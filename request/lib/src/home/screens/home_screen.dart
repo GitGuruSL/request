@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/country_service.dart';
 import '../../services/auth_service.dart';
 import '../../models/request_model.dart';
-import '../../screens/requests/rental_request_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -356,7 +354,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       subtitle: const Text('Request for products or items'),
                       onTap: () {
                         Navigator.pop(context);
-                        _showComingSoon('Item Request');
+                        Navigator.pushNamed(context, '/create-item-request');
                       },
                     ),
                     ListTile(
@@ -365,7 +363,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       subtitle: const Text('Request for services'),
                       onTap: () {
                         Navigator.pop(context);
-                        _showComingSoon('Service Request');
+                        Navigator.pushNamed(context, '/create-service-request');
                       },
                     ),
                     ListTile(
@@ -374,7 +372,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       subtitle: const Text('Request for transportation'),
                       onTap: () {
                         Navigator.pop(context);
-                        _showComingSoon('Ride Request');
+                        Navigator.pushNamed(context, '/create-ride-request');
                       },
                     ),
                     ListTile(
@@ -383,7 +381,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       subtitle: const Text('Request for delivery services'),
                       onTap: () {
                         Navigator.pop(context);
-                        _showComingSoon('Delivery Request');
+                        Navigator.pushNamed(context, '/create-delivery-request');
                       },
                     ),
                     ListTile(
@@ -392,12 +390,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       subtitle: const Text('Rent vehicles, equipment, or items'),
                       onTap: () {
                         Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const RentalRequestScreen(),
-                          ),
-                        );
+                        Navigator.pushNamed(context, '/create-rental-request');
                       },
                     ),
                     ListTile(
@@ -406,7 +399,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       subtitle: const Text('Request price quotes for items or services'),
                       onTap: () {
                         Navigator.pop(context);
-                        _showComingSoon('Price Request');
+                        Navigator.pushNamed(context, '/price');
                       },
                     ),
                   ],

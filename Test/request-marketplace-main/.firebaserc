@@ -1,8 +1,0 @@
-{
-  "projects": {
-    "default": "request-marketplace",
-    "staging": "request-marketplace"
-  },
-  "targets": {},
-  "etags": {}
-}

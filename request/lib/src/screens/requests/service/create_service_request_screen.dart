@@ -1,0 +1,411 @@
+import 'package:flutter/material.dart';
+import '../../../models/request_model.dart';
+import '../../../models/enhanced_user_model.dart';
+import '../../../services/enhanced_request_service.dart';
+import '../../../services/enhanced_user_service.dart';
+
+class CreateServiceRequestScreen extends StatefulWidget {
+  const CreateServiceRequestScreen({super.key});
+
+  @override
+  State<CreateServiceRequestScreen> createState() => _CreateServiceRequestScreenState();
+}
+
+class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final EnhancedRequestService _requestService = EnhancedRequestService();
+  final EnhancedUserService _userService = EnhancedUserService();
+
+  // Form Controllers
+  final _titleController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _locationController = TextEditingController();
+  final _budgetController = TextEditingController();
+  
+  // Service-specific fields
+  String _serviceCategory = 'Home Services';
+  DateTime? _preferredDate;
+  String _timeSlot = 'Morning';
+  bool _isRemote = false;
+  final _requirementsController = TextEditingController();
+
+  bool _isLoading = false;
+
+  final List<String> _serviceCategories = [
+    'Home Services',
+    'Professional Services',
+    'Creative Services',
+    'Technical Support',
+    'Tutoring & Education',
+    'Health & Wellness',
+    'Event Services',
+    'Transportation',
+    'Other',
+  ];
+
+  final List<String> _timeSlots = [
+    'Morning',
+    'Afternoon',
+    'Evening',
+    'Flexible',
+  ];
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    _locationController.dispose();
+    _budgetController.dispose();
+    _requirementsController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFFAFAFAFF),
+      appBar: AppBar(
+        title: const Text('Create Service Request'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+      ),
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header Info
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.build, color: Colors.green[600]),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Service Request',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green[600],
+                            ),
+                          ),
+                          const Text(
+                            'Need professional help? Find the right service provider!',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Basic Information
+              _buildSectionTitle('Basic Information'),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _titleController,
+                decoration: const InputDecoration(
+                  labelText: 'What service do you need?',
+                  hintText: 'e.g., Home Cleaning, Web Design, Tutoring',
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: InputBorder.none,
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter the service you need';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description',
+                  hintText: 'Describe what you need in detail...',
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: InputBorder.none,
+                ),
+                maxLines: 3,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please provide a description';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 24),
+
+              // Service Details
+              _buildSectionTitle('Service Details'),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _serviceCategory,
+                decoration: const InputDecoration(
+                  labelText: 'Category',
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: InputBorder.none,
+                ),
+                items: _serviceCategories.map((category) {
+                  return DropdownMenuItem(
+                    value: category,
+                    child: Text(category),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _serviceCategory = value!;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: ListTile(
+                  title: Text(_preferredDate == null 
+                    ? 'Select Preferred Date' 
+                    : 'Date: ${_preferredDate!.day}/${_preferredDate!.month}/${_preferredDate!.year}'),
+                  trailing: const Icon(Icons.calendar_today),
+                  onTap: _selectDate,
+                ),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _timeSlot,
+                decoration: const InputDecoration(
+                  labelText: 'Preferred Time',
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: InputBorder.none,
+                ),
+                items: _timeSlots.map((time) {
+                  return DropdownMenuItem(
+                    value: time,
+                    child: Text(time),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _timeSlot = value!;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _requirementsController,
+                decoration: const InputDecoration(
+                  labelText: 'Special Requirements (Optional)',
+                  hintText: 'Any specific requirements or preferences...',
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: InputBorder.none,
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 24),
+
+              // Budget & Location
+              _buildSectionTitle('Budget & Location'),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _budgetController,
+                decoration: const InputDecoration(
+                  labelText: 'Budget (USD)',
+                  hintText: '0.00',
+                  prefixText: '\$ ',
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: InputBorder.none,
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: CheckboxListTile(
+                  title: const Text('Remote Service'),
+                  subtitle: const Text('This service can be provided remotely'),
+                  value: _isRemote,
+                  onChanged: (value) {
+                    setState(() {
+                      _isRemote = value!;
+                    });
+                  },
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              if (!_isRemote) ...[
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _locationController,
+                  decoration: const InputDecoration(
+                    labelText: 'Service Location',
+                    hintText: 'Where should the service be provided?',
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: InputBorder.none,
+                  ),
+                  validator: (value) {
+                    if (!_isRemote && (value == null || value.trim().isEmpty)) {
+                      return 'Please specify the service location';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+              const SizedBox(height: 32),
+
+              // Submit Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _submitRequest,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: Colors.green[600],
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text(
+                          'Create Service Request',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        color: Colors.black87,
+      ),
+    );
+  }
+
+  Future<void> _selectDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().add(const Duration(days: 1)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null) {
+      setState(() {
+        _preferredDate = picked;
+      });
+    }
+  }
+
+  Future<void> _submitRequest() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Check if user has verified phone number
+      final currentUser = await _userService.getCurrentUserModel();
+      if (currentUser == null || !currentUser.isPhoneVerified) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please verify your phone number to create requests'),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Create the service-specific data
+      final serviceData = ServiceRequestData(
+        serviceType: _serviceCategory,
+        preferredTime: _preferredDate,
+        estimatedDuration: 1, // Default 1 hour
+        isRecurring: false,
+        requirements: {
+          'timeSlot': _timeSlot,
+          'specialRequirements': _requirementsController.text.trim(),
+          'isRemote': _isRemote.toString(),
+        },
+      );
+
+      final requestId = await _requestService.createRequest(
+        title: _titleController.text.trim(),
+        description: _descriptionController.text.trim(),
+        type: RequestType.service,
+        budget: double.tryParse(_budgetController.text),
+        currency: 'USD',
+        typeSpecificData: serviceData.toMap(),
+        tags: ['service', _serviceCategory.toLowerCase().replaceAll(' ', '_')],
+        location: _isRemote ? null : LocationInfo(
+          latitude: 0.0,
+          longitude: 0.0,
+          address: _locationController.text.trim(),
+        ),
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Service request created successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error creating request: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+}

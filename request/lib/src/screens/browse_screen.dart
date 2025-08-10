@@ -362,6 +362,101 @@ class _BrowseScreenState extends State<BrowseScreen> {
     );
   }
 
+  Widget _buildRequestOption({
+    required IconData icon,
+    required String title,
+    required String description,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey[300]!),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                icon,
+                color: Theme.of(context).colorScheme.primary,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.grey[400],
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _navigateToCreateRequest(RequestType type) {
+    Navigator.pop(context); // Close the bottom sheet first
+    
+    String routeName;
+    switch (type) {
+      case RequestType.item:
+        routeName = '/create-item-request';
+        break;
+      case RequestType.service:
+        routeName = '/create-service-request';
+        break;
+      case RequestType.ride:
+        routeName = '/create-ride-request';
+        break;
+      case RequestType.delivery:
+        routeName = '/create-delivery-request';
+        break;
+      case RequestType.rental:
+        routeName = '/create-rental-request';
+        break;
+      case RequestType.price:
+        routeName = '/price'; // Navigate to existing price comparison screen
+        break;
+    }
+    
+    Navigator.pushNamed(context, routeName).then((_) {
+      // Refresh the requests list when returning from create screen
+      _loadRequests();
+    });
+  }
+
   Widget _buildRequestCard(RequestModel request) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -519,6 +614,23 @@ class _BrowseScreenState extends State<BrowseScreen> {
         return 'Rental';
       case RequestType.price:
         return 'Price Check';
+    }
+  }
+
+  String _formatDate(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inDays > 7) {
+      return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+    } else if (difference.inDays > 0) {
+      return '${difference.inDays}d ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}m ago';
+    } else {
+      return 'Just now';
     }
   }
 
