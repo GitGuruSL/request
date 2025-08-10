@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Complete Database Reset & Fresh Setup</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 1200px; margin: 0 auto; }
+        .section { background: #f9f9f9; border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 8px; }
+        .success { background: #e8f5e8; border-color: #4caf50; }
+        .error { background: #ffebee; border-color: #f44336; }
+        .warning { background: #fff3e0; border-color: #ff9800; }
+        .info { background: #e3f2fd; border-color: #2196f3; }
+        .danger { background: #ffebee; border: 2px solid #f44336; }
+        .button { 
+            padding: 12px 24px; margin: 8px; background: #2196F3; color: white; 
+            border: none; border-radius: 6px; cursor: pointer; font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .button:hover { background: #1976D2; transform: translateY(-1px); }
+        .button:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+        .scan-btn { background: #4CAF50; }
+        .scan-btn:hover { background: #45a049; }
+        .delete-btn { background: #f44336; }
+        .delete-btn:hover { background: #d32f2f; }
+        .create-btn { background: #FF9800; }
+        .create-btn:hover { background: #F57C00; }
+        .reset-btn { background: #9C27B0; }
+        .reset-btn:hover { background: #7B1FA2; }
+        pre { background: #f5f5f5; padding: 12px; border-radius: 4px; overflow-x: auto; font-size: 12px; }
+        .step { background: #fff; border-left: 4px solid #2196F3; padding: 15px; margin: 10px 0; }
+        .collection-box { border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 4px; }
+        .progress { width: 100%; background: #f0f0f0; border-radius: 4px; margin: 10px 0; }
+        .progress-bar { height: 20px; background: #4CAF50; border-radius: 4px; transition: width 0.3s; }
+        .admin-source { background: #e1f5fe; border: 1px solid #0288d1; padding: 10px; margin: 10px 0; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>🔄 Complete Database Reset & Fresh Setup</h1>
+    
+    <div class="section warning">
+        <h2>⚠️ ATTENTION: Database Reset Tool</h2>
+        <p><strong>This tool will completely clean and rebuild your Firebase database!</strong></p>
+        <p>Use this to fix all "Add Product" issues by starting fresh.</p>
+    </div>
+
+    <div class="section">
+        <h2>🔍 Step 1: Analyze Current Database</h2>
+        <button class="button scan-btn" onclick="scanCurrentDatabase()">
+            🔍 Scan All Collections & Admin Panel Sources
+        </button>
+        <button class="button" onclick="checkAdminPanelSources()">
+            📋 Check Where Admin Panel Creates Categories
+        </button>
+    </div>
+
+    <div class="section danger">
+        <h2>🗑️ Step 2: Clean Database (DESTRUCTIVE)</h2>
+        <p><strong>⚠️ WARNING: This will delete ALL data!</strong></p>
+        <button class="button delete-btn" onclick="deleteAllCollections()" id="deleteBtn" disabled>
+            🗑️ DELETE ALL (Categories, Products, Everything)
+        </button>
+        <p><em>Button will be enabled after scanning current database</em></p>
+    </div>
+
+    <div class="section">
+        <h2>🚀 Step 3: Create Fresh Data</h2>
+        <button class="button create-btn" onclick="createFreshEverything()">
+            ✨ CREATE FRESH CATEGORIES & PRODUCTS
+        </button>
+        <button class="button reset-btn" onclick="completeReset()">
+            🔄 COMPLETE RESET (Delete + Create)
+        </button>
+    </div>
+
+    <div id="output" class="section">
+        Click "Scan All Collections" to see what's currently in your database...
+    </div>
+
+    <script>
+        // Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyC5hb6Ydkp__EZgX-kRjJgtOKZKg8TNkJg",
+            authDomain: "request-marketplace-45a59.firebaseapp.com",
+            projectId: "request-marketplace-45a59",
+            storageBucket: "request-marketplace-45a59.firebasestorage.app",
+            messagingSenderId: "635550436472",
+            appId: "1:635550436472:web:72ee20ad95cdcf65c1c86a"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // All possible collections to check/clean
+        const ALL_COLLECTIONS = [
+            'product_categories', 'categories', 'productCategories',
+            'master_products', 'masterProducts', 'products',
+            'business_products', 'businessProducts',
+            'subcategories', 'subCategories', 'product_subcategories',
+            'businesses', 'users', 'drivers', 'requests', 'service_requests',
+            'notifications', 'reviews', 'orders'
+        ];
+
+        async function scanCurrentDatabase() {
+            document.getElementById('output').innerHTML = '🔍 Scanning entire database...';
+            
+            try {
+                let output = '<h2>🔍 Complete Database Scan:</h2>';
+                let foundCollections = [];
+                let totalDocuments = 0;
+
+                for (const collectionName of ALL_COLLECTIONS) {
+                    try {
+                        const snapshot = await db.collection(collectionName).get();
+                        if (!snapshot.empty) {
+                            foundCollections.push({
+                                name: collectionName,
+                                count: snapshot.size,
+                                samples: snapshot.docs.slice(0, 3).map(doc => ({
+                                    id: doc.id,
+                                    data: doc.data()
+                                }))
+                            });
+                            totalDocuments += snapshot.size;
+                        }
+                    } catch (error) {
+                        // Collection doesn't exist, skip
+                    }
+                }
+
+                if (foundCollections.length === 0) {
+                    output += `
+                        <div class="info">
+                            <h3>📭 Database is Empty</h3>
+                            <p>No collections found. You can proceed directly to creating fresh data.</p>
+                        </div>
+                    `;
+                } else {
+                    output += `
+                        <div class="info">
+                            <h3>📊 Database Summary</h3>
+                            <p><strong>Collections found:</strong> ${foundCollections.length}</p>
+                            <p><strong>Total documents:</strong> ${totalDocuments}</p>
+                        </div>
+                    `;
+
+                    foundCollections.forEach(collection => {
+                        output += `
+                            <div class="collection-box">
+                                <h4>📂 ${collection.name} (${collection.count} documents)</h4>
+                                <details>
+                                    <summary>View sample data</summary>
+                                    <pre>${JSON.stringify(collection.samples, null, 2)}</pre>
+                                </details>
+                            </div>
+                        `;
+                    });
+                }
+
+                // Enable delete button
+                document.getElementById('deleteBtn').disabled = false;
+                
+                document.getElementById('output').innerHTML = output;
+
+            } catch (error) {
+                document.getElementById('output').innerHTML = `
+                    <div class="error">
+                        <h3>❌ Scan Error:</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function checkAdminPanelSources() {
+            let output = '<h2>📋 Admin Panel Collection Sources:</h2>';
+            
+            output += `
+                <div class="admin-source">
+                    <h3>🔍 Where Admin Panel Creates Categories:</h3>
+                    <p><strong>complete-admin.html:</strong> Uses <code>product_categories</code> collection</p>
+                    <p><strong>simple-admin.html:</strong> Uses <code>categories</code> collection (if exists)</p>
+                    <p><strong>working-admin.html:</strong> Uses <code>product_categories</code> collection</p>
+                    <p><strong>Flutter App:</strong> Reads from <code>product_categories</code> collection</p>
+                </div>
+                
+                <div class="admin-source">
+                    <h3>🎯 Correct Collection for Flutter:</h3>
+                    <p>Your Flutter app specifically looks for: <code>product_categories</code></p>
+                    <p>Query: <code>collection('product_categories').where('isActive', '==', true)</code></p>
+                </div>
+                
+                <div class="admin-source">
+                    <h3>🔧 Recommendation:</h3>
+                    <p>1. Delete everything from all category collections</p>
+                    <p>2. Create fresh data in <code>product_categories</code> only</p>
+                    <p>3. This will ensure Flutter app works perfectly</p>
+                </div>
+            `;
+
+            document.getElementById('output').innerHTML = output;
+        }
+
+        async function deleteAllCollections() {
+            if (!confirm('⚠️ WARNING: This will delete ALL data from your Firebase database!\n\nThis includes:\n- All categories\n- All products\n- All business data\n- All user data\n\nAre you absolutely sure?')) {
+                return;
+            }
+
+            if (!confirm('🚨 FINAL WARNING: This action cannot be undone!\n\nType "YES DELETE" to confirm:') || 
+                prompt('Type "DELETE ALL" to confirm:') !== 'DELETE ALL') {
+                alert('❌ Deletion cancelled for safety.');
+                return;
+            }
+
+            document.getElementById('output').innerHTML = '🗑️ Deleting all collections...';
+            
+            try {
+                let output = '<h2>🗑️ Deleting All Collections:</h2>';
+                let deletedCollections = 0;
+                let totalDeleted = 0;
+
+                for (const collectionName of ALL_COLLECTIONS) {
+                    try {
+                        const snapshot = await db.collection(collectionName).get();
+                        
+                        if (!snapshot.empty) {
+                            output += `<p>🗑️ Deleting ${collectionName} (${snapshot.size} documents)...</p>`;
+                            
+                            // Delete in batches
+                            const batch = db.batch();
+                            snapshot.docs.forEach(doc => batch.delete(doc.ref));
+                            await batch.commit();
+                            
+                            deletedCollections++;
+                            totalDeleted += snapshot.size;
+                            
+                            // Update progress
+                            document.getElementById('output').innerHTML = output + 
+                                `<div class="progress"><div class="progress-bar" style="width: ${(deletedCollections / ALL_COLLECTIONS.length) * 100}%"></div></div>`;
+                        }
+                    } catch (error) {
+                        // Collection doesn't exist or error, skip
+                        console.log(`Could not delete ${collectionName}:`, error.message);
+                    }
+                }
+
+                output += `
+                    <div class="success">
+                        <h3>✅ Deletion Complete!</h3>
+                        <p><strong>Collections deleted:</strong> ${deletedCollections}</p>
+                        <p><strong>Total documents deleted:</strong> ${totalDeleted}</p>
+                        <p><strong>Database is now clean!</strong></p>
+                    </div>
+                `;
+
+                document.getElementById('output').innerHTML = output;
+
+            } catch (error) {
+                document.getElementById('output').innerHTML = `
+                    <div class="error">
+                        <h3>❌ Deletion Error:</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function createFreshEverything() {
+            document.getElementById('output').innerHTML = '✨ Creating fresh categories and products...';
+            
+            // Fresh categories for Flutter app
+            const categories = [
+                { id: 'electronics', name: 'Electronics', description: 'Electronic devices, smartphones, computers, and accessories', icon: '📱' },
+                { id: 'fashion', name: 'Fashion', description: 'Clothing, shoes, accessories, and fashion items', icon: '👕' },
+                { id: 'home-garden', name: 'Home & Garden', description: 'Home improvement and gardening supplies', icon: '🏠' },
+                { id: 'automotive', name: 'Automotive', description: 'Car parts, accessories, and automotive supplies', icon: '🚗' },
+                { id: 'sports', name: 'Sports & Recreation', description: 'Sports equipment and recreational items', icon: '⚽' },
+                { id: 'books', name: 'Books & Education', description: 'Books, educational materials, and literature', icon: '📚' },
+                { id: 'health', name: 'Health & Beauty', description: 'Health, beauty, and personal care products', icon: '💊' },
+                { id: 'food', name: 'Food & Beverages', description: 'Food items, beverages, and grocery products', icon: '🍎' },
+                { id: 'toys', name: 'Toys & Games', description: 'Toys, games, and entertainment products', icon: '🧸' },
+                { id: 'tools', name: 'Tools & Hardware', description: 'Tools, hardware, and construction supplies', icon: '🔧' }
+            ];
+
+            // Sample master products
+            const masterProducts = [
+                { name: 'iPhone 15 Pro', description: 'Latest Apple smartphone with advanced features', categoryId: 'electronics', basePrice: 999.99, unit: 'piece' },
+                { name: 'Samsung Galaxy S24', description: 'Premium Android smartphone', categoryId: 'electronics', basePrice: 899.99, unit: 'piece' },
+                { name: 'MacBook Air M3', description: 'Apple laptop with M3 chip', categoryId: 'electronics', basePrice: 1299.99, unit: 'piece' },
+                { name: 'Nike Air Max', description: 'Comfortable running shoes', categoryId: 'fashion', basePrice: 129.99, unit: 'pair' },
+                { name: 'Levi\'s Jeans', description: 'Classic denim jeans', categoryId: 'fashion', basePrice: 69.99, unit: 'piece' },
+                { name: 'Office Chair', description: 'Ergonomic office chair', categoryId: 'home-garden', basePrice: 199.99, unit: 'piece' },
+                { name: 'Garden Hose', description: '50ft expandable garden hose', categoryId: 'home-garden', basePrice: 39.99, unit: 'piece' },
+                { name: 'Car Phone Mount', description: 'Universal smartphone car mount', categoryId: 'automotive', basePrice: 24.99, unit: 'piece' },
+                { name: 'Soccer Ball', description: 'Official size soccer ball', categoryId: 'sports', basePrice: 29.99, unit: 'piece' },
+                { name: 'Programming Book', description: 'Learn to code with Python', categoryId: 'books', basePrice: 49.99, unit: 'piece' }
+            ];
+
+            try {
+                let output = '<h2>✨ Creating Fresh Database:</h2>';
+                
+                // Step 1: Create Categories
+                output += '<div class="step"><h3>Step 1: Creating Product Categories</h3>';
+                const categoryBatch = db.batch();
+                
+                categories.forEach(category => {
+                    const categoryData = {
+                        name: category.name,
+                        description: category.description,
+                        icon: category.icon,
+                        isActive: true,
+                        productCount: 0,
+                        createdAt: firebase.firestore.Timestamp.now(),
+                        updatedAt: firebase.firestore.Timestamp.now()
+                    };
+                    
+                    const docRef = db.collection('product_categories').doc(category.id);
+                    categoryBatch.set(docRef, categoryData);
+                    
+                    output += `<p>✅ ${category.icon} ${category.name}</p>`;
+                });
+                
+                await categoryBatch.commit();
+                output += `<p><strong>✅ Created ${categories.length} categories</strong></p></div>`;
+                
+                // Step 2: Create Master Products
+                output += '<div class="step"><h3>Step 2: Creating Master Products</h3>';
+                const productBatch = db.batch();
+                
+                masterProducts.forEach(product => {
+                    const productData = {
+                        name: product.name,
+                        description: product.description,
+                        categoryId: product.categoryId,
+                        basePrice: product.basePrice,
+                        unit: product.unit,
+                        isActive: true,
+                        createdAt: firebase.firestore.Timestamp.now(),
+                        updatedAt: firebase.firestore.Timestamp.now()
+                    };
+                    
+                    const docRef = db.collection('master_products').doc();
+                    productBatch.set(docRef, productData);
+                    
+                    output += `<p>✅ ${product.name} (${product.categoryId})</p>`;
+                });
+                
+                await productBatch.commit();
+                output += `<p><strong>✅ Created ${masterProducts.length} master products</strong></p></div>`;
+                
+                // Step 3: Verification
+                output += '<div class="step"><h3>Step 3: Verification</h3>';
+                
+                const categoriesVerify = await db.collection('product_categories').get();
+                const productsVerify = await db.collection('master_products').get();
+                const activeCategories = categoriesVerify.docs.filter(doc => doc.data().isActive === true);
+                
+                output += `<p>✅ Categories in database: ${categoriesVerify.size}</p>`;
+                output += `<p>✅ Active categories: ${activeCategories.length}</p>`;
+                output += `<p>✅ Master products: ${productsVerify.size}</p>`;
+                output += '</div>';
+                
+                output += `
+                    <div class="success">
+                        <h2>🎉 SUCCESS! Fresh Database Created!</h2>
+                        <p><strong>✅ ${categories.length} product categories created</strong></p>
+                        <p><strong>✅ ${masterProducts.length} master products created</strong></p>
+                        <p><strong>✅ All data in correct collections for Flutter app</strong></p>
+                        <p><strong>✅ All categories are active</strong></p>
+                        
+                        <h3>🚀 Your Flutter App Should Now Work!</h3>
+                        <ol>
+                            <li>Open your Flutter app</li>
+                            <li>Navigate to "Add Product"</li>
+                            <li>Categories should appear in dropdown</li>
+                            <li>You can select products and add pricing</li>
+                        </ol>
+                    </div>
+                `;
+
+                document.getElementById('output').innerHTML = output;
+
+            } catch (error) {
+                document.getElementById('output').innerHTML = `
+                    <div class="error">
+                        <h3>❌ Creation Error:</h3>
+                        <p>${error.message}</p>
+                        <pre>${error.stack}</pre>
+                    </div>
+                `;
+            }
+        }
+
+        async function completeReset() {
+            if (!confirm('🔄 Complete Reset will:\n\n1. Delete ALL existing data\n2. Create fresh categories and products\n\nProceed?')) {
+                return;
+            }
+
+            document.getElementById('output').innerHTML = '🔄 Starting complete reset...';
+            
+            try {
+                // First delete everything
+                await deleteAllCollections();
+                
+                // Wait a moment
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Then create fresh data
+                await createFreshEverything();
+                
+            } catch (error) {
+                document.getElementById('output').innerHTML = `
+                    <div class="error">
+                        <h3>❌ Reset Error:</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Auto-scan on page load
+        window.addEventListener('load', () => {
+            setTimeout(scanCurrentDatabase, 1000);
+        });
+    </script>
+</body>
+</html>

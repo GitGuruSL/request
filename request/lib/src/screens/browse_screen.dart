@@ -19,6 +19,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
   String _selectedLocation = 'All Locations';
   List<RequestModel> _requests = [];
   bool _isLoading = true;
+  String? _error; // Add error state
   String? _currencySymbol;
 
   @override
@@ -32,39 +33,141 @@ class _BrowseScreenState extends State<BrowseScreen> {
       _currencySymbol = CountryService.instance.getCurrencySymbol();
       await _loadRequests();
     } catch (e) {
-      print('Error loading data: $e');
+      if (mounted) {
+        setState(() {
+          _error = 'Error loading data: $e';
+        });
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   Future<void> _loadRequests() async {
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
     try {
-      // Get country-filtered query
-      Query? query = CountryService.instance.getCountryFilteredQuery(
-        FirebaseFirestore.instance.collection('requests')
-      );
+      print('📥 Attempting to fetch requests from Firestore...');
       
-      if (query != null) {
-        final querySnapshot = await query
-          .where('status', isEqualTo: 'active')
-          .orderBy('createdAt', descending: true)
-          .limit(50)
+      // Most basic query possible - get all documents from requests collection
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('requests')
           .get();
           
-        _requests = querySnapshot.docs
-            .map((doc) => RequestModel.fromMap({
-              ...doc.data() as Map<String, dynamic>,
-              'id': doc.id,
-            }))
-            .toList();
+      print('📊 Found ${querySnapshot.docs.length} documents in requests collection');
+      
+      if (mounted) {
+        final List<RequestModel> loadedRequests = [];
+        
+        // Let's inspect the first document to understand the data structure
+        if (querySnapshot.docs.isNotEmpty) {
+          final firstDoc = querySnapshot.docs.first;
+          final data = firstDoc.data();
+          
+          print('🔍 First document structure:');
+          print('Document ID: ${firstDoc.id}');
+          print('Document data keys: ${data.keys.toList()}');
+          
+          // Print each field and its type
+          data.forEach((key, value) {
+            print('Field "$key": ${value.runtimeType} = $value');
+          });
+        }
+        
+        for (var doc in querySnapshot.docs) {
+          try {
+            final data = doc.data();
+            data['id'] = doc.id; // Add document ID
             
+            // Create a simple display model instead of using RequestModel
+            final simpleRequest = {
+              'id': doc.id,
+              'title': data['title']?.toString() ?? 'No Title',
+              'description': data['description']?.toString() ?? 'No Description',
+              'type': data['type']?.toString() ?? 'item',
+              'status': data['status']?.toString() ?? 'active',
+            };
+            
+            // For now, create a minimal RequestModel with fallback values
+            final request = RequestModel(
+              id: doc.id,
+              requesterId: data['requesterId']?.toString() ?? '',
+              title: data['title']?.toString() ?? 'No Title',
+              description: data['description']?.toString() ?? 'No Description',
+              type: _parseRequestType(data['type']?.toString()),
+              status: _parseRequestStatus(data['status']?.toString()),
+              createdAt: DateTime.now(), // Use current time as fallback
+              updatedAt: DateTime.now(), // Use current time as fallback
+            );
+            
+            loadedRequests.add(request);
+            print('✅ Successfully parsed document ${doc.id}');
+          } catch (e) {
+            print('❌ Error parsing document ${doc.id}: $e');
+            // Continue with other documents even if one fails
+          }
+        }
+        
+        _requests = loadedRequests;
+        print('📝 Successfully loaded ${_requests.length} requests');
         setState(() {});
       }
     } catch (e) {
-      print('Error loading requests: $e');
+      print('💥 Error loading requests: $e');
+      if (mounted) {
+        setState(() {
+          _error = 'Failed to load requests: $e';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  RequestType _parseRequestType(String? type) {
+    switch (type?.toLowerCase()) {
+      case 'service':
+        return RequestType.service;
+      case 'ride':
+        return RequestType.ride;
+      case 'delivery':
+        return RequestType.delivery;
+      case 'rental':
+        return RequestType.rental;
+      case 'price':
+        return RequestType.price;
+      default:
+        return RequestType.item;
+    }
+  }
+
+  RequestStatus _parseRequestStatus(String? status) {
+    switch (status?.toLowerCase()) {
+      case 'active':
+      case 'open':
+        return RequestStatus.active;
+      case 'inprogress':
+        return RequestStatus.inProgress;
+      case 'completed':
+        return RequestStatus.completed;
+      case 'cancelled':
+        return RequestStatus.cancelled;
+      case 'expired':
+        return RequestStatus.expired;
+      default:
+        return RequestStatus.draft;
     }
   }
 
@@ -185,40 +288,74 @@ class _BrowseScreenState extends State<BrowseScreen> {
           ),
           // Results List
           Expanded(
-            child: _filteredRequests.isEmpty
+            child: _error != null
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          Icons.search_off,
+                          Icons.error_outline,
                           size: 64,
-                          color: Colors.grey[400],
+                          color: Colors.red[400],
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'No requests found',
+                          'Error',
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          _searchQuery.isNotEmpty || _selectedType != null
-                              ? 'Try adjusting your search or filters'
-                              : 'No active requests available at the moment',
+                          _error!,
                           style: Theme.of(context).textTheme.bodyMedium,
                           textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _loadRequests,
+                          child: const Text('Retry'),
                         ),
                       ],
                     ),
                   )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _filteredRequests.length,
-                    itemBuilder: (context, index) {
-                      final request = _filteredRequests[index];
-                      return _buildRequestCard(request);
-                    },
-                  ),
+                : _filteredRequests.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.search_off,
+                              size: 64,
+                              color: Colors.grey[400],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No requests found',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _searchQuery.isNotEmpty || _selectedType != null
+                                  ? 'Try adjusting your search or filters'
+                                  : 'No requests available at the moment',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: _loadRequests,
+                              child: const Text('Refresh'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: _filteredRequests.length,
+                        itemBuilder: (context, index) {
+                          final request = _filteredRequests[index];
+                          return _buildRequestCard(request);
+                        },
+                      ),
           ),
         ],
       ),

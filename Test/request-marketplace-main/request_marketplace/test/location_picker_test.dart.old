@@ -1,0 +1,59 @@
+// Test file to verify the location picker functionality
+// This demonstrates how the request form now matches the response form for location selection
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:request_marketplace/src/requests/screens/create_request_screen.dart';
+import 'package:request_marketplace/src/requests/screens/respond_to_request_screen.dart';
+import 'package:request_marketplace/src/models/request_model.dart';
+
+void main() {
+  group('Location Picker Tests', () {
+    testWidgets('CreateRequestScreen has location picker', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CreateRequestScreen(requestType: RequestType.item),
+        ),
+      );
+
+      // Verify location picker is present
+      expect(find.text('Location (Optional)'), findsOneWidget);
+      expect(find.text('Select Location'), findsOneWidget);
+      expect(find.byIcon(Icons.location_on), findsOneWidget);
+    });
+
+    testWidgets('RespondToRequestScreen has location picker', (WidgetTester tester) async {
+      final mockRequest = RequestModel(
+        id: 'test-id',
+        userId: 'test-user',
+        title: 'Test Request',
+        description: 'Test Description',
+        type: RequestType.item,
+        condition: 'new',
+        budget: 1000.0,
+        location: 'Colombo',
+        category: 'Electronics',
+        subcategory: 'Phones',
+        createdAt: DateTime.now(),
+        deadline: DateTime.now().add(Duration(days: 7)),
+        images: [],
+        tags: [],
+        isActive: true,
+        responses: [],
+        viewCount: 0,
+        favoriteCount: 0,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RespondToRequestScreen(request: mockRequest),
+        ),
+      );
+
+      // Verify location picker is present
+      expect(find.text('Location (Optional)'), findsOneWidget);
+      expect(find.text('Select Location'), findsOneWidget);
+      expect(find.byIcon(Icons.location_on), findsOneWidget);
+    });
+  });
+}

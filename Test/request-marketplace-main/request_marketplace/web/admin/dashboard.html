@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Request Marketplace</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f1f5f9;
+            color: #1e293b;
+        }
+
+        .admin-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: #1e293b;
+            color: white;
+            padding: 2rem 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 0 2rem 2rem;
+            border-bottom: 1px solid #334155;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #60a5fa;
+        }
+
+        .nav-menu {
+            padding: 2rem 0;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 1rem 2rem;
+            color: #cbd5e1;
+            text-decoration: none;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background: #334155;
+            color: white;
+            border-left-color: #60a5fa;
+        }
+
+        .nav-item i {
+            margin-right: 0.75rem;
+            width: 20px;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 2rem;
+        }
+
+        .page-header {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .page-title {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-subtitle {
+            color: #64748b;
+        }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-left: 4px solid;
+        }
+
+        .stat-card.users { border-left-color: #3b82f6; }
+        .stat-card.requests { border-left-color: #10b981; }
+        .stat-card.businesses { border-left-color: #f59e0b; }
+        .stat-card.revenue { border-left-color: #8b5cf6; }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        .stat-change {
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+        }
+
+        .stat-change.positive { color: #10b981; }
+        .stat-change.negative { color: #ef4444; }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .card-content {
+            padding: 1.5rem;
+        }
+
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th,
+        .table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .table th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .table tr:hover {
+            background: #f8fafc;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn-small {
+            padding: 0.25rem 0.75rem;
+            font-size: 0.875rem;
+        }
+
+        /* Status Badges */
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-pending {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .badge-approved {
+            background: #d1fae5;
+            color: #059669;
+        }
+
+        .badge-rejected {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .badge-active {
+            background: #dbeafe;
+            color: #2563eb;
+        }
+
+        /* Charts */
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .spinner {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 12px;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow: auto;
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .close {
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6b7280;
+        }
+
+        .close:hover {
+            color: #374151;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">🏪 Admin Panel</div>
+                <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem;">Request Marketplace</div>
+            </div>
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" onclick="showSection('dashboard')">
+                    <i>📊</i> Dashboard
+                </a>
+                <a href="#" class="nav-item" onclick="showSection('users')">
+                    <i>👥</i> Users Management
+                </a>
+                <a href="#" class="nav-item" onclick="showSection('requests')">
+                    <i>📝</i> Requests
+                </a>
+                <a href="#" class="nav-item" onclick="showSection('businesses')">
+                    <i>🏢</i> Businesses
+                </a>
+                <a href="#" class="nav-item" onclick="showSection('drivers')">
+                    <i>🚗</i> Driver Verification
+                </a>
+                <a href="#" class="nav-item" onclick="showSection('analytics')">
+                    <i>📈</i> Analytics
+                </a>
+                <a href="#" class="nav-item" onclick="showSection('settings')">
+                    <i>⚙️</i> Platform Settings
+                </a>
+                <a href="#" class="nav-item" onclick="showSection('reports')">
+                    <i>📋</i> Reports
+                </a>
+                <div style="margin-top: 2rem; padding: 0 2rem;">
+                    <div style="border-top: 1px solid #334155; padding-top: 1rem;">
+                        <div style="font-size: 0.8rem; color: #94a3b8;">System Status</div>
+                        <div style="display: flex; align-items: center; margin-top: 0.5rem;">
+                            <div style="width: 8px; height: 8px; background: #10b981; border-radius: 50%; margin-right: 0.5rem;"></div>
+                            <span style="font-size: 0.9rem;">All Systems Operational</span>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Dashboard Section -->
+            <div id="dashboard-section">
+                <div class="page-header">
+                    <h1 class="page-title">Dashboard Overview</h1>
+                    <p class="page-subtitle">Real-time insights into your marketplace ecosystem</p>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card users">
+                        <div class="stat-number" id="totalUsers">0</div>
+                        <div class="stat-label">Total Users</div>
+                        <div class="stat-change positive" id="usersChange">+12% this month</div>
+                    </div>
+                    <div class="stat-card requests">
+                        <div class="stat-number" id="totalRequests">0</div>
+                        <div class="stat-label">Total Requests</div>
+                        <div class="stat-change positive" id="requestsChange">+8% this week</div>
+                    </div>
+                    <div class="stat-card businesses">
+                        <div class="stat-number" id="totalBusinesses">0</div>
+                        <div class="stat-label">Registered Businesses</div>
+                        <div class="stat-change positive" id="businessesChange">+15% this month</div>
+                    </div>
+                    <div class="stat-card revenue">
+                        <div class="stat-number" id="totalRevenue">LKR 0</div>
+                        <div class="stat-label">Platform Revenue</div>
+                        <div class="stat-change positive" id="revenueChange">+22% this month</div>
+                    </div>
+                </div>
+
+                <!-- Dashboard Grid -->
+                <div class="dashboard-grid">
+                    <!-- Recent Activity -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Recent Activity</h2>
+                            <button class="btn btn-primary btn-small">View All</button>
+                        </div>
+                        <div class="card-content">
+                            <div id="recentActivity">
+                                <div class="loading">
+                                    <div class="spinner"></div>
+                                    <p>Loading recent activity...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pending Verifications -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Pending Verifications</h2>
+                            <span class="badge badge-pending" id="pendingCount">0</span>
+                        </div>
+                        <div class="card-content">
+                            <div id="pendingVerifications">
+                                <div class="loading">
+                                    <div class="spinner"></div>
+                                    <p>Loading pending verifications...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Request Trends</h2>
+                        </div>
+                        <div class="card-content">
+                            <div class="chart-container">
+                                <canvas id="requestsChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">User Growth</h2>
+                        </div>
+                        <div class="card-content">
+                            <div class="chart-container">
+                                <canvas id="usersChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Section -->
+            <div id="users-section" style="display: none;">
+                <div class="page-header">
+                    <h1 class="page-title">Users Management</h1>
+                    <p class="page-subtitle">Manage all users, their profiles and verification status</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">All Users</h2>
+                        <div>
+                            <input type="text" placeholder="Search users..." style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; margin-right: 1rem;">
+                            <button class="btn btn-primary btn-small">Export</button>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="table-container">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>User</th>
+                                        <th>Email</th>
+                                        <th>Roles</th>
+                                        <th>Status</th>
+                                        <th>Joined</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="usersTable">
+                                    <tr>
+                                        <td colspan="6" class="loading">
+                                            <div class="spinner"></div>
+                                            <p>Loading users...</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Driver Verification Section -->
+            <div id="drivers-section" style="display: none;">
+                <div class="page-header">
+                    <h1 class="page-title">Driver Verification</h1>
+                    <p class="page-subtitle">Review and verify driver applications and documents</p>
+                    <button class="btn btn-primary" onclick="window.open('driver_verification.html', '_blank')">
+                        Open Advanced Driver Panel
+                    </button>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalDrivers">0</div>
+                        <div class="stat-label">Total Drivers</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="pendingDrivers">0</div>
+                        <div class="stat-label">Pending Verification</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="approvedDrivers">0</div>
+                        <div class="stat-label">Approved Drivers</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="rejectedDrivers">0</div>
+                        <div class="stat-label">Rejected Applications</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Driver Applications</h2>
+                        <div>
+                            <select style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; margin-right: 1rem;">
+                                <option value="all">All Status</option>
+                                <option value="pending">Pending</option>
+                                <option value="approved">Approved</option>
+                                <option value="rejected">Rejected</option>
+                            </select>
+                            <button class="btn btn-primary btn-small">Refresh</button>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="table-container">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Driver</th>
+                                        <th>License</th>
+                                        <th>Vehicle</th>
+                                        <th>Status</th>
+                                        <th>Applied</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="driversTable">
+                                    <tr>
+                                        <td colspan="6" class="loading">
+                                            <div class="spinner"></div>
+                                            <p>Loading driver applications...</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Other sections placeholder -->
+            <div id="requests-section" style="display: none;">
+                <div class="page-header">
+                    <h1 class="page-title">Requests Management</h1>
+                    <p class="page-subtitle">Monitor and manage all requests on the platform</p>
+                </div>
+                <!-- Requests content will be loaded here -->
+            </div>
+
+            <div id="businesses-section" style="display: none;">
+                <div class="page-header">
+                    <h1 class="page-title">Business Management</h1>
+                    <p class="page-subtitle">Manage business registrations and verifications</p>
+                </div>
+                <!-- Business content will be loaded here -->
+            </div>
+
+            <div id="analytics-section" style="display: none;">
+                <div class="page-header">
+                    <h1 class="page-title">Analytics & Reports</h1>
+                    <p class="page-subtitle">Comprehensive platform analytics and insights</p>
+                </div>
+                <!-- Analytics content will be loaded here -->
+            </div>
+
+            <div id="settings-section" style="display: none;">
+                <div class="page-header">
+                    <h1 class="page-title">Platform Settings</h1>
+                    <p class="page-subtitle">Configure platform settings and preferences</p>
+                </div>
+                <!-- Settings content will be loaded here -->
+            </div>
+
+            <div id="reports-section" style="display: none;">
+                <div class="page-header">
+                    <h1 class="page-title">Reports</h1>
+                    <p class="page-subtitle">Generate and download platform reports</p>
+                </div>
+                <!-- Reports content will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Configuration and JavaScript -->
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDzUbFqDUDcU8OYk6GgRQ5AElz7WnL2R9s",
+            authDomain: "request-marketplace.firebaseapp.com",
+            projectId: "request-marketplace",
+            storageBucket: "request-marketplace.firebasestorage.app",
+            messagingSenderId: "368893362239",
+            appId: "1:368893362239:web:6c25e8bac05f9e14064ba3"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Navigation
+        function showSection(sectionName) {
+            // Hide all sections
+            const sections = ['dashboard', 'users', 'requests', 'businesses', 'drivers', 'analytics', 'settings', 'reports'];
+            sections.forEach(section => {
+                document.getElementById(`${section}-section`).style.display = 'none';
+            });
+
+            // Remove active class from all nav items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            // Show selected section
+            document.getElementById(`${sectionName}-section`).style.display = 'block';
+
+            // Add active class to clicked nav item
+            event.target.classList.add('active');
+
+            // Load section data
+            switch(sectionName) {
+                case 'dashboard':
+                    loadDashboardData();
+                    break;
+                case 'users':
+                    loadUsersData();
+                    break;
+                case 'drivers':
+                    loadDriversData();
+                    break;
+                // Add other cases as needed
+            }
+        }
+
+        // Load Dashboard Data
+        async function loadDashboardData() {
+            try {
+                // Load stats
+                const usersSnapshot = await db.collection('users').get();
+                document.getElementById('totalUsers').textContent = usersSnapshot.size;
+
+                const requestsSnapshot = await db.collection('requests').get();
+                document.getElementById('totalRequests').textContent = requestsSnapshot.size;
+
+                const businessSnapshot = await db.collection('users')
+                    .where('roles', 'array-contains', 'business')
+                    .get();
+                document.getElementById('totalBusinesses').textContent = businessSnapshot.size;
+
+                // Mock revenue calculation
+                document.getElementById('totalRevenue').textContent = `LKR ${(requestsSnapshot.size * 500).toLocaleString()}`;
+
+                // Load recent activity
+                loadRecentActivity();
+                loadPendingVerifications();
+                initCharts();
+
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+            }
+        }
+
+        // Load Recent Activity
+        async function loadRecentActivity() {
+            try {
+                const recentRequests = await db.collection('requests')
+                    .orderBy('createdAt', 'desc')
+                    .limit(5)
+                    .get();
+
+                const activityHtml = recentRequests.docs.map(doc => {
+                    const data = doc.data();
+                    const date = new Date(data.createdAt.toDate()).toLocaleDateString();
+                    return `
+                        <div style="padding: 0.75rem 0; border-bottom: 1px solid #f1f5f9;">
+                            <div style="font-weight: 500;">${data.title}</div>
+                            <div style="font-size: 0.875rem; color: #64748b;">${data.type} • ${date}</div>
+                        </div>
+                    `;
+                }).join('');
+
+                document.getElementById('recentActivity').innerHTML = activityHtml || '<p>No recent activity</p>';
+            } catch (error) {
+                document.getElementById('recentActivity').innerHTML = '<p>Error loading activity</p>';
+            }
+        }
+
+        // Load Pending Verifications
+        async function loadPendingVerifications() {
+            try {
+                const pendingDrivers = await db.collection('drivers')
+                    .where('status', '==', 'pending')
+                    .get();
+
+                const pendingBusinesses = await db.collection('users')
+                    .where('businessProfile.verificationStatus', '==', 'pending')
+                    .get();
+
+                const total = pendingDrivers.size + pendingBusinesses.size;
+                document.getElementById('pendingCount').textContent = total;
+
+                const verificationsHtml = [
+                    ...pendingDrivers.docs.map(doc => {
+                        const data = doc.data();
+                        return `
+                            <div style="padding: 0.75rem 0; border-bottom: 1px solid #f1f5f9;">
+                                <div style="font-weight: 500;">Driver: ${data.name}</div>
+                                <div style="font-size: 0.875rem; color: #64748b;">Vehicle: ${data.vehicleType} ${data.vehicleModel}</div>
+                            </div>
+                        `;
+                    }),
+                    ...pendingBusinesses.docs.map(doc => {
+                        const data = doc.data();
+                        return `
+                            <div style="padding: 0.75rem 0; border-bottom: 1px solid #f1f5f9;">
+                                <div style="font-weight: 500;">Business: ${data.businessProfile?.businessName || 'Unknown'}</div>
+                                <div style="font-size: 0.875rem; color: #64748b;">Type: Business Verification</div>
+                            </div>
+                        `;
+                    })
+                ].join('');
+
+                document.getElementById('pendingVerifications').innerHTML = verificationsHtml || '<p>No pending verifications</p>';
+            } catch (error) {
+                document.getElementById('pendingVerifications').innerHTML = '<p>Error loading verifications</p>';
+            }
+        }
+
+        // Load Users Data
+        async function loadUsersData() {
+            try {
+                const usersSnapshot = await db.collection('users').get();
+                const usersHtml = usersSnapshot.docs.map(doc => {
+                    const data = doc.data();
+                    const roles = data.roles || ['consumer'];
+                    const joinDate = new Date(data.createdAt?.toDate() || Date.now()).toLocaleDateString();
+                    
+                    return `
+                        <tr>
+                            <td>
+                                <div style="font-weight: 500;">${data.displayName || 'Unknown'}</div>
+                                <div style="font-size: 0.875rem; color: #64748b;">${doc.id}</div>
+                            </td>
+                            <td>${data.email || 'Not provided'}</td>
+                            <td>
+                                ${roles.map(role => `<span class="badge badge-active">${role}</span>`).join(' ')}
+                            </td>
+                            <td>
+                                <span class="badge ${data.isVerified ? 'badge-approved' : 'badge-pending'}">
+                                    ${data.isVerified ? 'Verified' : 'Pending'}
+                                </span>
+                            </td>
+                            <td>${joinDate}</td>
+                            <td>
+                                <button class="btn btn-primary btn-small">View</button>
+                                <button class="btn btn-secondary btn-small">Edit</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                document.getElementById('usersTable').innerHTML = usersHtml;
+            } catch (error) {
+                document.getElementById('usersTable').innerHTML = '<tr><td colspan="6">Error loading users</td></tr>';
+            }
+        }
+
+        // Load Drivers Data
+        async function loadDriversData() {
+            try {
+                // Load driver stats
+                const driversSnapshot = await db.collection('drivers').get();
+                const pendingDrivers = driversSnapshot.docs.filter(doc => doc.data().status === 'pending');
+                const approvedDrivers = driversSnapshot.docs.filter(doc => doc.data().status === 'approved');
+                const rejectedDrivers = driversSnapshot.docs.filter(doc => doc.data().status === 'rejected');
+
+                document.getElementById('totalDrivers').textContent = driversSnapshot.size;
+                document.getElementById('pendingDrivers').textContent = pendingDrivers.length;
+                document.getElementById('approvedDrivers').textContent = approvedDrivers.length;
+                document.getElementById('rejectedDrivers').textContent = rejectedDrivers.length;
+
+                // Load drivers table
+                const driversHtml = driversSnapshot.docs.map(doc => {
+                    const data = doc.data();
+                    const appliedDate = new Date(data.createdAt?.toDate() || Date.now()).toLocaleDateString();
+                    
+                    return `
+                        <tr>
+                            <td>
+                                <div style="font-weight: 500;">${data.name}</div>
+                                <div style="font-size: 0.875rem; color: #64748b;">${data.userId}</div>
+                            </td>
+                            <td>${data.licenseNumber}</td>
+                            <td>${data.vehicleType} ${data.vehicleModel} (${data.vehicleYear})</td>
+                            <td>
+                                <span class="badge badge-${data.status === 'approved' ? 'approved' : data.status === 'rejected' ? 'rejected' : 'pending'}">
+                                    ${data.status}
+                                </span>
+                            </td>
+                            <td>${appliedDate}</td>
+                            <td>
+                                <button class="btn btn-primary btn-small" onclick="viewDriver('${doc.id}')">Review</button>
+                                ${data.status === 'pending' ? `
+                                    <button class="btn btn-success btn-small" onclick="approveDriver('${doc.id}')">Approve</button>
+                                    <button class="btn btn-danger btn-small" onclick="rejectDriver('${doc.id}')">Reject</button>
+                                ` : ''}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                document.getElementById('driversTable').innerHTML = driversHtml;
+            } catch (error) {
+                document.getElementById('driversTable').innerHTML = '<tr><td colspan="6">Error loading drivers</td></tr>';
+            }
+        }
+
+        // Driver Actions
+        async function approveDriver(driverId) {
+            if (confirm('Are you sure you want to approve this driver?')) {
+                try {
+                    await db.collection('drivers').doc(driverId).update({
+                        status: 'approved',
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    alert('Driver approved successfully!');
+                    loadDriversData(); // Refresh the table
+                } catch (error) {
+                    alert('Error approving driver: ' + error.message);
+                }
+            }
+        }
+
+        async function rejectDriver(driverId) {
+            const reason = prompt('Please provide a reason for rejection:');
+            if (reason) {
+                try {
+                    await db.collection('drivers').doc(driverId).update({
+                        status: 'rejected',
+                        rejectionReason: reason,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    alert('Driver application rejected.');
+                    loadDriversData(); // Refresh the table
+                } catch (error) {
+                    alert('Error rejecting driver: ' + error.message);
+                }
+            }
+        }
+
+        function viewDriver(driverId) {
+            // Open the detailed driver verification page
+            window.open(`driver_verification.html?id=${driverId}`, '_blank');
+        }
+
+        // Initialize Charts
+        function initCharts() {
+            // Requests Chart
+            const requestsCtx = document.getElementById('requestsChart').getContext('2d');
+            new Chart(requestsCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    datasets: [{
+                        label: 'Requests',
+                        data: [12, 19, 3, 5, 2, 3],
+                        borderColor: '#3b82f6',
+                        backgroundColor: '#3b82f620'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+
+            // Users Chart
+            const usersCtx = document.getElementById('usersChart').getContext('2d');
+            new Chart(usersCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    datasets: [{
+                        label: 'New Users',
+                        data: [12, 19, 3, 5, 2, 3],
+                        backgroundColor: '#10b981'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        // Initialize dashboard on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboardData();
+        });
+    </script>
+</body>
+</html>

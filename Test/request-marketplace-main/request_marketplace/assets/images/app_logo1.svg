@@ -1,0 +1,17 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#5DDBF4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7FE5A3;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Main rounded rectangle background -->
+  <rect x="10" y="10" width="100" height="80" rx="25" ry="25" fill="url(#logoGradient)"/>
+  
+  <!-- White upward arrow -->
+  <path d="M60 25 L45 40 L52 40 L52 65 L68 65 L68 40 L75 40 L60 25 Z" fill="white" stroke="none"/>
+  
+  <!-- Blue speech bubble tail -->
+  <path d="M25 85 L25 100 L40 85 Z" fill="#5DDBF4"/>
+</svg>

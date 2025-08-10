@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   version="1.1"
+   id="svg1"
+   width="343.74808"
+   height="319.88086"
+   viewBox="0 0 343.74808 319.88086"
+   sodipodi:docname="Logo.svg"
+   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1">
+    <linearGradient
+       id="linearGradient12"
+       inkscape:collect="always">
+      <stop
+         style="stop-color:#29aef8;stop-opacity:1"
+         offset="0"
+         id="stop13" />
+      <stop
+         style="stop-color:#48d3a9;stop-opacity:1"
+         offset="1"
+         id="stop12" />
+    </linearGradient>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient12"
+       id="linearGradient13"
+       x1="92.630989"
+       y1="340.82547"
+       x2="357.79602"
+       y2="337.99704"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(-606.69762,17.677669)" />
+  </defs>
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="1.4142136"
+     inkscape:cx="15.202796"
+     inkscape:cy="543.76511"
+     inkscape:window-width="3400"
+     inkscape:window-height="1370"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g12">
+    <inkscape:page
+       x="0"
+       y="0"
+       width="343.74808"
+       height="319.88086"
+       id="page2"
+       margin="0"
+       bleed="0" />
+  </sodipodi:namedview>
+  <g
+     inkscape:groupmode="layer"
+     inkscape:label="Image copy"
+     id="g12"
+     transform="translate(548.62347,-239.78789)">
+    <path
+       id="path10"
+       style="opacity:0.64;fill:url(#linearGradient13);fill-opacity:1;stroke:none;stroke-width:6.42808;stroke-dasharray:none"
+       d="m -478.8852,239.78788 c -38.63509,0 -69.73828,31.10515 -69.73828,69.74024 V 437.7039 c 0,38.63508 31.10319,69.73828 69.73828,69.73828 h 2.67773 v 52.22656 c 41.00479,-34.69558 68.78143,-66.14882 68.42382,-122.07617 -0.0516,-0.55934 -0.0781,-1.12597 -0.0781,-1.69922 V 381.4871 l -26.8496,27.5586 c -6.37732,6.54596 -16.68954,6.59229 -23.12305,0.10351 -6.43351,-6.48878 -6.47888,-16.98138 -0.10156,-23.52734 l 66.16405,-67.91406 h 0.002 v -0.002 -0.002 c 0.61318,-0.9258 1.3325,-1.80436 2.15625,-2.62109 3.24439,-3.21676 7.48942,-4.83717 11.74219,-4.85547 4.25276,-0.0183 8.51218,1.56524 11.78516,4.7539 l 70.33593,68.52344 c 6.54596,6.3773 6.59229,16.69149 0.10352,23.125 -6.48879,6.43351 -16.98335,6.47887 -23.5293,0.10156 l -26.46093,-25.77929 v 54.9414 c 0,0.2471 -0.004,0.4917 -0.0137,0.73633 0,0 0.83555,35.73164 -33.40039,70.86523 l 104.4375,-0.0527 c 38.63509,0 69.73828,-31.1032 69.73828,-69.73828 V 309.52812 c 0,-38.63509 -31.10319,-69.74024 -69.73828,-69.74024 z"
+       sodipodi:nodetypes="sssscccsccscccccssccsscscccssss"
+       inkscape:export-filename="Logo.svg"
+       inkscape:export-xdpi="300"
+       inkscape:export-ydpi="300" />
+  </g>
+</svg>

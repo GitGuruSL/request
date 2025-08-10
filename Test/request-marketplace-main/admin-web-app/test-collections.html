@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Firebase Collections</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { margin: 10px 0; padding: 10px; border-left: 4px solid #4CAF50; background: #f9f9f9; }
+        .error { border-color: #f44336; background: #ffebee; }
+        .loading { border-color: #2196F3; background: #e3f2fd; }
+    </style>
+</head>
+<body>
+    <h1>🔥 Firebase Collections Test</h1>
+    <div id="results"></div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js';
+        import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js';
+        
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCtuD42SzwxKmSY5p-x5olFex2U_S9YrMk",
+            authDomain: "request-marketplace.firebaseapp.com",
+            projectId: "request-marketplace",
+            storageBucket: "request-marketplace.appspot.com",
+            messagingSenderId: "355474518888",
+            appId: "1:355474518888:web:7b3a7f6f7d7a8b0d8e8f9f"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        const resultsDiv = document.getElementById('results');
+        
+        function addResult(message, isError = false) {
+            const div = document.createElement('div');
+            div.className = `result ${isError ? 'error' : ''}`;
+            div.innerHTML = message;
+            resultsDiv.appendChild(div);
+        }
+        
+        async function testCollections() {
+            const collectionsToTest = [
+                'users',
+                'businesses', 
+                'requests',
+                'master_products',
+                'business_products',
+                'product_categories',
+                'drivers',
+                'enhanced_drivers'
+            ];
+            
+            addResult('🔥 Firebase initialized successfully');
+            addResult('📊 Testing collections...', false);
+            
+            for (const collectionName of collectionsToTest) {
+                try {
+                    addResult(`🔍 Testing collection: <strong>${collectionName}</strong>`, false);
+                    const snapshot = await getDocs(collection(db, collectionName));
+                    addResult(`✅ <strong>${collectionName}</strong>: ${snapshot.size} documents found`);
+                    
+                    // Show first few document IDs for verification
+                    if (snapshot.size > 0) {
+                        const docIds = [];
+                        snapshot.forEach((doc, index) => {
+                            if (index < 3) docIds.push(doc.id);
+                        });
+                        addResult(`&nbsp;&nbsp;&nbsp;📄 Sample document IDs: ${docIds.join(', ')}`);
+                    }
+                } catch (error) {
+                    addResult(`❌ <strong>${collectionName}</strong>: Error - ${error.message}`, true);
+                }
+            }
+            
+            addResult('🏁 Collection testing complete!');
+        }
+        
+        // Run the test
+        testCollections().catch(error => {
+            addResult(`❌ Fatal error: ${error.message}`, true);
+        });
+    </script>
+</body>
+</html>

@@ -3,6 +3,7 @@ import '../models/enhanced_user_model.dart';
 enum RequestStatus {
   draft,
   active,
+  open, // Added to handle legacy or alternate status
   inProgress,
   completed,
   cancelled,
@@ -94,9 +95,9 @@ class RequestModel {
       requesterId: map['requesterId'] ?? '',
       title: map['title'] ?? '',
       description: map['description'] ?? '',
-      type: RequestType.values.byName(map['type']),
-      status: RequestStatus.values.byName(map['status'] ?? 'draft'),
-      priority: Priority.values.byName(map['priority'] ?? 'medium'),
+      type: _parseRequestType(map['type']),
+      status: _parseRequestStatus(map['status']),
+      priority: _parsePriority(map['priority']),
       location: map['location'] != null 
           ? LocationInfo.fromMap(map['location']) 
           : null,
@@ -106,20 +107,63 @@ class RequestModel {
       budget: map['budget']?.toDouble(),
       currency: map['currency'],
       deadline: map['deadline'] != null 
-          ? DateTime.parse(map['deadline']) 
+          ? _parseDateTime(map['deadline']) 
           : null,
       images: List<String>.from(map['images'] ?? []),
       typeSpecificData: Map<String, dynamic>.from(map['typeSpecificData'] ?? {}),
       tags: List<String>.from(map['tags'] ?? []),
       contactMethod: map['contactMethod'],
       isPublic: map['isPublic'] ?? true,
-      createdAt: DateTime.parse(map['createdAt']),
-      updatedAt: DateTime.parse(map['updatedAt']),
+      createdAt: _parseDateTime(map['createdAt']) ?? DateTime.now(),
+      updatedAt: _parseDateTime(map['updatedAt']) ?? DateTime.now(),
       assignedTo: map['assignedTo'],
       responses: (map['responses'] as List<dynamic>?)
           ?.map((e) => ResponseModel.fromMap(e))
           .toList() ?? [],
     );
+  }
+
+  static RequestType _parseRequestType(String? type) {
+    try {
+      return RequestType.values.byName(type ?? 'item');
+    } catch (e) {
+      return RequestType.item; // Fallback to item type
+    }
+  }
+
+  static RequestStatus _parseRequestStatus(String? status) {
+    if (status == 'open') {
+      return RequestStatus.active; // Treat 'open' as 'active'
+    }
+    try {
+      return RequestStatus.values.byName(status ?? 'draft');
+    } catch (e) {
+      return RequestStatus.draft; // Fallback for any other unknown status
+    }
+  }
+
+  static Priority _parsePriority(String? priority) {
+    try {
+      return Priority.values.byName(priority ?? 'medium');
+    } catch (e) {
+      return Priority.medium; // Fallback to medium priority
+    }
+  }
+
+  static DateTime? _parseDateTime(dynamic dateTime) {
+    if (dateTime == null) return null;
+    try {
+      if (dateTime is String) {
+        return DateTime.parse(dateTime);
+      } else if (dateTime is Map && dateTime.containsKey('_seconds')) {
+        // Handle Firestore Timestamp
+        int seconds = dateTime['_seconds'] ?? 0;
+        return DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
   }
 
   Map<String, dynamic> toMap() {
@@ -616,5 +660,17 @@ class ResponseModel {
       'isAccepted': isAccepted,
       'rejectionReason': rejectionReason,
     };
+  }
+}
+
+// Helper function to parse request status
+RequestStatus _parseRequestStatus(String? status) {
+  if (status == 'open') {
+    return RequestStatus.active;
+  }
+  try {
+    return RequestStatus.values.byName(status ?? 'draft');
+  } catch (e) {
+    return RequestStatus.draft;
   }
 }

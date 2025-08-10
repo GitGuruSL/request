@@ -1,0 +1,1525 @@
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import '../../models/product_models.dart';
+import '../../models/business_models.dart';
+import '../../services/business_service.dart';
+import '../../services/product_service.dart';
+import '../../theme/app_theme.dart';
+
+class ProductVariable {
+  final String id;
+  final String name;
+  final String type; // dropdown, checkbox, text, number
+  final List<String> possibleValues;
+  final bool isRequired;
+  String? selectedValue;
+  
+  ProductVariable({
+    required this.id,
+    required this.name,
+    required this.type,
+    required this.possibleValues,
+    required this.isRequired,
+    this.selectedValue,
+  });
+  
+  factory ProductVariable.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return ProductVariable(
+      id: doc.id,
+      name: data['name'] ?? '',
+      type: data['type'] ?? 'text',
+      possibleValues: List<String>.from(data['possibleValues'] ?? []),
+      isRequired: data['isRequired'] ?? false,
+    );
+  }
+}
+
+class EnhancedProductPricingScreen extends StatefulWidget {
+  final MasterProduct product;
+  final String businessId;
+
+  const EnhancedProductPricingScreen({
+    super.key,
+    required this.product,
+    required this.businessId,
+  });
+
+  @override
+  State<EnhancedProductPricingScreen> createState() => _EnhancedProductPricingScreenState();
+}
+
+class _EnhancedProductPricingScreenState extends State<EnhancedProductPricingScreen> {
+  final BusinessService _businessService = BusinessService();
+  final ProductService _productService = ProductService();
+  final ImagePicker _imagePicker = ImagePicker();
+  
+  final _formKey = GlobalKey<FormState>();
+  final _priceController = TextEditingController();
+  final _originalPriceController = TextEditingController();
+  final _deliveryCostController = TextEditingController();
+  final _deliveryDaysController = TextEditingController();
+  final _stockController = TextEditingController();
+  final _freeDeliveryThresholdController = TextEditingController();
+  final _warrantyMonthsController = TextEditingController();
+  final _warrantyDescriptionController = TextEditingController();
+  final _businessUrlController = TextEditingController();
+  final _businessPhoneController = TextEditingController();
+  final _businessWhatsappController = TextEditingController();
+  final _notesController = TextEditingController();
+  
+  bool _freeDelivery = false;
+  String _warrantyType = 'manufacturer';
+  List<String> _deliveryAreas = [];
+  List<String> _additionalImages = [];
+  List<XFile> _newImages = [];
+  Map<String, dynamic>? _availabilityData;
+  bool _isLoading = false;
+  bool _isUploadingImages = false;
+  BusinessProfile? _businessProfile;
+  
+  // Product Variables
+  List<ProductVariable> _availableVariables = [];
+  Map<String, String> _selectedVariableValues = {};
+  bool _isLoadingVariables = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBusinessProfile();
+    _loadProductVariables();
+    _initializeDefaults();
+  }
+
+  Future<void> _loadBusinessProfile() async {
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      final profile = await _businessService.getBusinessProfile(widget.businessId);
+      setState(() {
+        _businessProfile = profile;
+      });
+
+      // Pre-fill some fields from business profile
+      if (profile != null) {
+        _businessPhoneController.text = profile.basicInfo.phone;
+        if (profile.basicInfo.whatsapp != null && profile.basicInfo.whatsapp!.isNotEmpty) {
+          _businessWhatsappController.text = profile.basicInfo.whatsapp!;
+        }
+        if (profile.basicInfo.website != null && profile.basicInfo.website!.isNotEmpty) {
+          _businessUrlController.text = profile.basicInfo.website!;
+        }
+      }
+    } catch (e) {
+      print('Error loading business profile: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading business profile: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadProductVariables() async {
+    setState(() {
+      _isLoadingVariables = true;
+    });
+    
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('custom_product_variables')
+          .get();
+      
+      final variables = snapshot.docs
+          .map((doc) => ProductVariable.fromFirestore(doc))
+          .toList();
+      
+      setState(() {
+        _availableVariables = variables;
+      });
+      
+      print('🔧 Loaded ${variables.length} product variables');
+      for (final variable in variables) {
+        print('   - ${variable.name} (${variable.type})');
+      }
+    } catch (e) {
+      print('Error loading product variables: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading product variables: $e'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } finally {
+      setState(() {
+        _isLoadingVariables = false;
+      });
+    }
+  }
+
+  void _initializeDefaults() {
+    _deliveryCostController.text = '0';
+    _deliveryDaysController.text = '1';
+    _stockController.text = '1';
+    _warrantyMonthsController.text = '0';
+    _warrantyDescriptionController.text = 'No warranty';
+    _availabilityData = {
+      'isInStock': true,
+      'quantity': 1,
+      'allowPreOrder': false,
+    };
+  }
+
+  Future<void> _pickImages() async {
+    try {
+      final List<XFile> images = await _imagePicker.pickMultiImage(
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+      
+      if (images.isNotEmpty) {
+        setState(() {
+          _newImages.addAll(images);
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error picking images: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _takePhoto() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+      
+      if (image != null) {
+        setState(() {
+          _newImages.add(image);
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error taking photo: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _removeNewImage(int index) {
+    setState(() {
+      _newImages.removeAt(index);
+    });
+  }
+
+  Future<List<String>> _uploadNewImages() async {
+    final uploadedUrls = <String>[];
+    
+    setState(() {
+      _isUploadingImages = true;
+    });
+
+    try {
+      for (int i = 0; i < _newImages.length; i++) {
+        final file = _newImages[i];
+        final fileName = 'business_product_${widget.businessId}_${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
+        
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('business_product_images')
+            .child(widget.businessId)
+            .child(fileName);
+
+        final uploadTask = storageRef.putFile(File(file.path));
+        final snapshot = await uploadTask;
+        final downloadUrl = await snapshot.ref.getDownloadURL();
+        
+        uploadedUrls.add(downloadUrl);
+      }
+    } catch (e) {
+      print('Error uploading images: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error uploading images: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isUploadingImages = false;
+      });
+    }
+    
+    return uploadedUrls;
+  }
+
+  void _showImageOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Add Product Images',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from Gallery'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImages();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Take Photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _takePhoto();
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVariableField(ProductVariable variable) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                variable.name,
+                style: AppTheme.bodyLarge,
+              ),
+              if (variable.isRequired) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppTheme.errorColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'Required',
+                    style: TextStyle(
+                      color: AppTheme.errorColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildVariableInput(variable),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVariableInput(ProductVariable variable) {
+    switch (variable.type) {
+      case 'dropdown':
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+          ),
+          child: DropdownButtonFormField<String>(
+            value: _selectedVariableValues[variable.id],
+            decoration: AppTheme.inputDecoration(
+              hintText: 'Select ${variable.name}',
+            ),
+            items: variable.possibleValues.map((value) {
+              return DropdownMenuItem(
+                value: value,
+                child: Text(value),
+              );
+            }).toList(),
+            onChanged: (String? value) {
+              setState(() {
+                if (value != null) {
+                  _selectedVariableValues[variable.id] = value;
+                } else {
+                  _selectedVariableValues.remove(variable.id);
+                }
+              });
+            },
+            validator: variable.isRequired ? (value) {
+              if (value == null || value.isEmpty) {
+                return '${variable.name} is required';
+              }
+              return null;
+            } : null,
+          ),
+        );
+      
+      case 'text':
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+          ),
+          child: TextFormField(
+            decoration: AppTheme.inputDecoration(
+              hintText: 'Enter ${variable.name}',
+            ),
+            onChanged: (value) {
+              setState(() {
+                if (value.isNotEmpty) {
+                  _selectedVariableValues[variable.id] = value;
+                } else {
+                  _selectedVariableValues.remove(variable.id);
+                }
+              });
+            },
+            validator: variable.isRequired ? (value) {
+              if (value == null || value.isEmpty) {
+                return '${variable.name} is required';
+              }
+              return null;
+            } : null,
+          ),
+        );
+      
+      case 'number':
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+          ),
+          child: TextFormField(
+            keyboardType: TextInputType.number,
+            decoration: AppTheme.inputDecoration(
+              hintText: 'Enter ${variable.name}',
+            ),
+            onChanged: (value) {
+              setState(() {
+                if (value.isNotEmpty) {
+                  _selectedVariableValues[variable.id] = value;
+                } else {
+                  _selectedVariableValues.remove(variable.id);
+                }
+              });
+            },
+            validator: variable.isRequired ? (value) {
+              if (value == null || value.isEmpty) {
+                return '${variable.name} is required';
+              }
+              if (double.tryParse(value) == null) {
+                return 'Please enter a valid number';
+              }
+              return null;
+            } : (value) {
+              if (value != null && value.isNotEmpty && double.tryParse(value) == null) {
+                return 'Please enter a valid number';
+              }
+              return null;
+            },
+          ),
+        );
+      
+      default:
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+          ),
+          child: TextFormField(
+            decoration: AppTheme.inputDecoration(
+              hintText: 'Enter ${variable.name}',
+            ),
+            onChanged: (value) {
+              setState(() {
+                if (value.isNotEmpty) {
+                  _selectedVariableValues[variable.id] = value;
+                } else {
+                  _selectedVariableValues.remove(variable.id);
+                }
+              });
+            },
+            validator: variable.isRequired ? (value) {
+              if (value == null || value.isEmpty) {
+                return '${variable.name} is required';
+              }
+              return null;
+            } : null,
+          ),
+              }
+            });
+          },
+          validator: variable.isRequired ? (value) {
+            if (value == null || value.isEmpty) {
+              return '${variable.name} is required';
+            }
+            return null;
+          } : null,
+        );
+    }
+  }
+
+  Future<void> _submitPricing() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Upload images first
+      final uploadedImageUrls = await _uploadNewImages();
+      final allImages = [..._additionalImages, ...uploadedImageUrls];
+
+      // Prepare variable values
+      final variableData = <String, dynamic>{};
+      for (final entry in _selectedVariableValues.entries) {
+        final variable = _availableVariables.firstWhere((v) => v.id == entry.key);
+        variableData[variable.name] = entry.value;
+      }
+
+      final success = await _productService.addBusinessProduct(
+        businessId: widget.businessId,
+        masterProductId: widget.product.id,
+        price: double.parse(_priceController.text),
+        originalPrice: _originalPriceController.text.isNotEmpty 
+            ? double.parse(_originalPriceController.text) 
+            : null,
+        deliveryInfo: ProductDeliveryInfo(
+          cost: double.parse(_deliveryCostController.text),
+          estimatedDays: int.parse(_deliveryDaysController.text),
+          availableAreas: _deliveryAreas,
+          isFreeDelivery: _freeDelivery,
+          freeDeliveryThreshold: _freeDelivery && _freeDeliveryThresholdController.text.isNotEmpty
+              ? double.parse(_freeDeliveryThresholdController.text)
+              : null,
+        ),
+        warrantyInfo: ProductWarrantyInfo(
+          months: int.parse(_warrantyMonthsController.text),
+          type: _warrantyType,
+          description: _warrantyDescriptionController.text,
+        ),
+        availability: ProductAvailability(
+          isInStock: _availabilityData?['isInStock'] ?? true,
+          quantity: int.parse(_stockController.text),
+          allowPreOrder: _availabilityData?['allowPreOrder'] ?? false,
+        ),
+        businessUrl: _businessUrlController.text.isNotEmpty ? _businessUrlController.text : null,
+        businessPhone: _businessPhoneController.text.isNotEmpty ? _businessPhoneController.text : null,
+        businessWhatsapp: _businessWhatsappController.text.isNotEmpty ? _businessWhatsappController.text : null,
+        additionalImages: allImages,
+        businessSpecificData: {
+          'notes': _notesController.text,
+          'productVariables': variableData, // Store selected variables
+        },
+      );
+      
+      if (success != null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ Product with variables added successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.pop(context, true);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppTheme.textPrimary),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text(
+          'Add Product Pricing',
+          style: TextStyle(
+            color: AppTheme.textPrimary,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+      body: _isLoading && _businessProfile == null
+          ? const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Loading business profile...'),
+                ],
+              ),
+            )
+          : _businessProfile == null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error_outline, size: 64, color: Colors.orange),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Business Profile Required',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Please complete your business registration first',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Go Back'),
+                      ),
+                    ],
+                  ),
+                )
+              : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Product Info Card
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 80,
+                            height: 80,
+                            decoration: const BoxDecoration(
+                              color: AppTheme.borderLight,
+                            ),
+                            child: widget.product.imageUrls.isNotEmpty
+                                ? ClipRRect(
+                                    child: Image.network(
+                                      widget.product.imageUrls.first,
+                                      width: 80,
+                                      height: 80,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) =>
+                                          const Icon(
+                                        Icons.image_not_supported_outlined,
+                                        color: AppTheme.textTertiary,
+                                        size: 32,
+                                      ),
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.image_not_supported_outlined,
+                                    color: AppTheme.textTertiary,
+                                    size: 32,
+                                  ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  widget.product.name,
+                                  style: AppTheme.headingSmall,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  widget.product.description ?? 'Latest product with advanced features',
+                                  style: AppTheme.bodyMedium,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Brand: ${widget.product.brand}',
+                                  style: AppTheme.bodySmall,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Product Images Section
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Your Product Images',
+                          style: AppTheme.headingSmall,
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Add your own photos to showcase the product better',
+                          style: AppTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          height: 120,
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                          ),
+                          child: InkWell(
+                            onTap: _pickImages,
+                            child: const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.camera_alt_outlined,
+                                  size: 40,
+                                  color: AppTheme.textTertiary,
+                                ),
+                                SizedBox(height: 8),
+                                Text(
+                                  'Add Your Product Images',
+                                  style: AppTheme.bodyLarge,
+                                ),
+                                Text(
+                                  'Show customers your actual product',
+                                  style: AppTheme.bodySmall,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        if (_newImages.isNotEmpty) ...[
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            height: 100,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: _newImages.length,
+                              itemBuilder: (context, index) {
+                                return Container(
+                                  margin: const EdgeInsets.only(right: 8),
+                                  width: 100,
+                                  height: 100,
+                                  decoration: BoxDecoration(
+                                    image: DecorationImage(
+                                      image: FileImage(File(_newImages[index].path)),
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                  child: Stack(
+                                    children: [
+                                      Positioned(
+                                        top: 4,
+                                        right: 4,
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            setState(() {
+                                              _newImages.removeAt(index);
+                                            });
+                                          },
+                                          child: Container(
+                                            width: 24,
+                                            height: 24,
+                                            decoration: const BoxDecoration(
+                                              color: AppTheme.errorColor,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(
+                                              Icons.close,
+                                              color: Colors.white,
+                                              size: 16,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+                    
+                    // Product Variables Section
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Product Variables',
+                          style: AppTheme.headingSmall,
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Select variations for your product',
+                          style: AppTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        if (_isLoadingVariables)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(24.0),
+                              child: CircularProgressIndicator(
+                                color: AppTheme.primaryColor,
+                              ),
+                            ),
+                          )
+                        else if (_availableVariables.isEmpty)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(24),
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                            ),
+                            child: const Column(
+                              children: [
+                                Icon(
+                                  Icons.settings_outlined,
+                                  size: 48,
+                                  color: AppTheme.textTertiary,
+                                ),
+                                SizedBox(height: 12),
+                                Text(
+                                  'No Variables Available',
+                                  style: AppTheme.bodyLarge,
+                                ),
+                                Text(
+                                  'No product variables have been created yet',
+                                  style: AppTheme.bodySmall,
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          Column(
+                            children: _availableVariables.map((variable) {
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 16),
+                                child: _buildVariableField(variable),
+                              );
+                            }).toList(),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+                    
+                    // Product Images Section
+                    const Text(
+                      'Your Product Images',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Add your own photos to showcase the product better',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Image Grid
+                    if (_newImages.isNotEmpty) ...[
+                      SizedBox(
+                        height: 120,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          children: [
+                            // New images
+                            ..._newImages.asMap().entries.map((entry) {
+                              final index = entry.key;
+                              final imageFile = entry.value;
+                              return Container(
+                                margin: const EdgeInsets.only(right: 8),
+                                child: Stack(
+                                  children: [
+                                    ClipRRect(
+                                      child: Image.file(
+                                        File(imageFile.path),
+                                        width: 100,
+                                        height: 100,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                    Positioned(
+                                      top: 4,
+                                      right: 4,
+                                      child: GestureDetector(
+                                        onTap: () => _removeNewImage(index),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(4),
+                                          decoration: const BoxDecoration(
+                                            color: Colors.red,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(
+                                            Icons.close,
+                                            color: Colors.white,
+                                            size: 16,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    if (_isUploadingImages)
+                                      Positioned.fill(
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color: Colors.black54,
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: const Center(
+                                            child: CircularProgressIndicator(
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              );
+                            }),
+
+                            // Add image button
+                            GestureDetector(
+                              onTap: _showImageOptions,
+                              child: Container(
+                                width: 100,
+                                height: 100,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade200,
+                                ),
+                                child: const Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.add_a_photo, size: 32, color: Colors.grey),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      'Add Photo',
+                                      style: TextStyle(
+                                        color: Colors.grey,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else ...[
+                      // No images yet
+                      GestureDetector(
+                        onTap: _showImageOptions,
+                        child: Container(
+                          height: 120,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                          ),
+                          child: const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.add_a_photo, size: 48, color: Colors.grey),
+                              SizedBox(height: 8),
+                              Text(
+                                'Add Your Product Images',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              Text(
+                                'Show customers your actual product',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 24),
+                    
+                    // Pricing Information
+                    const Text(
+                      'Pricing Information',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    // Pricing Information Section
+                    const Text(
+                      'Pricing Information',
+                      style: AppTheme.headingSmall,
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                      ),
+                      child: TextFormField(
+                        controller: _priceController,
+                        decoration: AppTheme.inputDecoration(
+                          hintText: 'Selling Price (LKR) *',
+                        ),
+                        keyboardType: TextInputType.number,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter selling price';
+                          }
+                          final price = double.tryParse(value);
+                          if (price == null) {
+                            return 'Please enter valid price';
+                          }
+                          if (price <= 0) {
+                            return 'Price must be greater than 0';
+                          }
+                          if (price > 10000000) {
+                            return 'Price seems too high';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Enter your selling price for this product',
+                      style: AppTheme.bodySmall,
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                      ),
+                      child: TextFormField(
+                        controller: _originalPriceController,
+                        decoration: AppTheme.inputDecoration(
+                          hintText: 'Original Price (LKR)',
+                        ),
+                        keyboardType: TextInputType.number,
+                        validator: (value) {
+                          if (value != null && value.isNotEmpty) {
+                            final originalPrice = double.tryParse(value);
+                            if (originalPrice == null) {
+                              return 'Please enter valid price';
+                            }
+                            final sellingPrice = double.tryParse(_priceController.text);
+                            if (sellingPrice != null && originalPrice <= sellingPrice) {
+                              return 'Original price should be higher than selling price';
+                            }
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Leave empty if no discount',
+                      style: AppTheme.bodySmall,
+                    ),
+
+                    const SizedBox(height: 16),
+                    
+                    // Stock Information
+                    TextFormField(
+                      controller: _stockController,
+                      decoration: const InputDecoration(
+                        labelText: 'Stock Quantity *',
+                        border: OutlineInputBorder(),
+                        suffixText: 'units',
+                        helperText: 'How many units do you have in stock?',
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter stock quantity';
+                        }
+                        final stock = int.tryParse(value);
+                        if (stock == null || stock < 0) {
+                          return 'Please enter valid stock quantity';
+                        }
+                        return null;
+                      },
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Delivery Information
+                    const Text(
+                      'Delivery Information',
+                      style: AppTheme.headingSmall,
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Delivery Cost (LKR)',
+                                style: AppTheme.bodyMedium,
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                ),
+                                child: TextFormField(
+                                  controller: _deliveryCostController,
+                                  decoration: AppTheme.inputDecoration(
+                                    hintText: 'Rs. 0',
+                                  ),
+                                  keyboardType: TextInputType.number,
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Please enter delivery cost';
+                                    }
+                                    if (double.tryParse(value) == null) {
+                                      return 'Please enter valid cost';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Delivery Days',
+                                style: AppTheme.bodyMedium,
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                ),
+                                child: TextFormField(
+                                  controller: _deliveryDaysController,
+                                  decoration: const InputDecoration(
+                                    hintText: '1',
+                                    hintStyle: TextStyle(color: AppTheme.textTertiary),
+                                    suffixText: 'days',
+                                    suffixStyle: AppTheme.bodyMedium,
+                                    border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                  ),
+                                  keyboardType: TextInputType.number,
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Please enter delivery days';
+                                    }
+                                    if (int.tryParse(value) == null) {
+                                return 'Please enter valid days';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    CheckboxListTile(
+                      title: const Text('Free Delivery'),
+                      value: _freeDelivery,
+                      onChanged: (value) {
+                        setState(() {
+                          _freeDelivery = value ?? false;
+                        });
+                      },
+                      controlAffinity: ListTileControlAffinity.leading,
+                    ),
+                    
+                    if (_freeDelivery) ...[
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _freeDeliveryThresholdController,
+                        decoration: const InputDecoration(
+                          labelText: 'Free Delivery Threshold (LKR)',
+                          hintText: 'Minimum order value for free delivery',
+                          border: OutlineInputBorder(),
+                          prefixText: 'Rs. ',
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ],
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Warranty Information
+                    const Text(
+                      'Warranty Information',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _warrantyMonthsController,
+                            decoration: const InputDecoration(
+                              labelText: 'Warranty Period',
+                              border: OutlineInputBorder(),
+                              suffixText: 'months',
+                            ),
+                            keyboardType: TextInputType.number,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter warranty period';
+                              }
+                              if (int.tryParse(value) == null) {
+                                return 'Please enter valid months';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: _warrantyType,
+                            decoration: const InputDecoration(
+                              labelText: 'Warranty Type',
+                              border: OutlineInputBorder(),
+                            ),
+                            items: const [
+                              DropdownMenuItem(value: 'manufacturer', child: Text('Manufacturer')),
+                              DropdownMenuItem(value: 'seller', child: Text('Seller')),
+                              DropdownMenuItem(value: 'extended', child: Text('Extended')),
+                              DropdownMenuItem(value: 'none', child: Text('No Warranty')),
+                            ],
+                            onChanged: (value) {
+                              setState(() {
+                                _warrantyType = value ?? 'manufacturer';
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    TextFormField(
+                      controller: _warrantyDescriptionController,
+                      decoration: const InputDecoration(
+                        labelText: 'Warranty Description',
+                        border: OutlineInputBorder(),
+                        hintText: 'Describe warranty terms and conditions',
+                      ),
+                      maxLines: 3,
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Contact Information
+                    Row(
+                      children: [
+                        const Text(
+                          'Contact Information',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        if (_businessProfile != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.green),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.verified, color: Colors.green, size: 16),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Verified',
+                                  style: TextStyle(
+                                    color: Colors.green,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (_businessProfile != null)
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.05),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.info_outline, color: Colors.blue, size: 16),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Contact details are automatically used from your verified business profile',
+                                style: TextStyle(
+                                  color: Colors.blue,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    const SizedBox(height: 16),
+                    
+                    TextFormField(
+                      controller: _businessPhoneController,
+                      readOnly: _businessProfile != null && _businessProfile!.basicInfo.phone.isNotEmpty,
+                      decoration: InputDecoration(
+                        labelText: 'Contact Phone',
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.phone),
+                        suffixIcon: _businessProfile != null && _businessProfile!.basicInfo.phone.isNotEmpty
+                            ? const Icon(Icons.verified, color: Colors.green)
+                            : null,
+                        filled: _businessProfile != null && _businessProfile!.basicInfo.phone.isNotEmpty,
+                        fillColor: _businessProfile != null && _businessProfile!.basicInfo.phone.isNotEmpty
+                            ? Colors.green.withOpacity(0.05)
+                            : null,
+                      ),
+                      keyboardType: TextInputType.phone,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Contact phone is required';
+                        }
+                        return null;
+                      },
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    TextFormField(
+                      controller: _businessWhatsappController,
+                      readOnly: _businessProfile != null && (_businessProfile!.basicInfo.whatsapp?.isNotEmpty ?? false),
+                      decoration: InputDecoration(
+                        labelText: 'WhatsApp Number',
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.chat),
+                        suffixIcon: _businessProfile != null && (_businessProfile!.basicInfo.whatsapp?.isNotEmpty ?? false)
+                            ? const Icon(Icons.verified, color: Colors.green)
+                            : null,
+                        filled: _businessProfile != null && (_businessProfile!.basicInfo.whatsapp?.isNotEmpty ?? false),
+                        fillColor: _businessProfile != null && (_businessProfile!.basicInfo.whatsapp?.isNotEmpty ?? false)
+                            ? Colors.green.withOpacity(0.05)
+                            : null,
+                        hintText: _businessProfile == null ? 'Optional - for customer inquiries' : null,
+                      ),
+                      keyboardType: TextInputType.phone,
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    TextFormField(
+                      controller: _businessUrlController,
+                      decoration: const InputDecoration(
+                        labelText: 'Business Website/Link',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.link),
+                        hintText: 'https://your-business-website.com',
+                      ),
+                      keyboardType: TextInputType.url,
+                    ),
+
+                    const SizedBox(height: 16),
+                    
+                    // Additional Notes
+                    TextFormField(
+                      controller: _notesController,
+                      decoration: const InputDecoration(
+                        labelText: 'Additional Notes',
+                        border: OutlineInputBorder(),
+                        hintText: 'Any special information about this product...',
+                      ),
+                      maxLines: 3,
+                    ),
+                    
+                    const SizedBox(height: 32),
+                    
+                    // Submit Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _submitPricing,
+                        style: AppTheme.primaryButtonStyle,
+                        child: _isLoading
+                            ? const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                  SizedBox(width: 12),
+                                  Text('Adding Product...'),
+                                ],
+                              )
+                            : const Text(
+                                'Add Product with Variables',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Help text
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.info_outline, color: Colors.blue, size: 16),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Your product variables will be stored and displayed to customers for better product specification.',
+                              style: TextStyle(
+                                color: Colors.blue,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _priceController.dispose();
+    _originalPriceController.dispose();
+    _deliveryCostController.dispose();
+    _deliveryDaysController.dispose();
+    _stockController.dispose();
+    _freeDeliveryThresholdController.dispose();
+    _warrantyMonthsController.dispose();
+    _warrantyDescriptionController.dispose();
+    _businessUrlController.dispose();
+    _businessPhoneController.dispose();
+    _businessWhatsappController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+}

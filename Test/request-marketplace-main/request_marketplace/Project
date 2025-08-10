@@ -1,0 +1,162 @@
+# Ultimate Prompt: Request Marketplace & Price Comparison App
+
+## OVERVIEW
+
+Build a modern, cross-platform app called **Request** that enables users to:
+- Post and respond to requests for items, services, rides, appointments, classes, etc.
+- Compare product prices from registered businesses, with a centralized catalog.
+- Register and operate as a personal user or a business (with seamless profile switching).
+- Communicate, negotiate, and connect—all in one place.
+- Support both **web** (Node.js backend, React.js frontend) and **mobile** (Flutter), with a unified experience and Firebase as the backend (database, authentication, storage, messaging, notifications).
+
+---
+
+## DESIGN & UI/UX GUIDELINES
+
+- **Colors:** Very subtle, neutral palette (soft grays, muted blues/greens), white/light gray backgrounds, white cards/fields, no heavy shadows, no dotted borders. Use color only for highlights and icons. No overpowering or saturated colors.
+- **Typography:** Clean, modern sans-serif fonts. Clear hierarchy, accessible contrast.
+- **Spacing:** Generous white space, rounded corners, comfortable touch/click targets.
+- **Responsiveness:** Fully responsive across web and mobile. Mobile-first, but both platforms must match visually and functionally.
+- **Accessibility:** High-contrast text, screen reader support, accessible controls.
+
+---
+
+## WELCOME & AUTHENTICATION FLOWS
+
+### Welcome Screen
+- **Country selection:** User must select their country.
+- The selected country sets the default phone country code throughout the app.
+
+### Login Screen (Single Field, Adaptive)
+- **Single input field** where user can toggle between entering email or phone number.
+- "Continue" button below the field.
+- Below that: "Continue with Apple" and "Continue with Google" buttons.
+- The phone number input uses the default country code from the welcome screen.
+- **On submit:**
+  - If user exists:
+    - **Email:** Go to next screen, ask for password.
+    - **Phone:** Go to next screen, ask for 6-digit OTP.
+  - If user is new:
+    - **Email:** Go to next screen, ask for 6-digit OTP sent to the email.  
+      - After correct OTP, show profile completion form: name, phone number, password, confirm password.
+    - **Phone:** Go to next screen, ask for 6-digit OTP (SMS).  
+      - After correct OTP, show profile completion form: name, email (optional).
+- After completing registration/profile form, navigate to home screen.
+- For **Google or Apple sign-in:**  
+  - Authenticate, then go straight to home screen (no verification screens or extra steps).
+
+---
+
+## HOME PAGE UI
+
+- **Top bar:** Greeting with user’s name, notification icon (right), profile picture (right).
+- **Main content:**
+  - Heading: "Request For"
+  - Three icons/buttons: Item, Service, Ride (quick create).
+  - Banner: Intro to “Price Comparison” feature.
+  - Search bar: “Search for a product to check its price”
+    - Shows results with business prices, sorted by lowest, with links to visit, chat, or contact.
+- **UI must be visually consistent across web and mobile (Flutter).**
+
+---
+
+## REQUEST MARKETPLACE
+
+### Request Forms (Item / Service / Ride)
+- **Categories:** Dynamically loaded from backend; separate sets for item and service requests.
+- **Fields:**
+  - Title (required)
+  - Description (required)
+  - Category (required, dropdown, loaded from backend)
+  - Requester type: "New/user" or "Any" (toggle)
+  - Price: Min & Max (optional, numeric)
+  - Urgency (dropdown: Low, Medium, High, ASAP)
+  - Location: Type-ahead with auto-suggestions (integrate Google Places API or similar)
+  - Attach pictures (file/image uploader, inline previews)
+  - Phone numbers:
+    - User’s verified numbers shown with toggles (show/hide for this request)
+    - Add new number with OTP (unique, verified)
+    - Can delete non-default numbers; can't delete default/login number
+    - No number shown unless user opts in for this request
+- **For Service Request:** Same fields, categories/labels adapted for service context.
+- **Ride Request:** Adapted form with relevant ride-specific fields (pickup, dropoff, etc.)
+
+---
+
+## RESPONDING TO REQUESTS
+
+- View request details.
+- Respond directly; responder can show/hide their phone number(s), add new (OTP), and message requester.
+- In-app chat between requester and responder.
+- Requester can mark as "Fulfilled/Closed".
+
+---
+
+## PRICE COMPARISON ENGINE
+
+- Centralized product catalog (admin-controlled, businesses can suggest new products).
+- Businesses register, add/edit their product prices.
+- Users search for products, see all businesses with prices (sorted by lowest).
+- Can visit business website, chat, or contact them.
+- Businesses have public profile pages.
+
+---
+
+## PROFILE & ACCOUNT MANAGEMENT
+
+- Unified user/business account:
+  - Can register as both and toggle between personal and business mode for requests/responses.
+- **Profile page:** Edit all fields, manage phone numbers (add with OTP, remove non-default), switch mode.
+- **Settings:** Notification preferences (push, email, SMS), activity log, security settings (password, 2FA, logout).
+- **Activity log:** Track requests, responses, messages, price updates, etc.
+
+---
+
+## PHONE NUMBER MANAGEMENT
+
+- OTP verification for all phone numbers (Firebase Auth or Twilio).
+- Prevent duplicate numbers in database.
+- Default/login phone cannot be deleted.
+- Additional numbers can be added/removed (with OTP).
+- During request or response, user chooses which phone numbers (if any) to share—private by default.
+
+---
+
+## NOTIFICATIONS & ADMIN
+
+- Real-time notifications for all major actions (new messages, request responses, price updates, profile views, etc.).
+- Admin panel (web): Manage users, businesses, products, requests, categories, and reported content. Product approval workflow.
+
+---
+
+## TECH STACK
+
+- **Mobile:** Flutter (matching web features and UI)
+- **Web:** React.js (or similar), Node.js backend
+- **Backend:** Firebase (Firestore, Auth, Cloud Functions, Storage, Messaging)
+- **OTP:** Firebase Auth or Twilio
+- **Chat:** Firestore or Realtime Database
+- **Notifications:** Firebase Cloud Messaging, Email (SendGrid), SMS (Twilio)
+- **Hosting:** Firebase Hosting/Vercel/Netlify
+
+---
+
+## DELIVERABLES
+
+- Complete codebase: Flutter app (mobile), React.js web app, Node.js backend (for web/admin), Firebase Cloud Functions.
+- Firestore DB schema documentation.
+- README with setup/deployment instructions.
+- Sample data, screenshots, demo video.
+
+---
+
+## BEST PRACTICES
+
+- Simple, fast onboarding and navigation.
+- Subtle, elegant, accessible UI.
+- Dynamic, differentiated request forms (item/service/ride).
+- Robust and secure phone number management.
+- All features and UI consistent across web and mobile.
+- Privacy by default: phone numbers hidden unless user opts in.
+- Lazy loading for categories/images, performant and scalable.
+- Accessibility: color contrast, keyboard nav, screen reader support.
