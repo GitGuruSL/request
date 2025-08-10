@@ -457,6 +457,48 @@ class EnhancedRequestService {
     }
   }
 
+  // Reject response
+  Future<void> rejectResponse(String responseId, String reason) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User must be authenticated');
+      }
+
+      // Get response and request
+      final responseDoc = await _firestore
+          .collection(_responsesCollection)
+          .doc(responseId)
+          .get();
+      
+      if (!responseDoc.exists) {
+        throw Exception('Response not found');
+      }
+
+      final response = ResponseModel.fromMap(responseDoc.data()!);
+      final request = await getRequestById(response.requestId);
+      
+      if (request == null) {
+        throw Exception('Request not found');
+      }
+      if (request.requesterId != user.uid) {
+        throw Exception('Only request owner can reject responses');
+      }
+
+      // Update response as rejected
+      await _firestore
+          .collection(_responsesCollection)
+          .doc(responseId)
+          .update({
+        'isAccepted': false,
+        'rejectionReason': reason,
+        'rejectedAt': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      throw Exception('Failed to reject response: $e');
+    }
+  }
+
   // Get user's responses
   Future<List<ResponseModel>> getUserResponses(String userId, {
     bool acceptedOnly = false,
