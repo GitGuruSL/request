@@ -89,16 +89,15 @@ class _BrowseScreenState extends State<BrowseScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: Colors.grey[50], // Same as home screen
+      backgroundColor: theme.colorScheme.background, // Use app theme background
       appBar: AppBar(
-        title: const Align(
-          alignment: Alignment.centerLeft,
-          child: Text('Browse Requests'),
-        ),
-        backgroundColor: Colors.grey[100], // Same as home screen
-        foregroundColor: Colors.grey[800], // Same as home screen
-        elevation: 1, // Subtle shadow like home screen
+        title: const Text('Browse Requests'),
+        backgroundColor: theme.colorScheme.background, // Match background
+        elevation: 0, // No shadow
+        foregroundColor: theme.textTheme.bodyLarge?.color, // Use theme text color
         titleSpacing: 0,
       ),
       body: _isLoading
@@ -106,23 +105,18 @@ class _BrowseScreenState extends State<BrowseScreen> {
           : Column(
         children: [
           // Search and Filter Section
-          Container(
+          Padding(
             padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-            ),
             child: Column(
               children: [
                 // Search Bar
-                TextField(
+                TextFormField(
                   decoration: InputDecoration(
                     hintText: 'Search requests...',
                     prefixIcon: const Icon(Icons.search),
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: Colors.white, // White background for the field
+                    border: InputBorder.none, // No border
                   ),
                   onChanged: (value) {
                     setState(() {
@@ -140,11 +134,9 @@ class _BrowseScreenState extends State<BrowseScreen> {
                         value: _selectedType,
                         decoration: InputDecoration(
                           labelText: 'Category',
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: Colors.white, // White background
+                          border: InputBorder.none, // No border
                         ),
                         items: [
                           const DropdownMenuItem(value: null, child: Text('All Categories')),
@@ -169,11 +161,9 @@ class _BrowseScreenState extends State<BrowseScreen> {
                         value: _selectedLocation,
                         decoration: InputDecoration(
                           labelText: 'Location',
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: Colors.white, // White background
+                          border: InputBorder.none, // No border
                         ),
                         items: const [
                           DropdownMenuItem(value: 'All Locations', child: Text('All Locations')),
