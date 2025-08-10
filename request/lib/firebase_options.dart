@@ -41,45 +41,45 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCtuD42SzwxKmSY5p-x5olFex2U_S9YrMk',
-    appId: '1:355474518888:web:placeholder',
-    messagingSenderId: '355474518888',
-    projectId: 'request-marketplace',
-    authDomain: 'request-marketplace.firebaseapp.com',
-    storageBucket: 'request-marketplace.firebasestorage.app',
+    apiKey: 'AIzaSyC5hb6Ydkp__EZgX-kRjJgtOKZKg8TNkJg',
+    appId: '1:635550436472:web:72ee20ad95cdcf65c1c86a',
+    messagingSenderId: '635550436472',
+    projectId: 'request-marketplace-45a59',
+    authDomain: 'request-marketplace-45a59.firebaseapp.com',
+    storageBucket: 'request-marketplace-45a59.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCtuD42SzwxKmSY5p-x5olFex2U_S9YrMk',
-    appId: '1:355474518888:android:27570ce58b7a8346b91cdd',
-    messagingSenderId: '355474518888',
-    projectId: 'request-marketplace',
-    storageBucket: 'request-marketplace.firebasestorage.app',
+    apiKey: 'AIzaSyC5hb6Ydkp__EZgX-kRjJgtOKZKg8TNkJg',
+    appId: '1:635550436472:android:placeholder',
+    messagingSenderId: '635550436472',
+    projectId: 'request-marketplace-45a59',
+    storageBucket: 'request-marketplace-45a59.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCtuD42SzwxKmSY5p-x5olFex2U_S9YrMk',
-    appId: '1:355474518888:ios:placeholder',
-    messagingSenderId: '355474518888',
-    projectId: 'request-marketplace',
-    storageBucket: 'request-marketplace.firebasestorage.app',
+    apiKey: 'AIzaSyC5hb6Ydkp__EZgX-kRjJgtOKZKg8TNkJg',
+    appId: '1:635550436472:ios:placeholder',
+    messagingSenderId: '635550436472',
+    projectId: 'request-marketplace-45a59',
+    storageBucket: 'request-marketplace-45a59.firebasestorage.app',
     iosBundleId: 'lk.alphabet.request',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyCtuD42SzwxKmSY5p-x5olFex2U_S9YrMk',
-    appId: '1:355474518888:macos:placeholder',
-    messagingSenderId: '355474518888',
-    projectId: 'request-marketplace',
-    storageBucket: 'request-marketplace.firebasestorage.app',
+    apiKey: 'AIzaSyC5hb6Ydkp__EZgX-kRjJgtOKZKg8TNkJg',
+    appId: '1:635550436472:macos:placeholder',
+    messagingSenderId: '635550436472',
+    projectId: 'request-marketplace-45a59',
+    storageBucket: 'request-marketplace-45a59.firebasestorage.app',
     iosBundleId: 'lk.mac.app',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyCtuD42SzwxKmSY5p-x5olFex2U_S9YrMk',
-    appId: '1:355474518888:windows:placeholder',
-    messagingSenderId: '355474518888',
-    projectId: 'request-marketplace',
-    storageBucket: 'request-marketplace.firebasestorage.app',
+    apiKey: 'AIzaSyC5hb6Ydkp__EZgX-kRjJgtOKZKg8TNkJg',
+    appId: '1:635550436472:windows:placeholder',
+    messagingSenderId: '635550436472',
+    projectId: 'request-marketplace-45a59',
+    storageBucket: 'request-marketplace-45a59.firebasestorage.app',
   );
 }

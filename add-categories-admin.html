@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Sample Categories - Request Marketplace</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 50px auto; 
+            padding: 20px;
+            background-color: #FAFAFAFF;
+        }
+        .container { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 12px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button { 
+            background: #007AFF; 
+            color: white; 
+            border: none; 
+            padding: 12px 24px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-size: 16px;
+            margin: 10px 10px 10px 0;
+        }
+        button:hover { background: #0056D3; }
+        .status { 
+            margin: 20px 0; 
+            padding: 15px; 
+            border-radius: 8px;
+        }
+        .success { background: #D4F6D4; color: #2D5A2D; }
+        .error { background: #FFE6E6; color: #D32F2F; }
+        .loading { background: #E3F2FD; color: #1565C0; }
+        .category-group {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #E0E0E0;
+            border-radius: 8px;
+            background: #F9F9F9;
+        }
+        .category-group h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .subcategory {
+            margin-left: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏪 Request Marketplace - Add Sample Categories</h1>
+        <p>This tool will add sample categories and subcategories to Firebase Firestore for testing the mobile app.</p>
+        
+        <button onclick="addItemCategories()">Add Item Categories</button>
+        <button onclick="addServiceCategories()">Add Service Categories</button>
+        <button onclick="addDeliveryCategories()">Add Delivery Categories</button>
+        <button onclick="addAllCategories()">Add All Categories</button>
+        <button onclick="clearAllCategories()">Clear All Categories</button>
+        
+        <div id="status"></div>
+        
+        <div id="preview">
+            <h2>📋 Categories Preview</h2>
+            
+            <div class="category-group">
+                <h3>📱 Item Categories</h3>
+                <div>Electronics → Smartphones, Laptops, Gaming, Audio</div>
+                <div>Clothing & Fashion → Men's Wear, Women's Wear, Accessories, Shoes</div>
+                <div>Home & Garden → Furniture, Appliances, Decor, Tools</div>
+                <div>Sports & Outdoors → Fitness, Sports Equipment, Outdoor Gear, Bicycles</div>
+                <div>Books & Media → Books, Movies, Music, Games</div>
+                <div>Automotive → Car Parts, Accessories, Maintenance, Motorcycles</div>
+                <div>Health & Beauty → Skincare, Makeup, Health Supplements, Personal Care</div>
+                <div>Toys & Games → Children's Toys, Board Games, Educational, Collectibles</div>
+                <div>Other → Miscellaneous Items</div>
+            </div>
+
+            <div class="category-group">
+                <h3>🔧 Service Categories</h3>
+                <div>Home Services → Cleaning, Plumbing, Electrical, Gardening</div>
+                <div>Professional Services → Legal, Accounting, Consulting, Translation</div>
+                <div>Personal Care → Hair & Beauty, Massage, Fitness Training, Wellness</div>
+                <div>Education & Training → Tutoring, Music Lessons, Skills Training, Language</div>
+                <div>Health & Wellness → Medical, Dental, Mental Health, Therapy</div>
+                <div>Business Services → Marketing, Design, Writing, IT Support</div>
+                <div>Creative Services → Photography, Video, Art, Music Production</div>
+                <div>Event Services → Planning, Catering, Entertainment, Decoration</div>
+                <div>Other Services → Miscellaneous Services</div>
+            </div>
+
+            <div class="category-group">
+                <h3>🚚 Delivery Categories</h3>
+                <div>Food & Beverages → Restaurant Food, Groceries, Drinks, Snacks</div>
+                <div>Documents & Papers → Legal Documents, Mail, Contracts, Certificates</div>
+                <div>Packages & Parcels → Online Shopping, Gifts, Small Items, Letters</div>
+                <div>Groceries & Shopping → Supermarket Items, Pharmacy, Retail Shopping</div>
+                <div>Medicine & Healthcare → Prescriptions, Medical Supplies, Health Products</div>
+                <div>Furniture & Large Items → Furniture, Appliances, Heavy Items, Bulky Goods</div>
+                <div>Electronics & Fragile → Computers, Phones, Glass Items, Delicate Items</div>
+                <div>Other Delivery → Miscellaneous Delivery Items</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Configuration -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCtuD42SzwxKmSY5p-x5olFex2U_S9YrMk",
+            authDomain: "request-marketplace.firebaseapp.com",
+            projectId: "request-marketplace",
+            storageBucket: "request-marketplace.firebasestorage.app",
+            messagingSenderId: "355474518888",
+            appId: "1:355474518888:android:27570ce58b7a8346b91cdd"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const itemCategories = [
+            {
+                name: "Electronics",
+                type: "item",
+                order: 1,
+                isActive: true,
+                subCategories: [
+                    { id: "smartphones", name: "Smartphones", order: 1, isActive: true },
+                    { id: "laptops", name: "Laptops & Computers", order: 2, isActive: true },
+                    { id: "gaming", name: "Gaming Equipment", order: 3, isActive: true },
+                    { id: "audio", name: "Audio & Headphones", order: 4, isActive: true }
+                ]
+            },
+            {
+                name: "Clothing & Fashion",
+                type: "item",
+                order: 2,
+                isActive: true,
+                subCategories: [
+                    { id: "mens_wear", name: "Men's Clothing", order: 1, isActive: true },
+                    { id: "womens_wear", name: "Women's Clothing", order: 2, isActive: true },
+                    { id: "accessories", name: "Accessories", order: 3, isActive: true },
+                    { id: "shoes", name: "Shoes & Footwear", order: 4, isActive: true }
+                ]
+            },
+            {
+                name: "Home & Garden",
+                type: "item",
+                order: 3,
+                isActive: true,
+                subCategories: [
+                    { id: "furniture", name: "Furniture", order: 1, isActive: true },
+                    { id: "appliances", name: "Home Appliances", order: 2, isActive: true },
+                    { id: "decor", name: "Home Decor", order: 3, isActive: true },
+                    { id: "tools", name: "Tools & Hardware", order: 4, isActive: true }
+                ]
+            },
+            {
+                name: "Sports & Outdoors",
+                type: "item",
+                order: 4,
+                isActive: true,
+                subCategories: [
+                    { id: "fitness", name: "Fitness Equipment", order: 1, isActive: true },
+                    { id: "sports_equipment", name: "Sports Equipment", order: 2, isActive: true },
+                    { id: "outdoor_gear", name: "Outdoor Gear", order: 3, isActive: true },
+                    { id: "bicycles", name: "Bicycles & Cycling", order: 4, isActive: true }
+                ]
+            },
+            {
+                name: "Other",
+                type: "item",
+                order: 9,
+                isActive: true,
+                subCategories: []
+            }
+        ];
+
+        const serviceCategories = [
+            {
+                name: "Home Services",
+                type: "service",
+                order: 1,
+                isActive: true,
+                subCategories: [
+                    { id: "cleaning", name: "Cleaning Services", order: 1, isActive: true },
+                    { id: "plumbing", name: "Plumbing", order: 2, isActive: true },
+                    { id: "electrical", name: "Electrical Work", order: 3, isActive: true },
+                    { id: "gardening", name: "Gardening & Landscaping", order: 4, isActive: true }
+                ]
+            },
+            {
+                name: "Professional Services",
+                type: "service",
+                order: 2,
+                isActive: true,
+                subCategories: [
+                    { id: "legal", name: "Legal Services", order: 1, isActive: true },
+                    { id: "accounting", name: "Accounting & Finance", order: 2, isActive: true },
+                    { id: "consulting", name: "Business Consulting", order: 3, isActive: true },
+                    { id: "translation", name: "Translation Services", order: 4, isActive: true }
+                ]
+            },
+            {
+                name: "Personal Care",
+                type: "service",
+                order: 3,
+                isActive: true,
+                subCategories: [
+                    { id: "hair_beauty", name: "Hair & Beauty", order: 1, isActive: true },
+                    { id: "massage", name: "Massage Therapy", order: 2, isActive: true },
+                    { id: "fitness_training", name: "Personal Training", order: 3, isActive: true },
+                    { id: "wellness", name: "Wellness Services", order: 4, isActive: true }
+                ]
+            },
+            {
+                name: "Business Services",
+                type: "service",
+                order: 6,
+                isActive: true,
+                subCategories: [
+                    { id: "marketing", name: "Marketing & Advertising", order: 1, isActive: true },
+                    { id: "design", name: "Graphic Design", order: 2, isActive: true },
+                    { id: "writing", name: "Content Writing", order: 3, isActive: true },
+                    { id: "it_support", name: "IT Support", order: 4, isActive: true }
+                ]
+            },
+            {
+                name: "Other Services",
+                type: "service",
+                order: 9,
+                isActive: true,
+                subCategories: []
+            }
+        ];
+
+        const deliveryCategories = [
+            {
+                name: "Food & Beverages",
+                type: "delivery",
+                order: 1,
+                isActive: true,
+                subCategories: [
+                    { id: "restaurant_food", name: "Restaurant Food", order: 1, isActive: true },
+                    { id: "groceries", name: "Groceries", order: 2, isActive: true },
+                    { id: "drinks", name: "Beverages", order: 3, isActive: true },
+                    { id: "snacks", name: "Snacks & Treats", order: 4, isActive: true }
+                ]
+            },
+            {
+                name: "Documents & Papers",
+                type: "delivery",
+                order: 2,
+                isActive: true,
+                subCategories: [
+                    { id: "legal_docs", name: "Legal Documents", order: 1, isActive: true },
+                    { id: "mail", name: "Mail & Letters", order: 2, isActive: true },
+                    { id: "contracts", name: "Contracts", order: 3, isActive: true },
+                    { id: "certificates", name: "Certificates", order: 4, isActive: true }
+                ]
+            },
+            {
+                name: "Packages & Parcels",
+                type: "delivery",
+                order: 3,
+                isActive: true,
+                subCategories: [
+                    { id: "online_shopping", name: "Online Shopping", order: 1, isActive: true },
+                    { id: "gifts", name: "Gifts", order: 2, isActive: true },
+                    { id: "small_items", name: "Small Items", order: 3, isActive: true },
+                    { id: "letters", name: "Letters", order: 4, isActive: true }
+                ]
+            },
+            {
+                name: "Electronics & Fragile",
+                type: "delivery",
+                order: 7,
+                isActive: true,
+                subCategories: [
+                    { id: "computers", name: "Computers & Laptops", order: 1, isActive: true },
+                    { id: "phones", name: "Mobile Phones", order: 2, isActive: true },
+                    { id: "glass_items", name: "Glass Items", order: 3, isActive: true },
+                    { id: "delicate", name: "Delicate Items", order: 4, isActive: true }
+                ]
+            },
+            {
+                name: "Other Delivery",
+                type: "delivery",
+                order: 8,
+                isActive: true,
+                subCategories: []
+            }
+        ];
+
+        function showStatus(message, type = 'loading') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${type}`;
+            statusDiv.innerHTML = message;
+        }
+
+        async function addCategoriesToFirestore(categories, categoryType) {
+            try {
+                showStatus(`🔄 Adding ${categoryType} categories to Firebase...`, 'loading');
+                
+                for (const category of categories) {
+                    await addDoc(collection(db, 'categories'), category);
+                }
+                
+                showStatus(`✅ Successfully added ${categories.length} ${categoryType} categories!`, 'success');
+            } catch (error) {
+                console.error(`Error adding ${categoryType} categories:`, error);
+                showStatus(`❌ Error adding ${categoryType} categories: ${error.message}`, 'error');
+            }
+        }
+
+        window.addItemCategories = () => addCategoriesToFirestore(itemCategories, 'item');
+        window.addServiceCategories = () => addCategoriesToFirestore(serviceCategories, 'service');
+        window.addDeliveryCategories = () => addCategoriesToFirestore(deliveryCategories, 'delivery');
+
+        window.addAllCategories = async () => {
+            try {
+                showStatus('🔄 Adding all categories to Firebase...', 'loading');
+                
+                const allCategories = [...itemCategories, ...serviceCategories, ...deliveryCategories];
+                
+                for (const category of allCategories) {
+                    await addDoc(collection(db, 'categories'), category);
+                }
+                
+                showStatus(`✅ Successfully added all ${allCategories.length} categories!`, 'success');
+            } catch (error) {
+                console.error('Error adding all categories:', error);
+                showStatus(`❌ Error adding categories: ${error.message}`, 'error');
+            }
+        };
+
+        window.clearAllCategories = async () => {
+            try {
+                if (!confirm('⚠️ Are you sure you want to delete all categories? This cannot be undone.')) {
+                    return;
+                }
+
+                showStatus('🔄 Clearing all categories from Firebase...', 'loading');
+                
+                const querySnapshot = await getDocs(collection(db, 'categories'));
+                const deletePromises = [];
+                
+                querySnapshot.forEach((document) => {
+                    deletePromises.push(deleteDoc(doc(db, 'categories', document.id)));
+                });
+                
+                await Promise.all(deletePromises);
+                
+                showStatus(`✅ Successfully deleted ${deletePromises.length} categories!`, 'success');
+            } catch (error) {
+                console.error('Error clearing categories:', error);
+                showStatus(`❌ Error clearing categories: ${error.message}`, 'error');
+            }
+        };
+
+        // Initialize
+        showStatus('🚀 Ready to add categories to Firebase Firestore!', 'success');
+    </script>
+</body>
+</html>

@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../../models/request_model.dart';
 import '../../../models/enhanced_user_model.dart';
+import '../../../models/category_model.dart';
 import '../../../services/enhanced_request_service.dart';
 import '../../../services/enhanced_user_service.dart';
+import '../../../services/category_service.dart';
+import '../../../widgets/image_upload_widget.dart';
+import '../../../widgets/category_selection_widget.dart';
 
 class CreateDeliveryRequestScreen extends StatefulWidget {
   const CreateDeliveryRequestScreen({super.key});
@@ -24,6 +28,8 @@ class _CreateDeliveryRequestScreenState extends State<CreateDeliveryRequestScree
   final _budgetController = TextEditingController();
   
   // Delivery-specific fields
+  String? _selectedCategoryId;
+  String? _selectedSubCategoryId;
   String _packageSize = 'Small';
   DateTime? _pickupTime;
   DateTime? _deliveryTime;
@@ -31,6 +37,7 @@ class _CreateDeliveryRequestScreenState extends State<CreateDeliveryRequestScree
   bool _requiresSignature = false;
   final _specialInstructionsController = TextEditingController();
   final _itemDescriptionController = TextEditingController();
+  List<String> _imageUrls = [];
 
   bool _isLoading = false;
 
@@ -40,6 +47,11 @@ class _CreateDeliveryRequestScreenState extends State<CreateDeliveryRequestScree
     'Large',
     'Extra Large',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+  }
 
   @override
   void dispose() {
@@ -141,6 +153,36 @@ class _CreateDeliveryRequestScreenState extends State<CreateDeliveryRequestScree
                 },
               ),
               const SizedBox(height: 16),
+              
+              // Category Selection
+              CategorySelectionWidget(
+                categoryType: 'delivery',
+                selectedCategoryId: _selectedCategoryId,
+                selectedSubCategoryId: _selectedSubCategoryId,
+                onSelectionChanged: (categoryId, subCategoryId) {
+                  setState(() {
+                    _selectedCategoryId = categoryId;
+                    _selectedSubCategoryId = subCategoryId;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Images
+              _buildSectionTitle('Images'),
+              const SizedBox(height: 12),
+              ImageUploadWidget(
+                initialImages: _imageUrls,
+                maxImages: 4,
+                uploadPath: 'requests/deliveries',
+                label: 'Upload item images (up to 4)',
+                onImagesChanged: (images) {
+                  setState(() {
+                    _imageUrls = images;
+                  });
+                },
+              ),
+              const SizedBox(height: 24),
               TextFormField(
                 controller: _pickupLocationController,
                 decoration: const InputDecoration(
@@ -385,6 +427,13 @@ class _CreateDeliveryRequestScreenState extends State<CreateDeliveryRequestScree
       return;
     }
 
+    if (_selectedCategoryId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a category')),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -403,6 +452,14 @@ class _CreateDeliveryRequestScreenState extends State<CreateDeliveryRequestScree
         return;
       }
 
+      // Get category info
+      String categoryName = 'Delivery'; // Default fallback
+      
+      // If we have selected categories, we'll store the IDs and let the backend handle names
+      if (_selectedCategoryId != null) {
+        categoryName = 'Package Delivery'; // Placeholder - backend will resolve
+      }
+
       // Create the delivery-specific data
       final packageInfo = PackageInfo(
         description: _itemDescriptionController.text.trim(),
@@ -412,7 +469,7 @@ class _CreateDeliveryRequestScreenState extends State<CreateDeliveryRequestScree
           width: 10.0, 
           height: 10.0,
         ),
-        category: _packageSize,
+        category: categoryName,
       );
 
       final deliveryData = DeliveryRequestData(
@@ -434,7 +491,12 @@ class _CreateDeliveryRequestScreenState extends State<CreateDeliveryRequestScree
         budget: double.tryParse(_budgetController.text),
         currency: 'USD',
         typeSpecificData: deliveryData.toMap(),
-        tags: ['delivery', _packageSize.toLowerCase().replaceAll(' ', '_')],
+        tags: [
+          'delivery',
+          _packageSize.toLowerCase().replaceAll(' ', '_'),
+          if (_selectedCategoryId != null) 'category_${_selectedCategoryId!}',
+          if (_selectedSubCategoryId != null) 'subcategory_${_selectedSubCategoryId!}',
+        ],
         location: LocationInfo(
           latitude: 0.0,
           longitude: 0.0,
@@ -445,6 +507,7 @@ class _CreateDeliveryRequestScreenState extends State<CreateDeliveryRequestScree
           longitude: 0.0,
           address: _deliveryLocationController.text.trim(),
         ),
+        images: _imageUrls,
       );
 
       if (mounted) {

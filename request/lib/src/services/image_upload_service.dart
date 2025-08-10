@@ -131,39 +131,4 @@ class ImageUploadService {
       return null;
     }
   }
-
-  // Show image source selection dialog
-  Future<XFile?> showImageSourceDialog(context) async {
-    return await showDialog<XFile?>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Select Image Source'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.camera_alt),
-                title: const Text('Camera'),
-                onTap: () async {
-                  Navigator.pop(context);
-                  final image = await pickImageFromCamera();
-                  Navigator.pop(context, image);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text('Gallery'),
-                onTap: () async {
-                  Navigator.pop(context);
-                  final image = await pickSingleImage();
-                  Navigator.pop(context, image);
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
 }

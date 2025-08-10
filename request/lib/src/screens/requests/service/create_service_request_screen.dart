@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../../models/request_model.dart';
 import '../../../models/enhanced_user_model.dart';
+import '../../../models/category_model.dart';
 import '../../../services/enhanced_request_service.dart';
 import '../../../services/enhanced_user_service.dart';
+import '../../../services/category_service.dart';
+import '../../../widgets/image_upload_widget.dart';
+import '../../../widgets/category_selection_widget.dart';
 
 class CreateServiceRequestScreen extends StatefulWidget {
   const CreateServiceRequestScreen({super.key});
@@ -23,25 +27,15 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
   final _budgetController = TextEditingController();
   
   // Service-specific fields
-  String _serviceCategory = 'Home Services';
+  String? _selectedCategoryId;
+  String? _selectedSubCategoryId;
   DateTime? _preferredDate;
   String _timeSlot = 'Morning';
   bool _isRemote = false;
   final _requirementsController = TextEditingController();
+  List<String> _imageUrls = [];
 
   bool _isLoading = false;
-
-  final List<String> _serviceCategories = [
-    'Home Services',
-    'Professional Services',
-    'Creative Services',
-    'Technical Support',
-    'Tutoring & Education',
-    'Health & Wellness',
-    'Event Services',
-    'Transportation',
-    'Other',
-  ];
 
   final List<String> _timeSlots = [
     'Morning',
@@ -49,6 +43,11 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
     'Evening',
     'Flexible',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+  }
 
   @override
   void dispose() {
@@ -153,23 +152,16 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
               // Service Details
               _buildSectionTitle('Service Details'),
               const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: _serviceCategory,
-                decoration: const InputDecoration(
-                  labelText: 'Category',
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: InputBorder.none,
-                ),
-                items: _serviceCategories.map((category) {
-                  return DropdownMenuItem(
-                    value: category,
-                    child: Text(category),
-                  );
-                }).toList(),
-                onChanged: (value) {
+              
+              // Category Selection
+              CategorySelectionWidget(
+                categoryType: 'service',
+                selectedCategoryId: _selectedCategoryId,
+                selectedSubCategoryId: _selectedSubCategoryId,
+                onSelectionChanged: (categoryId, subCategoryId) {
                   setState(() {
-                    _serviceCategory = value!;
+                    _selectedCategoryId = categoryId;
+                    _selectedSubCategoryId = subCategoryId;
                   });
                 },
               ),
@@ -219,6 +211,22 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
                   border: InputBorder.none,
                 ),
                 maxLines: 2,
+              ),
+              const SizedBox(height: 24),
+
+              // Images
+              _buildSectionTitle('Images'),
+              const SizedBox(height: 12),
+              ImageUploadWidget(
+                initialImages: _imageUrls,
+                maxImages: 4,
+                uploadPath: 'requests/services',
+                label: 'Upload reference images (up to 4)',
+                onImagesChanged: (images) {
+                  setState(() {
+                    _imageUrls = images;
+                  });
+                },
               ),
               const SizedBox(height: 24),
 
@@ -336,6 +344,13 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
       return;
     }
 
+    if (_selectedCategoryId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a category')),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -354,9 +369,17 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
         return;
       }
 
+      // Get category info
+      String categoryName = 'Service'; // Default fallback
+      
+      // If we have selected categories, we'll store the IDs and let the backend handle names
+      if (_selectedCategoryId != null) {
+        categoryName = 'Selected Service Category'; // Placeholder - backend will resolve
+      }
+
       // Create the service-specific data
       final serviceData = ServiceRequestData(
-        serviceType: _serviceCategory,
+        serviceType: categoryName,
         preferredTime: _preferredDate,
         estimatedDuration: 1, // Default 1 hour
         isRecurring: false,
@@ -364,6 +387,8 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
           'timeSlot': _timeSlot,
           'specialRequirements': _requirementsController.text.trim(),
           'isRemote': _isRemote.toString(),
+          'categoryId': _selectedCategoryId ?? '',
+          'subCategoryId': _selectedSubCategoryId ?? '',
         },
       );
 
@@ -374,12 +399,17 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
         budget: double.tryParse(_budgetController.text),
         currency: 'USD',
         typeSpecificData: serviceData.toMap(),
-        tags: ['service', _serviceCategory.toLowerCase().replaceAll(' ', '_')],
+        tags: [
+          'service',
+          if (_selectedCategoryId != null) 'category_${_selectedCategoryId!}',
+          if (_selectedSubCategoryId != null) 'subcategory_${_selectedSubCategoryId!}',
+        ],
         location: _isRemote ? null : LocationInfo(
           latitude: 0.0,
           longitude: 0.0,
           address: _locationController.text.trim(),
         ),
+        images: _imageUrls,
       );
 
       if (mounted) {

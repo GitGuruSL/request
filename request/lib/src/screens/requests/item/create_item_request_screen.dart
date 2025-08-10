@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../../models/request_model.dart';
 import '../../../models/enhanced_user_model.dart';
+import '../../../models/category_model.dart';
 import '../../../services/enhanced_request_service.dart';
 import '../../../services/enhanced_user_service.dart';
+import '../../../services/category_service.dart';
+import '../../../widgets/image_upload_widget.dart';
+import '../../../widgets/category_selection_widget.dart';
 
 class CreateItemRequestScreen extends StatefulWidget {
   const CreateItemRequestScreen({super.key});
@@ -23,25 +27,15 @@ class _CreateItemRequestScreenState extends State<CreateItemRequestScreen> {
   final _budgetController = TextEditingController();
   
   // Item-specific fields
-  String _itemCategory = 'Electronics';
+  String? _selectedCategoryId;
+  String? _selectedSubCategoryId;
   String _condition = 'New';
   bool _isUrgent = false;
   final _brandController = TextEditingController();
   final _specificationsController = TextEditingController();
+  List<String> _imageUrls = [];
 
   bool _isLoading = false;
-
-  final List<String> _itemCategories = [
-    'Electronics',
-    'Clothing',
-    'Home & Garden',
-    'Sports',
-    'Books',
-    'Automotive',
-    'Health & Beauty',
-    'Toys & Games',
-    'Other',
-  ];
 
   final List<String> _conditions = [
     'New',
@@ -50,6 +44,11 @@ class _CreateItemRequestScreenState extends State<CreateItemRequestScreen> {
     'Fair',
     'Any Condition',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+  }
 
   @override
   void dispose() {
@@ -155,23 +154,16 @@ class _CreateItemRequestScreenState extends State<CreateItemRequestScreen> {
               // Item Details
               _buildSectionTitle('Item Details'),
               const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: _itemCategory,
-                decoration: const InputDecoration(
-                  labelText: 'Category',
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: InputBorder.none,
-                ),
-                items: _itemCategories.map((category) {
-                  return DropdownMenuItem(
-                    value: category,
-                    child: Text(category),
-                  );
-                }).toList(),
-                onChanged: (value) {
+              
+              // Category Selection
+              CategorySelectionWidget(
+                categoryType: 'item',
+                selectedCategoryId: _selectedCategoryId,
+                selectedSubCategoryId: _selectedSubCategoryId,
+                onSelectionChanged: (categoryId, subCategoryId) {
                   setState(() {
-                    _itemCategory = value!;
+                    _selectedCategoryId = categoryId;
+                    _selectedSubCategoryId = subCategoryId;
                   });
                 },
               ),
@@ -218,6 +210,22 @@ class _CreateItemRequestScreenState extends State<CreateItemRequestScreen> {
                   border: InputBorder.none,
                 ),
                 maxLines: 2,
+              ),
+              const SizedBox(height: 24),
+
+              // Images
+              _buildSectionTitle('Images'),
+              const SizedBox(height: 12),
+              ImageUploadWidget(
+                initialImages: _imageUrls,
+                maxImages: 4,
+                uploadPath: 'requests/items',
+                label: 'Upload item images (up to 4)',
+                onImagesChanged: (images) {
+                  setState(() {
+                    _imageUrls = images;
+                  });
+                },
               ),
               const SizedBox(height: 24),
 
@@ -323,6 +331,13 @@ class _CreateItemRequestScreenState extends State<CreateItemRequestScreen> {
       return;
     }
 
+    if (_selectedCategoryId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a category')),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -341,14 +356,26 @@ class _CreateItemRequestScreenState extends State<CreateItemRequestScreen> {
         return;
       }
 
+      // Get category and subcategory info
+      String categoryName = 'Item'; // Default fallback
+      String? subCategoryName;
+
+      // If we have selected categories, we'll store the IDs and let the backend handle names
+      if (_selectedCategoryId != null) {
+        // We'll use the category ID and let the backend resolve the name
+        categoryName = 'Selected Item Category'; // Placeholder - backend will resolve
+      }
+
       // Create the item-specific data
       final itemData = ItemRequestData(
-        category: _itemCategory,
+        category: categoryName,
         brand: _brandController.text.trim().isEmpty ? null : _brandController.text.trim(),
         condition: _condition,
         specifications: {
           'specifications': _specificationsController.text.trim(),
           'isUrgent': _isUrgent.toString(),
+          'categoryId': _selectedCategoryId ?? '',
+          'subCategoryId': _selectedSubCategoryId ?? '',
         },
         acceptAlternatives: true,
       );
@@ -360,12 +387,17 @@ class _CreateItemRequestScreenState extends State<CreateItemRequestScreen> {
         budget: double.tryParse(_budgetController.text),
         currency: 'USD',
         typeSpecificData: itemData.toMap(),
-        tags: ['item', _itemCategory.toLowerCase().replaceAll(' ', '_')],
+        tags: [
+          'item', 
+          'category_${_selectedCategoryId ?? 'other'}',
+          if (_selectedSubCategoryId != null) 'subcategory_${_selectedSubCategoryId}',
+        ],
         location: LocationInfo(
           latitude: 0.0,
           longitude: 0.0,
           address: _locationController.text.trim(),
         ),
+        images: _imageUrls,
       );
 
       if (mounted) {

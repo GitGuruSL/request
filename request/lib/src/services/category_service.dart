@@ -20,7 +20,7 @@ class CategoryService {
       }
 
       final querySnapshot = await _firestore
-          .collection('categories')
+          .collection('product_categories')
           .where('type', isEqualTo: type)
           .where('isActive', isEqualTo: true)
           .orderBy('order')
