@@ -182,7 +182,7 @@ class _PasswordScreenState extends State<PasswordScreen> with TickerProviderStat
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      // Uses theme background color (FAFAFAFF)
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,

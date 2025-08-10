@@ -11,9 +11,9 @@ class AppTheme {
   static const Color secondaryLight = Color(0xFF66FFF9);
   static const Color secondaryDark = Color(0xFF00A896);
   
-  // Surface Colors - Flat White
+  // Surface Colors - Light Gray Background
   static const Color surfaceColor = Colors.white;
-  static const Color backgroundColor = Colors.white;
+  static const Color backgroundColor = Color(0xFAFAFAFF); // Light gray background
   static const Color cardColor = Colors.white;
   
   // Text Colors
@@ -46,6 +46,9 @@ class AppTheme {
         error: errorColor,
         onError: Colors.white,
       ),
+      
+      // Background color for all screens
+      scaffoldBackgroundColor: backgroundColor,
       
       // AppBar Theme - Flat design
       appBarTheme: const AppBarTheme(

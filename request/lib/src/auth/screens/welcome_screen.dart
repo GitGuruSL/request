@@ -64,7 +64,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
     final size = MediaQuery.of(context).size;
     
     return Scaffold(
-      backgroundColor: Colors.white,
+      // Uses theme background color (FAFAFAFF)
       body: SafeArea(
         child: SingleChildScrollView(
           child: ConstrainedBox(

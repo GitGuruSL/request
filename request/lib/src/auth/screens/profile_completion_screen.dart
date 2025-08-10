@@ -87,7 +87,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      // Uses theme background color (FAFAFAFF)
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: const Text('Complete Profile'),

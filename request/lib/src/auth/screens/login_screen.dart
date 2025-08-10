@@ -342,7 +342,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      // Uses theme background color (FAFAFAFF)
       body: SafeArea(
         child: FadeTransition(
           opacity: _fadeAnimation,

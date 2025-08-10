@@ -1,5 +1,7 @@
 # Request Marketplace - Development Roadmap 2025 🚀
 
+> **📋 UPDATED VERSION AVAILABLE**: See the comprehensive roadmap at `/COMPREHENSIVE_ROADMAP_2025.md` for the latest detailed development plan.
+
 ## 🎯 **Project Vision**
 Transform the current authentication-focused app into a comprehensive multi-role marketplace platform supporting General Users, Drivers, Delivery Services, and Businesses.
 
