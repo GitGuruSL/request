@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/enhanced_user_model.dart';
 
 enum RequestStatus {
@@ -154,9 +153,7 @@ class RequestModel {
   static DateTime? _parseDateTime(dynamic dateTime) {
     if (dateTime == null) return null;
     try {
-      if (dateTime is Timestamp) {
-        return dateTime.toDate();
-      } else if (dateTime is String) {
+      if (dateTime is String) {
         return DateTime.parse(dateTime);
       } else if (dateTime is Map && dateTime.containsKey('_seconds')) {
         // Handle Firestore Timestamp
@@ -318,7 +315,9 @@ class ServiceRequestData {
     return ServiceRequestData(
       serviceType: map['serviceType'] ?? '',
       skillLevel: map['skillLevel'],
-      preferredTime: RequestModel._parseDateTime(map['preferredTime']),
+      preferredTime: map['preferredTime'] != null 
+          ? DateTime.parse(map['preferredTime']) 
+          : null,
       estimatedDuration: map['estimatedDuration'] ?? 1,
       isRecurring: map['isRecurring'] ?? false,
       recurrencePattern: map['recurrencePattern'],
@@ -363,7 +362,7 @@ class RideRequestData {
   factory RideRequestData.fromMap(Map<String, dynamic> map) {
     return RideRequestData(
       passengers: map['passengers'] ?? 1,
-      preferredTime: RequestModel._parseDateTime(map['preferredTime']) ?? DateTime.now(),
+      preferredTime: DateTime.parse(map['preferredTime']),
       isFlexibleTime: map['isFlexibleTime'] ?? false,
       vehicleType: map['vehicleType'],
       needsWheelchairAccess: map['needsWheelchairAccess'] ?? false,
@@ -411,8 +410,8 @@ class DeliveryRequestData {
   factory DeliveryRequestData.fromMap(Map<String, dynamic> map) {
     return DeliveryRequestData(
       package: PackageInfo.fromMap(map['package']),
-      preferredPickupTime: RequestModel._parseDateTime(map['preferredPickupTime']) ?? DateTime.now(),
-      preferredDeliveryTime: RequestModel._parseDateTime(map['preferredDeliveryTime']) ?? DateTime.now(),
+      preferredPickupTime: DateTime.parse(map['preferredPickupTime']),
+      preferredDeliveryTime: DateTime.parse(map['preferredDeliveryTime']),
       isFlexibleTime: map['isFlexibleTime'] ?? false,
       requireSignature: map['requireSignature'] ?? false,
       isFragile: map['isFragile'] ?? false,
@@ -519,8 +518,8 @@ class RentalRequestData {
   factory RentalRequestData.fromMap(Map<String, dynamic> map) {
     return RentalRequestData(
       itemCategory: map['itemCategory'] ?? '',
-      startDate: RequestModel._parseDateTime(map['startDate']) ?? DateTime.now(),
-      endDate: RequestModel._parseDateTime(map['endDate']) ?? DateTime.now().add(const Duration(days: 1)),
+      startDate: DateTime.parse(map['startDate']),
+      endDate: DateTime.parse(map['endDate']),
       isFlexibleDates: map['isFlexibleDates'] ?? false,
       preferredBrand: map['preferredBrand'],
       specifications: Map<String, String>.from(map['specifications'] ?? {}),
@@ -631,11 +630,15 @@ class ResponseModel {
       message: map['message'] ?? '',
       price: map['price']?.toDouble(),
       currency: map['currency'],
-      availableFrom: RequestModel._parseDateTime(map['availableFrom']),
-      availableUntil: RequestModel._parseDateTime(map['availableUntil']),
+      availableFrom: map['availableFrom'] != null 
+          ? DateTime.parse(map['availableFrom']) 
+          : null,
+      availableUntil: map['availableUntil'] != null 
+          ? DateTime.parse(map['availableUntil']) 
+          : null,
       images: List<String>.from(map['images'] ?? []),
       additionalInfo: Map<String, dynamic>.from(map['additionalInfo'] ?? {}),
-      createdAt: RequestModel._parseDateTime(map['createdAt']) ?? DateTime.now(),
+      createdAt: DateTime.parse(map['createdAt']),
       isAccepted: map['isAccepted'] ?? false,
       rejectionReason: map['rejectionReason'],
     );

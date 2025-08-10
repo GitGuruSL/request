@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../models/request_model.dart';
-import '../../../models/response_model.dart';
 import '../../../models/enhanced_user_model.dart';
 import '../../../services/enhanced_request_service.dart';
 import '../../../services/enhanced_user_service.dart';
@@ -104,7 +103,7 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
     });
 
     try {
-      final user = await _userService.getCurrentUser();
+      final user = await _userService.getCurrentUserModel();
       if (user == null) {
         throw Exception('User not logged in');
       }
@@ -124,13 +123,21 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
           'petsAllowed': _petsAllowed,
           'drivingExperience': _drivingExperienceController.text.trim(),
           'pickupLocation': widget.request.location?.address ?? '',
-          'destination': widget.request.metadata?['destination'] ?? '',
+          'destination': widget.request.typeSpecificData['destination'] ?? '',
         },
       };
 
       await _requestService.createResponse(
         requestId: widget.request.id,
-        responseData: responseData,
+        message: _descriptionController.text,
+        price: double.tryParse(_priceController.text.trim()),
+        currency: widget.request.currency ?? 'USD',
+        availableFrom: DateTime.now(),
+        images: _imageUrls,
+        additionalInfo: {
+          'vehicleType': _vehicleType,
+          'destination': widget.request.typeSpecificData['destination'] ?? '',
+        },
       );
 
       if (mounted) {
@@ -226,7 +233,7 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
                   ],
                   if (widget.request.budget != null) ...[
                     const SizedBox(height: 4),
-                    Text(CurrencyHelper.instance.formatPrice(widget.request.budget!))',
+                    Text(CurrencyHelper.instance.formatPrice(widget.request.budget!),
                       style: const TextStyle(fontWeight: FontWeight.w600)),
                   ],
                   if (widget.request.location != null) ...[

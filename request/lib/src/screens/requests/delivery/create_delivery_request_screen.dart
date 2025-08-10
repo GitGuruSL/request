@@ -357,7 +357,7 @@ class _CreateDeliveryRequestScreenState extends State<CreateDeliveryRequestScree
               TextFormField(
                 controller: _budgetController,
                 decoration: InputDecoration(
-                  labelText: CurrencyHelper.instance.getBudgetLabel('Delivery Fee'),
+                  labelText: 'Delivery Fee (USD)',
                   hintText: '0.00',
                   prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
                   filled: true,

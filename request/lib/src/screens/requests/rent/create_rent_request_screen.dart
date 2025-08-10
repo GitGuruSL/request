@@ -23,7 +23,7 @@ class _CreateRentRequestScreenState extends State<CreateRentRequestScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _locationController = TextEditingController();
-  final _specificRequirementsController = TextEditingController();
+  final _budgetController = TextEditingController();
   
   // Rental-specific fields
   String _rentalType = 'Vehicle';
@@ -31,6 +31,7 @@ class _CreateRentRequestScreenState extends State<CreateRentRequestScreen> {
   DateTime? _endDate;
   String _duration = 'Daily';
   bool _deliveryRequired = false;
+  final _specificRequirementsController = TextEditingController();
   List<String> _imageUrls = [];
 
   bool _isLoading = false;
@@ -52,7 +53,6 @@ class _CreateRentRequestScreenState extends State<CreateRentRequestScreen> {
     'Daily',
     'Weekly',
     'Monthly',
-    'Custom',
   ];
 
   @override
@@ -60,6 +60,7 @@ class _CreateRentRequestScreenState extends State<CreateRentRequestScreen> {
     _titleController.dispose();
     _descriptionController.dispose();
     _locationController.dispose();
+    _budgetController.dispose();
     _specificRequirementsController.dispose();
     super.dispose();
   }
@@ -203,48 +204,33 @@ class _CreateRentRequestScreenState extends State<CreateRentRequestScreen> {
               // Rental Period
               _buildSectionTitle('Rental Period'),
               const SizedBox(height: 12),
-              // Only show date pickers when Custom is selected
-              if (_duration == 'Custom') ...[
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: ListTile(
-                    title: Text(_startDate == null 
-                      ? 'Select Start Date' 
-                      : 'Start: ${_startDate!.day}/${_startDate!.month}/${_startDate!.year}'),
-                    trailing: const Icon(Icons.calendar_today),
-                    onTap: () => _selectDate(isStartDate: true),
-                  ),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                const SizedBox(height: 16),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: ListTile(
-                    title: Text(_endDate == null 
-                      ? 'Select End Date' 
-                      : 'End: ${_endDate!.day}/${_endDate!.month}/${_endDate!.year}'),
-                    trailing: const Icon(Icons.event),
-                    onTap: () => _selectDate(isStartDate: false),
-                  ),
+                child: ListTile(
+                  title: Text(_startDate == null 
+                    ? 'Select Start Date' 
+                    : 'Start: ${_startDate!.day}/${_startDate!.month}/${_startDate!.year}'),
+                  trailing: const Icon(Icons.calendar_today),
+                  onTap: () => _selectDate(isStartDate: true),
                 ),
-              ] else ...[
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    'Duration: $_duration',
-                    style: const TextStyle(fontSize: 16),
-                  ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
                 ),
-              ],
+                child: ListTile(
+                  title: Text(_endDate == null 
+                    ? 'Select End Date' 
+                    : 'End: ${_endDate!.day}/${_endDate!.month}/${_endDate!.year}'),
+                  trailing: const Icon(Icons.event),
+                  onTap: () => _selectDate(isStartDate: false),
+                ),
+              ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _specificRequirementsController,
@@ -275,9 +261,22 @@ class _CreateRentRequestScreenState extends State<CreateRentRequestScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Location (renamed from Budget & Location)
-              _buildSectionTitle('Location'),
+              // Budget & Location
+              _buildSectionTitle('Budget & Location'),
               const SizedBox(height: 12),
+              TextFormField(
+                controller: _budgetController,
+                decoration: InputDecoration(
+                  labelText: 'Budget per ${_duration.toLowerCase().replaceAll('ly', '')} (USD)',
+                  hintText: '0.00',
+                  prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: InputBorder.none,
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
               LocationPickerWidget(
                 controller: _locationController,
                 labelText: 'Preferred Location',
@@ -383,10 +382,9 @@ class _CreateRentRequestScreenState extends State<CreateRentRequestScreen> {
       return;
     }
 
-    // Only validate dates when Custom duration is selected
-    if (_duration == 'Custom' && (_startDate == null || _endDate == null)) {
+    if (_startDate == null || _endDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select start and end dates for custom duration')),
+        const SnackBar(content: Text('Please select start and end dates')),
       );
       return;
     }
@@ -410,40 +408,15 @@ class _CreateRentRequestScreenState extends State<CreateRentRequestScreen> {
       }
 
       // Create the rental-specific data
-      Map<String, String> specifications = {
-        'duration': _duration,
-        'specificRequirements': _specificRequirementsController.text.trim(),
-      };
-      
-      // Handle dates based on duration type
-      DateTime startDate = _startDate ?? DateTime.now().add(const Duration(days: 1));
-      DateTime endDate = _endDate ?? DateTime.now().add(const Duration(days: 2));
-      
-      // For non-custom durations, set default date ranges
-      if (_duration != 'Custom') {
-        startDate = DateTime.now().add(const Duration(days: 1));
-        switch (_duration) {
-          case 'Hourly':
-            endDate = startDate.add(const Duration(hours: 1));
-            break;
-          case 'Daily':
-            endDate = startDate.add(const Duration(days: 1));
-            break;
-          case 'Weekly':
-            endDate = startDate.add(const Duration(days: 7));
-            break;
-          case 'Monthly':
-            endDate = startDate.add(const Duration(days: 30));
-            break;
-        }
-      }
-      
       final rentalData = RentalRequestData(
         itemCategory: _rentalType,
-        startDate: startDate,
-        endDate: endDate,
-        isFlexibleDates: _duration != 'Custom',
-        specifications: specifications,
+        startDate: _startDate!,
+        endDate: _endDate!,
+        isFlexibleDates: false,
+        specifications: {
+          'duration': _duration,
+          'specificRequirements': _specificRequirementsController.text.trim(),
+        },
         needsDelivery: _deliveryRequired,
       );
 
@@ -451,7 +424,7 @@ class _CreateRentRequestScreenState extends State<CreateRentRequestScreen> {
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         type: RequestType.rental,
-        budget: null, // No budget field
+        budget: double.tryParse(_budgetController.text),
         currency: CurrencyHelper.instance.getCurrency(),
         typeSpecificData: rentalData.toMap(),
         tags: ['rental', _rentalType.toLowerCase().replaceAll(' ', '_')],

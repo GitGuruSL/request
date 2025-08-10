@@ -68,16 +68,16 @@ class _CreateItemResponseScreenState extends State<CreateItemResponseScreen> {
 
   void _initializeFromRequest() {
     // Initialize category from request if available
-    if (widget.request.category != null) {
-      _selectedCategory = widget.request.category;
-      _selectedCategoryId = widget.request.categoryId;
-      _selectedSubcategory = widget.request.subcategory;
-      _selectedSubCategoryId = widget.request.subcategoryId;
+    if (widget.request.typeSpecificData['category'] != null) {
+      _selectedCategory = widget.request.typeSpecificData['category'];
+      _selectedCategoryId = widget.request.typeSpecificData['categoryId'];
+      _selectedSubcategory = widget.request.typeSpecificData['subcategory'];
+      _selectedSubCategoryId = widget.request.typeSpecificData['subcategoryId'];
     }
     
     // Initialize location from request if available
     if (widget.request.location != null) {
-      _locationController.text = widget.request.location!;
+      _locationController.text = widget.request.location!.address;
     }
   }
 
@@ -115,7 +115,7 @@ class _CreateItemResponseScreenState extends State<CreateItemResponseScreen> {
     });
 
     try {
-      final user = await _userService.getCurrentUser();
+      final user = await _userService.getCurrentUserModel();
       if (user == null) {
         throw Exception('User not logged in');
       }
@@ -123,9 +123,9 @@ class _CreateItemResponseScreenState extends State<CreateItemResponseScreen> {
       // Create response data
       final responseData = {
         'requestId': widget.request.id,
-        'requesterId': widget.request.userId,
-        'responderId': user.uid,
-        'responderName': user.businessName ?? user.displayName,
+        'requesterId': widget.request.requesterId,
+        'responderId': user.id,
+        'responderName': user.name,
         'responderPhone': user.phoneNumber,
         'description': _descriptionController.text.trim(),
         'price': double.tryParse(_priceController.text.trim()) ?? 0.0,
@@ -136,17 +136,29 @@ class _CreateItemResponseScreenState extends State<CreateItemResponseScreen> {
         'condition': _condition,
         'deliveryType': _deliveryType,
         'isNegotiable': _isNegotiable,
-        'category': _selectedCategory ?? widget.request.category,
-        'categoryId': _selectedCategoryId ?? widget.request.categoryId,
-        'subcategory': _selectedSubcategory ?? widget.request.subcategory,
-        'subcategoryId': _selectedSubCategoryId ?? widget.request.subcategoryId,
+        'category': _selectedCategory ?? widget.request.typeSpecificData['category'],
+        'categoryId': _selectedCategoryId ?? widget.request.typeSpecificData['categoryId'],
+        'subcategory': _selectedSubcategory ?? widget.request.typeSpecificData['subcategory'],
+        'subcategoryId': _selectedSubCategoryId ?? widget.request.typeSpecificData['subcategoryId'],
         'images': _imageUrls,
         'status': 'pending',
         'createdAt': DateTime.now(),
         'type': 'item',
       };
 
-      await _requestService.createResponse(responseData);
+      await _requestService.createResponse(
+        requestId: widget.request.id,
+        message: _descriptionController.text,
+        price: double.tryParse(_priceController.text.trim()),
+        currency: widget.request.currency ?? 'USD',
+        images: _imageUrls,
+        additionalInfo: {
+          'category': _selectedCategory ?? widget.request.typeSpecificData['category'],
+          'brand': _brandController.text,
+          'model': _specificationsController.text,
+          'condition': _condition,
+        },
+      );
 
       if (mounted) {
         Navigator.of(context).pop();
@@ -338,7 +350,7 @@ class _CreateItemResponseScreenState extends State<CreateItemResponseScreen> {
               controller: TextEditingController(
                 text: _selectedSubcategory != null 
                   ? '$_selectedCategory > $_selectedSubcategory'
-                  : _selectedCategory ?? (widget.request.category ?? ''),
+                  : _selectedCategory ?? (widget.request.typeSpecificData['category'] ?? ''),
               ),
               onTap: _showCategoryPicker,
             ),

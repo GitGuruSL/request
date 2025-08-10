@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/country_service.dart';
 import '../../services/auth_service.dart';
+import '../../models/request_model.dart';
+import '../unified_request_response/unified_request_create_screen.dart';
+import '../../screens/price_comparison_screen.dart';
+import '../../models/enhanced_user_model.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -12,6 +17,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   String? _selectedCountry;
   String? _currencySymbol;
+  List<RequestModel> _requests = [];
   bool _isLoading = true;
   Map<String, dynamic>? _userData;
 
@@ -40,6 +46,9 @@ class _HomeScreenState extends State<HomeScreen> {
       // Get user's selected country
       _selectedCountry = await CountryService.instance.getUserCountry();
       _currencySymbol = CountryService.instance.getCurrencySymbol();
+      
+      // Load country-filtered requests
+      await _loadRequests();
     } catch (e) {
       print('Error loading country data: $e');
     } finally {
@@ -49,26 +58,57 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _loadRequests() async {
+    try {
+      // Get country-filtered query
+      Query? query = CountryService.instance.getCountryFilteredQuery(
+        FirebaseFirestore.instance.collection('requests')
+      );
+      
+      if (query != null) {
+        final querySnapshot = await query.limit(20).get();
+        _requests = querySnapshot.docs
+            .map((doc) => RequestModel.fromMap(doc.data() as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (e) {
+      print('Error loading requests: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Colors.grey[50], // Light subtle background
       appBar: AppBar(
-        backgroundColor: Colors.grey[100],
-        foregroundColor: Colors.grey[800],
-        elevation: 1,
-        automaticallyImplyLeading: false,
+        backgroundColor: Colors.grey[100], // Subtle grey background
+        foregroundColor: Colors.grey[800], // Dark grey text
+        elevation: 1, // Subtle shadow
+        automaticallyImplyLeading: false, // Remove back button
         title: Row(
           children: [
             // User Name on the left
             Expanded(
-              child: Text(
-                _getUserName(),
-                style: TextStyle(
-                  color: Colors.grey[800],
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _getUserName(),
+                    style: TextStyle(
+                      color: Colors.grey[800],
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (_selectedCountry != null)
+                    Text(
+                      '$_selectedCountry $_currencySymbol',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 12,
+                      ),
+                    ),
+                ],
               ),
             ),
             // Notification and Profile on the right
@@ -103,20 +143,180 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : const Center(
-              child: Text(
-                'Home Screen - Coming Soon',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w300,
-                  color: Colors.grey,
+          : Column(
+              children: [
+                // Country Info Card
+                Card(
+                  margin: const EdgeInsets.all(16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Your Location',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(Icons.location_on, color: Theme.of(context).colorScheme.primary),
+                            const SizedBox(width: 8),
+                            Text(
+                              _selectedCountry ?? 'No country selected',
+                              style: Theme.of(context).textTheme.bodyLarge,
+                            ),
+                            const Spacer(),
+                            if (_currencySymbol != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  _currencySymbol!,
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.primary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Showing requests from your country only',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+                
+                // Requests List
+                Expanded(
+                  child: _requests.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.inbox_outlined,
+                                size: 64,
+                                color: Colors.grey[400],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No requests found',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                _selectedCountry != null
+                                    ? 'No requests available in $_selectedCountry yet'
+                                    : 'Please select a country first',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: _requests.length,
+                          itemBuilder: (context, index) {
+                            final request = _requests[index];
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  child: Icon(_getRequestIcon(request.type.name)),
+                                ),
+                                title: Text(request.title),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(request.description),
+                                    const SizedBox(height: 4),
+                                    if (request.budget != null)
+                                      Text(
+                                        'Budget: ${CountryService.instance.formatPrice(request.budget!)}',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.green,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                trailing: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.location_on, size: 16),
+                                    Text(
+                                      request.location?.city ?? 'Location not set',
+                                      style: Theme.of(context).textTheme.bodySmall,
+                                    ),
+                                  ],
+                                ),
+                                onTap: () {
+                                  // Navigate to request detail
+                                  _showRequestDetail(request);
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
             ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _createNewRequest,
         icon: const Icon(Icons.add),
         label: const Text('New Request'),
+      ),
+    );
+  }
+
+  IconData _getRequestIcon(String type) {
+    switch (type.toLowerCase()) {
+      case 'item':
+        return Icons.shopping_bag;
+      case 'service':
+        return Icons.build;
+      case 'ride':
+        return Icons.directions_car;
+      case 'delivery':
+        return Icons.local_shipping;
+      case 'rental':
+        return Icons.key;
+      default:
+        return Icons.help_outline;
+    }
+  }
+
+  Future<void> _changeCountry() async {
+    // Navigate back to welcome screen to change country
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Change Country'),
+        content: const Text('Do you want to change your country? This will take you back to the welcome screen.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushReplacementNamed(context, '/welcome');
+            },
+            child: const Text('Change'),
+          ),
+        ],
       ),
     );
   }
@@ -157,7 +357,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       subtitle: const Text('Request for products or items'),
                       onTap: () {
                         Navigator.pop(context);
-                        Navigator.pushNamed(context, '/create-item-request');
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const UnifiedRequestCreateScreen(initialType: RequestType.item),
+                          ),
+                        );
                       },
                     ),
                     ListTile(
@@ -166,7 +371,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       subtitle: const Text('Request for services'),
                       onTap: () {
                         Navigator.pop(context);
-                        Navigator.pushNamed(context, '/create-service-request');
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const UnifiedRequestCreateScreen(initialType: RequestType.service),
+                          ),
+                        );
                       },
                     ),
                     ListTile(
@@ -184,7 +394,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       subtitle: const Text('Request for delivery services'),
                       onTap: () {
                         Navigator.pop(context);
-                        Navigator.pushNamed(context, '/create-delivery-request');
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const UnifiedRequestCreateScreen(initialType: RequestType.delivery),
+                          ),
+                        );
                       },
                     ),
                     ListTile(
@@ -193,7 +408,26 @@ class _HomeScreenState extends State<HomeScreen> {
                       subtitle: const Text('Rent vehicles, equipment, or items'),
                       onTap: () {
                         Navigator.pop(context);
-                        Navigator.pushNamed(context, '/create-rental-request');
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const UnifiedRequestCreateScreen(initialType: RequestType.rental),
+                          ),
+                        );
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.compare_arrows),
+                      title: const Text('Price Request'),
+                      subtitle: const Text('Request price quotes for items or services'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const PriceComparisonScreen(),
+                          ),
+                        );
                       },
                     ),
                   ],
@@ -202,6 +436,44 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showRequestDetail(RequestModel request) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(request.title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Type: ${request.type}'),
+            const SizedBox(height: 8),
+            Text('Description: ${request.description}'),
+            const SizedBox(height: 8),
+            if (request.budget != null)
+              Text('Budget: ${CountryService.instance.formatPrice(request.budget!)}'),
+            const SizedBox(height: 8),
+            Text('Location: ${request.location?.city ?? 'Not specified'}'),
+            const SizedBox(height: 8),
+            Text('Status: ${request.status}'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _showComingSoon('Respond to Request');
+            },
+            child: const Text('Respond'),
+          ),
+        ],
       ),
     );
   }
@@ -306,30 +578,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Future<void> _changeCountry() async {
-    // Navigate back to welcome screen to change country
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Change Country'),
-        content: const Text('Do you want to change your country? This will take you back to the welcome screen.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pushReplacementNamed(context, '/welcome');
-            },
-            child: const Text('Change'),
-          ),
-        ],
       ),
     );
   }

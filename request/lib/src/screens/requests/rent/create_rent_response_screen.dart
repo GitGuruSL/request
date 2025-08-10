@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../models/request_model.dart';
-import '../../../models/response_model.dart';
 import '../../../models/enhanced_user_model.dart';
 import '../../../services/enhanced_request_service.dart';
 import '../../../services/enhanced_user_service.dart';
@@ -101,7 +100,7 @@ class _CreateRentResponseScreenState extends State<CreateRentResponseScreen> {
     });
 
     try {
-      final user = await _userService.getCurrentUser();
+      final user = await _userService.getCurrentUserModel();
       if (user == null) {
         throw Exception('User not logged in');
       }
@@ -121,13 +120,20 @@ class _CreateRentResponseScreenState extends State<CreateRentResponseScreen> {
           'availableFrom': _availableFrom,
           'availableUntil': _availableUntil,
           'terms': _termsController.text.trim(),
-          'rentalType': widget.request.metadata?['rentalType'] ?? 'General',
+          'rentalType': widget.request.typeSpecificData['rentalType'] ?? 'General',
         },
       };
 
       await _requestService.createResponse(
         requestId: widget.request.id,
-        responseData: responseData,
+        message: _descriptionController.text,
+        price: double.tryParse(_priceController.text.trim()),
+        currency: widget.request.currency ?? 'USD',
+        availableFrom: DateTime.now(),
+        images: _imageUrls,
+        additionalInfo: {
+          'rentalType': widget.request.typeSpecificData['rentalType'] ?? 'General',
+        },
       );
 
       if (mounted) {
@@ -223,7 +229,7 @@ class _CreateRentResponseScreenState extends State<CreateRentResponseScreen> {
                   ],
                   if (widget.request.budget != null) ...[
                     const SizedBox(height: 4),
-                    Text(CurrencyHelper.instance.formatPrice(widget.request.budget!))',
+                    Text(CurrencyHelper.instance.formatPrice(widget.request.budget!),
                       style: const TextStyle(fontWeight: FontWeight.w600)),
                   ],
                 ],

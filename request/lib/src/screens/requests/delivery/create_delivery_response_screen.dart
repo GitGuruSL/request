@@ -50,7 +50,7 @@ class _CreateDeliveryResponseScreenState extends State<CreateDeliveryResponseScr
     super.initState();
     // Initialize location from request if available
     if (widget.request.location != null) {
-      _locationController.text = widget.request.location!;
+      _locationController.text = widget.request.location!.address;
     }
   }
 
@@ -76,7 +76,7 @@ class _CreateDeliveryResponseScreenState extends State<CreateDeliveryResponseScr
     });
 
     try {
-      final user = await _userService.getCurrentUser();
+      final user = await _userService.getCurrentUserModel();
       if (user == null) {
         throw Exception('User not logged in');
       }
@@ -84,9 +84,9 @@ class _CreateDeliveryResponseScreenState extends State<CreateDeliveryResponseScr
       // Create response data
       final responseData = {
         'requestId': widget.request.id,
-        'requesterId': widget.request.userId,
-        'responderId': user.uid,
-        'responderName': user.businessName ?? user.displayName,
+        'requesterId': widget.request.requesterId,
+        'responderId': user.id,
+        'responderName': user.name,
         'responderPhone': user.phoneNumber,
         'description': _descriptionController.text.trim(),
         'price': double.tryParse(_priceController.text.trim()) ?? 0.0,
@@ -102,7 +102,17 @@ class _CreateDeliveryResponseScreenState extends State<CreateDeliveryResponseScr
         'type': 'delivery',
       };
 
-      await _requestService.createResponse(responseData);
+      await _requestService.createResponse(
+        requestId: widget.request.id,
+        message: _descriptionController.text,
+        price: double.tryParse(_priceController.text.trim()),
+        currency: widget.request.currency ?? 'USD',
+        availableFrom: DateTime.now(),
+        images: _imageUrls,
+        additionalInfo: {
+          'vehicleType': _deliveryType,
+        },
+      );
 
       if (mounted) {
         Navigator.of(context).pop();
