@@ -6,7 +6,8 @@ import '../../../services/enhanced_request_service.dart';
 import '../../../services/enhanced_user_service.dart';
 import '../../../services/category_service.dart';
 import '../../../widgets/image_upload_widget.dart';
-import '../../../widgets/category_selection_widget.dart';
+import '../../../widgets/category_picker.dart';
+import '../../../widgets/location_picker_widget.dart';
 
 class CreateDeliveryRequestScreen extends StatefulWidget {
   const CreateDeliveryRequestScreen({super.key});
@@ -30,6 +31,8 @@ class _CreateDeliveryRequestScreenState extends State<CreateDeliveryRequestScree
   // Delivery-specific fields
   String? _selectedCategoryId;
   String? _selectedSubCategoryId;
+  String? _selectedCategory;
+  String? _selectedSubcategory;
   String _packageSize = 'Small';
   DateTime? _pickupTime;
   DateTime? _deliveryTime;
@@ -51,6 +54,32 @@ class _CreateDeliveryRequestScreenState extends State<CreateDeliveryRequestScree
   @override
   void initState() {
     super.initState();
+  }
+
+  Future<void> _showCategoryPicker() async {
+    final result = await showModalBottomSheet<Map<String, String>>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.8,
+        maxChildSize: 0.9,
+        minChildSize: 0.5,
+        builder: (context, scrollController) => CategoryPicker(
+          requestType: 'delivery',
+          scrollController: scrollController,
+        ),
+      ),
+    );
+
+    if (result != null && result.containsKey('category')) {
+      setState(() {
+        _selectedCategory = result['category'];
+        _selectedSubcategory = result['subcategory']; // Can be null for main categories
+        _selectedCategoryId = _selectedCategory; // Set ID same as name for now
+        _selectedSubCategoryId = _selectedSubcategory; // Set ID same as name for now
+      });
+    }
   }
 
   @override
@@ -155,15 +184,27 @@ class _CreateDeliveryRequestScreenState extends State<CreateDeliveryRequestScree
               const SizedBox(height: 16),
               
               // Category Selection
-              CategorySelectionWidget(
-                categoryType: 'delivery',
-                selectedCategoryId: _selectedCategoryId,
-                selectedSubCategoryId: _selectedSubCategoryId,
-                onSelectionChanged: (categoryId, subCategoryId) {
-                  setState(() {
-                    _selectedCategoryId = categoryId;
-                    _selectedSubCategoryId = subCategoryId;
-                  });
+              TextFormField(
+                readOnly: true,
+                decoration: const InputDecoration(
+                  labelText: 'Delivery Category',
+                  hintText: 'Select a delivery category',
+                  suffixIcon: Icon(Icons.arrow_drop_down),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: InputBorder.none,
+                ),
+                controller: TextEditingController(
+                  text: _selectedSubcategory != null 
+                    ? '$_selectedCategory > $_selectedSubcategory'
+                    : _selectedCategory ?? '',
+                ),
+                onTap: _showCategoryPicker,
+                validator: (value) {
+                  if (_selectedCategory == null) {
+                    return 'Please select a delivery category';
+                  }
+                  return null;
                 },
               ),
               const SizedBox(height: 16),
@@ -183,39 +224,23 @@ class _CreateDeliveryRequestScreenState extends State<CreateDeliveryRequestScree
                 },
               ),
               const SizedBox(height: 24),
-              TextFormField(
+              LocationPickerWidget(
                 controller: _pickupLocationController,
-                decoration: const InputDecoration(
-                  labelText: 'Pickup Location',
-                  hintText: 'Where should the courier pick up from?',
-                  prefixIcon: Icon(Icons.my_location),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: InputBorder.none,
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter pickup location';
-                  }
-                  return null;
+                labelText: 'Pickup Location',
+                hintText: 'Where should the courier pick up from?',
+                isRequired: true,
+                onLocationSelected: (address, lat, lng) {
+                  print('Pickup location selected: $address at $lat, $lng');
                 },
               ),
               const SizedBox(height: 16),
-              TextFormField(
+              LocationPickerWidget(
                 controller: _deliveryLocationController,
-                decoration: const InputDecoration(
-                  labelText: 'Delivery Location',
-                  hintText: 'Where should it be delivered?',
-                  prefixIcon: Icon(Icons.location_on),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: InputBorder.none,
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter delivery location';
-                  }
-                  return null;
+                labelText: 'Delivery Location',
+                hintText: 'Where should it be delivered?',
+                isRequired: true,
+                onLocationSelected: (address, lat, lng) {
+                  print('Delivery location selected: $address at $lat, $lng');
                 },
               ),
               const SizedBox(height: 24),

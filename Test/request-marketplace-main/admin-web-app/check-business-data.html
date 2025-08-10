@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check Business Data</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .user-card {
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        .business-profile {
+            background: #e8f5e8;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+        }
+        .no-business {
+            background: #ffe8e8;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+        .error {
+            color: red;
+            background: #ffe8e8;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>Check Business Registration Data</h1>
+    <button onclick="checkAllUsers()">Check All Users</button>
+    <button onclick="checkSpecificUser()">Check Specific User</button>
+    <div id="results"></div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCQ95FakWZLLnm5YvG-l1J6FN9Y80RLIEc",
+            authDomain: "request-marketplace.firebaseapp.com",
+            projectId: "request-marketplace",
+            storageBucket: "request-marketplace.firebasestorage.app",
+            messagingSenderId: "551503664846",
+            appId: "1:551503664846:web:04d0b81b3fd24a0fe53c97"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        async function checkAllUsers() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="loading">Loading users...</div>';
+
+            try {
+                const usersSnapshot = await db.collection('users').get();
+                let html = `<h2>Found ${usersSnapshot.docs.length} users:</h2>`;
+
+                usersSnapshot.docs.forEach(doc => {
+                    const data = doc.data();
+                    html += `
+                        <div class="user-card">
+                            <h3>User ID: ${doc.id}</h3>
+                            <p><strong>Name:</strong> ${data.name || 'Not set'}</p>
+                            <p><strong>Email:</strong> ${data.email || 'Not set'}</p>
+                            <p><strong>Phone:</strong> ${data.phoneNumber || 'Not set'}</p>
+                            <p><strong>Roles:</strong> ${(data.roles || []).join(', ')}</p>
+                            <p><strong>Profile Complete:</strong> ${data.profileComplete ? 'Yes' : 'No'}</p>
+                            
+                            ${data.businessProfile ? `
+                                <div class="business-profile">
+                                    <h4>📈 Business Profile Found!</h4>
+                                    <p><strong>Business Name:</strong> ${data.businessProfile.businessName}</p>
+                                    <p><strong>Business Type:</strong> ${data.businessProfile.businessType}</p>
+                                    <p><strong>Categories:</strong> ${(data.businessProfile.businessCategories || []).join(', ')}</p>
+                                    <p><strong>Address:</strong> ${data.businessProfile.businessAddress}</p>
+                                    <p><strong>Status:</strong> ${data.businessProfile.verificationStatus}</p>
+                                    <p><strong>Active:</strong> ${data.businessProfile.isActive ? 'Yes' : 'No'}</p>
+                                    <p><strong>Location:</strong> ${data.businessProfile.latitude}, ${data.businessProfile.longitude}</p>
+                                </div>
+                            ` : `
+                                <div class="no-business">
+                                    <p>❌ No business profile found</p>
+                                </div>
+                            `}
+                        </div>
+                    `;
+                });
+
+                resultsDiv.innerHTML = html;
+            } catch (error) {
+                console.error('Error:', error);
+                resultsDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function checkSpecificUser() {
+            const userId = prompt('Enter User ID (e.g., G68WKHAnd8WuIlYlx8iHBO6urDy2):');
+            if (!userId) return;
+
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="loading">Loading user data...</div>';
+
+            try {
+                const userDoc = await db.collection('users').doc(userId).get();
+                
+                if (!userDoc.exists) {
+                    resultsDiv.innerHTML = `<div class="error">User ${userId} not found</div>`;
+                    return;
+                }
+
+                const data = userDoc.data();
+                const html = `
+                    <h2>User: ${userId}</h2>
+                    <div class="user-card">
+                        <p><strong>Name:</strong> ${data.name || 'Not set'}</p>
+                        <p><strong>Email:</strong> ${data.email || 'Not set'}</p>
+                        <p><strong>Phone:</strong> ${data.phoneNumber || 'Not set'}</p>
+                        <p><strong>Roles:</strong> ${(data.roles || []).join(', ')}</p>
+                        <p><strong>Profile Complete:</strong> ${data.profileComplete ? 'Yes' : 'No'}</p>
+                        
+                        ${data.businessProfile ? `
+                            <div class="business-profile">
+                                <h4>📈 Business Profile Found!</h4>
+                                <p><strong>Business Name:</strong> ${data.businessProfile.businessName}</p>
+                                <p><strong>Business Type:</strong> ${data.businessProfile.businessType}</p>
+                                <p><strong>Categories:</strong> ${(data.businessProfile.businessCategories || []).join(', ')}</p>
+                                <p><strong>Address:</strong> ${data.businessProfile.businessAddress}</p>
+                                <p><strong>Status:</strong> ${data.businessProfile.verificationStatus}</p>
+                                <p><strong>Active:</strong> ${data.businessProfile.isActive ? 'Yes' : 'No'}</p>
+                                <p><strong>Location:</strong> ${data.businessProfile.latitude}, ${data.businessProfile.longitude}</p>
+                                <details>
+                                    <summary>Full Business Data</summary>
+                                    <pre>${JSON.stringify(data.businessProfile, null, 2)}</pre>
+                                </details>
+                            </div>
+                        ` : `
+                            <div class="no-business">
+                                <p>❌ No business profile found</p>
+                            </div>
+                        `}
+                        
+                        <details>
+                            <summary>Full User Data</summary>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </details>
+                    </div>
+                `;
+
+                resultsDiv.innerHTML = html;
+            } catch (error) {
+                console.error('Error:', error);
+                resultsDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        // Auto-load data on page load
+        window.onload = function() {
+            checkAllUsers();
+        };
+    </script>
+</body>
+</html>

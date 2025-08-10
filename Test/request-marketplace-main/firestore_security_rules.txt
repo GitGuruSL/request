@@ -1,0 +1,23 @@
+# Firestore Notifications Index Issue
+
+The notification system is showing a count but empty list because of a missing Firestore index.
+
+## Problem:
+The query in NotificationService.getUserNotifications() requires a composite index:
+- Query: notifications where recipientId==<uid> order by -createdAt, -__name__
+- Error: "The query requires an index"
+
+## Solution Applied:
+1. Modified getUserNotifications() to remove orderBy from Firestore query
+2. Sort results in memory instead: `notifications.sort((a, b) => b.createdAt.compareTo(a.createdAt))`
+
+## Proper Solution (for production):
+Create the composite index in Firebase Console:
+Collection: notifications
+Fields:
+- recipientId (Ascending)  
+- createdAt (Descending)
+- __name__ (Descending)
+
+## Index URL (from error):
+https://console.firebase.google.com/v1/r/project/request-marketplace/firestore/indexes?create_composite=Cllwcm9qZWN0cy9yZXF1ZXN0LW1hcmtldHBsYWNlL2RhdGFiYXNlcy8oZGVmYXVsdCkvY29sbGVjdGlvbkdyb3Vwcy9ub3RpZmljYXRpb25zL2luZGV4ZXMvXxABGg8KC3JlY2lwaWVudElkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg

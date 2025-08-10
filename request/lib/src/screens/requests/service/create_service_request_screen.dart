@@ -6,7 +6,8 @@ import '../../../services/enhanced_request_service.dart';
 import '../../../services/enhanced_user_service.dart';
 import '../../../services/category_service.dart';
 import '../../../widgets/image_upload_widget.dart';
-import '../../../widgets/category_selection_widget.dart';
+import '../../../widgets/category_picker.dart';
+import '../../../widgets/location_picker_widget.dart';
 
 class CreateServiceRequestScreen extends StatefulWidget {
   const CreateServiceRequestScreen({super.key});
@@ -29,6 +30,8 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
   // Service-specific fields
   String? _selectedCategoryId;
   String? _selectedSubCategoryId;
+  String? _selectedCategory;
+  String? _selectedSubcategory;
   DateTime? _preferredDate;
   String _timeSlot = 'Morning';
   bool _isRemote = false;
@@ -47,6 +50,32 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
   @override
   void initState() {
     super.initState();
+  }
+
+  Future<void> _showCategoryPicker() async {
+    final result = await showModalBottomSheet<Map<String, String>>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.8,
+        maxChildSize: 0.9,
+        minChildSize: 0.5,
+        builder: (context, scrollController) => CategoryPicker(
+          requestType: 'service',
+          scrollController: scrollController,
+        ),
+      ),
+    );
+
+    if (result != null && result.containsKey('category')) {
+      setState(() {
+        _selectedCategory = result['category'];
+        _selectedSubcategory = result['subcategory']; // Can be null for main categories
+        _selectedCategoryId = _selectedCategory; // Set ID same as name for now
+        _selectedSubCategoryId = _selectedSubcategory; // Set ID same as name for now
+      });
+    }
   }
 
   @override
@@ -154,15 +183,27 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
               const SizedBox(height: 12),
               
               // Category Selection
-              CategorySelectionWidget(
-                categoryType: 'service',
-                selectedCategoryId: _selectedCategoryId,
-                selectedSubCategoryId: _selectedSubCategoryId,
-                onSelectionChanged: (categoryId, subCategoryId) {
-                  setState(() {
-                    _selectedCategoryId = categoryId;
-                    _selectedSubCategoryId = subCategoryId;
-                  });
+              TextFormField(
+                readOnly: true,
+                decoration: const InputDecoration(
+                  labelText: 'Service Category',
+                  hintText: 'Select a service category',
+                  suffixIcon: Icon(Icons.arrow_drop_down),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: InputBorder.none,
+                ),
+                controller: TextEditingController(
+                  text: _selectedSubcategory != null 
+                    ? '$_selectedCategory > $_selectedSubcategory'
+                    : _selectedCategory ?? '',
+                ),
+                onTap: _showCategoryPicker,
+                validator: (value) {
+                  if (_selectedCategory == null) {
+                    return 'Please select a service category';
+                  }
+                  return null;
                 },
               ),
               const SizedBox(height: 16),
@@ -267,20 +308,13 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
               ),
               if (!_isRemote) ...[
                 const SizedBox(height: 16),
-                TextFormField(
+                LocationPickerWidget(
                   controller: _locationController,
-                  decoration: const InputDecoration(
-                    labelText: 'Service Location',
-                    hintText: 'Where should the service be provided?',
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: InputBorder.none,
-                  ),
-                  validator: (value) {
-                    if (!_isRemote && (value == null || value.trim().isEmpty)) {
-                      return 'Please specify the service location';
-                    }
-                    return null;
+                  labelText: 'Service Location',
+                  hintText: 'Where should the service be provided?',
+                  isRequired: !_isRemote,
+                  onLocationSelected: (address, lat, lng) {
+                    print('Service location selected: $address at $lat, $lng');
                   },
                 ),
               ],

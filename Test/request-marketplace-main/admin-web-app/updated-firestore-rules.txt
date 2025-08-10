@@ -1,0 +1,160 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && 
+        request.auth.token.email == 'cyber.sec.expert@outlook.com';
+    }
+
+    // Default deny all reads and writes
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Admin access to all collections
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    // Users can only read and write their own data.
+    // They can create their own user document.
+    // Allow authenticated users to read basic profile info needed for requests
+    match /users/{userId} {
+      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null;
+      // Allow authenticated users to read basic profile info for request display
+      // This includes single document reads and batch reads using whereIn
+      allow read: if request.auth != null;
+      // Allow unauthenticated reads for limited user existence checks (login flow)
+      allow read: if request.auth == null && 
+                     request.query != null &&
+                     request.query.limit <= 1;
+    }
+    
+    // Allow authenticated users to query user documents for basic profile info
+    match /users/{document=**} {
+      allow read: if request.auth != null;
+    }
+
+    // Allow authenticated users to register as drivers
+    // Allow admins to manage all drivers
+    match /drivers/{driverId} {
+      allow create: if request.auth != null && request.auth.uid == driverId;
+      allow read, update: if request.auth != null && request.auth.uid == driverId;
+      // Admin access for driver management
+      allow read, write: if isAdmin();
+    }
+
+    // Allow users to create activity logs for themselves.
+    // Users can only read their own activity logs.
+    match /activities/{activityId} {
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    // Allow users to create activity logs under their user document.
+    match /users/{userId}/activity_logs/{activityId} {
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Allow users to manage their own requests.
+    // Users can only read, create, update, and delete their own requests.
+    // Temporary: Allow any authenticated user to update requests (for responseCount)
+    match /requests/{requestId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null; // Simplified for now - any authenticated user can update
+      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    // Allow users to create responses to any request.
+    // Users can read responses to requests they own or responses they created.
+    // Allow querying responses for a specific request if user owns the request
+    match /responses/{responseId} {
+      allow create: if request.auth != null && 
+        request.resource.data.responderId == request.auth.uid;
+      allow read: if request.auth != null && (
+        resource.data.responderId == request.auth.uid ||
+        get(/databases/$(database)/documents/requests/$(resource.data.requestId)).data.userId == request.auth.uid
+      );
+      // Responder can update their own response (but not change responderId)
+      allow update: if request.auth != null && 
+        resource.data.responderId == request.auth.uid &&
+        request.resource.data.responderId == request.auth.uid;
+      // Request owner can update any response status for their request (for accepting/rejecting)
+      allow update: if request.auth != null && 
+        request.auth.uid == get(/databases/$(database)/documents/requests/$(resource.data.requestId)).data.userId;
+    }
+
+    // Phone verification collection
+    match /phone_verifications/{verificationId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null;
+    }
+
+    // Phone OTP verifications collection for custom OTP system
+    match /phone_otp_verifications/{otpId} {
+      // Allow authenticated users to create and read their own OTP records
+      // The otpId format is: ${userId}_${phoneNumber}
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.userId &&
+        otpId.matches('^' + request.auth.uid + '_.*');
+      allow read, update, delete: if request.auth != null && 
+        request.auth.uid == resource.data.userId &&
+        otpId.matches('^' + request.auth.uid + '_.*');
+    }
+
+    // Email OTP verifications collection for email verification
+    match /email_otp_verifications/{email} {
+      // Allow anyone to create OTP records (for registration)
+      // Allow reading/updating only for email verification process
+      allow create, read, update: if true;
+      allow delete: if request.auth != null;
+    }
+
+    // Email OTP verifications collection for email OTP system
+    match /email_otp_verifications/{email} {
+      // Allow anyone to create, read, update email OTP records (for registration flow)
+      // This is needed for email verification during user registration (before authentication)
+      allow read, write: if true;
+    }
+
+    // Conversations collection
+    match /conversations/{conversationId} {
+      allow read, create, update: if request.auth != null && (
+        // Allow if user is in participants (for existing conversations)
+        (resource != null && resource.data != null && request.auth.uid in resource.data.participants) ||
+        // Allow if being created and user is in participants (for new conversations)
+        (request.resource != null && request.resource.data != null && request.auth.uid in request.resource.data.participants) ||
+        // Allow if conversation ID contains user's ID (for checking existence before creation)
+        conversationId.split('_').hasAny([request.auth.uid])
+      );
+      
+      // Messages subcollection
+      match /messages/{messageId} {
+        allow read: if request.auth != null && 
+          request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+        allow create: if request.auth != null &&
+          request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+        allow update: if request.auth != null && 
+          request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+      }
+    }
+
+    // Notifications collection
+    match /notifications/{notificationId} {
+      // Users can read their own notifications
+      allow read: if request.auth != null && request.auth.uid == resource.data.recipientId;
+      // Users can create notifications for others
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.senderId;
+      // Users can update their own notifications (mark as read, etc.)
+      allow update: if request.auth != null && request.auth.uid == resource.data.recipientId;
+      // Users can delete their own notifications
+      allow delete: if request.auth != null && request.auth.uid == resource.data.recipientId;
+    }
+  }
+}

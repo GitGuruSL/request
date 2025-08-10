@@ -40,17 +40,13 @@ class CategoryOption {
 
 class _CategorySelectionWidgetState extends State<CategorySelectionWidget> {
   final CategoryService _categoryService = CategoryService();
-  List<Category> _categories = [];
-  List<SubCategory> _subCategories = [];
+  List<CategoryOption> _categoryOptions = [];
   bool _isLoading = true;
-  String? _selectedCategoryId;
-  String? _selectedSubCategoryId;
+  String? _selectedValue;
 
   @override
   void initState() {
     super.initState();
-    _selectedCategoryId = widget.selectedCategoryId;
-    _selectedSubCategoryId = widget.selectedSubCategoryId;
     _loadCategories();
   }
 
@@ -75,335 +71,154 @@ class _CategorySelectionWidgetState extends State<CategorySelectionWidget> {
           categories = await _categoryService.getCategoriesByType(widget.categoryType);
       }
       
+      List<CategoryOption> options = [];
+      
+      for (Category category in categories) {
+        // Add the main category
+        options.add(CategoryOption(
+          id: 'cat_${category.id}',
+          displayName: category.name,
+          categoryId: category.id,
+          isCategory: true,
+        ));
+        
+        // Add subcategories with indentation
+        for (SubCategory subCategory in category.subCategories) {
+          options.add(CategoryOption(
+            id: 'sub_${category.id}_${subCategory.id}',
+            displayName: '  → ${subCategory.name}',
+            categoryId: category.id,
+            subCategoryId: subCategory.id,
+            isCategory: false,
+          ));
+        }
+      }
+      
       setState(() {
-        _categories = categories;
+        _categoryOptions = options;
         _isLoading = false;
         
-        // Load subcategories if category is already selected
-        if (_selectedCategoryId != null) {
-          _updateSubCategories(_selectedCategoryId!);
+        // Set initial selection
+        if (widget.selectedCategoryId != null) {
+          if (widget.selectedSubCategoryId != null) {
+            _selectedValue = 'sub_${widget.selectedCategoryId}_${widget.selectedSubCategoryId}';
+          } else {
+            _selectedValue = 'cat_${widget.selectedCategoryId}';
+          }
         }
       });
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading categories: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading categories: $e')),
+        );
+      }
     }
   }
 
-  void _updateSubCategories(String categoryId) {
-    final category = _categories.firstWhere((cat) => cat.id == categoryId);
+  void _onSelectionChanged(String? value) {
     setState(() {
-      _subCategories = category.subCategories;
-      // Reset subcategory selection if it doesn't exist in new category
-      if (_selectedSubCategoryId != null && 
-          !_subCategories.any((sub) => sub.id == _selectedSubCategoryId)) {
-        _selectedSubCategoryId = null;
-      }
-    });
-  }
-
-  void _onCategorySelected(String? categoryId) {
-    setState(() {
-      _selectedCategoryId = categoryId;
-      _selectedSubCategoryId = null;
-      
-      if (categoryId != null) {
-        _updateSubCategories(categoryId);
-      } else {
-        _subCategories = [];
-      }
+      _selectedValue = value;
     });
     
-    widget.onSelectionChanged(_selectedCategoryId, _selectedSubCategoryId);
-  }
-
-  void _onSubCategorySelected(String? subCategoryId) {
-    setState(() {
-      _selectedSubCategoryId = subCategoryId;
-    });
+    if (value == null) {
+      widget.onSelectionChanged(null, null);
+      return;
+    }
     
-    widget.onSelectionChanged(_selectedCategoryId, _selectedSubCategoryId);
+    final selectedOption = _categoryOptions.firstWhere((opt) => opt.id == value);
+    widget.onSelectionChanged(
+      selectedOption.categoryId,
+      selectedOption.subCategoryId,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return Card(
-        color: Colors.white,
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          child: const Row(
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 16),
-              Text('Loading categories...'),
-            ],
-          ),
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: const Row(
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: 12),
+            Text('Loading categories...'),
+          ],
         ),
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Main Categories
-        Card(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.grey.shade300),
-          ),
-          child: Column(
+    return DropdownButtonFormField<String>(
+      value: _selectedValue,
+      decoration: InputDecoration(
+        labelText: _getCategoryTitle(),
+        hintText: 'Select a category or subcategory',
+        prefixIcon: Icon(
+          _getCategoryIcon(),
+          color: Colors.blue.shade600,
+        ),
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.blue.shade600, width: 2),
+        ),
+      ),
+      items: _categoryOptions.map((option) {
+        return DropdownMenuItem<String>(
+          value: option.id,
+          child: Row(
             children: [
-              // Category Selection Header
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _getCategoryIcon(),
-                      color: Colors.blue.shade600,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      _getCategoryTitle(),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (widget.isRequired)
-                      const Text(
-                        ' *',
-                        style: TextStyle(
-                          color: Colors.red,
-                          fontSize: 16,
-                        ),
-                      ),
-                  ],
-                ),
+              // Icon for category vs subcategory
+              Icon(
+                option.isCategory ? Icons.folder : Icons.subdirectory_arrow_right,
+                size: 16,
+                color: option.isCategory ? Colors.blue.shade600 : Colors.grey.shade600,
               ),
-              
-              // Categories List
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _categories.length,
-                separatorBuilder: (context, index) => Divider(
-                  height: 1,
-                  color: Colors.grey.shade200,
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  option.displayName,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: option.isCategory ? FontWeight.w500 : FontWeight.normal,
+                    color: option.isCategory ? Colors.black87 : Colors.grey.shade700,
+                  ),
                 ),
-                itemBuilder: (context, index) {
-                  final category = _categories[index];
-                  final isSelected = _selectedCategoryId == category.id;
-                  final hasSubCategories = category.subCategories.isNotEmpty;
-                  
-                  return InkWell(
-                    onTap: () => _onCategorySelected(category.id),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      color: isSelected ? Colors.blue.shade50 : Colors.white,
-                      child: Row(
-                        children: [
-                          // Selection indicator
-                          Container(
-                            width: 20,
-                            height: 20,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isSelected ? Colors.blue.shade600 : Colors.grey.shade400,
-                                width: 2,
-                              ),
-                              color: isSelected ? Colors.blue.shade600 : Colors.transparent,
-                            ),
-                            child: isSelected 
-                              ? const Icon(
-                                  Icons.check,
-                                  color: Colors.white,
-                                  size: 14,
-                                )
-                              : null,
-                          ),
-                          const SizedBox(width: 12),
-                          
-                          // Category icon (if available)
-                          if (category.iconUrl != null)
-                            Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: Image.network(
-                                category.iconUrl!,
-                                width: 24,
-                                height: 24,
-                                errorBuilder: (context, error, stackTrace) => 
-                                  const Icon(Icons.category, size: 24),
-                              ),
-                            )
-                          else
-                            const Padding(
-                              padding: EdgeInsets.only(right: 8),
-                              child: Icon(Icons.category, size: 24, color: Colors.grey),
-                            ),
-                          
-                          // Category name
-                          Expanded(
-                            child: Text(
-                              category.name,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                                color: isSelected ? Colors.blue.shade800 : Colors.black87,
-                              ),
-                            ),
-                          ),
-                          
-                          // Arrow indicator for subcategories
-                          if (hasSubCategories)
-                            Icon(
-                              isSelected ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_right,
-                              color: Colors.grey.shade600,
-                            ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
               ),
             ],
           ),
-        ),
-        
-        // Subcategories (shown when a category is selected)
-        if (_selectedCategoryId != null && _subCategories.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Card(
-            color: Colors.white,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-              side: BorderSide(color: Colors.grey.shade300),
-            ),
-            child: Column(
-              children: [
-                // Subcategory Header
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.subdirectory_arrow_right,
-                        color: Colors.blue.shade600,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Select Subcategory',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                
-                // Subcategories List
-                ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _subCategories.length,
-                  separatorBuilder: (context, index) => Divider(
-                    height: 1,
-                    color: Colors.grey.shade200,
-                  ),
-                  itemBuilder: (context, index) {
-                    final subCategory = _subCategories[index];
-                    final isSelected = _selectedSubCategoryId == subCategory.id;
-                    
-                    return InkWell(
-                      onTap: () => _onSubCategorySelected(subCategory.id),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        color: isSelected ? Colors.blue.shade50 : Colors.white,
-                        child: Row(
-                          children: [
-                            // Selection indicator
-                            Container(
-                              width: 16,
-                              height: 16,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: isSelected ? Colors.blue.shade600 : Colors.grey.shade400,
-                                  width: 1.5,
-                                ),
-                                color: isSelected ? Colors.blue.shade600 : Colors.transparent,
-                              ),
-                              child: isSelected 
-                                ? const Icon(
-                                    Icons.check,
-                                    color: Colors.white,
-                                    size: 12,
-                                  )
-                                : null,
-                            ),
-                            const SizedBox(width: 16),
-                            
-                            // Subcategory name
-                            Expanded(
-                              child: Text(
-                                subCategory.name,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
-                                  color: isSelected ? Colors.blue.shade800 : Colors.black87,
-                                ),
-                              ),
-                            ),
-                            
-                            // Optional delivery indicator (like in your image)
-                            if (subCategory.name.toLowerCase().contains('delivery') || 
-                                subCategory.name.toLowerCase().contains('available'))
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.shade100,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  'Available',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.green.shade700,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-        ],
-      ],
+        );
+      }).toList(),
+      onChanged: _onSelectionChanged,
+      validator: widget.isRequired ? (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please select a category';
+        }
+        return null;
+      } : null,
+      isExpanded: true,
+      menuMaxHeight: 300,
     );
   }
 
@@ -423,13 +238,13 @@ class _CategorySelectionWidgetState extends State<CategorySelectionWidget> {
   String _getCategoryTitle() {
     switch (widget.categoryType) {
       case 'item':
-        return 'Select Item Category';
+        return 'Item Category';
       case 'service':
-        return 'Select Service Category';
+        return 'Service Category';
       case 'delivery':
-        return 'Select Delivery Category';
+        return 'Delivery Category';
       default:
-        return 'Select Category';
+        return 'Category';
     }
   }
 }
