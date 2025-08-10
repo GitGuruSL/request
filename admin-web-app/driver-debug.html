@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Driver Debug Test</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #1e1e1e; color: #fff; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .log { background: #2d2d2d; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 4px solid #007acc; }
+        .error { border-left-color: #f44336; }
+        .success { border-left-color: #4caf50; }
+        .warning { border-left-color: #ff9800; }
+        pre { background: #1e1e1e; padding: 10px; border-radius: 4px; overflow: auto; white-space: pre-wrap; }
+        button { background: #007acc; color: white; border: none; padding: 10px 20px; margin: 5px; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #005a9e; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐛 Driver Loading Debug Test</h1>
+        <p>This will test the exact same driver loading logic as the admin panel.</p>
+        
+        <button onclick="testAuthentication()">🔐 Test Authentication</button>
+        <button onclick="testDriversCollection()">🚗 Test Drivers Collection</button>
+        <button onclick="testDriversWithDetails()">📊 Test Drivers with Full Details</button>
+        <button onclick="clearLogs()">🧹 Clear Logs</button>
+        
+        <div id="logs"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, getDocs, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCtuD42SzwxKmSY5p-x5olFex2U_S9YrMk",
+            authDomain: "request-marketplace.firebaseapp.com",
+            projectId: "request-marketplace",
+            storageBucket: "request-marketplace.firebasestorage.app",
+            messagingSenderId: "297785977179",
+            appId: "1:297785977179:web:7b3bb3a1ecaf5ed2f61b18"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
+
+        // Make functions global
+        window.testAuthentication = testAuthentication;
+        window.testDriversCollection = testDriversCollection;
+        window.testDriversWithDetails = testDriversWithDetails;
+        window.clearLogs = clearLogs;
+
+        function log(message, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logDiv = document.createElement('div');
+            logDiv.className = `log ${type}`;
+            logDiv.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            document.getElementById('logs').appendChild(logDiv);
+            logDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+
+        async function testAuthentication() {
+            log('🔐 Testing authentication...', 'log');
+            
+            if (auth.currentUser) {
+                log(`✅ Already authenticated: ${auth.currentUser.email}`, 'success');
+                return true;
+            } else {
+                log('⚠️ Not authenticated. Attempting Google sign-in...', 'warning');
+                try {
+                    const result = await signInWithPopup(auth, provider);
+                    log(`✅ Successfully signed in: ${result.user.email}`, 'success');
+                    return true;
+                } catch (error) {
+                    log(`❌ Authentication failed: ${error.message}`, 'error');
+                    return false;
+                }
+            }
+        }
+
+        async function testDriversCollection() {
+            log('🚗 Testing drivers collection access...', 'log');
+            
+            if (!auth.currentUser) {
+                log('❌ Please authenticate first', 'error');
+                return;
+            }
+
+            try {
+                const driversSnapshot = await getDocs(collection(db, 'drivers'));
+                log(`✅ Successfully accessed drivers collection`, 'success');
+                log(`📊 Found ${driversSnapshot.size} drivers in collection`, 'success');
+                
+                if (driversSnapshot.empty) {
+                    log('⚠️ No drivers found in the collection', 'warning');
+                } else {
+                    log('📋 Driver document IDs:', 'log');
+                    driversSnapshot.forEach(doc => {
+                        log(`- Document ID: ${doc.id}`, 'log');
+                    });
+                }
+                
+            } catch (error) {
+                log(`❌ Error accessing drivers collection: ${error.message}`, 'error');
+                log(`🔍 Error details: ${JSON.stringify(error, null, 2)}`, 'error');
+            }
+        }
+
+        async function testDriversWithDetails() {
+            log('📊 Testing drivers with full details...', 'log');
+            
+            if (!auth.currentUser) {
+                log('❌ Please authenticate first', 'error');
+                return;
+            }
+
+            try {
+                const driversSnapshot = await getDocs(collection(db, 'drivers'));
+                log(`✅ Retrieved ${driversSnapshot.size} drivers`, 'success');
+                
+                if (driversSnapshot.empty) {
+                    log('⚠️ No drivers to display', 'warning');
+                    return;
+                }
+
+                driversSnapshot.forEach((doc, index) => {
+                    const driver = doc.data();
+                    log(`<h3>🚗 Driver ${index + 1} (ID: ${doc.id})</h3>`, 'log');
+                    
+                    // Test the same parsing logic as admin panel
+                    const name = driver.name || 'N/A';
+                    const license = driver.licenseNumber || 'N/A';
+                    
+                    let vehicle = 'N/A';
+                    if (driver.vehicleType && driver.vehicleModel) {
+                        vehicle = `${driver.vehicleType} - ${driver.vehicleModel}`;
+                        if (driver.vehicleNumber) {
+                            vehicle += ` (${driver.vehicleNumber})`;
+                        }
+                        if (driver.vehicleColor) {
+                            vehicle += ` [${driver.vehicleColor}]`;
+                        }
+                        if (driver.vehicleYear) {
+                            vehicle += ` (${driver.vehicleYear})`;
+                        }
+                    }
+                    
+                    const status = driver.status || 'pending';
+                    const isVerified = driver.isVerified || false;
+                    const availability = driver.availability || false;
+                    const rating = driver.rating || 0;
+                    const totalRides = driver.totalRides || 0;
+                    const totalEarnings = driver.totalEarnings || 0;
+                    
+                    log('📋 Parsed Data: Name: ' + name + ', License: ' + license + ', Vehicle: ' + vehicle + ', Status: ' + status + ', Verified: ' + isVerified + ', Available: ' + availability + ', Rating: ' + rating + ', Rides: ' + totalRides + ', Earnings: $' + totalEarnings, 'success');
+                    
+                    log('🔍 Raw Firebase Data:', 'log');
+                    log('<pre>' + JSON.stringify(driver, null, 2) + '</pre>', 'log');
+                });
+                
+            } catch (error) {
+                log('❌ Error loading driver details: ' + error.message, 'error');
+                log('🔍 Error stack: ' + error.stack, 'error');
+            }
+        }
+
+        // Auto-check authentication status
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                log('🔐 Authentication state: Signed in as ' + user.email, 'success');
+            } else {
+                log('🔐 Authentication state: Not signed in', 'warning');
+            }
+        });
+
+        log('🚀 Debug tool initialized. Firebase config loaded.', 'success');
+    </script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Storage URL Refresh Test</title>
+</head>
+<body>
+    <h1>Firebase Storage URL Refresh Test</h1>
+    <button onclick="refreshImageUrls()">Refresh Image URLs</button>
+    <div id="output"></div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, getDocs, doc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getStorage, ref, getDownloadURL, listAll } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCtuD42SzwxKmSY5p-x5olFex2U_S9YrMk",
+            authDomain: "request-marketplace.firebaseapp.com",
+            projectId: "request-marketplace",
+            storageBucket: "request-marketplace.firebasestorage.app",
+            messagingSenderId: "355474518888",
+            appId: "1:355474518888:android:deb017622c8c4d0cb91cdd"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+
+        window.refreshImageUrls = async function() {
+            const output = document.getElementById('output');
+            output.innerHTML = '<p>Refreshing URLs from Firebase Storage...</p>';
+
+            try {
+                const driversSnapshot = await getDocs(collection(db, 'drivers'));
+                let results = '<h2>Storage URL Refresh Results:</h2>';
+
+                for (const driverDoc of driversSnapshot.docs) {
+                    const driverData = driverDoc.data();
+                    const driverId = driverDoc.id;
+                    const driverName = driverData.name || 'Unknown';
+                    
+                    results += `<h3>Driver: ${driverName} (ID: ${driverId})</h3>`;
+
+                    try {
+                        // List all files in the driver's vehicle folder
+                        const vehicleFolderRef = ref(storage, `drivers/${driverId}/vehicles`);
+                        const vehicleList = await listAll(vehicleFolderRef);
+                        
+                        if (vehicleList.items.length > 0) {
+                            results += '<h4>Found Files in Storage:</h4><ul>';
+                            const newUrls = [];
+
+                            for (const itemRef of vehicleList.items) {
+                                try {
+                                    const url = await getDownloadURL(itemRef);
+                                    newUrls.push(url);
+                                    results += `<li>✅ ${itemRef.name}: <br><code>${url}</code><br>
+                                               <img src="${url}" style="max-width: 150px; max-height: 100px; border: 1px solid green; margin: 5px 0;"></li>`;
+                                } catch (urlError) {
+                                    results += `<li>❌ ${itemRef.name}: Failed to get URL - ${urlError.message}</li>`;
+                                }
+                            }
+                            results += '</ul>';
+
+                            // Update Firestore with refreshed URLs
+                            if (newUrls.length > 0) {
+                                await updateDoc(doc(db, 'drivers', driverId), {
+                                    vehicleImageUrls: newUrls,
+                                    lastUrlRefresh: new Date()
+                                });
+                                results += `<p style="color: green;">✅ Updated Firestore with ${newUrls.length} refreshed URLs</p>`;
+                            }
+                        } else {
+                            results += '<p>No files found in vehicle storage folder.</p>';
+                        }
+
+                        // Compare with stored URLs
+                        const storedUrls = driverData.vehicleImageUrls || [];
+                        results += `<h4>Currently Stored URLs (${storedUrls.length}):</h4><ul>`;
+                        storedUrls.forEach((url, index) => {
+                            results += `<li>URL ${index + 1}: <br><code>${url}</code><br>
+                                       <img src="${url}" style="max-width: 150px; max-height: 100px; border: 1px solid orange; margin: 5px 0;" 
+                                            onerror="this.style.border='2px solid red'; this.title='Failed to load'"></li>`;
+                        });
+                        results += '</ul>';
+
+                    } catch (storageError) {
+                        results += `<p style="color: red;">❌ Storage Error: ${storageError.message}</p>`;
+                    }
+                    
+                    results += '<hr>';
+                }
+
+                output.innerHTML = results;
+            } catch (error) {
+                console.error('Error:', error);
+                output.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Debug Test</title>
+</head>
+<body>
+    <h2>Firebase Storage Image Test</h2>
+    <div id="test-results"></div>
+    
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getStorage, ref, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCtuD42SzwxKmSY5p-x5olFex2U_S9YrMk",
+            authDomain: "request-marketplace.firebaseapp.com",
+            projectId: "request-marketplace",
+            storageBucket: "request-marketplace.firebasestorage.app",
+            messagingSenderId: "355474518888",
+            appId: "1:355474518888:web:7b3a7f6f7d7a8b0d8e8f9f"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+
+        async function testDriverImages() {
+            const results = document.getElementById('test-results');
+            results.innerHTML = '<h3>Testing driver images...</h3>';
+            
+            try {
+                // Test the specific driver from screenshot
+                const driverId = '0JbNwxxqOveTJcMrTmvQKjWZOJuy2';
+                const driverDoc = await getDoc(doc(db, 'drivers', driverId));
+                
+                if (driverDoc.exists()) {
+                    const data = driverDoc.data();
+                    results.innerHTML += '<h4>Driver Data Found:</h4>';
+                    results.innerHTML += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                    
+                    // Test document verification images
+                    if (data.documentVerification) {
+                        results.innerHTML += '<h4>Testing Document Images:</h4>';
+                        
+                        for (const [docType, docData] of Object.entries(data.documentVerification)) {
+                            if (docData && docData.url) {
+                                results.innerHTML += `<div><strong>${docType}:</strong> ${docData.url}</div>`;
+                                
+                                // Test image loading
+                                const img = new Image();
+                                img.onload = () => {
+                                    results.innerHTML += `<div style="color: green;">✅ ${docType} loads successfully</div>`;
+                                    results.innerHTML += `<img src="${docData.url}" style="max-width: 200px; margin: 10px;" />`;
+                                };
+                                img.onerror = () => {
+                                    results.innerHTML += `<div style="color: red;">❌ ${docType} failed to load</div>`;
+                                };
+                                img.src = docData.url;
+                            }
+                        }
+                    }
+                } else {
+                    results.innerHTML += '<div style="color: red;">Driver not found</div>';
+                }
+            } catch (error) {
+                results.innerHTML += '<div style="color: red;">Error: ' + error.message + '</div>';
+            }
+        }
+
+        // Run test when page loads
+        testDriverImages();
+    </script>
+</body>
+</html>
