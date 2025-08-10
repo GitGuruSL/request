@@ -44,6 +44,13 @@ migrate_working_dir/
 .pub/
 /build/
 pubspec.lock
+.dart_tool/
+android/.gradle/
+request/.dart_tool/
+request/android/.gradle/
+request/build/
+*.dill
+*.cache.dill*
 
 # Symbolication related
 app.*.symbols
