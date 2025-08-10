@@ -1,23 +1,17 @@
 import 'package:flutter/material.dart';
-import '../../../models/request_model.dart';
-import '../../../models/enhanced_user_model.dart';
-import '../../../models/category_model.dart';
-import '../../../services/enhanced_request_service.dart';
-import '../../../services/enhanced_user_service.dart';
-import '../../../services/category_service.dart';
-import '../../../widgets/image_upload_widget.dart';
-import '../../../widgets/category_picker.dart';
-import '../../../widgets/location_picker_widget.dart';
-import '../../../utils/currency_helper.dart';
+import '../../models/request_model.dart';
+import '../../models/enhanced_user_model.dart';
+import '../../services/enhanced_request_service.dart';
+import '../../services/enhanced_user_service.dart';
 
-class CreateItemRequestScreen extends StatefulWidget {
-  const CreateItemRequestScreen({super.key});
+class CreatePriceRequestScreen extends StatefulWidget {
+  const CreatePriceRequestScreen({super.key});
 
   @override
-  State<CreateItemRequestScreen> createState() => _CreateItemRequestScreenState();
+  State<CreatePriceRequestScreen> createState() => _CreatePriceRequestScreenState();
 }
 
-class _CreateItemRequestScreenState extends State<CreateItemRequestScreen> {
+class _CreatePriceRequestScreenState extends State<CreatePriceRequestScreen> {
   final _formKey = GlobalKey<FormState>();
   final EnhancedRequestService _requestService = EnhancedRequestService();
   final EnhancedUserService _userService = EnhancedUserService();
@@ -26,67 +20,31 @@ class _CreateItemRequestScreenState extends State<CreateItemRequestScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _locationController = TextEditingController();
-  final _budgetController = TextEditingController();
   
-  // Item-specific fields
-  String? _selectedCategoryId;
-  String? _selectedSubCategoryId;
-  String? _selectedCategory;
-  String? _selectedSubcategory;
-  String _condition = 'New';
-  bool _isUrgent = false;
+  // Price-specific fields
+  String _requestType = 'Product Price';
   final _brandController = TextEditingController();
+  final _modelController = TextEditingController();
   final _specificationsController = TextEditingController();
-  List<String> _imageUrls = [];
+  bool _includeShipping = false;
+  bool _lookingForBestDeal = true;
 
   bool _isLoading = false;
 
-  final List<String> _conditions = [
-    'New',
-    'Like New',
-    'Good',
-    'Fair',
-    'Any Condition',
+  final List<String> _requestTypes = [
+    'Product Price',
+    'Service Quote',
+    'Rental Rate',
+    'Market Price',
   ];
-
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  Future<void> _showCategoryPicker() async {
-    final result = await showModalBottomSheet<Map<String, String>>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.8,
-        maxChildSize: 0.9,
-        minChildSize: 0.5,
-        builder: (context, scrollController) => CategoryPicker(
-          requestType: 'item',
-          scrollController: scrollController,
-        ),
-      ),
-    );
-
-    if (result != null && result.containsKey('category')) {
-      setState(() {
-        _selectedCategory = result['category'];
-        _selectedSubcategory = result['subcategory']; // Can be null for main categories
-        _selectedCategoryId = _selectedCategory; // Set ID same as name for now
-        _selectedSubCategoryId = _selectedSubcategory; // Set ID same as name for now
-      });
-    }
-  }
 
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
     _locationController.dispose();
-    _budgetController.dispose();
     _brandController.dispose();
+    _modelController.dispose();
     _specificationsController.dispose();
     super.dispose();
   }
@@ -96,7 +54,7 @@ class _CreateItemRequestScreenState extends State<CreateItemRequestScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFAFF),
       appBar: AppBar(
-        title: const Text('Create Item Request'),
+        title: const Text('Create Price Request'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
@@ -117,22 +75,22 @@ class _CreateItemRequestScreenState extends State<CreateItemRequestScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.shopping_bag, color: Colors.blue[600]),
+                    Icon(Icons.attach_money, color: Colors.teal[600]),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Item Request',
+                            'Price Request',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.blue[600],
+                              color: Colors.teal[600],
                             ),
                           ),
                           const Text(
-                            'Looking for a specific item? Tell us what you need!',
+                            'Get price quotes and compare offers from multiple providers!',
                           ),
                         ],
                       ),
@@ -147,16 +105,16 @@ class _CreateItemRequestScreenState extends State<CreateItemRequestScreen> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: 'What are you looking for?',
-                  hintText: 'e.g., iPhone 15 Pro, Gaming Chair',
+                decoration: InputDecoration(
+                  labelText: 'What do you want priced?',
+                  hintText: 'e.g., iPhone 15 Pro, Web Design Service',
                   filled: true,
                   fillColor: Colors.white,
                   border: InputBorder.none,
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Please enter what you\'re looking for';
+                    return 'Please enter what you want priced';
                   }
                   return null;
                 },
@@ -164,9 +122,9 @@ class _CreateItemRequestScreenState extends State<CreateItemRequestScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Description',
-                  hintText: 'Provide more details about the item...',
+                  hintText: 'Provide more details about what you need priced...',
                   filled: true,
                   fillColor: Colors.white,
                   border: InputBorder.none,
@@ -181,59 +139,33 @@ class _CreateItemRequestScreenState extends State<CreateItemRequestScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Item Details
-              _buildSectionTitle('Item Details'),
+              // Price Request Details
+              _buildSectionTitle('Request Details'),
               const SizedBox(height: 12),
-              
-              // Category Selection
-              TextFormField(
-                readOnly: true,
-                decoration: const InputDecoration(
-                  labelText: 'Category',
-                  hintText: 'Select a category',
-                  suffixIcon: Icon(Icons.arrow_drop_down),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: InputBorder.none,
-                ),
-                controller: TextEditingController(
-                  text: _selectedSubcategory != null 
-                    ? '$_selectedCategory > $_selectedSubcategory'
-                    : _selectedCategory ?? '',
-                ),
-                onTap: _showCategoryPicker,
-                validator: (value) {
-                  if (_selectedCategory == null) {
-                    return 'Please select a category';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _condition,
-                decoration: const InputDecoration(
-                  labelText: 'Preferred Condition',
+                value: _requestType,
+                decoration: InputDecoration(
+                  labelText: 'Request Type',
                   filled: true,
                   fillColor: Colors.white,
                   border: InputBorder.none,
                 ),
-                items: _conditions.map((condition) {
+                items: _requestTypes.map((type) {
                   return DropdownMenuItem(
-                    value: condition,
-                    child: Text(condition),
+                    value: type,
+                    child: Text(type),
                   );
                 }).toList(),
                 onChanged: (value) {
                   setState(() {
-                    _condition = value!;
+                    _requestType = value!;
                   });
                 },
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _brandController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Brand (Optional)',
                   hintText: 'e.g., Apple, Samsung, Nike',
                   filled: true,
@@ -243,10 +175,21 @@ class _CreateItemRequestScreenState extends State<CreateItemRequestScreen> {
               ),
               const SizedBox(height: 16),
               TextFormField(
+                controller: _modelController,
+                decoration: InputDecoration(
+                  labelText: 'Model/Version (Optional)',
+                  hintText: 'e.g., Pro Max, 2024 Edition',
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: InputBorder.none,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
                 controller: _specificationsController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Specifications (Optional)',
-                  hintText: 'Size, color, model, features...',
+                  hintText: 'Color, size, features, requirements...',
                   filled: true,
                   fillColor: Colors.white,
                   border: InputBorder.none,
@@ -255,52 +198,29 @@ class _CreateItemRequestScreenState extends State<CreateItemRequestScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Images
-              _buildSectionTitle('Images'),
-              const SizedBox(height: 12),
-              ImageUploadWidget(
-                initialImages: _imageUrls,
-                maxImages: 4,
-                uploadPath: 'requests/items',
-                label: 'Upload item images (up to 4)',
-                onImagesChanged: (images) {
-                  setState(() {
-                    _imageUrls = images;
-                  });
-                },
-              ),
-              const SizedBox(height: 24),
-
-              // Budget & Location
-              _buildSectionTitle('Budget & Location'),
+              // Location
+              _buildSectionTitle('Location'),
               const SizedBox(height: 12),
               TextFormField(
-                controller: _budgetController,
+                controller: _locationController,
                 decoration: InputDecoration(
-                  labelText: CurrencyHelper.instance.getBudgetLabel(),
-                  hintText: '0.00',
-                  prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
+                  labelText: 'Your Location',
+                  hintText: 'For accurate pricing and availability',
                   filled: true,
                   fillColor: Colors.white,
                   border: InputBorder.none,
                 ),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 16),
-              LocationPickerWidget(
-                controller: _locationController,
-                labelText: 'Preferred Location',
-                hintText: 'Where would you like to pick up?',
-                isRequired: true,
-                onLocationSelected: (address, lat, lng) {
-                  // You can store lat/lng if needed for future features
-                  print('Selected location: $address at $lat, $lng');
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please specify your location';
+                  }
+                  return null;
                 },
               ),
               const SizedBox(height: 24),
 
               // Options
-              _buildSectionTitle('Options'),
+              _buildSectionTitle('Preferences'),
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(16),
@@ -308,17 +228,33 @@ class _CreateItemRequestScreenState extends State<CreateItemRequestScreen> {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: CheckboxListTile(
-                  title: const Text('This is urgent'),
-                  subtitle: const Text('I need this item as soon as possible'),
-                  value: _isUrgent,
-                  onChanged: (value) {
-                    setState(() {
-                      _isUrgent = value!;
-                    });
-                  },
-                  controlAffinity: ListTileControlAffinity.leading,
-                  contentPadding: EdgeInsets.zero,
+                child: Column(
+                  children: [
+                    CheckboxListTile(
+                      title: const Text('Include Shipping Costs'),
+                      subtitle: const Text('Get total price including delivery'),
+                      value: _includeShipping,
+                      onChanged: (value) {
+                        setState(() {
+                          _includeShipping = value!;
+                        });
+                      },
+                      controlAffinity: ListTileControlAffinity.leading,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    CheckboxListTile(
+                      title: const Text('Looking for Best Deal'),
+                      subtitle: const Text('I want the most competitive prices'),
+                      value: _lookingForBestDeal,
+                      onChanged: (value) {
+                        setState(() {
+                          _lookingForBestDeal = value!;
+                        });
+                      },
+                      controlAffinity: ListTileControlAffinity.leading,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 32),
@@ -330,7 +266,7 @@ class _CreateItemRequestScreenState extends State<CreateItemRequestScreen> {
                   onPressed: _isLoading ? null : _submitRequest,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: Colors.blue[600],
+                    backgroundColor: Colors.teal[600],
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -339,7 +275,7 @@ class _CreateItemRequestScreenState extends State<CreateItemRequestScreen> {
                   child: _isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
                       : const Text(
-                          'Create Item Request',
+                          'Get Price Quotes',
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                 ),
@@ -367,13 +303,6 @@ class _CreateItemRequestScreenState extends State<CreateItemRequestScreen> {
       return;
     }
 
-    if (_selectedCategoryId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a category')),
-      );
-      return;
-    }
-
     setState(() {
       _isLoading = true;
     });
@@ -392,54 +321,38 @@ class _CreateItemRequestScreenState extends State<CreateItemRequestScreen> {
         return;
       }
 
-      // Get category and subcategory info
-      String categoryName = 'Item'; // Default fallback
-      String? subCategoryName;
-
-      // If we have selected categories, we'll store the IDs and let the backend handle names
-      if (_selectedCategoryId != null) {
-        // We'll use the category ID and let the backend resolve the name
-        categoryName = 'Selected Item Category'; // Placeholder - backend will resolve
-      }
-
-      // Create the item-specific data
-      final itemData = ItemRequestData(
-        category: categoryName,
+      // Create the price-specific data
+      final priceData = PriceRequestData(
+        itemOrService: _titleController.text.trim(),
+        category: _category,
         brand: _brandController.text.trim().isEmpty ? null : _brandController.text.trim(),
         condition: _condition,
         specifications: {
           'specifications': _specificationsController.text.trim(),
-          'isUrgent': _isUrgent.toString(),
-          'categoryId': _selectedCategoryId ?? '',
-          'subCategoryId': _selectedSubCategoryId ?? '',
         },
-        acceptAlternatives: true,
+        quantity: _quantity,
+        compareNewAndUsed: _compareNewAndUsed,
       );
 
       final requestId = await _requestService.createRequest(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
-        type: RequestType.item,
+        type: RequestType.price,
         budget: double.tryParse(_budgetController.text),
         currency: CurrencyHelper.instance.getCurrency(),
-        typeSpecificData: itemData.toMap(),
-        tags: [
-          'item', 
-          'category_${_selectedCategoryId ?? 'other'}',
-          if (_selectedSubCategoryId != null) 'subcategory_${_selectedSubCategoryId}',
-        ],
+        typeSpecificData: priceData.toMap(),
+        tags: ['price', _category.toLowerCase().replaceAll(' ', '_')],
         location: LocationInfo(
           latitude: 0.0,
           longitude: 0.0,
           address: _locationController.text.trim(),
         ),
-        images: _imageUrls,
       );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Item request created successfully!'),
+            content: Text('Price request created successfully!'),
             backgroundColor: Colors.green,
           ),
         );

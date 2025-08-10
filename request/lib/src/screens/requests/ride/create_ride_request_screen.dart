@@ -3,6 +3,9 @@ import '../../../models/request_model.dart';
 import '../../../models/enhanced_user_model.dart';
 import '../../../services/enhanced_request_service.dart';
 import '../../../services/enhanced_user_service.dart';
+import '../../../widgets/image_upload_widget.dart';
+import '../../../widgets/location_picker_widget.dart';
+import '../../../utils/currency_helper.dart';
 
 class CreateRideRequestScreen extends StatefulWidget {
   const CreateRideRequestScreen({super.key});
@@ -29,6 +32,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
   int _passengerCount = 1;
   bool _allowSharing = true;
   final _specialRequestsController = TextEditingController();
+  List<String> _imageUrls = [];
 
   bool _isLoading = false;
 
@@ -106,7 +110,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _titleController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Trip Title',
                   hintText: 'e.g., Airport to Downtown, Daily Commute',
                   filled: true,
@@ -121,45 +125,29 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                 },
               ),
               const SizedBox(height: 16),
-              TextFormField(
+              LocationPickerWidget(
                 controller: _pickupLocationController,
-                decoration: const InputDecoration(
-                  labelText: 'Pickup Location',
-                  hintText: 'Where should the driver pick you up?',
-                  prefixIcon: Icon(Icons.my_location),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: InputBorder.none,
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter pickup location';
-                  }
-                  return null;
+                labelText: 'Pickup Location',
+                hintText: 'Where should the driver pick you up?',
+                isRequired: true,
+                onLocationSelected: (address, lat, lng) {
+                  print('Pickup location: $address at $lat, $lng');
                 },
               ),
               const SizedBox(height: 16),
-              TextFormField(
+              LocationPickerWidget(
                 controller: _destinationController,
-                decoration: const InputDecoration(
-                  labelText: 'Destination',
-                  hintText: 'Where do you want to go?',
-                  prefixIcon: Icon(Icons.location_on),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: InputBorder.none,
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter destination';
-                  }
-                  return null;
+                labelText: 'Destination',
+                hintText: 'Where do you want to go?',
+                isRequired: true,
+                onLocationSelected: (address, lat, lng) {
+                  print('Destination: $address at $lat, $lng');
                 },
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Additional Notes (Optional)',
                   hintText: 'Any special instructions or preferences...',
                   filled: true,
@@ -175,7 +163,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: _rideType,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Ride Type',
                   filled: true,
                   fillColor: Colors.white,
@@ -258,7 +246,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _specialRequestsController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Special Requests (Optional)',
                   hintText: 'Pet-friendly, non-smoking, etc...',
                   filled: true,
@@ -268,15 +256,31 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
               ),
               const SizedBox(height: 24),
 
+              // Reference Images
+              _buildSectionTitle('Reference Images'),
+              const SizedBox(height: 12),
+              ImageUploadWidget(
+                initialImages: _imageUrls,
+                maxImages: 4,
+                uploadPath: 'requests/ride',
+                label: 'Upload reference images (optional)',
+                onImagesChanged: (images) {
+                  setState(() {
+                    _imageUrls = images;
+                  });
+                },
+              ),
+              const SizedBox(height: 24),
+
               // Budget
               _buildSectionTitle('Budget'),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _budgetController,
-                decoration: const InputDecoration(
-                  labelText: 'Offered Price (USD)',
+                decoration: InputDecoration(
+                  labelText: CurrencyHelper.instance.getPriceLabel('Offered Price'),
                   hintText: '0.00',
-                  prefixText: '\$ ',
+                  prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
                   filled: true,
                   fillColor: Colors.white,
                   border: InputBorder.none,
@@ -400,7 +404,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
         description: _descriptionController.text.trim(),
         type: RequestType.ride,
         budget: double.tryParse(_budgetController.text),
-        currency: 'USD',
+        currency: CurrencyHelper.instance.getCurrency(),
         typeSpecificData: rideData.toMap(),
         tags: ['ride', _rideType.toLowerCase().replaceAll(' ', '_')],
         location: LocationInfo(

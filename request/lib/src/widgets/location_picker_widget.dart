@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'dart:async';
 
 class LocationPickerWidget extends StatefulWidget {
   final TextEditingController controller;
@@ -26,11 +27,16 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
   bool _isLoadingLocation = false;
   List<String> _searchSuggestions = [];
   bool _showSuggestions = false;
+  Timer? _debounceTimer;
   final LayerLink _layerLink = LayerLink();
   OverlayEntry? _overlayEntry;
+  final FocusNode _focusNode = FocusNode();
+  bool _isReadOnly = true;
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
+    _focusNode.dispose();
     _removeOverlay();
     super.dispose();
   }
@@ -38,128 +44,6 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
   void _removeOverlay() {
     _overlayEntry?.remove();
     _overlayEntry = null;
-  }
-
-  void _showLocationOptions() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (BuildContext context) {
-        return Container(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Select Location',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 20),
-              
-              // Current Location Option
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.my_location,
-                    color: Colors.blue.shade600,
-                  ),
-                ),
-                title: const Text(
-                  'Use Current Location',
-                  style: TextStyle(fontWeight: FontWeight.w500),
-                ),
-                subtitle: const Text('Automatically detect your location'),
-                trailing: _isLoadingLocation 
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.chevron_right),
-                onTap: _isLoadingLocation ? null : () {
-                  Navigator.pop(context);
-                  _getCurrentLocation();
-                },
-              ),
-              
-              const Divider(),
-              
-              // Search Location Option
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.search,
-                    color: Colors.green.shade600,
-                  ),
-                ),
-                title: const Text(
-                  'Search Location',
-                  style: TextStyle(fontWeight: FontWeight.w500),
-                ),
-                subtitle: const Text('Search for a specific address'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showSearchDialog();
-                },
-              ),
-              
-              const Divider(),
-              
-              // Manual Entry Option
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.edit_location,
-                    color: Colors.orange.shade600,
-                  ),
-                ),
-                title: const Text(
-                  'Enter Manually',
-                  style: TextStyle(fontWeight: FontWeight.w500),
-                ),
-                subtitle: const Text('Type your location manually'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showManualEntryDialog();
-                },
-              ),
-              
-              const SizedBox(height: 10),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   Future<void> _getCurrentLocation() async {
@@ -343,157 +227,148 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
     );
   }
 
-  void _showSearchDialog() {
-    final searchController = TextEditingController();
+  Future<void> _searchLocation(String query) async {
+    if (query.length < 2) {
+      setState(() {
+        _searchSuggestions = [];
+        _showSuggestions = false;
+      });
+      _removeOverlay();
+      return;
+    }
+
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () async {
+      try {
+        // Create realistic suggestions based on the query
+        List<String> suggestions = [];
+        
+        // Add common locations based on query
+        if (query.toLowerCase().contains('col')) {
+          suggestions.add('Colombo, Sri Lanka');
+          suggestions.add('Colombo 1, Sri Lanka');
+          suggestions.add('Colombo 2, Fort, Sri Lanka');
+        }
+        if (query.toLowerCase().contains('kan') || query.toLowerCase().contains('candy')) {
+          suggestions.add('Kandy, Sri Lanka');
+        }
+        if (query.toLowerCase().contains('gal')) {
+          suggestions.add('Galle, Sri Lanka');
+        }
+        if (query.toLowerCase().contains('mat') || query.toLowerCase().contains('mata')) {
+          suggestions.add('Matara, Sri Lanka');
+        }
+        if (query.toLowerCase().contains('neg')) {
+          suggestions.add('Negombo, Sri Lanka');
+        }
+        
+        // Add generic suggestions with the query
+        suggestions.addAll([
+          '$query, Colombo, Sri Lanka',
+          '$query, Kandy, Sri Lanka', 
+          '$query, Galle, Sri Lanka',
+        ]);
+        
+        // Remove duplicates and limit to 5
+        suggestions = suggestions.toSet().toList().take(5).toList();
+        
+        if (mounted) {
+          setState(() {
+            _searchSuggestions = suggestions;
+            _showSuggestions = suggestions.isNotEmpty;
+          });
+          _showOverlay();
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _searchSuggestions = ['$query, Sri Lanka'];
+            _showSuggestions = true;
+          });
+          _showOverlay();
+        }
+      }
+    });
+  }
+
+  void _showOverlay() {
+    _removeOverlay();
     
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Search Location'),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: searchController,
-                      decoration: const InputDecoration(
-                        hintText: 'Enter address, city, or landmark',
-                        prefixIcon: Icon(Icons.search),
-                        border: OutlineInputBorder(),
-                      ),
-                      onChanged: (value) {
-                        if (value.length > 2) {
-                          _searchLocation(value);
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 10),
-                    if (_searchSuggestions.isNotEmpty) ...[
-                      const Text('Suggestions:'),
-                      const SizedBox(height: 5),
-                      SizedBox(
-                        height: 150,
-                        child: ListView.builder(
-                          itemCount: _searchSuggestions.length,
-                          itemBuilder: (context, index) {
-                            return ListTile(
-                              leading: const Icon(Icons.location_on),
-                              title: Text(_searchSuggestions[index]),
-                              onTap: () {
-                                widget.controller.text = _searchSuggestions[index];
-                                widget.onLocationSelected?.call(
-                                  _searchSuggestions[index],
-                                  null,
-                                  null,
-                                );
-                                Navigator.pop(context);
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
+    if (!_showSuggestions || _searchSuggestions.isEmpty) return;
+
+    _overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        width: MediaQuery.of(context).size.width - 32,
+        child: CompositedTransformFollower(
+          link: _layerLink,
+          showWhenUnlinked: false,
+          offset: const Offset(0, 60),
+          child: Material(
+            elevation: 4,
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              constraints: const BoxConstraints(maxHeight: 200),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    if (searchController.text.trim().isNotEmpty) {
-                      widget.controller.text = searchController.text.trim();
+              child: ListView.separated(
+                shrinkWrap: true,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemCount: _searchSuggestions.length,
+                separatorBuilder: (context, index) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  return InkWell(
+                    onTap: () {
+                      widget.controller.text = _searchSuggestions[index];
                       widget.onLocationSelected?.call(
-                        searchController.text.trim(),
+                        _searchSuggestions[index],
                         null,
                         null,
                       );
-                    }
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Use This'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _searchLocation(String query) async {
-    try {
-      List<Location> locations = await locationFromAddress(query);
-      if (locations.isNotEmpty) {
-        List<Placemark> placemarks = await placemarkFromCoordinates(
-          locations.first.latitude,
-          locations.first.longitude,
-        );
-        
-        setState(() {
-          _searchSuggestions = placemarks.map((place) => _formatAddress(place)).toList();
-        });
-      }
-    } catch (e) {
-      // Search failed, show manual suggestions based on query
-      setState(() {
-        _searchSuggestions = [
-          '$query, New York, NY',
-          '$query, Los Angeles, CA',
-          '$query, Chicago, IL',
-          '$query, Houston, TX',
-          '$query, Phoenix, AZ',
-        ];
-      });
-    }
-  }
-
-  void _showManualEntryDialog() {
-    final manualController = TextEditingController(text: widget.controller.text);
-    
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Enter Location'),
-          content: TextField(
-            controller: manualController,
-            decoration: const InputDecoration(
-              hintText: 'Enter your location address',
-              border: OutlineInputBorder(),
-            ),
-            maxLines: 3,
-            textInputAction: TextInputAction.done,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                if (manualController.text.trim().isNotEmpty) {
-                  widget.controller.text = manualController.text.trim();
-                  widget.onLocationSelected?.call(
-                    manualController.text.trim(),
-                    null,
-                    null,
+                      _focusNode.unfocus();
+                      setState(() {
+                        _isReadOnly = true;
+                        _showSuggestions = false;
+                      });
+                      _removeOverlay();
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.location_on,
+                            color: Colors.blue.shade600,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              _searchSuggestions[index],
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   );
-                }
-                Navigator.pop(context);
-              },
-              child: const Text('Save'),
+                },
+              ),
             ),
-          ],
-        );
-      },
+          ),
+        ),
+      ),
     );
+
+    Overlay.of(context).insert(_overlayEntry!);
   }
 
   @override
@@ -502,7 +377,8 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
       link: _layerLink,
       child: TextFormField(
         controller: widget.controller,
-        readOnly: true,
+        focusNode: _focusNode,
+        readOnly: _isReadOnly,
         decoration: InputDecoration(
           labelText: widget.labelText,
           hintText: widget.hintText,
@@ -523,36 +399,61 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
                   icon: const Icon(Icons.my_location),
                   onPressed: _getCurrentLocation,
                   tooltip: 'Get current location',
+                  iconSize: 20,
                 ),
               IconButton(
-                icon: const Icon(Icons.location_on),
-                onPressed: _showLocationOptions,
-                tooltip: 'Select location',
+                icon: Icon(_isReadOnly ? Icons.edit : Icons.check),
+                onPressed: () {
+                  setState(() {
+                    _isReadOnly = !_isReadOnly;
+                  });
+                  if (!_isReadOnly) {
+                    _focusNode.requestFocus();
+                  } else {
+                    _focusNode.unfocus();
+                    _removeOverlay();
+                  }
+                },
+                tooltip: _isReadOnly ? 'Edit location' : 'Done editing',
+                iconSize: 20,
               ),
             ],
           ),
           filled: true,
-          fillColor: Colors.white,
+          fillColor: Colors.grey.shade50,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(color: Colors.blue.shade600, width: 2),
           ),
         ),
+        onChanged: (value) {
+          if (!_isReadOnly) {
+            _searchLocation(value);
+          }
+        },
+        onTap: () {
+          if (_isReadOnly) {
+            setState(() {
+              _isReadOnly = false;
+            });
+            _focusNode.requestFocus();
+          }
+        },
         validator: widget.isRequired ? (value) {
           if (value == null || value.trim().isEmpty) {
-            return 'Please ${widget.labelText?.toLowerCase() ?? 'location'} is required';
+            return '${widget.labelText ?? 'Location'} is required';
           }
           return null;
         } : null,
-        onTap: _showLocationOptions,
       ),
     );
   }

@@ -2976,6 +2976,7 @@
                                             <select class="form-control" id="categoryType" required>
                                                 <option value="item">Item (for products and item requests)</option>
                                                 <option value="service">Service (for service requests)</option>
+                                                <option value="delivery">Delivery (for delivery requests)</option>
                                             </select>
                                         </div>
                                         <div class="form-check">
@@ -3040,6 +3041,7 @@
                                             <select class="form-control" id="categoryType" required>
                                                 <option value="item">Item (for products and item requests)</option>
                                                 <option value="service">Service (for service requests)</option>
+                                                <option value="delivery">Delivery (for delivery requests)</option>
                                             </select>
                                         </div>
                                         <div class="form-check">
@@ -5981,8 +5983,8 @@
         window.addNewCategory = function() {
             const categoryName = prompt('Enter new category name:');
             if (categoryName) {
-                const categoryType = prompt('Enter category type (item or service):', 'item');
-                if (categoryType && (categoryType === 'item' || categoryType === 'service')) {
+                const categoryType = prompt('Enter category type (item, service, or delivery):', 'item');
+                if (categoryType && (categoryType === 'item' || categoryType === 'service' || categoryType === 'delivery')) {
                     // Add to database
                     addDoc(collection(db, 'categories'), {
                         category: categoryName,
@@ -5995,7 +5997,7 @@
                         showToast('Error adding category: ' + error.message, 'error');
                     });
                 } else {
-                    alert('Category type must be either "item" or "service"');
+                    alert('Category type must be either "item", "service", or "delivery"');
                 }
             }
         };

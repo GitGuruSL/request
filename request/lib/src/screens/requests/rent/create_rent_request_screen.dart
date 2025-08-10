@@ -3,6 +3,9 @@ import '../../../models/request_model.dart';
 import '../../../models/enhanced_user_model.dart';
 import '../../../services/enhanced_request_service.dart';
 import '../../../services/enhanced_user_service.dart';
+import '../../../widgets/image_upload_widget.dart';
+import '../../../widgets/location_picker_widget.dart';
+import '../../../utils/currency_helper.dart';
 
 class CreateRentRequestScreen extends StatefulWidget {
   const CreateRentRequestScreen({super.key});
@@ -21,6 +24,8 @@ class _CreateRentRequestScreenState extends State<CreateRentRequestScreen> {
   final _descriptionController = TextEditingController();
   final _locationController = TextEditingController();
   final _budgetController = TextEditingController();
+  final _allowedKmController = TextEditingController();
+  final _extraKmRateController = TextEditingController();
   
   // Rental-specific fields
   String _rentalType = 'Vehicle';
@@ -29,6 +34,9 @@ class _CreateRentRequestScreenState extends State<CreateRentRequestScreen> {
   String _duration = 'Daily';
   bool _deliveryRequired = false;
   final _specificRequirementsController = TextEditingController();
+  List<String> _imageUrls = [];
+  String _allowedKmOption = '100 KM';
+  bool _includeInsurance = false;
 
   bool _isLoading = false;
 
@@ -51,12 +59,25 @@ class _CreateRentRequestScreenState extends State<CreateRentRequestScreen> {
     'Monthly',
   ];
 
+  final List<String> _allowedKmOptions = [
+    '50 KM',
+    '100 KM',
+    '150 KM',
+    '200 KM',
+    '300 KM',
+    '500 KM',
+    'Unlimited',
+    'Custom',
+  ];
+
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
     _locationController.dispose();
     _budgetController.dispose();
+    _allowedKmController.dispose();
+    _extraKmRateController.dispose();
     _specificRequirementsController.dispose();
     super.dispose();
   }
@@ -117,7 +138,7 @@ class _CreateRentRequestScreenState extends State<CreateRentRequestScreen> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _titleController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'What do you want to rent?',
                   hintText: 'e.g., Car for Weekend, Camera Equipment',
                   filled: true,
@@ -134,7 +155,7 @@ class _CreateRentRequestScreenState extends State<CreateRentRequestScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Description',
                   hintText: 'Provide more details about your rental needs...',
                   filled: true,
@@ -156,7 +177,7 @@ class _CreateRentRequestScreenState extends State<CreateRentRequestScreen> {
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: _rentalType,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Category',
                   filled: true,
                   fillColor: Colors.white,
@@ -177,7 +198,7 @@ class _CreateRentRequestScreenState extends State<CreateRentRequestScreen> {
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 value: _duration,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Rental Duration Type',
                   filled: true,
                   fillColor: Colors.white,
@@ -230,7 +251,7 @@ class _CreateRentRequestScreenState extends State<CreateRentRequestScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _specificRequirementsController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Specific Requirements (Optional)',
                   hintText: 'Any special features or conditions needed...',
                   filled: true,
@@ -241,15 +262,31 @@ class _CreateRentRequestScreenState extends State<CreateRentRequestScreen> {
               ),
               const SizedBox(height: 24),
 
+              // Reference Images
+              _buildSectionTitle('Reference Images'),
+              const SizedBox(height: 12),
+              ImageUploadWidget(
+                initialImages: _imageUrls,
+                maxImages: 4,
+                uploadPath: 'requests/rent',
+                label: 'Upload reference images (optional)',
+                onImagesChanged: (images) {
+                  setState(() {
+                    _imageUrls = images;
+                  });
+                },
+              ),
+              const SizedBox(height: 24),
+
               // Budget & Location
               _buildSectionTitle('Budget & Location'),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _budgetController,
                 decoration: InputDecoration(
-                  labelText: 'Budget per ${_duration.toLowerCase().replaceAll('ly', '')} (USD)',
+                  labelText: CurrencyHelper.instance.getBudgetLabel('per ${_duration.toLowerCase().replaceAll('ly', '')}'),
                   hintText: '0.00',
-                  prefixText: '\$ ',
+                  prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
                   filled: true,
                   fillColor: Colors.white,
                   border: InputBorder.none,
@@ -257,23 +294,90 @@ class _CreateRentRequestScreenState extends State<CreateRentRequestScreen> {
                 keyboardType: TextInputType.number,
               ),
               const SizedBox(height: 16),
-              TextFormField(
+              LocationPickerWidget(
                 controller: _locationController,
-                decoration: const InputDecoration(
-                  labelText: 'Preferred Location',
-                  hintText: 'Where would you like to pick up?',
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: InputBorder.none,
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please specify your preferred location';
-                  }
-                  return null;
+                labelText: 'Preferred Location',
+                hintText: 'Where would you like to pick up?',
+                isRequired: true,
+                onLocationSelected: (address, lat, lng) {
+                  print('Rent pickup location: $address at $lat, $lng');
                 },
               ),
               const SizedBox(height: 24),
+
+              // Mileage (for Vehicle rentals)
+              if (_rentalType == 'Vehicle') ...[
+                _buildSectionTitle('Mileage/KM Limits'),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Allowed KM/Mileage',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        value: _allowedKmOption,
+                        decoration: const InputDecoration(
+                          hintText: 'Select allowed KM',
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: InputBorder.none,
+                        ),
+                        items: _allowedKmOptions.map((option) {
+                          return DropdownMenuItem(
+                            value: option,
+                            child: Text(option),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _allowedKmOption = value!;
+                          });
+                        },
+                      ),
+                      if (_allowedKmOption == 'Custom') ...[
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _allowedKmController,
+                          decoration: const InputDecoration(
+                            labelText: 'Custom KM Limit',
+                            hintText: 'Enter custom KM limit',
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: InputBorder.none,
+                          ),
+                          keyboardType: TextInputType.number,
+                        ),
+                      ],
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _extraKmRateController,
+                        decoration: InputDecoration(
+                          labelText: CurrencyHelper.instance.getPriceLabel('Extra KM Rate'),
+                          hintText: 'Rate per extra KM',
+                          prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: InputBorder.none,
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
 
               // Options
               _buildSectionTitle('Options'),
@@ -395,15 +499,30 @@ class _CreateRentRequestScreenState extends State<CreateRentRequestScreen> {
       }
 
       // Create the rental-specific data
+      Map<String, String> specifications = {
+        'duration': _duration,
+        'specificRequirements': _specificRequirementsController.text.trim(),
+      };
+      
+      // Add mileage information for vehicle rentals
+      if (_rentalType == 'Vehicle') {
+        String allowedKm = _allowedKmOption == 'Custom' 
+            ? _allowedKmController.text.trim() 
+            : _allowedKmOption.replaceAll(' KM', '').replaceAll('Unlimited', '-1');
+        
+        specifications.addAll({
+          'allowedKm': allowedKm,
+          'extraKmRate': _extraKmRateController.text.trim(),
+          'kmUnit': 'KM',
+        });
+      }
+      
       final rentalData = RentalRequestData(
         itemCategory: _rentalType,
         startDate: _startDate!,
         endDate: _endDate!,
         isFlexibleDates: false,
-        specifications: {
-          'duration': _duration,
-          'specificRequirements': _specificRequirementsController.text.trim(),
-        },
+        specifications: specifications,
         needsDelivery: _deliveryRequired,
       );
 
@@ -412,7 +531,7 @@ class _CreateRentRequestScreenState extends State<CreateRentRequestScreen> {
         description: _descriptionController.text.trim(),
         type: RequestType.rental,
         budget: double.tryParse(_budgetController.text),
-        currency: 'USD',
+        currency: CurrencyHelper.instance.getCurrency(),
         typeSpecificData: rentalData.toMap(),
         tags: ['rental', _rentalType.toLowerCase().replaceAll(' ', '_')],
         location: LocationInfo(

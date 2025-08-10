@@ -14,7 +14,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   String? _selectedCountry;
   String? _currencySymbol;
-  List<RequestModel> _requests = [];
   bool _isLoading = true;
   Map<String, dynamic>? _userData;
 
@@ -43,33 +42,12 @@ class _HomeScreenState extends State<HomeScreen> {
       // Get user's selected country
       _selectedCountry = await CountryService.instance.getUserCountry();
       _currencySymbol = CountryService.instance.getCurrencySymbol();
-      
-      // Load country-filtered requests
-      await _loadRequests();
     } catch (e) {
       print('Error loading country data: $e');
     } finally {
       setState(() {
         _isLoading = false;
       });
-    }
-  }
-
-  Future<void> _loadRequests() async {
-    try {
-      // Get country-filtered query
-      Query? query = CountryService.instance.getCountryFilteredQuery(
-        FirebaseFirestore.instance.collection('requests')
-      );
-      
-      if (query != null) {
-        final querySnapshot = await query.limit(20).get();
-        _requests = querySnapshot.docs
-            .map((doc) => RequestModel.fromMap(doc.data() as Map<String, dynamic>))
-            .toList();
-      }
-    } catch (e) {
-      print('Error loading requests: $e');
     }
   }
 
@@ -86,26 +64,13 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             // User Name on the left
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _getUserName(),
-                    style: TextStyle(
-                      color: Colors.grey[800],
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (_selectedCountry != null)
-                    Text(
-                      '$_selectedCountry $_currencySymbol',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 12,
-                      ),
-                    ),
-                ],
+              child: Text(
+                _getUserName(),
+                style: TextStyle(
+                  color: Colors.grey[800],
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
             // Notification and Profile on the right

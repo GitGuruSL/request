@@ -57,9 +57,12 @@ class _BrowseScreenState extends State<BrowseScreen> {
     try {
       print('📥 Attempting to fetch requests from Firestore...');
       
-      // Most basic query possible - get all documents from requests collection
+      // Simplified query - get all requests and filter client-side
+      // This avoids the need for complex Firestore indexes
       final querySnapshot = await FirebaseFirestore.instance
           .collection('requests')
+          .orderBy('createdAt', descending: true)
+          .limit(100) // Get more to allow for filtering
           .get();
           
       print('📊 Found ${querySnapshot.docs.length} documents in requests collection');
@@ -87,14 +90,12 @@ class _BrowseScreenState extends State<BrowseScreen> {
             final data = doc.data();
             data['id'] = doc.id; // Add document ID
             
-            // Create a simple display model instead of using RequestModel
-            final simpleRequest = {
-              'id': doc.id,
-              'title': data['title']?.toString() ?? 'No Title',
-              'description': data['description']?.toString() ?? 'No Description',
-              'type': data['type']?.toString() ?? 'item',
-              'status': data['status']?.toString() ?? 'active',
-            };
+            // Skip completed and fulfilled requests
+            final status = data['status']?.toString()?.toLowerCase() ?? 'active';
+            if (status == 'completed' || status == 'fulfilled') {
+              print('⏭️ Skipping ${status} request: ${doc.id}');
+              continue;
+            }
             
             // For now, create a minimal RequestModel with fallback values
             final request = RequestModel(
@@ -174,6 +175,12 @@ class _BrowseScreenState extends State<BrowseScreen> {
   List<RequestModel> get _filteredRequests {
     List<RequestModel> filtered = List.from(_requests);
     
+    // Filter out completed and fulfilled requests
+    filtered = filtered.where((request) => 
+      request.status != RequestStatus.completed && 
+      request.status.name != 'fulfilled'
+    ).toList();
+    
     // Apply search filter
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((request) =>
@@ -186,6 +193,9 @@ class _BrowseScreenState extends State<BrowseScreen> {
     if (_selectedType != null) {
       filtered = filtered.where((request) => request.type == _selectedType).toList();
     }
+    
+    // Sort by most recent first (createdAt descending)
+    filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     
     return filtered;
   }

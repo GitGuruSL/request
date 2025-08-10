@@ -8,6 +8,7 @@ import '../../../services/category_service.dart';
 import '../../../widgets/image_upload_widget.dart';
 import '../../../widgets/category_picker.dart';
 import '../../../widgets/location_picker_widget.dart';
+import '../../../utils/currency_helper.dart';
 
 class CreateDeliveryRequestScreen extends StatefulWidget {
   const CreateDeliveryRequestScreen({super.key});
@@ -150,7 +151,7 @@ class _CreateDeliveryRequestScreenState extends State<CreateDeliveryRequestScree
               const SizedBox(height: 12),
               TextFormField(
                 controller: _titleController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Delivery Title',
                   hintText: 'e.g., Documents to Office, Food Delivery',
                   filled: true,
@@ -167,7 +168,7 @@ class _CreateDeliveryRequestScreenState extends State<CreateDeliveryRequestScree
               const SizedBox(height: 16),
               TextFormField(
                 controller: _itemDescriptionController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'What needs to be delivered?',
                   hintText: 'Describe the items to be delivered...',
                   filled: true,
@@ -186,7 +187,7 @@ class _CreateDeliveryRequestScreenState extends State<CreateDeliveryRequestScree
               // Category Selection
               TextFormField(
                 readOnly: true,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Delivery Category',
                   hintText: 'Select a delivery category',
                   suffixIcon: Icon(Icons.arrow_drop_down),
@@ -250,7 +251,7 @@ class _CreateDeliveryRequestScreenState extends State<CreateDeliveryRequestScree
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: _packageSize,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Package Size',
                   filled: true,
                   fillColor: Colors.white,
@@ -339,7 +340,7 @@ class _CreateDeliveryRequestScreenState extends State<CreateDeliveryRequestScree
               const SizedBox(height: 16),
               TextFormField(
                 controller: _specialInstructionsController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Special Instructions (Optional)',
                   hintText: 'Any special handling or delivery instructions...',
                   filled: true,
@@ -355,10 +356,10 @@ class _CreateDeliveryRequestScreenState extends State<CreateDeliveryRequestScree
               const SizedBox(height: 12),
               TextFormField(
                 controller: _budgetController,
-                decoration: const InputDecoration(
-                  labelText: 'Delivery Fee (USD)',
+                decoration: InputDecoration(
+                  labelText: CurrencyHelper.instance.getBudgetLabel('Delivery Fee'),
                   hintText: '0.00',
-                  prefixText: '\$ ',
+                  prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
                   filled: true,
                   fillColor: Colors.white,
                   border: InputBorder.none,
@@ -514,7 +515,7 @@ class _CreateDeliveryRequestScreenState extends State<CreateDeliveryRequestScree
         description: '${_itemDescriptionController.text.trim()}\n${_descriptionController.text.trim()}',
         type: RequestType.delivery,
         budget: double.tryParse(_budgetController.text),
-        currency: 'USD',
+        currency: CurrencyHelper.instance.getCurrency(),
         typeSpecificData: deliveryData.toMap(),
         tags: [
           'delivery',

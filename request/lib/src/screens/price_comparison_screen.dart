@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/currency_helper.dart';
 
 class PriceComparisonScreen extends StatefulWidget {
   const PriceComparisonScreen({super.key});
@@ -276,10 +277,10 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
             ),
             const SizedBox(height: 12),
             TextField(
-              decoration: const InputDecoration(
-                labelText: 'Price',
-                border: OutlineInputBorder(),
-                prefixText: '\$',
+              decoration: InputDecoration(
+                labelText: CurrencyHelper.instance.getPriceLabel(),
+                border: const OutlineInputBorder(),
+                prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
               ),
               keyboardType: TextInputType.number,
             ),

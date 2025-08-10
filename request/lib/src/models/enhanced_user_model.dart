@@ -1,4 +1,6 @@
 // Enhanced User Model with Multi-Role Support
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 enum UserRole { 
   general, 
   driver, 
@@ -89,8 +91,8 @@ class UserModel {
       profileComplete: map['profileComplete'] ?? false,
       countryCode: map['countryCode'],
       countryName: map['countryName'],
-      createdAt: DateTime.parse(map['createdAt']),
-      updatedAt: DateTime.parse(map['updatedAt']),
+      createdAt: _parseDateTime(map['createdAt']),
+      updatedAt: _parseDateTime(map['updatedAt']),
     );
   }
 
@@ -112,6 +114,19 @@ class UserModel {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
+  }
+
+  // Helper method to parse DateTime from either Timestamp or String
+  static DateTime _parseDateTime(dynamic dateTime) {
+    if (dateTime == null) {
+      return DateTime.now();
+    } else if (dateTime is Timestamp) {
+      return dateTime.toDate();
+    } else if (dateTime is String) {
+      return DateTime.parse(dateTime);
+    } else {
+      return DateTime.now();
+    }
   }
 }
 
@@ -135,7 +150,7 @@ class RoleData {
       ),
       data: map['data'] ?? {},
       verifiedAt: map['verifiedAt'] != null 
-          ? DateTime.parse(map['verifiedAt']) 
+          ? UserModel._parseDateTime(map['verifiedAt']) 
           : null,
       verificationNotes: map['verificationNotes'],
     );
@@ -174,7 +189,7 @@ class DriverData {
   factory DriverData.fromMap(Map<String, dynamic> map) {
     return DriverData(
       licenseNumber: map['licenseNumber'] ?? '',
-      licenseExpiry: DateTime.parse(map['licenseExpiry']),
+      licenseExpiry: UserModel._parseDateTime(map['licenseExpiry']),
       licenseImageUrl: map['licenseImageUrl'],
       vehicle: VehicleInfo.fromMap(map['vehicle']),
       rating: (map['rating'] ?? 0.0).toDouble(),

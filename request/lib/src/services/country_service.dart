@@ -47,6 +47,7 @@ class CountryService {
     'EG': 'EGP',
     'KE': 'KES',
     'GH': 'GHS',
+    'LK': 'LKR', // Sri Lanka
     // Add more countries as needed
   };
   
@@ -65,7 +66,7 @@ class CountryService {
     _currentCountryCode = countryCode;
     _currentCountryName = countryName;
     _currentPhoneCode = phoneCode;
-    _currentCurrency = countryCurrencyMap[countryCode] ?? 'USD';
+    _currentCurrency = countryCurrencyMap[countryCode] ?? 'LKR';
     
     // Save to local preferences
     await _saveToPreferences();
@@ -92,7 +93,8 @@ class CountryService {
       case 'EGP': return 'E£';
       case 'KES': return 'KSh';
       case 'GHS': return 'GH₵';
-      default: return '\$';
+      case 'LKR': return 'LKR'; // Sri Lankan Rupee
+      default: return 'LKR'; // Default to LKR instead of USD
     }
   }
   
@@ -112,12 +114,15 @@ class CountryService {
     CollectionReference<Map<String, dynamic>> collection
   ) {
     if (_currentCountryName == null) {
-      // If no country set, return all (fallback)
-      return collection.orderBy('createdAt', descending: true);
+      // If no country set, return all active requests (fallback)
+      return collection
+          .where('status', whereNotIn: ['completed', 'fulfilled'])
+          .orderBy('createdAt', descending: true);
     }
     
     return collection
         .where('country', isEqualTo: _currentCountryName!)
+        .where('status', whereNotIn: ['completed', 'fulfilled'])
         .orderBy('createdAt', descending: true);
   }
   

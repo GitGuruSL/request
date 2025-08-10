@@ -8,6 +8,7 @@ import '../../../services/category_service.dart';
 import '../../../widgets/image_upload_widget.dart';
 import '../../../widgets/category_picker.dart';
 import '../../../widgets/location_picker_widget.dart';
+import '../../../utils/currency_helper.dart';
 
 class CreateServiceRequestScreen extends StatefulWidget {
   const CreateServiceRequestScreen({super.key});
@@ -144,7 +145,7 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
               const SizedBox(height: 12),
               TextFormField(
                 controller: _titleController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'What service do you need?',
                   hintText: 'e.g., Home Cleaning, Web Design, Tutoring',
                   filled: true,
@@ -161,7 +162,7 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
               const SizedBox(height: 16),
               TextFormField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Description',
                   hintText: 'Describe what you need in detail...',
                   filled: true,
@@ -185,7 +186,7 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
               // Category Selection
               TextFormField(
                 readOnly: true,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Service Category',
                   hintText: 'Select a service category',
                   suffixIcon: Icon(Icons.arrow_drop_down),
@@ -223,7 +224,7 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 value: _timeSlot,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Preferred Time',
                   filled: true,
                   fillColor: Colors.white,
@@ -244,7 +245,7 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
               const SizedBox(height: 16),
               TextFormField(
                 controller: _requirementsController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Special Requirements (Optional)',
                   hintText: 'Any specific requirements or preferences...',
                   filled: true,
@@ -276,10 +277,10 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
               const SizedBox(height: 12),
               TextFormField(
                 controller: _budgetController,
-                decoration: const InputDecoration(
-                  labelText: 'Budget (USD)',
+                decoration: InputDecoration(
+                  labelText: CurrencyHelper.instance.getBudgetLabel(),
                   hintText: '0.00',
-                  prefixText: '\$ ',
+                  prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
                   filled: true,
                   fillColor: Colors.white,
                   border: InputBorder.none,
@@ -431,7 +432,7 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
         description: _descriptionController.text.trim(),
         type: RequestType.service,
         budget: double.tryParse(_budgetController.text),
-        currency: 'USD',
+        currency: CurrencyHelper.instance.getCurrency(),
         typeSpecificData: serviceData.toMap(),
         tags: [
           'service',
