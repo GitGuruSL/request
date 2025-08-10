@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Light mode colors -->
+    <color name="light_background">#FAFAFAFF</color>
+    <color name="splash_background">#FAFAFAFF</color>
+</resources>

@@ -130,7 +130,7 @@ class AppTheme {
         ),
       ),
       
-      // Input Decoration Theme - Flat (no borders)
+      // Input Decoration Theme - Completely borderless
       inputDecorationTheme: const InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
@@ -144,15 +144,15 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide(color: primaryColor, width: 2),
+          borderSide: BorderSide.none, // No border when focused
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide(color: errorColor, width: 2),
+          borderSide: BorderSide.none, // No border on error
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide(color: errorColor, width: 2),
+          borderSide: BorderSide.none, // No border even on error focus
         ),
         contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         labelStyle: TextStyle(

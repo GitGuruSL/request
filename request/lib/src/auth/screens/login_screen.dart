@@ -272,7 +272,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
               obscureText: true,
               decoration: const InputDecoration(
                 labelText: 'Password',
-                border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.lock),
               ),
             ),
@@ -467,7 +466,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                 controller: _phoneController,
                                 decoration: const InputDecoration(
                                   labelText: 'Phone Number',
-                                  border: OutlineInputBorder(),
                                   prefixIcon: Icon(Icons.phone),
                                 ),
                                 initialCountryCode: widget.countryCode.isNotEmpty 
@@ -491,7 +489,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                 controller: _emailController,
                                 decoration: const InputDecoration(
                                   labelText: 'Email Address',
-                                  border: OutlineInputBorder(),
                                   prefixIcon: Icon(Icons.email),
                                 ),
                                 keyboardType: TextInputType.emailAddress,

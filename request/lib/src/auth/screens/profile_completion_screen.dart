@@ -129,7 +129,6 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                   controller: _nameController,
                   decoration: const InputDecoration(
                     labelText: 'Full Name',
-                    border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.person),
                   ),
                   validator: (value) {
@@ -147,7 +146,6 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                   controller: _emailController,
                   decoration: const InputDecoration(
                     labelText: 'Email (Optional)',
-                    border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.email),
                   ),
                   keyboardType: TextInputType.emailAddress,
