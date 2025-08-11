@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../models/request_model.dart';
 import '../../../models/enhanced_user_model.dart';
 import '../../../services/enhanced_request_service.dart';
@@ -32,20 +33,61 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
   final _budgetController = TextEditingController();
   
   // Ride-specific fields
-  String _rideType = 'Regular';
+  String _selectedVehicleType = 'economy';
   DateTime? _departureTime;
   int _passengerCount = 1;
+  bool _scheduleForLater = false;
   bool _allowSharing = true;
   final _specialRequestsController = TextEditingController();
   List<String> _imageUrls = [];
+  
+  // Location coordinates
+  double? _pickupLat;
+  double? _pickupLng;
+  double? _destinationLat; 
+  double? _destinationLng;
+
+  // Google Maps
+  GoogleMapController? _mapController;
+  static const CameraPosition _initialPosition = CameraPosition(
+    target: LatLng(6.9271, 79.8612), // Colombo, Sri Lanka
+    zoom: 14,
+  );
+  Set<Marker> _markers = {};
+  Set<Polyline> _polylines = {};
 
   bool _isLoading = false;
 
-  final List<String> _rideTypes = [
-    'Regular',
-    'Premium',
-    'Shared',
-    'Airport Transfer',
+  final List<Map<String, dynamic>> _vehicleTypes = [
+    {
+      'id': 'economy',
+      'name': 'Economy',
+      'description': 'Affordable rides',
+      'icon': Icons.directions_car,
+      'passengers': '1-4',
+    },
+    {
+      'id': 'premium',
+      'name': 'Premium',
+      'description': 'Comfortable rides',
+      'icon': Icons.local_taxi,
+      'passengers': '1-4', 
+    },
+    {
+      'id': 'suv',
+      'name': 'SUV',
+      'description': 'Extra space',
+      'icon': Icons.airport_shuttle,
+      'passengers': '1-6',
+    },
+    {
+      'id': 'shared',
+      'name': 'Shared',
+      'description': 'Share & save',
+      'icon': Icons.people,
+      'passengers': '1-2',
+      'price': '${CurrencyHelper.instance.getCurrencySymbol()}100-150',
+    },
   ];
 
   @override
@@ -61,9 +103,17 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
     _budgetController.text = widget.request.budget?.toString() ?? '';
     _imageUrls = List<String>.from(widget.request.images);
     
+    // Set location coordinates
+    if (widget.request.location != null) {
+      _pickupLat = widget.request.location!.latitude;
+      _pickupLng = widget.request.location!.longitude;
+    }
+    
     // Handle destination location
     if (widget.request.destinationLocation != null) {
       _destinationController.text = widget.request.destinationLocation!.address;
+      _destinationLat = widget.request.destinationLocation!.latitude;
+      _destinationLng = widget.request.destinationLocation!.longitude;
     }
     
     // Parse ride-specific data using RideRequestData model
@@ -76,31 +126,45 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
         _allowSharing = rideData.petsAllowed ?? true;
         _specialRequestsController.text = rideData.specialRequests ?? '';
         
-        // Map vehicle type to ride type for backward compatibility
+        // Map vehicle type to new system
         switch (rideData.vehicleType?.toLowerCase()) {
           case 'economy':
-            _rideType = 'Regular';
+            _selectedVehicleType = 'economy';
             break;
           case 'premium':
-            _rideType = 'Premium';
+            _selectedVehicleType = 'premium';
             break;
           case 'shared':
-            _rideType = 'Shared';
+            _selectedVehicleType = 'shared';
             break;
           case 'suv':
-            _rideType = 'Premium';
+            _selectedVehicleType = 'suv';
             break;
           default:
-            _rideType = 'Regular';
+            _selectedVehicleType = 'economy';
+        }
+        
+        // Check if it's scheduled for later
+        if (rideData.preferredTime != null) {
+          final now = DateTime.now();
+          final preferredTime = rideData.preferredTime!;
+          // If preferred time is more than 30 minutes from now, consider it scheduled
+          _scheduleForLater = preferredTime.difference(now).inMinutes > 30;
         }
       } catch (e) {
         print('Error parsing ride data: $e');
         // Fallback to default values
-        _rideType = 'Regular';
+        _selectedVehicleType = 'economy';
         _passengerCount = 1;
         _allowSharing = true;
+        _scheduleForLater = false;
       }
     }
+
+    // Update map markers after data is loaded
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updateMapMarkers();
+    });
   }
 
   @override
@@ -112,6 +176,616 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
     _budgetController.dispose();
     _specialRequestsController.dispose();
     super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Stack(
+        children: [
+          // Google Maps View
+          Positioned.fill(
+            child: GoogleMap(
+              initialCameraPosition: _initialPosition,
+              onMapCreated: (GoogleMapController controller) {
+                _mapController = controller;
+                // If we have coordinates, update the view
+                if (_pickupLat != null && _pickupLng != null) {
+                  Future.delayed(const Duration(milliseconds: 500), () {
+                    _updateMapMarkers();
+                  });
+                }
+              },
+              markers: _markers,
+              polylines: _polylines,
+              onTap: _onMapTapped,
+              myLocationEnabled: true,
+              myLocationButtonEnabled: false,
+              zoomControlsEnabled: false,
+              mapToolbarEnabled: false,
+            ),
+          ),
+          
+          // My Location Button (like in Uber)
+          Positioned(
+            right: 16,
+            top: 120,
+            child: FloatingActionButton(
+              mini: true,
+              backgroundColor: Colors.white,
+              onPressed: _goToCurrentLocation,
+              child: const Icon(
+                Icons.my_location,
+                color: Colors.black,
+              ),
+            ),
+          ),
+          
+          // Top App Bar
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 8,
+                left: 16,
+                right: 16,
+                bottom: 8,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const Expanded(
+                    child: Text(
+                      'Edit Ride',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.my_location),
+                    onPressed: _goToCurrentLocation,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Bottom Sheet with ride details
+          DraggableScrollableSheet(
+            initialChildSize: 0.4,
+            minChildSize: 0.3,
+            maxChildSize: 0.9,
+            builder: (context, scrollController) {
+              return Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 10,
+                      offset: Offset(0, -2),
+                    ),
+                  ],
+                ),
+                child: ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(20),
+                  children: [
+                    // Drag handle
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Location inputs
+                    _buildLocationInputs(),
+                    const SizedBox(height: 24),
+
+                    // Vehicle selection
+                    _buildVehicleSelection(),
+                    const SizedBox(height: 24),
+
+                    // Passengers and scheduling
+                    _buildRideOptions(),
+                    const SizedBox(height: 24),
+
+                    // Budget input
+                    _buildBudgetInput(),
+                    const SizedBox(height: 24),
+
+                    // Update ride button
+                    _buildUpdateButton(),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        color: Colors.black87,
+      ),
+    );
+  }
+
+  Widget _buildLocationInputs() {
+    return Column(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.grey[50],
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.green,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: LocationPickerWidget(
+                        controller: _pickupLocationController,
+                        labelText: '',
+                        hintText: 'Pickup location',
+                        isRequired: true,
+                        onLocationSelected: (address, lat, lng) {
+                          setState(() {
+                            _pickupLat = lat;
+                            _pickupLng = lng;
+                          });
+                          _updateMapMarkers();
+                          // Show feedback
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Pickup location set: $address'),
+                              duration: const Duration(seconds: 2),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: Colors.grey[300]),
+              Container(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: LocationPickerWidget(
+                        controller: _destinationController,
+                        labelText: '',
+                        hintText: 'Where to?',
+                        isRequired: true,
+                        onLocationSelected: (address, lat, lng) {
+                          setState(() {
+                            _destinationLat = lat;
+                            _destinationLng = lng;
+                          });
+                          _updateMapMarkers();
+                          // Show feedback
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Destination set: $address'),
+                              duration: const Duration(seconds: 2),
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVehicleSelection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Choose a ride',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          height: 80,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: _vehicleTypes.length,
+            itemBuilder: (context, index) {
+              final vehicle = _vehicleTypes[index];
+              final isSelected = _selectedVehicleType == vehicle['id'];
+              
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _selectedVehicleType = vehicle['id'];
+                  });
+                },
+                child: Container(
+                  width: 120,
+                  margin: const EdgeInsets.only(right: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: isSelected ? Theme.of(context).primaryColor.withOpacity(0.1) : Colors.transparent,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            vehicle['icon'],
+                            size: 24,
+                            color: isSelected ? Theme.of(context).primaryColor : Colors.grey[600],
+                          ),
+                          const Spacer(),
+                          Text(
+                            vehicle['passengers'],
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        vehicle['name'],
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: isSelected ? Theme.of(context).primaryColor : Colors.grey[800],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRideOptions() {
+    return Column(
+      children: [
+        // Passenger count
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.grey[50],
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.person, color: Colors.grey),
+              const SizedBox(width: 12),
+              const Text(
+                'Passengers',
+                style: TextStyle(fontSize: 16),
+              ),
+              const Spacer(),
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: _passengerCount > 1 
+                        ? () => setState(() => _passengerCount--) 
+                        : null,
+                    icon: Icon(
+                      Icons.remove_circle_outline,
+                      color: _passengerCount > 1 
+                          ? Theme.of(context).primaryColor 
+                          : Colors.grey,
+                    ),
+                  ),
+                  Text(
+                    '$_passengerCount',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).primaryColor,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: _passengerCount < 6 
+                        ? () => setState(() => _passengerCount++) 
+                        : null,
+                    icon: Icon(
+                      Icons.add_circle_outline,
+                      color: _passengerCount < 6 
+                          ? Theme.of(context).primaryColor 
+                          : Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 12),
+        
+        // Schedule for later
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.grey[50],
+          ),
+          child: ListTile(
+            leading: Icon(
+              Icons.schedule, 
+              color: _scheduleForLater ? Theme.of(context).primaryColor : Colors.grey,
+            ),
+            title: Text(_scheduleForLater 
+                ? (_departureTime != null 
+                    ? 'Leave at ${_departureTime!.hour}:${_departureTime!.minute.toString().padLeft(2, '0')}'
+                    : 'Select time')
+                : 'Leave now'),
+            trailing: Switch(
+              value: _scheduleForLater,
+              onChanged: (value) {
+                setState(() {
+                  _scheduleForLater = value;
+                  if (value && _departureTime == null) {
+                    _selectDateTime();
+                  }
+                });
+              },
+            ),
+            onTap: _scheduleForLater ? _selectDateTime : null,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBudgetInput() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.grey[50],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Budget (optional)',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _budgetController,
+            decoration: InputDecoration(
+              hintText: '0.00',
+              prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+              filled: true,
+              fillColor: Colors.white,
+            ),
+            keyboardType: TextInputType.number,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUpdateButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: ElevatedButton(
+        onPressed: _isLoading ? null : _updateRequest,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: _isLoading
+            ? const CircularProgressIndicator(color: Colors.white)
+            : const Text(
+                'Update Ride Request',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+      ),
+    );
+  }
+
+  void _updateMapMarkers() {
+    setState(() {
+      _markers.clear();
+      _polylines.clear();
+      
+      // Add pickup marker
+      if (_pickupLat != null && _pickupLng != null) {
+        _markers.add(
+          Marker(
+            markerId: const MarkerId('pickup'),
+            position: LatLng(_pickupLat!, _pickupLng!),
+            infoWindow: InfoWindow(
+              title: 'Pickup',
+              snippet: _pickupLocationController.text,
+            ),
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          ),
+        );
+      }
+      
+      // Add destination marker
+      if (_destinationLat != null && _destinationLng != null) {
+        _markers.add(
+          Marker(
+            markerId: const MarkerId('destination'),
+            position: LatLng(_destinationLat!, _destinationLng!),
+            infoWindow: InfoWindow(
+              title: 'Drop',
+              snippet: _destinationController.text,
+            ),
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          ),
+        );
+      }
+      
+      // Add route line if both locations are set
+      if (_pickupLat != null && _pickupLng != null && 
+          _destinationLat != null && _destinationLng != null) {
+        _polylines.add(
+          Polyline(
+            polylineId: const PolylineId('route'),
+            points: [
+              LatLng(_pickupLat!, _pickupLng!),
+              LatLng(_destinationLat!, _destinationLng!),
+            ],
+            color: const Color(0xFF2196F3),
+            width: 5,
+            patterns: [PatternItem.dash(20), PatternItem.gap(10)],
+          ),
+        );
+      }
+    });
+    
+    // Camera movement after setState
+    if (_pickupLat != null && _pickupLng != null && 
+        _destinationLat != null && _destinationLng != null) {
+      Future.delayed(const Duration(milliseconds: 200), () {
+        _fitMarkersOnMap();
+      });
+    } else if (_pickupLat != null && _pickupLng != null) {
+      // If only pickup is set, center on pickup
+      Future.delayed(const Duration(milliseconds: 200), () {
+        _mapController?.animateCamera(
+          CameraUpdate.newLatLngZoom(LatLng(_pickupLat!, _pickupLng!), 15),
+        );
+      });
+    } else if (_destinationLat != null && _destinationLng != null) {
+      // If only destination is set, center on destination
+      Future.delayed(const Duration(milliseconds: 200), () {
+        _mapController?.animateCamera(
+          CameraUpdate.newLatLngZoom(LatLng(_destinationLat!, _destinationLng!), 15),
+        );
+      });
+    }
+  }
+
+  void _fitMarkersOnMap() {
+    if (_mapController == null || _pickupLat == null || _destinationLat == null) return;
+    
+    final bounds = LatLngBounds(
+      southwest: LatLng(
+        _pickupLat! < _destinationLat! ? _pickupLat! : _destinationLat!,
+        _pickupLng! < _destinationLng! ? _pickupLng! : _destinationLng!,
+      ),
+      northeast: LatLng(
+        _pickupLat! > _destinationLat! ? _pickupLat! : _destinationLat!,
+        _pickupLng! > _destinationLng! ? _pickupLng! : _destinationLng!,
+      ),
+    );
+    
+    _mapController!.animateCamera(
+      CameraUpdate.newLatLngBounds(bounds, 120.0), // More padding for better view
+    );
+  }
+
+  void _onMapTapped(LatLng position) {
+    // For now, just show coordinates - can be enhanced to set pickup/destination
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Tapped: ${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _goToCurrentLocation() {
+    // Future: Implement current location functionality
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Getting current location...'),
+        duration: Duration(seconds: 1),
+      ),
+    );
   }
 
   Future<void> _selectDateTime() async {
@@ -145,9 +819,22 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
   }
 
   Future<void> _updateRequest() async {
-    if (!_formKey.currentState!.validate()) return;
+    // Basic validation
+    if (_pickupLocationController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter pickup location')),
+      );
+      return;
+    }
 
-    if (_departureTime == null) {
+    if (_destinationController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter destination')),
+      );
+      return;
+    }
+
+    if (_scheduleForLater && _departureTime == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select departure time')),
       );
@@ -159,30 +846,30 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
     });
 
     try {
-      final user = await _userService.getCurrentUserModel();
-      if (user == null) {
-        throw Exception('User not logged in');
+      // Check if user has verified phone number
+      final currentUser = await _userService.getCurrentUserModel();
+      if (currentUser == null || !currentUser.isPhoneVerified) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please verify your phone number to update requests'),
+            ),
+          );
+        }
+        return;
       }
 
-      // Convert rideType to vehicleType for consistency
-      String vehicleType;
-      switch (_rideType) {
-        case 'Premium':
-          vehicleType = 'Premium';
-          break;
-        case 'Shared':
-          vehicleType = 'Shared';
-          break;
-        default:
-          vehicleType = 'Economy';
-      }
+      // Get selected vehicle details
+      final selectedVehicle = _vehicleTypes.firstWhere(
+        (vehicle) => vehicle['id'] == _selectedVehicleType,
+      );
 
-      // Create ride-specific data using RideRequestData model
+      // Create the ride-specific data
       final rideData = RideRequestData(
         passengers: _passengerCount,
-        preferredTime: _departureTime!,
-        isFlexibleTime: false, // Since we're explicitly setting time
-        vehicleType: vehicleType,
+        preferredTime: _scheduleForLater ? _departureTime! : DateTime.now().add(const Duration(minutes: 10)),
+        isFlexibleTime: !_scheduleForLater,
+        vehicleType: selectedVehicle['name'],
         allowSmoking: false,
         petsAllowed: _allowSharing,
         specialRequests: _specialRequestsController.text.trim().isEmpty 
@@ -190,23 +877,26 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
             : _specialRequestsController.text.trim(),
       );
 
+      // Generate a descriptive title
+      final title = 'Ride from ${_pickupLocationController.text.trim()} to ${_destinationController.text.trim()}';
+
       final locationInfo = LocationInfo(
         address: _pickupLocationController.text.trim(),
-        latitude: widget.request.location?.latitude ?? 0.0,
-        longitude: widget.request.location?.longitude ?? 0.0,
+        latitude: _pickupLat ?? widget.request.location?.latitude ?? 0.0,
+        longitude: _pickupLng ?? widget.request.location?.longitude ?? 0.0,
       );
 
       final destinationInfo = LocationInfo(
         address: _destinationController.text.trim(),
-        latitude: widget.request.destinationLocation?.latitude ?? 0.0,
-        longitude: widget.request.destinationLocation?.longitude ?? 0.0,
+        latitude: _destinationLat ?? widget.request.destinationLocation?.latitude ?? 0.0,
+        longitude: _destinationLng ?? widget.request.destinationLocation?.longitude ?? 0.0,
       );
 
       await _requestService.updateRequest(
         requestId: widget.request.id,
-        title: _titleController.text.trim(),
-        description: _descriptionController.text.trim(),
-        budget: double.tryParse(_budgetController.text.trim()),
+        title: title,
+        description: 'Ride request for $_passengerCount passenger(s) using ${selectedVehicle['name']}',
+        budget: double.tryParse(_budgetController.text),
         location: locationInfo,
         destinationLocation: destinationInfo,
         images: _imageUrls,
@@ -214,13 +904,13 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
       );
 
       if (mounted) {
-        Navigator.of(context).pop(true);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Ride request updated successfully!'),
             backgroundColor: Colors.green,
           ),
         );
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
@@ -238,259 +928,5 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
         });
       }
     }
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-        color: Colors.black87,
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFAFF),
-      appBar: AppBar(
-        title: const Text('Edit Ride Request'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-        actions: [
-          TextButton(
-            onPressed: _isLoading ? null : _updateRequest,
-            child: _isLoading 
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Save', style: TextStyle(fontSize: 16)),
-          ),
-        ],
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            _buildSectionTitle('Trip Details'),
-            const SizedBox(height: 12),
-            
-            TextFormField(
-              controller: _titleController,
-              decoration: InputDecoration(
-                labelText: 'Trip Title',
-                hintText: 'e.g., Airport to Downtown, Daily Commute',
-                filled: true,
-                fillColor: Colors.white,
-                border: InputBorder.none,
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter a trip title';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            
-            LocationPickerWidget(
-              controller: _pickupLocationController,
-              labelText: 'Pickup Location',
-              hintText: 'Where should the driver pick you up?',
-              isRequired: true,
-              onLocationSelected: (address, lat, lng) {
-                print('Pickup location: $address at $lat, $lng');
-              },
-            ),
-            const SizedBox(height: 16),
-            
-            LocationPickerWidget(
-              controller: _destinationController,
-              labelText: 'Destination',
-              hintText: 'Where do you want to go?',
-              isRequired: true,
-              onLocationSelected: (address, lat, lng) {
-                print('Destination: $address at $lat, $lng');
-              },
-            ),
-            const SizedBox(height: 16),
-            
-            TextFormField(
-              controller: _descriptionController,
-              decoration: InputDecoration(
-                labelText: 'Additional Notes (Optional)',
-                hintText: 'Any special instructions or preferences...',
-                filled: true,
-                fillColor: Colors.white,
-                border: InputBorder.none,
-              ),
-              maxLines: 2,
-            ),
-            const SizedBox(height: 24),
-
-            _buildSectionTitle('Ride Preferences'),
-            const SizedBox(height: 12),
-            
-            DropdownButtonFormField<String>(
-              value: _rideType,
-              decoration: InputDecoration(
-                labelText: 'Ride Type',
-                filled: true,
-                fillColor: Colors.white,
-                border: InputBorder.none,
-              ),
-              items: _rideTypes.map((type) {
-                return DropdownMenuItem(
-                  value: type,
-                  child: Text(type),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _rideType = value!;
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-            
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: ListTile(
-                title: Text(_departureTime == null 
-                  ? 'Select Departure Time' 
-                  : 'Departure: ${_departureTime!.day}/${_departureTime!.month} at ${_departureTime!.hour}:${_departureTime!.minute.toString().padLeft(2, '0')}'),
-                trailing: const Icon(Icons.access_time),
-                onTap: _selectDateTime,
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Number of Passengers: $_passengerCount',
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                  Slider(
-                    value: _passengerCount.toDouble(),
-                    min: 1,
-                    max: 6,
-                    divisions: 5,
-                    onChanged: (value) {
-                      setState(() {
-                        _passengerCount = value.toInt();
-                      });
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: CheckboxListTile(
-                title: const Text('Allow ride sharing'),
-                subtitle: const Text('Other passengers can join this ride'),
-                value: _allowSharing,
-                onChanged: (value) {
-                  setState(() {
-                    _allowSharing = value!;
-                  });
-                },
-                controlAffinity: ListTileControlAffinity.leading,
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            TextFormField(
-              controller: _specialRequestsController,
-              decoration: InputDecoration(
-                labelText: 'Special Requests (Optional)',
-                hintText: 'Pet-friendly, non-smoking, etc...',
-                filled: true,
-                fillColor: Colors.white,
-                border: InputBorder.none,
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            _buildSectionTitle('Reference Images'),
-            const SizedBox(height: 12),
-            ImageUploadWidget(
-              initialImages: _imageUrls,
-              maxImages: 4,
-              uploadPath: 'requests/ride',
-              label: 'Upload reference images (optional)',
-              onImagesChanged: (images) {
-                setState(() {
-                  _imageUrls = images;
-                });
-              },
-            ),
-            const SizedBox(height: 24),
-
-            _buildSectionTitle('Budget'),
-            const SizedBox(height: 12),
-            
-            TextFormField(
-              controller: _budgetController,
-              decoration: InputDecoration(
-                labelText: CurrencyHelper.instance.getPriceLabel('Offered Price'),
-                hintText: '0.00',
-                prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
-                filled: true,
-                fillColor: Colors.white,
-                border: InputBorder.none,
-              ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 32),
-
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _updateRequest,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Colors.orange[600],
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text(
-                        'Update Ride Request',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
