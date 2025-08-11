@@ -3,7 +3,8 @@ import '../../models/request_model.dart';
 import '../../models/enhanced_user_model.dart';
 import '../../services/enhanced_request_service.dart';
 import '../../services/enhanced_user_service.dart';
-import '../../utils/currency_helper.dart';
+import '../../services/messaging_service.dart';
+import '../messaging/conversation_screen.dart';
 import 'unified_response_edit_screen.dart';
 
 class UnifiedResponseViewScreen extends StatefulWidget {
@@ -475,6 +476,37 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
     }
   }
 
+  void _startConversation() async {
+    if (_responder == null) return;
+    
+    try {
+      final conversation = await MessagingService().getOrCreateConversation(
+        requestId: widget.request.id,
+        requestTitle: widget.request.title,
+        requesterId: widget.request.requesterId,
+        responderId: _responder!.id,
+      );
+      
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ConversationScreen(
+              conversation: conversation,
+              request: widget.request,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error starting conversation: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -513,125 +545,142 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Responder information
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Responder Information',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                        // Responder information
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Responder Information',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 30,
-                          backgroundColor: Colors.blue[100],
-                          child: Text(
-                            _responder?.name?[0] ?? 'U',
-                            style: TextStyle(
-                              color: Colors.blue[700],
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
-                            ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 30,
+                        backgroundColor: Colors.blue[100],
+                        child: Text(
+                          (_responder != null && _responder!.name.isNotEmpty) ? _responder!.name[0] : 'U',
+                          style: TextStyle(
+                            color: Colors.blue[700],
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _responder?.name ?? 'Unknown User',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
+                            if (_responder?.email != null) ...[
+                              const SizedBox(height: 4),
                               Text(
-                                _responder?.name ?? 'Unknown User',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
+                                _responder!.email!,
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 14,
                                 ),
                               ),
-                              if (_responder?.email != null) ...[
-                                const SizedBox(height: 4),
-                                Text(
-                                  _responder!.email!,
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
                             ],
-                          ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                      // Message button
+                      ElevatedButton.icon(
+                        onPressed: () => _startConversation(),
+                        icon: const Icon(Icons.message, size: 18),
+                        label: const Text('Message'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue[600],
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),
 
             // Response details
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Response Details',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Response Details',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(height: 16),
+                  ),
+                  const SizedBox(height: 16),
 
-                    // Price
-                    if (widget.response.price != null) ...[
-                      _buildDetailRow('Price', 
-                        '${widget.response.currency ?? 'LKR'} ${_formatPrice(widget.response.price!)}'),
-                      const SizedBox(height: 12),
-                    ],
-
-                    // Message
-                    _buildDetailRow('Message', widget.response.message),
+                  // Price
+                  if (widget.response.price != null) ...[
+                    _buildDetailRow('Price', 
+                      '${widget.response.currency ?? 'LKR'} ${_formatPrice(widget.response.price!)}'),
                     const SizedBox(height: 12),
-
-                    // Availability
-                    if (widget.response.availableFrom != null || widget.response.availableUntil != null) ...[
-                      if (widget.response.availableFrom != null)
-                        _buildDetailRow('Available From', 
-                          '${widget.response.availableFrom!.day}/${widget.response.availableFrom!.month}/${widget.response.availableFrom!.year}'),
-                      const SizedBox(height: 8),
-                      if (widget.response.availableUntil != null)
-                        _buildDetailRow('Available Until', 
-                          '${widget.response.availableUntil!.day}/${widget.response.availableUntil!.month}/${widget.response.availableUntil!.year}'),
-                      const SizedBox(height: 12),
-                    ],
-
-                    // Type-specific details
-                    _buildTypeSpecificDetails(),
                   ],
-                ),
+
+                  // Message
+                  _buildDetailRow('Message', widget.response.message),
+                  const SizedBox(height: 12),
+
+                  // Availability
+                  if (widget.response.availableFrom != null || widget.response.availableUntil != null) ...[
+                    if (widget.response.availableFrom != null)
+                      _buildDetailRow('Available From', 
+                        '${widget.response.availableFrom!.day}/${widget.response.availableFrom!.month}/${widget.response.availableFrom!.year}'),
+                    const SizedBox(height: 8),
+                    if (widget.response.availableUntil != null)
+                      _buildDetailRow('Available Until', 
+                        '${widget.response.availableUntil!.day}/${widget.response.availableUntil!.month}/${widget.response.availableUntil!.year}'),
+                    const SizedBox(height: 12),
+                  ],
+
+                  // Type-specific details
+                  _buildTypeSpecificDetails(),
+                ],
               ),
             ),
             const SizedBox(height: 16),
 
             // Images (if any)
             if (widget.response.images.isNotEmpty) ...[
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Images',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Images',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -667,16 +716,17 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
                     ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-            ],
+                const SizedBox(height: 16),
+              ],
 
             // Rejection reason (if any)
-            if (widget.response.rejectionReason != null) ...[
-              Card(
-                color: Colors.red[50],
-                child: Padding(
+              if (widget.response.rejectionReason != null) ...[
+                Container(
                   padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -695,9 +745,8 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
                     ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-            ],
+                const SizedBox(height: 16),
+              ],
 
             // Action buttons
             _buildActionButtons(),
