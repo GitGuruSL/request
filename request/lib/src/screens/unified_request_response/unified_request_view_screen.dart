@@ -301,6 +301,65 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
               ],
             ),
           ],
+          // Display images if available
+          if (_request!.images.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text(
+              'Images',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 120,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: _request!.images.length,
+                itemBuilder: (context, index) {
+                  return GestureDetector(
+                    onTap: () => _showFullScreenImage(index),
+                    child: Container(
+                      width: 120,
+                      margin: const EdgeInsets.only(right: 8),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          _request!.images[index],
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey[200],
+                              child: Icon(
+                                Icons.broken_image,
+                                color: Colors.grey[400],
+                              ),
+                            );
+                          },
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Container(
+                              color: Colors.grey[200],
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  value: loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
+                                      : null,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           Row(
             children: [
@@ -483,7 +542,59 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 12),
+          if (itemData.itemName?.isNotEmpty == true) ...[
+            Row(
+              children: [
+                Text('Item Name: ', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500)),
+                Expanded(child: Text(itemData.itemName!)),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
+          if (itemData.category.isNotEmpty) ...[
+            Row(
+              children: [
+                Text('Category: ', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500)),
+                Expanded(child: Text(itemData.subcategory?.isNotEmpty == true ? itemData.subcategory! : itemData.category)),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
+          if (itemData.quantity != null) ...[
+            Row(
+              children: [
+                Text('Quantity: ', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500)),
+                Text('${itemData.quantity}'),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
+          Row(
+            children: [
+              Text('Condition: ', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500)),
+              Text(itemData.condition),
+            ],
+          ),
+          if (itemData.brand?.isNotEmpty == true) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Text('Brand: ', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500)),
+                Text(itemData.brand!),
+              ],
+            ),
+          ],
+          if (itemData.model?.isNotEmpty == true) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Text('Model: ', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500)),
+                Text(itemData.model!),
+              ],
+            ),
+          ],
           if (itemData.specifications.isNotEmpty) ...[
+            const SizedBox(height: 12),
             const Text(
               'Specifications:',
               style: TextStyle(fontWeight: FontWeight.w500),
@@ -790,6 +901,99 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
             },
           ),
       ],
+    );
+  }
+
+  void _showFullScreenImage(int initialIndex) {
+    showDialog(
+      context: context,
+      backgroundColor: Colors.black,
+      barrierColor: Colors.black87,
+      builder: (context) => Dialog.fullscreen(
+        backgroundColor: Colors.black,
+        child: Stack(
+          children: [
+            PageView.builder(
+              controller: PageController(initialPage: initialIndex),
+              itemCount: _request!.images.length,
+              itemBuilder: (context, index) {
+                return Center(
+                  child: InteractiveViewer(
+                    child: Image.network(
+                      _request!.images[index],
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.broken_image,
+                              color: Colors.grey[400],
+                              size: 64,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Failed to load image',
+                              style: TextStyle(color: Colors.grey[400]),
+                            ),
+                          ],
+                        );
+                      },
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Center(
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                                : null,
+                            color: Colors.white,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                );
+              },
+            ),
+            Positioned(
+              top: 50,
+              right: 20,
+              child: IconButton(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(
+                  Icons.close,
+                  color: Colors.white,
+                  size: 30,
+                ),
+              ),
+            ),
+            if (_request!.images.length > 1)
+              Positioned(
+                bottom: 50,
+                left: 0,
+                right: 0,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(
+                    _request!.images.length,
+                    (index) => Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: index == initialIndex
+                            ? Colors.white
+                            : Colors.white.withOpacity(0.3),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 

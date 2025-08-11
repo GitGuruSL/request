@@ -254,6 +254,11 @@ class LocationInfo {
 // Type-specific request data models
 class ItemRequestData {
   final String category;
+  final String? categoryId;
+  final String? subcategory;
+  final String? subcategoryId;
+  final String? itemName;
+  final int? quantity;
   final String? brand;
   final String? model;
   final String condition; // new, used, like-new, etc.
@@ -262,6 +267,11 @@ class ItemRequestData {
 
   ItemRequestData({
     required this.category,
+    this.categoryId,
+    this.subcategory,
+    this.subcategoryId,
+    this.itemName,
+    this.quantity,
     this.brand,
     this.model,
     required this.condition,
@@ -272,6 +282,11 @@ class ItemRequestData {
   factory ItemRequestData.fromMap(Map<String, dynamic> map) {
     return ItemRequestData(
       category: map['category'] ?? '',
+      categoryId: map['categoryId'] ?? map['subCategoryId'],
+      subcategory: map['subcategory'],
+      subcategoryId: map['subcategoryId'] ?? map['subCategoryId'],
+      itemName: map['itemName'],
+      quantity: map['quantity'],
       brand: map['brand'],
       model: map['model'],
       condition: map['condition'] ?? 'any',
@@ -283,6 +298,11 @@ class ItemRequestData {
   Map<String, dynamic> toMap() {
     return {
       'category': category,
+      'categoryId': categoryId,
+      'subcategory': subcategory,
+      'subcategoryId': subcategoryId,
+      'itemName': itemName,
+      'quantity': quantity,
       'brand': brand,
       'model': model,
       'condition': condition,
