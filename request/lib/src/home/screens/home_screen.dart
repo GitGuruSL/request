@@ -6,6 +6,7 @@ import '../../models/request_model.dart';
 import '../../screens/unified_request_response/unified_request_create_screen.dart';
 import '../../screens/price_comparison_screen.dart';
 import '../../models/enhanced_user_model.dart';
+import '../../theme/app_theme.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -79,11 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50], // Light subtle background
       appBar: AppBar(
-        backgroundColor: Colors.grey[100], // Subtle grey background
-        foregroundColor: Colors.grey[800], // Dark grey text
-        elevation: 1, // Subtle shadow
         automaticallyImplyLeading: false, // Remove back button
         title: Row(
           children: [
@@ -95,7 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text(
                     _getUserName(),
                     style: TextStyle(
-                      color: Colors.grey[800],
+                      color: AppTheme.textPrimary,
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
                     ),
@@ -104,7 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Text(
                       '$_selectedCountry $_currencySymbol',
                       style: TextStyle(
-                        color: Colors.grey[600],
+                        color: AppTheme.textSecondary,
                         fontSize: 12,
                       ),
                     ),
@@ -115,7 +112,7 @@ class _HomeScreenState extends State<HomeScreen> {
             IconButton(
               icon: Icon(
                 Icons.notifications_outlined,
-                color: Colors.grey[700],
+                color: AppTheme.textSecondary,
               ),
               onPressed: _showNotifications,
             ),

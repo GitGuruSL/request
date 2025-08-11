@@ -3,7 +3,7 @@ import '../services/category_service.dart';
 import '../models/category_data.dart';
 
 class CategoryPicker extends StatefulWidget {
-  final String requestType; // 'item', 'service', or 'delivery'
+  final String requestType; // 'item', 'service', 'delivery', or 'rent'
   final ScrollController scrollController;
 
   const CategoryPicker({
@@ -98,6 +98,15 @@ class _CategoryPickerState extends State<CategoryPicker> {
           'Retail Items': ['Clothing', 'Electronics', 'Books', 'General Items'],
           'Documents': ['Legal Documents', 'Business Papers', 'Personal Documents'],
           'Medical': ['Prescriptions', 'Medical Supplies', 'Lab Results'],
+        };
+      case 'rent':
+        return {
+          'Vehicles': ['Cars', 'Motorcycles', 'Bicycles', 'Trucks', 'Vans'],
+          'Electronics': ['Laptops', 'Gaming Consoles', 'Cameras', 'Audio Equipment', 'Projectors'],
+          'Tools & Equipment': ['Power Tools', 'Garden Tools', 'Construction Equipment', 'Kitchen Appliances'],
+          'Furniture': ['Tables', 'Chairs', 'Sofas', 'Beds', 'Storage Units'],
+          'Event Items': ['Tents', 'Chairs', 'Tables', 'Sound Systems', 'Lighting'],
+          'Sports Equipment': ['Bicycles', 'Gym Equipment', 'Outdoor Gear', 'Water Sports'],
         };
       default:
         return {};

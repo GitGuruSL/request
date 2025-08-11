@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../models/request_model.dart';
 import '../../../models/enhanced_user_model.dart';
 import '../../../services/enhanced_request_service.dart';
@@ -27,20 +28,60 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
   final _budgetController = TextEditingController();
   
   // Ride-specific fields
-  String _rideType = 'Regular';
+  String _selectedVehicleType = 'economy';
   DateTime? _departureTime;
   int _passengerCount = 1;
+  bool _scheduleForLater = false;
   bool _allowSharing = true;
   final _specialRequestsController = TextEditingController();
   List<String> _imageUrls = [];
+  
+  // Location coordinates (for future map integration)
+  double? _pickupLat;
+  double? _pickupLng;
+  double? _destinationLat; 
+  double? _destinationLng;
+
+  // Google Maps
+  GoogleMapController? _mapController;
+  static const CameraPosition _initialPosition = CameraPosition(
+    target: LatLng(6.9271, 79.8612), // Colombo, Sri Lanka
+    zoom: 14,
+  );
+  Set<Marker> _markers = {};
 
   bool _isLoading = false;
 
-  final List<String> _rideTypes = [
-    'Regular',
-    'Premium',
-    'Shared',
-    'Airport Transfer',
+  final List<Map<String, dynamic>> _vehicleTypes = [
+    {
+      'id': 'economy',
+      'name': 'Economy',
+      'description': 'Affordable rides',
+      'icon': Icons.directions_car,
+      'passengers': '1-4',
+    },
+    {
+      'id': 'premium',
+      'name': 'Premium',
+      'description': 'Comfortable rides',
+      'icon': Icons.local_taxi,
+      'passengers': '1-4', 
+    },
+    {
+      'id': 'suv',
+      'name': 'SUV',
+      'description': 'Extra space',
+      'icon': Icons.airport_shuttle,
+      'passengers': '1-6',
+    },
+    {
+      'id': 'shared',
+      'name': 'Shared',
+      'description': 'Share & save',
+      'icon': Icons.people,
+      'passengers': '1-2',
+      'price': '${CurrencyHelper.instance.getCurrencySymbol()}100-150',
+    },
   ];
 
   @override
@@ -57,262 +98,129 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFAFF),
-      appBar: AppBar(
-        title: const Text('Create Ride Request'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-      ),
-      body: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header Info
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.directions_car, color: Colors.orange[600]),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Ride Request',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.orange[600],
-                            ),
-                          ),
-                          const Text(
-                            'Need a ride? Find drivers going your way!',
-                          ),
-                        ],
+      backgroundColor: Colors.white,
+      body: Stack(
+        children: [
+          // Google Maps View
+          Positioned.fill(
+            child: GoogleMap(
+              initialCameraPosition: _initialPosition,
+              onMapCreated: (GoogleMapController controller) {
+                _mapController = controller;
+              },
+              markers: _markers,
+              onTap: _onMapTapped,
+              myLocationEnabled: true,
+              myLocationButtonEnabled: false,
+              zoomControlsEnabled: false,
+              mapToolbarEnabled: false,
+            ),
+          ),
+          
+          // Top App Bar
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 8,
+                left: 16,
+                right: 16,
+                bottom: 8,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const Expanded(
+                    child: Text(
+                      'Book a Ride',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Basic Information
-              _buildSectionTitle('Trip Details'),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _titleController,
-                decoration: InputDecoration(
-                  labelText: 'Trip Title',
-                  hintText: 'e.g., Airport to Downtown, Daily Commute',
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: InputBorder.none,
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter a trip title';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              LocationPickerWidget(
-                controller: _pickupLocationController,
-                labelText: 'Pickup Location',
-                hintText: 'Where should the driver pick you up?',
-                isRequired: true,
-                onLocationSelected: (address, lat, lng) {
-                  print('Pickup location: $address at $lat, $lng');
-                },
-              ),
-              const SizedBox(height: 16),
-              LocationPickerWidget(
-                controller: _destinationController,
-                labelText: 'Destination',
-                hintText: 'Where do you want to go?',
-                isRequired: true,
-                onLocationSelected: (address, lat, lng) {
-                  print('Destination: $address at $lat, $lng');
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _descriptionController,
-                decoration: InputDecoration(
-                  labelText: 'Additional Notes (Optional)',
-                  hintText: 'Any special instructions or preferences...',
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: InputBorder.none,
-                ),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 24),
-
-              // Ride Details
-              _buildSectionTitle('Ride Preferences'),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: _rideType,
-                decoration: InputDecoration(
-                  labelText: 'Ride Type',
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: InputBorder.none,
-                ),
-                items: _rideTypes.map((type) {
-                  return DropdownMenuItem(
-                    value: type,
-                    child: Text(type),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _rideType = value!;
-                  });
-                },
-              ),
-              const SizedBox(height: 16),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: ListTile(
-                  title: Text(_departureTime == null 
-                    ? 'Select Departure Time' 
-                    : 'Departure: ${_departureTime!.day}/${_departureTime!.month} at ${_departureTime!.hour}:${_departureTime!.minute.toString().padLeft(2, '0')}'),
-                  trailing: const Icon(Icons.access_time),
-                  onTap: _selectDateTime,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Number of Passengers: $_passengerCount',
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                    Slider(
-                      value: _passengerCount.toDouble(),
-                      min: 1,
-                      max: 6,
-                      divisions: 5,
-                      onChanged: (value) {
-                        setState(() {
-                          _passengerCount = value.toInt();
-                        });
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: CheckboxListTile(
-                  title: const Text('Allow ride sharing'),
-                  subtitle: const Text('Other passengers can join this ride'),
-                  value: _allowSharing,
-                  onChanged: (value) {
-                    setState(() {
-                      _allowSharing = value!;
-                    });
-                  },
-                  controlAffinity: ListTileControlAffinity.leading,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _specialRequestsController,
-                decoration: InputDecoration(
-                  labelText: 'Special Requests (Optional)',
-                  hintText: 'Pet-friendly, non-smoking, etc...',
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: InputBorder.none,
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Reference Images
-              _buildSectionTitle('Reference Images'),
-              const SizedBox(height: 12),
-              ImageUploadWidget(
-                initialImages: _imageUrls,
-                maxImages: 4,
-                uploadPath: 'requests/ride',
-                label: 'Upload reference images (optional)',
-                onImagesChanged: (images) {
-                  setState(() {
-                    _imageUrls = images;
-                  });
-                },
-              ),
-              const SizedBox(height: 24),
-
-              // Budget
-              _buildSectionTitle('Budget'),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _budgetController,
-                decoration: InputDecoration(
-                  labelText: CurrencyHelper.instance.getPriceLabel('Offered Price'),
-                  hintText: '0.00',
-                  prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: InputBorder.none,
-                ),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 32),
-
-              // Submit Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _submitRequest,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: Colors.orange[600],
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      textAlign: TextAlign.center,
                     ),
                   ),
-                  child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text(
-                          'Create Ride Request',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                ),
+                  IconButton(
+                    icon: const Icon(Icons.my_location),
+                    onPressed: _goToCurrentLocation,
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+
+          // Bottom Sheet with ride details
+          DraggableScrollableSheet(
+            initialChildSize: 0.4,
+            minChildSize: 0.3,
+            maxChildSize: 0.9,
+            builder: (context, scrollController) {
+              return Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 10,
+                      offset: Offset(0, -2),
+                    ),
+                  ],
+                ),
+                child: ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(20),
+                  children: [
+                    // Drag handle
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Location inputs
+                    _buildLocationInputs(),
+                    const SizedBox(height: 24),
+
+                    // Vehicle selection
+                    _buildVehicleSelection(),
+                    const SizedBox(height: 24),
+
+                    // Passengers and scheduling
+                    _buildRideOptions(),
+                    const SizedBox(height: 24),
+
+                    // Request ride button
+                    _buildRequestButton(),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -324,6 +232,298 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
         fontSize: 16,
         fontWeight: FontWeight.bold,
         color: Colors.black87,
+      ),
+    );
+  }
+
+  Widget _buildLocationInputs() {
+    return Column(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.grey[50],
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.green,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: LocationPickerWidget(
+                        controller: _pickupLocationController,
+                        labelText: '',
+                        hintText: 'Pickup location',
+                        isRequired: true,
+                        onLocationSelected: (address, lat, lng) {
+                          setState(() {
+                            _pickupLat = lat;
+                            _pickupLng = lng;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: Colors.grey[300]),
+              Container(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: LocationPickerWidget(
+                        controller: _destinationController,
+                        labelText: '',
+                        hintText: 'Where to?',
+                        isRequired: true,
+                        onLocationSelected: (address, lat, lng) {
+                          setState(() {
+                            _destinationLat = lat;
+                            _destinationLng = lng;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVehicleSelection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Choose a ride',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          height: 80,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: _vehicleTypes.length,
+            itemBuilder: (context, index) {
+              final vehicle = _vehicleTypes[index];
+              final isSelected = _selectedVehicleType == vehicle['id'];
+              
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _selectedVehicleType = vehicle['id'];
+                  });
+                },
+                child: Container(
+                  width: 120,
+                  margin: const EdgeInsets.only(right: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: isSelected ? Theme.of(context).primaryColor.withOpacity(0.1) : Colors.transparent,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            vehicle['icon'],
+                            size: 24,
+                            color: isSelected ? Theme.of(context).primaryColor : Colors.grey[600],
+                          ),
+                          const Spacer(),
+                          Text(
+                            vehicle['passengers'],
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        vehicle['name'],
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: isSelected ? Theme.of(context).primaryColor : Colors.grey[800],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRideOptions() {
+    return Column(
+      children: [
+        // Passenger count
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.grey[50],
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.person, color: Colors.grey),
+              const SizedBox(width: 12),
+              const Text(
+                'Passengers',
+                style: TextStyle(fontSize: 16),
+              ),
+              const Spacer(),
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: _passengerCount > 1 
+                        ? () => setState(() => _passengerCount--) 
+                        : null,
+                    icon: Icon(
+                      Icons.remove_circle_outline,
+                      color: _passengerCount > 1 
+                          ? Theme.of(context).primaryColor 
+                          : Colors.grey,
+                    ),
+                  ),
+                  Text(
+                    '$_passengerCount',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).primaryColor,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: _passengerCount < 6 
+                        ? () => setState(() => _passengerCount++) 
+                        : null,
+                    icon: Icon(
+                      Icons.add_circle_outline,
+                      color: _passengerCount < 6 
+                          ? Theme.of(context).primaryColor 
+                          : Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 12),
+        
+        // Schedule for later
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.grey[50],
+          ),
+          child: ListTile(
+            leading: Icon(
+              Icons.schedule, 
+              color: _scheduleForLater ? Theme.of(context).primaryColor : Colors.grey,
+            ),
+            title: Text(_scheduleForLater 
+                ? (_departureTime != null 
+                    ? 'Leave at ${_departureTime!.hour}:${_departureTime!.minute.toString().padLeft(2, '0')}'
+                    : 'Select time')
+                : 'Leave now'),
+            trailing: Switch(
+              value: _scheduleForLater,
+              onChanged: (value) {
+                setState(() {
+                  _scheduleForLater = value;
+                  if (value && _departureTime == null) {
+                    _selectDateTime();
+                  }
+                });
+              },
+            ),
+            onTap: _scheduleForLater ? _selectDateTime : null,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRequestButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: ElevatedButton(
+        onPressed: _isLoading ? null : _submitRequest,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: _isLoading
+            ? const CircularProgressIndicator(color: Colors.white)
+            : const Text(
+                'Request Ride',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+      ),
+    );
+  }
+
+  void _onMapTapped() {
+    // Future: Handle map tapping for setting pickup/destination
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Map interaction will be available soon!'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+  }
+
+  void _goToCurrentLocation() {
+    // Future: Implement current location functionality
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Getting current location...'),
+        duration: Duration(seconds: 1),
       ),
     );
   }
@@ -357,11 +557,22 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
   }
 
   Future<void> _submitRequest() async {
-    if (!_formKey.currentState!.validate()) {
+    // Basic validation
+    if (_pickupLocationController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter pickup location')),
+      );
       return;
     }
 
-    if (_departureTime == null) {
+    if (_destinationController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter destination')),
+      );
+      return;
+    }
+
+    if (_scheduleForLater && _departureTime == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select departure time')),
       );
@@ -386,37 +597,51 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
         return;
       }
 
+      // Get selected vehicle details
+      final selectedVehicle = _vehicleTypes.firstWhere(
+        (vehicle) => vehicle['id'] == _selectedVehicleType,
+      );
+
       // Create the ride-specific data
       final rideData = RideRequestData(
         passengers: _passengerCount,
-        preferredTime: _departureTime!,
-        isFlexibleTime: false,
-        vehicleType: _rideType,
+        preferredTime: _scheduleForLater ? _departureTime! : DateTime.now().add(const Duration(minutes: 10)),
+        isFlexibleTime: !_scheduleForLater,
+        vehicleType: selectedVehicle['name'],
         allowSmoking: false,
-        petsAllowed: false,
+        petsAllowed: _allowSharing,
         specialRequests: _specialRequestsController.text.trim().isEmpty 
             ? null 
             : _specialRequestsController.text.trim(),
       );
 
+      // Generate a descriptive title
+      final title = 'Ride from ${_pickupLocationController.text.trim()} to ${_destinationController.text.trim()}';
+
       final requestId = await _requestService.createRequest(
-        title: _titleController.text.trim(),
-        description: _descriptionController.text.trim(),
+        title: title,
+        description: 'Ride request for $_passengerCount passenger(s) using ${selectedVehicle['name']}',
         type: RequestType.ride,
         budget: double.tryParse(_budgetController.text),
         currency: CurrencyHelper.instance.getCurrency(),
         typeSpecificData: rideData.toMap(),
-        tags: ['ride', _rideType.toLowerCase().replaceAll(' ', '_')],
+        tags: [
+          'ride', 
+          _selectedVehicleType,
+          'passengers_$_passengerCount',
+          if (_scheduleForLater) 'scheduled',
+        ],
         location: LocationInfo(
-          latitude: 0.0,
-          longitude: 0.0,
+          latitude: _pickupLat ?? 0.0,
+          longitude: _pickupLng ?? 0.0,
           address: _pickupLocationController.text.trim(),
         ),
         destinationLocation: LocationInfo(
-          latitude: 0.0,
-          longitude: 0.0,
+          latitude: _destinationLat ?? 0.0,
+          longitude: _destinationLng ?? 0.0,
           address: _destinationController.text.trim(),
         ),
+        images: _imageUrls,
       );
 
       if (mounted) {

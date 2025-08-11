@@ -4,6 +4,7 @@ import '../../models/enhanced_user_model.dart';
 import '../../services/enhanced_request_service.dart';
 import '../../services/enhanced_user_service.dart';
 import '../../widgets/image_upload_widget.dart';
+import '../../utils/currency_helper.dart';
 
 class UnifiedResponseCreateScreen extends StatefulWidget {
   final RequestModel request;
@@ -216,7 +217,7 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                'Budget: \$${widget.request.budget?.toStringAsFixed(2)}',
+                'Budget: ${CurrencyHelper.instance.formatPrice(widget.request.budget ?? 0)}',
                 style: TextStyle(
                   color: Colors.green[700],
                   fontSize: 12,
@@ -326,13 +327,13 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
               TextFormField(
                 controller: _offerPriceController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: 'Enter your selling price',
-                  prefixText: '\$ ',
+                  prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(16),
+                  contentPadding: const EdgeInsets.all(16),
                   filled: true,
-                  fillColor: Color(0xFFF8F9FA),
+                  fillColor: const Color(0xFFF8F9FA),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -465,13 +466,13 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                 TextFormField(
                   controller: _deliveryCostController,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'Cost to deliver the item',
-                    prefixText: '\$ ',
+                    prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.all(16),
+                    contentPadding: const EdgeInsets.all(16),
                     filled: true,
-                    fillColor: Color(0xFFF8F9FA),
+                    fillColor: const Color(0xFFF8F9FA),
                   ),
                 ),
               ],
@@ -627,7 +628,7 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                   hintText: _selectedPriceType == 'Fixed Price'
                       ? 'Total estimated cost'
                       : 'Cost per hour',
-                  prefixText: '\$ ',
+                  prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
                   suffixText: _selectedPriceType == 'Hourly Rate' ? '/hr' : null,
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.all(16),
@@ -863,13 +864,13 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                     child: TextFormField(
                       controller: _rentalPriceController,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: 'Price',
-                        prefixText: '\$ ',
+                        prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.all(16),
+                        contentPadding: const EdgeInsets.all(16),
                         filled: true,
-                        fillColor: Color(0xFFF8F9FA),
+                        fillColor: const Color(0xFFF8F9FA),
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
@@ -1116,13 +1117,13 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
               TextFormField(
                 controller: _securityDepositController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: 'Security deposit amount',
-                  prefixText: '\$ ',
+                  prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(16),
+                  contentPadding: const EdgeInsets.all(16),
                   filled: true,
-                  fillColor: Color(0xFFF8F9FA),
+                  fillColor: const Color(0xFFF8F9FA),
                 ),
               ),
             ],
@@ -1181,13 +1182,13 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
               TextFormField(
                 controller: _deliveryFeeController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: 'Your delivery service fee',
-                  prefixText: '\$ ',
+                  prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(16),
+                  contentPadding: const EdgeInsets.all(16),
                   filled: true,
-                  fillColor: Color(0xFFF8F9FA),
+                  fillColor: const Color(0xFFF8F9FA),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {

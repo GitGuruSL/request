@@ -152,6 +152,50 @@ class CategoryData {
           'Medical Supplies',
           'Lab Results'
         ]
+      },
+      'rent': {
+        'Tools & Equipment': [
+          'Construction Tools',
+          'Power Tools',
+          'Hand Tools',
+          'Heavy Machinery',
+          'Garden Tools'
+        ],
+        'Electronics': [
+          'Cameras & Video',
+          'Audio Equipment',
+          'Gaming Equipment',
+          'Computers & Laptops',
+          'Projectors'
+        ],
+        'Vehicles': [
+          'Cars',
+          'Motorcycles',
+          'Bicycles',
+          'Vans & Trucks',
+          'Boats'
+        ],
+        'Party & Events': [
+          'Decorations',
+          'Sound Systems',
+          'Lighting',
+          'Furniture',
+          'Catering Equipment'
+        ],
+        'Sports Equipment': [
+          'Fitness Equipment',
+          'Sports Gear',
+          'Outdoor Equipment',
+          'Water Sports',
+          'Winter Sports'
+        ],
+        'Furniture & Appliances': [
+          'Living Room',
+          'Bedroom',
+          'Kitchen Appliances',
+          'Office Furniture',
+          'Storage Solutions'
+        ]
       }
     };
 

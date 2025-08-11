@@ -13,7 +13,7 @@ class AppTheme {
   
   // Surface Colors - White Background for entire app
   static const Color surfaceColor = Colors.white;
-  static const Color backgroundColor = Colors.white; // White background for entire app
+  static const Color backgroundColor = Color(0xFAFAFAFF);
   static const Color cardColor = Colors.white;
   
   // Text Colors
@@ -49,6 +49,7 @@ class AppTheme {
       
       // Background color for all screens
       scaffoldBackgroundColor: backgroundColor,
+      focusColor: backgroundColor, // Focus color same as background
       
       // AppBar Theme - Same as background color, flat design
       appBarTheme: const AppBarTheme(
@@ -134,6 +135,7 @@ class AppTheme {
       inputDecorationTheme: const InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
+        focusColor: backgroundColor, // Focus color same as background
         border: OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(12)),
           borderSide: BorderSide.none, // No border
