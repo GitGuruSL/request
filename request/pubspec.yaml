@@ -133,11 +133,7 @@ flutter_launcher_icons:
 
 # Flutter Native Splash Configuration - Disabled to use custom splash only
 flutter_native_splash:
-  color: "#FFFFFF"
-  # Remove image to disable splash
+  # Completely disable native splash
   android: false
   ios: false
   web: false
-  android_12:
-    icon_background_color: "#FFFFFF"
-    icon_background_color_dark: "#1D1B20"

@@ -68,6 +68,10 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
   List<String> _imageUrls = [];
   bool _isLoading = false;
 
+  // Location coordinates storage
+  double? _selectedLatitude;
+  double? _selectedLongitude;
+
   final List<String> _conditions = ['New', 'Used', 'For Parts', 'Any Condition'];
   final List<String> _urgencyLevels = ['Flexible', 'ASAP', 'Specific Date'];
   final List<String> _deliveryTimes = ['Anytime', 'Morning', 'Afternoon', 'By End of Day'];
@@ -95,6 +99,8 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
     // Set location if available
     if (widget.request.location != null) {
       _locationController.text = widget.request.location!.address;
+      _selectedLatitude = widget.request.location!.latitude;
+      _selectedLongitude = widget.request.location!.longitude;
     }
     
     // Populate type-specific data
@@ -103,16 +109,32 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
     switch (widget.request.type) {
       case RequestType.item:
         _itemNameController.text = typeData['itemName'] ?? '';
-        _selectedCategory = typeData['category'];
+        _selectedCategory = typeData['category'] ?? 'Electronics';
+        _selectedCategoryId = typeData['categoryId'] ?? typeData['category'];
+        _selectedSubcategory = typeData['subcategory'];
+        _selectedSubCategoryId = typeData['subcategoryId'] ?? typeData['subcategory'];
         _quantityController.text = typeData['quantity']?.toString() ?? '';
-        _selectedCondition = typeData['condition'];
+        _selectedCondition = typeData['condition'] ?? 'New';
+        
+        // Ensure categoryId is set if we have a category
+        if (_selectedCategory?.isNotEmpty == true && (_selectedCategoryId?.isEmpty ?? true)) {
+          _selectedCategoryId = _selectedCategory;
+        }
         break;
         
       case RequestType.service:
         _selectedCategory = typeData['serviceType'] ?? '';
-        _selectedUrgency = typeData['urgency'];
+        _selectedCategoryId = typeData['categoryId'] ?? typeData['serviceType'];
+        _selectedSubcategory = typeData['subcategory'];
+        _selectedSubCategoryId = typeData['subcategoryId'] ?? typeData['subcategory'];
+        _selectedUrgency = typeData['urgency'] ?? 'Flexible';
         if (typeData['preferredDateTime'] != null) {
           _preferredDateTime = DateTime.fromMillisecondsSinceEpoch(typeData['preferredDateTime']);
+        }
+        
+        // Ensure categoryId is set if we have a category
+        if (_selectedCategory?.isNotEmpty == true && (_selectedCategoryId?.isEmpty ?? true)) {
+          _selectedCategoryId = _selectedCategory;
         }
         break;
         
@@ -123,17 +145,31 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
         _itemDescriptionController.text = typeData['itemDescription'] ?? '';
         _weightController.text = typeData['weight']?.toString() ?? '';
         _dimensionsController.text = typeData['dimensions'] ?? '';
-        _selectedDeliveryTime = typeData['preferredDeliveryTime'];
+        _selectedDeliveryTime = typeData['preferredDeliveryTime'] ?? 'Anytime';
         _specialInstructionsController.text = typeData['specialInstructions'] ?? '';
         break;
         
       case RequestType.rental:
         _itemToRentController.text = typeData['itemToRent'] ?? '';
+        _selectedCategory = typeData['category'] ?? '';
+        _selectedCategoryId = typeData['categoryId'] ?? typeData['category'];
+        _selectedSubcategory = typeData['subcategory'];
+        _selectedSubCategoryId = typeData['subcategoryId'] ?? typeData['subcategory'];
+        _pickupDropoffPreference = typeData['pickupDropoffPreference'] ?? 'pickup';
+        
+        // Set both date formats for compatibility
         if (typeData['startDate'] != null) {
           _startDate = DateTime.fromMillisecondsSinceEpoch(typeData['startDate']);
+          _startDateTime = _startDate; // Use same date for both
         }
         if (typeData['endDate'] != null) {
           _endDate = DateTime.fromMillisecondsSinceEpoch(typeData['endDate']);
+          _endDateTime = _endDate; // Use same date for both
+        }
+        
+        // If we have category data but _selectedCategoryId is empty, set it to category name
+        if (_selectedCategory?.isNotEmpty == true && (_selectedCategoryId?.isEmpty ?? true)) {
+          _selectedCategoryId = _selectedCategory;
         }
         break;
         
@@ -252,7 +288,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
                     ),
                   )
                 : Text(
-                    'Create ${_getTypeDisplayName(_selectedType)}',
+                    'Update ${_getTypeDisplayName(_selectedType)}',
                     style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
           ),
@@ -474,6 +510,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
               ),
               const SizedBox(height: 8),
               ImageUploadWidget(
+                initialImages: _imageUrls,
                 uploadPath: 'request_images/items',
                 onImagesChanged: (urls) {
                   setState(() {
@@ -726,6 +763,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
               ),
               const SizedBox(height: 8),
               ImageUploadWidget(
+                initialImages: _imageUrls,
                 uploadPath: 'request_images/services',
                 onImagesChanged: (urls) {
                   setState(() {
@@ -785,48 +823,64 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
         
         // Item to Rent (Use Category Picker)
         _buildFlatField(
-          child: GestureDetector(
-            onTap: () async {
-              final result = await showModalBottomSheet<Map<String, String>>(
-                context: context,
-                isScrollControlled: true,
-                builder: (context) => DraggableScrollableSheet(
-                  expand: false,
-                  builder: (context, scrollController) => CategoryPicker(
-                    requestType: 'rent',
-                    scrollController: scrollController,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Item to Rent',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () async {
+                  final result = await showModalBottomSheet<Map<String, String>>(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.white,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                    ),
+                    builder: (context) => SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.8,
+                      child: CategoryPicker(
+                        requestType: 'rent',
+                        scrollController: ScrollController(),
+                      ),
+                    ),
+                  );
+                  
+                  if (result != null && result['category'] != null) {
+                    setState(() {
+                      _selectedCategory = result['category']!;
+                      _selectedSubcategory = result['subcategory'];
+                      _selectedCategoryId = result['category']!; // Use category name as ID
+                      _selectedSubCategoryId = result['subcategory'];
+                    });
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _selectedSubcategory ?? _selectedCategory ?? 'Select item to rent',
+                        style: TextStyle(
+                          color: (_selectedSubcategory != null || _selectedCategory != null) 
+                              ? Colors.black 
+                              : Colors.grey.shade600,
+                        ),
+                      ),
+                      const Icon(Icons.arrow_drop_down),
+                    ],
                   ),
                 ),
-              );
-              
-              if (result != null) {
-                setState(() {
-                  _selectedCategory = result['category'] ?? _selectedCategory;
-                  _selectedSubcategory = result['subcategory'] ?? _selectedSubcategory;
-                  _selectedCategoryId = result['category'];
-                  _selectedSubCategoryId = result['subcategory'];
-                });
-              }
-            },
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(8),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    _selectedSubcategory ?? 'Select item to rent',
-                    style: TextStyle(
-                      color: _selectedSubcategory != null ? Colors.black : Colors.grey.shade600,
-                    ),
-                  ),
-                  const Icon(Icons.arrow_drop_down),
-                ],
-              ),
-            ),
+            ],
           ),
         ),
         const SizedBox(height: 16),
@@ -1020,6 +1074,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
               ),
               const SizedBox(height: 8),
               ImageUploadWidget(
+                initialImages: _imageUrls,
                 uploadPath: 'request_images/rentals',
                 onImagesChanged: (urls) {
                   setState(() {
@@ -1292,6 +1347,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
               ),
               const SizedBox(height: 8),
               ImageUploadWidget(
+                initialImages: _imageUrls,
                 uploadPath: 'request_images/deliveries',
                 onImagesChanged: (urls) {
                   setState(() {
@@ -1314,7 +1370,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
 
     // Additional validation for category selection based on request type
     if ((_selectedType == RequestType.service || _selectedType == RequestType.delivery || _selectedType == RequestType.rental) 
-        && (_selectedCategoryId == null || _selectedCategoryId!.isEmpty)) {
+        && (_selectedCategory == null || _selectedCategory!.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Please select a ${_selectedType.name} category'),
@@ -1335,10 +1391,20 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
       }
 
       // Update the request using the service method
+      LocationInfo? locationInfo;
+      if (_locationController.text.trim().isNotEmpty) {
+        locationInfo = LocationInfo(
+          address: _locationController.text.trim(),
+          latitude: null, // We'll need to geocode this if needed
+          longitude: null,
+        );
+      }
+
       await _requestService.updateRequest(
         requestId: widget.request.id,
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
+        location: locationInfo,
         budget: _budgetController.text.trim().isNotEmpty 
             ? double.tryParse(_budgetController.text.trim()) 
             : null,
@@ -1407,7 +1473,11 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
         };
       case RequestType.rental:
         return {
-          'itemToRent': _rentalItemController.text.trim(),
+          'itemToRent': _itemToRentController.text.trim(),
+          'category': _selectedCategory,
+          'categoryId': _selectedCategoryId ?? '',
+          'subcategory': _selectedSubcategory,
+          'subcategoryId': _selectedSubCategoryId ?? '',
           'startDate': _startDateTime?.millisecondsSinceEpoch,
           'endDate': _endDateTime?.millisecondsSinceEpoch,
           'pickupDropoffPreference': _pickupDropoffPreference,

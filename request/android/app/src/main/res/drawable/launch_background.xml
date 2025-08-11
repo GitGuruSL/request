@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Simplified launch background - just white color, no image -->
+<!-- Minimal launch background - just solid color -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="@color/splash_background"/>
-    <!-- Removed splash image to avoid double splash screens -->
+    <item android:drawable="@android:color/white"/>
 </layer-list>
