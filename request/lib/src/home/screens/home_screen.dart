@@ -380,15 +380,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                     ),
                     ListTile(
-                      leading: const Icon(Icons.directions_car),
-                      title: const Text('Ride Request'),
-                      subtitle: const Text('Request for transportation'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.pushNamed(context, '/create-ride-request');
-                      },
-                    ),
-                    ListTile(
                       leading: const Icon(Icons.local_shipping),
                       title: const Text('Delivery Request'),
                       subtitle: const Text('Request for delivery services'),
@@ -414,6 +405,15 @@ class _HomeScreenState extends State<HomeScreen> {
                             builder: (context) => const UnifiedRequestCreateScreen(initialType: RequestType.rental),
                           ),
                         );
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.directions_car),
+                      title: const Text('Ride Request'),
+                      subtitle: const Text('Request for transportation'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.pushNamed(context, '/create-ride-request');
                       },
                     ),
                     ListTile(

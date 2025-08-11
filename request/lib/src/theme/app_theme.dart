@@ -11,9 +11,9 @@ class AppTheme {
   static const Color secondaryLight = Color(0xFF66FFF9);
   static const Color secondaryDark = Color(0xFF00A896);
   
-  // Surface Colors - Light Gray Background
+  // Surface Colors - White Background for entire app
   static const Color surfaceColor = Colors.white;
-  static const Color backgroundColor = Color(0xFAFAFAFF); // Light gray background
+  static const Color backgroundColor = Colors.white; // White background for entire app
   static const Color cardColor = Colors.white;
   
   // Text Colors
@@ -50,15 +50,15 @@ class AppTheme {
       // Background color for all screens
       scaffoldBackgroundColor: backgroundColor,
       
-      // AppBar Theme - Flat design
+      // AppBar Theme - Same as background color, flat design
       appBarTheme: const AppBarTheme(
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
+        backgroundColor: backgroundColor, // Same as background
+        foregroundColor: textPrimary, // Dark text
         elevation: 0, // No shadow
         scrolledUnderElevation: 0,
         centerTitle: true,
         titleTextStyle: TextStyle(
-          color: Colors.white,
+          color: textPrimary, // Dark text
           fontSize: 20,
           fontWeight: FontWeight.w600,
         ),
@@ -306,15 +306,21 @@ class AppTheme {
     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
   );
 
-  // Custom Container Decoration
+  // Custom Container Decoration - Flat white containers
   static BoxDecoration get cardDecoration => const BoxDecoration(
     color: cardColor,
     borderRadius: BorderRadius.all(Radius.circular(12)),
   );
 
   static BoxDecoration get inputDecoration => const BoxDecoration(
-    color: backgroundColor,
+    color: Colors.white,
     borderRadius: BorderRadius.all(Radius.circular(12)),
+  );
+
+  // Field container decoration (for form fields)
+  static BoxDecoration get fieldDecoration => const BoxDecoration(
+    color: Colors.white,
+    borderRadius: BorderRadius.all(Radius.circular(8)),
   );
 
   // Custom Gradient (if needed)
@@ -323,4 +329,32 @@ class AppTheme {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
+
+  // Helper method to create flat containers
+  static Container buildFlatContainer({
+    required Widget child,
+    EdgeInsets? padding,
+    double? width,
+    double? height,
+  }) {
+    return Container(
+      width: width,
+      height: height,
+      padding: padding ?? const EdgeInsets.all(16),
+      decoration: cardDecoration,
+      child: child,
+    );
+  }
+
+  // Helper method for form fields
+  static Container buildFlatField({
+    required Widget child,
+    EdgeInsets? padding,
+  }) {
+    return Container(
+      padding: padding ?? const EdgeInsets.all(16),
+      decoration: fieldDecoration,
+      child: child,
+    );
+  }
 }

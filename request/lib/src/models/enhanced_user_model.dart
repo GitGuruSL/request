@@ -11,9 +11,9 @@ enum UserRole {
 enum RequestType { 
   item,      // General items
   service,   // Services
-  ride,      // Transportation
   delivery,  // Package delivery
   rental,    // Rent/lease items
+  ride,      // Transportation
   price      // Price comparison
 }
 

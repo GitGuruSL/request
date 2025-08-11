@@ -99,7 +99,10 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
         key: _formKey,
         child: Column(
           children: [
+            // Request Summary
             _buildRequestSummary(),
+            
+            // Response Form
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
@@ -175,21 +178,21 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
             children: [
               Icon(
                 _getTypeIcon(widget.request.type),
-                color: Theme.of(context).primaryColor,
+                color: Colors.blue,
                 size: 20,
               ),
               const SizedBox(width: 8),
               Text(
                 _getTypeDisplayName(widget.request.type),
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
-                  color: Theme.of(context).primaryColor,
+                  color: Colors.blue,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
             widget.request.title,
             style: const TextStyle(
@@ -204,24 +207,15 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
               color: Colors.grey[600],
               fontSize: 14,
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
           if (widget.request.budget != null) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.green[50],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                'Budget: \$${widget.request.budget?.toStringAsFixed(2)}',
-                style: TextStyle(
-                  color: Colors.green[700],
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
+            const SizedBox(height: 8),
+            Text(
+              'Budget: \$${widget.request.budget?.toStringAsFixed(2) ?? 'Not specified'}',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.green,
               ),
             ),
           ],
@@ -248,63 +242,19 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
   }
 
   Widget _buildResponseFields() {
-    return Column(
-      children: [
-        _buildCommonResponseField(),
-        const SizedBox(height: 16),
-        _buildTypeSpecificFields(),
-      ],
-    );
-  }
-
-  Widget _buildCommonResponseField() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Your Message*',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _messageController,
-            maxLines: 4,
-            decoration: const InputDecoration(
-              hintText: 'Explain why you\'re the best choice for this request...',
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.all(16),
-              filled: true,
-              fillColor: Color(0xFFF8F9FA),
-            ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Please enter a message';
-              }
-              return null;
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTypeSpecificFields() {
     switch (widget.request.type) {
       case RequestType.item:
         return _buildItemResponseFields();
       case RequestType.service:
         return _buildServiceResponseFields();
-      case RequestType.rental:
-        return _buildRentalResponseFields();
       case RequestType.delivery:
         return _buildDeliveryResponseFields();
-      default:
-        return const SizedBox();
+      case RequestType.rental:
+        return _buildRentalResponseFields();
+      case RequestType.ride:
+        return const SizedBox(); // Ride requests handled by specialized screen
+      case RequestType.price:
+        return const SizedBox(); // Price requests handled by specialized screen
     }
   }
 
@@ -313,16 +263,21 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
       children: [
         // Offer Price
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(color: Colors.white),
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 'Offer Price*',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _offerPriceController,
                 keyboardType: TextInputType.number,
@@ -330,7 +285,7 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                   hintText: 'Enter your selling price',
                   prefixText: '\$ ',
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(16),
+                  contentPadding: EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                   filled: true,
                   fillColor: Color(0xFFF8F9FA),
                 ),
@@ -347,32 +302,33 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
             ],
           ),
         ),
-        const SizedBox(height: 16),
 
         // Item Condition
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(color: Colors.white),
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 'Item Condition*',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _itemConditionController,
                 decoration: const InputDecoration(
-                  hintText: 'e.g., Brand new, Used - excellent condition',
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(16),
-                  filled: true,
-                  fillColor: Color(0xFFF8F9FA),
+                  hintText: 'Describe the current condition of your item',
+                  border: OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Please specify the item condition';
+                    return 'Please describe the item condition';
                   }
                   return null;
                 },
@@ -380,29 +336,30 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
             ],
           ),
         ),
-        const SizedBox(height: 16),
 
         // Offer Description
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(color: Colors.white),
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Item Description*',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                'Offer Description*',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _offerDescriptionController,
                 maxLines: 4,
                 decoration: const InputDecoration(
-                  hintText: 'Detailed description of the item you\'re offering...',
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(16),
-                  filled: true,
-                  fillColor: Color(0xFFF8F9FA),
+                  hintText: 'Detailed description of the item you have, including specific features or flaws',
+                  border: OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -414,30 +371,35 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
             ],
           ),
         ),
-        const SizedBox(height: 16),
 
         // Delivery Method
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(color: Colors.white),
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 'Delivery/Pickup Method*',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _selectedDeliveryMethod,
                 decoration: const InputDecoration(
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(16),
-                  filled: true,
-                  fillColor: Color(0xFFF8F9FA),
+                  border: OutlineInputBorder(),
                 ),
-                items: ['User pickup', 'I can deliver'].map((method) =>
-                    DropdownMenuItem(value: method, child: Text(method))).toList(),
+                items: ['User pickup', 'I can deliver', 'Meet halfway']
+                    .map((method) => DropdownMenuItem(
+                          value: method,
+                          child: Text(method),
+                        ))
+                    .toList(),
                 onChanged: (value) {
                   setState(() {
                     _selectedDeliveryMethod = value!;
@@ -448,30 +410,31 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
           ),
         ),
 
-        // Delivery Cost (conditional)
+        // Delivery Cost (only if delivery selected)
         if (_selectedDeliveryMethod == 'I can deliver') ...[
-          const SizedBox(height: 16),
           Container(
-            padding: const EdgeInsets.all(20),
-            decoration: const BoxDecoration(color: Colors.white),
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
                   'Delivery Cost',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
                 TextFormField(
                   controller: _deliveryCostController,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
                     hintText: 'Cost to deliver the item',
                     prefixText: '\$ ',
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.all(16),
-                    filled: true,
-                    fillColor: Color(0xFFF8F9FA),
+                    border: OutlineInputBorder(),
                   ),
                 ),
               ],
@@ -479,83 +442,88 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
           ),
         ],
 
-        const SizedBox(height: 16),
-
-        // Estimated Delivery
+        // Estimated Delivery Time
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(color: Colors.white),
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 'Estimated Delivery (Optional)',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _estimatedDeliveryController,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
                   hintText: 'Number of days for delivery',
                   suffixText: 'days',
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(16),
-                  filled: true,
-                  fillColor: Color(0xFFF8F9FA),
+                  border: OutlineInputBorder(),
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 16),
 
         // Warranty
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(color: Colors.white),
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 'Warranty (Optional)',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _warrantyController,
                 decoration: const InputDecoration(
                   hintText: 'Warranty details (e.g., 30-day return policy)',
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(16),
-                  filled: true,
-                  fillColor: Color(0xFFF8F9FA),
+                  border: OutlineInputBorder(),
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 16),
 
         // Photo Upload
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(color: Colors.white),
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 'Photos (Optional)',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 8),
               const Text(
                 'Upload photos of the actual item you are offering',
-                style: TextStyle(color: Colors.grey, fontSize: 14),
+                style: TextStyle(color: Colors.grey),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               ImageUploadWidget(
-                uploadPath: 'responses/item',
+                uploadPath: 'responses/item_photos',
                 onImagesChanged: (images) {
                   setState(() {
                     _uploadedImages = images;
@@ -575,26 +543,32 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
       children: [
         // Price Type Selection
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(color: Colors.white),
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 'Pricing Type*',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _selectedPriceType,
                 decoration: const InputDecoration(
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(16),
-                  filled: true,
-                  fillColor: Color(0xFFF8F9FA),
+                  border: OutlineInputBorder(),
                 ),
-                items: ['Fixed Price', 'Hourly Rate'].map((type) =>
-                    DropdownMenuItem(value: type, child: Text(type))).toList(),
+                items: ['Fixed Price', 'Hourly Rate']
+                    .map((type) => DropdownMenuItem(
+                          value: type,
+                          child: Text(type),
+                        ))
+                    .toList(),
                 onChanged: (value) {
                   setState(() {
                     _selectedPriceType = value!;
@@ -604,35 +578,32 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
             ],
           ),
         ),
-        const SizedBox(height: 16),
 
-        // Cost/Rate
+        // Cost/Rate Field
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(color: Colors.white),
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                _selectedPriceType == 'Fixed Price' ? 'Total Cost*' : 'Hourly Rate*',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                _selectedPriceType == 'Fixed Price' ? 'Estimated Cost*' : 'Hourly Rate*',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               TextFormField(
-                controller: _selectedPriceType == 'Fixed Price' 
-                    ? _estimatedCostController 
-                    : _hourlyRateController,
+                controller: _selectedPriceType == 'Fixed Price' ? _estimatedCostController : _hourlyRateController,
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
-                  hintText: _selectedPriceType == 'Fixed Price'
-                      ? 'Total estimated cost'
-                      : 'Cost per hour',
+                  hintText: _selectedPriceType == 'Fixed Price' ? 'Total estimated cost' : 'Cost per hour',
                   prefixText: '\$ ',
-                  suffixText: _selectedPriceType == 'Hourly Rate' ? '/hr' : null,
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.all(16),
-                  filled: true,
-                  fillColor: const Color(0xFFF8F9FA),
+                  suffixText: _selectedPriceType == 'Hourly Rate' ? '/hour' : null,
+                  border: const OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -647,28 +618,29 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
             ],
           ),
         ),
-        const SizedBox(height: 16),
 
         // Timeframe
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(color: Colors.white),
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Estimated Timeframe*',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                'Timeframe*',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _timeframeController,
                 decoration: const InputDecoration(
-                  hintText: 'e.g., 2-3 hours, 1 day, etc.',
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(16),
-                  filled: true,
-                  fillColor: Color(0xFFF8F9FA),
+                  hintText: 'How long will the job take?',
+                  border: OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -680,27 +652,31 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
             ],
           ),
         ),
-        const SizedBox(height: 16),
 
         // Available Dates
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(color: Colors.white),
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 'Available Dates/Times',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Available From', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        const Text('Available From'),
                         const SizedBox(height: 4),
                         InkWell(
                           onTap: () async {
@@ -717,9 +693,10 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                             }
                           },
                           child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFF8F9FA),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey),
+                              borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
                               _availableFrom == null
@@ -736,7 +713,7 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Available Until', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        const Text('Available Until'),
                         const SizedBox(height: 4),
                         InkWell(
                           onTap: () async {
@@ -753,9 +730,10 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                             }
                           },
                           child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFF8F9FA),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey),
+                              borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
                               _availableUntil == null
@@ -772,29 +750,30 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
             ],
           ),
         ),
-        const SizedBox(height: 16),
 
         // Solution Description
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(color: Colors.white),
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 'Description of Solution*',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _solutionDescriptionController,
                 maxLines: 4,
                 decoration: const InputDecoration(
                   hintText: 'Brief explanation of how you plan to solve the problem',
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(16),
-                  filled: true,
-                  fillColor: Color(0xFFF8F9FA),
+                  border: OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -806,27 +785,31 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
             ],
           ),
         ),
-        const SizedBox(height: 16),
 
-        // Portfolio Upload
+        // Photo/Portfolio Upload
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(color: Colors.white),
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 'Photo/Portfolio (Optional)',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 8),
               const Text(
                 'Upload photos of your previous work or portfolio',
-                style: TextStyle(color: Colors.grey, fontSize: 14),
+                style: TextStyle(color: Colors.grey),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               ImageUploadWidget(
-                uploadPath: 'responses/service',
+                uploadPath: 'responses/service_portfolio',
                 onImagesChanged: (images) {
                   setState(() {
                     _uploadedImages = images;
@@ -846,16 +829,21 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
       children: [
         // Rental Price
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(color: Colors.white),
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 'Rental Price*',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(
@@ -866,34 +854,32 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                       decoration: const InputDecoration(
                         hintText: 'Price',
                         prefixText: '\$ ',
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.all(16),
-                        filled: true,
-                        fillColor: Color(0xFFF8F9FA),
+                        border: OutlineInputBorder(),
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
                           return 'Please enter rental price';
                         }
                         if (double.tryParse(value) == null) {
-                          return 'Enter valid price';
+                          return 'Please enter a valid price';
                         }
                         return null;
                       },
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: DropdownButtonFormField<String>(
                       value: _selectedRentalPeriod,
                       decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.all(16),
-                        filled: true,
-                        fillColor: Color(0xFFF8F9FA),
+                        border: OutlineInputBorder(),
                       ),
-                      items: ['day', 'week', 'hour'].map((period) =>
-                          DropdownMenuItem(value: period, child: Text('per $period'))).toList(),
+                      items: ['hour', 'day', 'week', 'month']
+                          .map((period) => DropdownMenuItem(
+                                value: period,
+                                child: Text('per $period'),
+                              ))
+                          .toList(),
                       onChanged: (value) {
                         setState(() {
                           _selectedRentalPeriod = value!;
@@ -906,124 +892,33 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
             ],
           ),
         ),
-        const SizedBox(height: 16),
-
-        // Availability
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(color: Colors.white),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Availability*',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Available From', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                        const SizedBox(height: 4),
-                        InkWell(
-                          onTap: () async {
-                            final date = await showDatePicker(
-                              context: context,
-                              initialDate: DateTime.now(),
-                              firstDate: DateTime.now(),
-                              lastDate: DateTime.now().add(const Duration(days: 365)),
-                            );
-                            if (date != null) {
-                              setState(() {
-                                _availableFrom = date;
-                              });
-                            }
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFF8F9FA),
-                            ),
-                            child: Text(
-                              _availableFrom == null
-                                  ? 'Select date'
-                                  : '${_availableFrom!.day}/${_availableFrom!.month}/${_availableFrom!.year}',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Available Until', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                        const SizedBox(height: 4),
-                        InkWell(
-                          onTap: () async {
-                            final date = await showDatePicker(
-                              context: context,
-                              initialDate: _availableFrom ?? DateTime.now(),
-                              firstDate: _availableFrom ?? DateTime.now(),
-                              lastDate: DateTime.now().add(const Duration(days: 365)),
-                            );
-                            if (date != null) {
-                              setState(() {
-                                _availableUntil = date;
-                              });
-                            }
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFF8F9FA),
-                            ),
-                            child: Text(
-                              _availableUntil == null
-                                  ? 'Select date'
-                                  : '${_availableUntil!.day}/${_availableUntil!.month}/${_availableUntil!.year}',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
 
         // Item Condition
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(color: Colors.white),
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 'Item Condition*',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _rentalItemConditionController,
                 decoration: const InputDecoration(
-                  hintText: 'Current condition of the rental item',
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(16),
-                  filled: true,
-                  fillColor: Color(0xFFF8F9FA),
+                  hintText: 'Current condition of the item for rent',
+                  border: OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Please specify item condition';
+                    return 'Please describe the item condition';
                   }
                   return null;
                 },
@@ -1031,33 +926,34 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
             ],
           ),
         ),
-        const SizedBox(height: 16),
 
-        // Description
+        // Item Description
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(color: Colors.white),
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 'Item Description*',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _rentalDescriptionController,
                 maxLines: 4,
                 decoration: const InputDecoration(
-                  hintText: 'Detailed description of the rental item',
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(16),
-                  filled: true,
-                  fillColor: Color(0xFFF8F9FA),
+                  hintText: 'Detailed description of the specific item you have available',
+                  border: OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Please provide item description';
+                    return 'Please provide an item description';
                   }
                   return null;
                 },
@@ -1065,30 +961,34 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
             ],
           ),
         ),
-        const SizedBox(height: 16),
 
         // Pickup/Delivery Options
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(color: Colors.white),
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 'Pickup/Delivery Options*',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _selectedPickupDeliveryOption,
                 decoration: const InputDecoration(
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(16),
-                  filled: true,
-                  fillColor: Color(0xFFF8F9FA),
+                  border: OutlineInputBorder(),
                 ),
-                items: ['User picks up', 'I can deliver', 'Both options available']
-                    .map((option) => DropdownMenuItem(value: option, child: Text(option)))
+                items: ['User picks up', 'I can deliver', 'Meet halfway']
+                    .map((option) => DropdownMenuItem(
+                          value: option,
+                          child: Text(option),
+                        ))
                     .toList(),
                 onChanged: (value) {
                   setState(() {
@@ -1099,56 +999,61 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
             ],
           ),
         ),
-        const SizedBox(height: 16),
 
         // Security Deposit
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(color: Colors.white),
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 'Security Deposit (Optional)',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _securityDepositController,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
-                  hintText: 'Security deposit amount',
+                  hintText: 'Security deposit required',
                   prefixText: '\$ ',
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(16),
-                  filled: true,
-                  fillColor: Color(0xFFF8F9FA),
+                  border: OutlineInputBorder(),
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 16),
 
         // Photo Upload
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(color: Colors.white),
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 'Photos (Optional)',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 8),
               const Text(
-                'Upload photos of the rental item',
-                style: TextStyle(color: Colors.grey, fontSize: 14),
+                'Upload photos of the actual item available for rent',
+                style: TextStyle(color: Colors.grey),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               ImageUploadWidget(
-                uploadPath: 'responses/rental',
+                uploadPath: 'responses/rental_photos',
                 onImagesChanged: (images) {
                   setState(() {
                     _uploadedImages = images;
@@ -1168,26 +1073,28 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
       children: [
         // Delivery Fee
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(color: Colors.white),
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 'Delivery Fee*',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _deliveryFeeController,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
-                  hintText: 'Your delivery service fee',
+                  hintText: 'Cost of the delivery service',
                   prefixText: '\$ ',
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(16),
-                  filled: true,
-                  fillColor: Color(0xFFF8F9FA),
+                  border: OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -1202,30 +1109,34 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
             ],
           ),
         ),
-        const SizedBox(height: 16),
 
         // Vehicle Type
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(color: Colors.white),
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 'Vehicle Type*',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _selectedVehicleType,
                 decoration: const InputDecoration(
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(16),
-                  filled: true,
-                  fillColor: Color(0xFFF8F9FA),
+                  border: OutlineInputBorder(),
                 ),
-                items: ['Car', 'Van', 'Truck', 'Motorcycle', 'Bicycle']
-                    .map((vehicle) => DropdownMenuItem(value: vehicle, child: Text(vehicle)))
+                items: ['Motorcycle', 'Car', 'Van', 'Truck', 'Bicycle']
+                    .map((vehicle) => DropdownMenuItem(
+                          value: vehicle,
+                          child: Text(vehicle),
+                        ))
                     .toList(),
                 onChanged: (value) {
                   setState(() {
@@ -1236,101 +1147,122 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
             ],
           ),
         ),
-        const SizedBox(height: 16),
 
         // Estimated Times
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(color: Colors.white),
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 'Estimated Times*',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
-              const SizedBox(height: 16),
-              Row(
+              const SizedBox(height: 12),
+              Column(
                 children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _estimatedPickupTimeController,
-                      decoration: const InputDecoration(
-                        labelText: 'Pickup Time',
-                        hintText: 'e.g., 10:00 AM',
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.all(16),
-                        filled: true,
-                        fillColor: Color(0xFFF8F9FA),
-                      ),
+                  TextFormField(
+                    controller: _estimatedPickupTimeController,
+                    decoration: const InputDecoration(
+                      labelText: 'Estimated Pickup Time',
+                      hintText: 'e.g., "Within 2 hours" or "Tomorrow 2PM"',
+                      border: OutlineInputBorder(),
                     ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please provide pickup time estimate';
+                      }
+                      return null;
+                    },
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _estimatedDropoffTimeController,
-                      decoration: const InputDecoration(
-                        labelText: 'Drop-off Time',
-                        hintText: 'e.g., 12:00 PM',
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.all(16),
-                        filled: true,
-                        fillColor: Color(0xFFF8F9FA),
-                      ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _estimatedDropoffTimeController,
+                    decoration: const InputDecoration(
+                      labelText: 'Estimated Drop-off Time',
+                      hintText: 'e.g., "30 minutes after pickup" or "Same day"',
+                      border: OutlineInputBorder(),
                     ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please provide drop-off time estimate';
+                      }
+                      return null;
+                    },
                   ),
                 ],
               ),
             ],
           ),
         ),
-        const SizedBox(height: 16),
 
         // Special Considerations
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(color: Colors.white),
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 'Special Considerations (Optional)',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _specialConsiderationsController,
                 maxLines: 3,
                 decoration: const InputDecoration(
                   hintText: 'Any notes or concerns about the delivery (e.g., size limitations)',
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(16),
-                  filled: true,
-                  fillColor: Color(0xFFF8F9FA),
+                  border: OutlineInputBorder(),
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 16),
-
+        
         // Confirmation
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(color: Colors.white),
-          child: Row(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Checkbox(
-                value: true, // Always true for acceptance
-                onChanged: (value) {
-                  // Always accept when responding
-                },
+              const Text(
+                'Confirmation*',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
-              const Expanded(
-                child: Text(
-                  'I confirm that I can complete this delivery request as described',
-                  style: TextStyle(fontSize: 14),
-                ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Checkbox(
+                    value: true, // Always true for acceptance
+                    onChanged: (value) {
+                      // Always accept when responding
+                    },
+                  ),
+                  const Expanded(
+                    child: Text(
+                      'I confirm that I can complete this delivery request as described',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -1400,8 +1332,6 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
             'securityDeposit': _securityDepositController.text.trim().isNotEmpty 
                 ? double.tryParse(_securityDepositController.text.trim()) 
                 : null,
-            'availableFrom': _availableFrom?.millisecondsSinceEpoch,
-            'availableUntil': _availableUntil?.millisecondsSinceEpoch,
             'images': _uploadedImages,
           };
           break;
@@ -1414,15 +1344,17 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
             'specialConsiderations': _specialConsiderationsController.text.trim(),
           };
           break;
-        default:
+        case RequestType.ride:
+        case RequestType.price:
+          // Should not reach here
           break;
       }
 
-      // Submit the response
       await _requestService.createResponse(
-        requestId: widget.request.id!,
-        responderId: currentUser.uid,
-        message: _messageController.text.trim(),
+        requestId: widget.request.id,
+        message: _messageController.text.trim().isNotEmpty 
+            ? _messageController.text.trim() 
+            : 'Response to your ${_getTypeDisplayName(widget.request.type).toLowerCase()}',
         price: price,
         additionalInfo: additionalInfo,
       );

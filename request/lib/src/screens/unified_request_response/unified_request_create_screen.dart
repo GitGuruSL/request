@@ -5,6 +5,8 @@ import '../../services/enhanced_request_service.dart';
 import '../../services/enhanced_user_service.dart';
 import '../../widgets/image_upload_widget.dart';
 import '../../widgets/location_picker_widget.dart';
+import '../../widgets/category_picker.dart';
+import '../../theme/app_theme.dart';
 
 class UnifiedRequestCreateScreen extends StatefulWidget {
   final RequestType? initialType;
@@ -29,6 +31,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
   // Item-specific controllers
   final _itemNameController = TextEditingController();
   final _quantityController = TextEditingController();
+  final _categoryController = TextEditingController();
   
   // Service-specific controllers
   final _serviceTypeController = TextEditingController();
@@ -36,6 +39,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
   
   // Rental-specific controllers
   final _itemToRentController = TextEditingController();
+  final _rentalItemController = TextEditingController();
   
   // Delivery-specific controllers
   final _pickupLocationController = TextEditingController();
@@ -45,29 +49,45 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
   final _weightController = TextEditingController();
   final _dimensionsController = TextEditingController();
   
+  
   RequestType _selectedType = RequestType.item;
   String _selectedCondition = 'New';
   String _selectedUrgency = 'Flexible';
   String _selectedDeliveryTime = 'Anytime';
+  String _selectedCategory = 'Electronics';
+  String? _selectedCategoryId;
+  String? _selectedSubCategoryId;
+  String? _selectedSubcategory;
+  String _pickupDropoffPreference = 'pickup';
   DateTime? _startDate;
   DateTime? _endDate;
   DateTime? _preferredDateTime;
+  DateTime? _startDateTime;
+  DateTime? _endDateTime;
+  DateTime? _preferredDeliveryTime;
   List<String> _imageUrls = [];
   bool _isLoading = false;
-
-  final List<RequestType> _marketplaceTypes = [
-    RequestType.item,
-    RequestType.service,
-    RequestType.delivery,
-    RequestType.rental,
-  ];
 
   final List<String> _conditions = ['New', 'Used', 'For Parts', 'Any Condition'];
   final List<String> _urgencyLevels = ['Flexible', 'ASAP', 'Specific Date'];
   final List<String> _deliveryTimes = ['Anytime', 'Morning', 'Afternoon', 'By End of Day'];
+  final List<String> _categories = [
+    'Electronics', 'Clothing & Accessories', 'Home & Garden', 'Sports & Outdoors', 
+    'Books & Media', 'Toys & Games', 'Health & Beauty', 'Automotive', 
+    'Tools & Hardware', 'Art & Crafts', 'Jewelry & Watches', 'Musical Instruments',
+    'Baby & Kids', 'Pet Supplies', 'Office Supplies', 'Food & Beverages', 'Other'
+  ];
   final List<String> _serviceTypes = [
     'Plumbing', 'Cleaning', 'Handyman', 'IT Support', 
     'Tutoring', 'Event Planning', 'Other'
+  ];
+  final List<String> _rentalCategories = [
+    'Tools & Equipment', 'Electronics', 'Vehicles', 'Party Supplies', 
+    'Sports Equipment', 'Furniture', 'Appliances', 'Other'
+  ];
+  final List<String> _deliveryCategories = [
+    'Small Parcel', 'Fragile Items', 'Food', 'Documents', 
+    'Electronics', 'Clothing', 'Other'
   ];
   final List<String> _itemCategories = [
     'Small Parcel', 'Fragile Items', 'Food', 'Documents', 
@@ -79,6 +99,8 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
     super.initState();
     if (widget.initialType != null) {
       _selectedType = widget.initialType!;
+    } else {
+      _selectedType = RequestType.item; // Default fallback
     }
   }
 
@@ -90,9 +112,11 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
     _budgetController.dispose();
     _itemNameController.dispose();
     _quantityController.dispose();
+    _categoryController.dispose();
     _serviceTypeController.dispose();
     _specialInstructionsController.dispose();
     _itemToRentController.dispose();
+    _rentalItemController.dispose();
     _pickupLocationController.dispose();
     _dropoffLocationController.dispose();
     _itemCategoryController.dispose();
@@ -105,932 +129,115 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
   String _getTypeDisplayName(RequestType type) {
     switch (type) {
       case RequestType.item:
-        return 'Item';
+        return 'Item Request';
       case RequestType.service:
-        return 'Service';
+        return 'Service Request';
       case RequestType.delivery:
-        return 'Delivery';
+        return 'Delivery Request';
       case RequestType.rental:
-        return 'Rental';
+        return 'Rental Request';
       case RequestType.ride:
-        return 'Ride';
+        return 'Ride Request';
       case RequestType.price:
-        return 'Price';
+        return 'Price Request';
     }
   }
 
-  Widget _buildTypeSelector() {
-    return Card(
-      color: Colors.white,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: Colors.grey.shade300),
+  Future<void> _showCategoryPicker() async {
+    final result = await showModalBottomSheet<Map<String, String>>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.8,
+        maxChildSize: 0.9,
+        minChildSize: 0.5,
+        builder: (context, scrollController) => CategoryPicker(
+          requestType: 'item',
+          scrollController: scrollController,
+        ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Request Type',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
+    );
+
+    if (result != null && result.containsKey('category')) {
+      setState(() {
+        _selectedCategory = result['category'] ?? 'Electronics';
+        _selectedSubcategory = result['subcategory']; // Can be null for main categories
+        _selectedCategoryId = _selectedCategory; // Set ID same as name for now
+        _selectedSubCategoryId = _selectedSubcategory; // Set ID same as name for now
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Create ${_getTypeDisplayName(_selectedType)}'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+      ),
+      backgroundColor: Colors.white,
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildTypeSpecificFields(),
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+        ),
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: _isLoading ? null : _submitRequest,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
+              elevation: 0,
             ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _marketplaceTypes.map((type) {
-                final isSelected = _selectedType == type;
-                return ChoiceChip(
-                  label: Text(_getTypeDisplayName(type)),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    if (selected) {
-                      setState(() {
-                        _selectedType = type;
-                      });
-                    }
-                  },
-                  selectedColor: Colors.blue.shade100,
-                  backgroundColor: Colors.grey.shade100,
-                  labelStyle: TextStyle(
-                    color: isSelected ? Colors.blue.shade800 : Colors.grey.shade700,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            child: _isLoading
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : Text(
+                    'Create ${_getTypeDisplayName(_selectedType)}',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
-                );
-              }).toList(),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildCommonFields() {
-    return Column(
-      children: [
-        // Request Title
-        Card(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.grey.shade300),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextFormField(
-              controller: _titleController,
-              decoration: const InputDecoration(
-                labelText: 'Request Title',
-                hintText: 'Enter a short, descriptive title',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter a request title';
-                }
-                return null;
-              },
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        
-        // Description
-        Card(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.grey.shade300),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextFormField(
-              controller: _descriptionController,
-              maxLines: 4,
-              decoration: const InputDecoration(
-                labelText: 'Description',
-                hintText: 'Provide detailed information...',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter a description';
-                }
-                return null;
-              },
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        
-        // Budget
-        Card(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.grey.shade300),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextFormField(
-              controller: _budgetController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Budget (Optional)',
-                hintText: 'Enter your budget range',
-                prefixText: '\$ ',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-      ],
-    );
+    return const SizedBox(); // No common fields anymore - each type has its own order
   }
 
-  Widget _buildItemFields() {
-    return Column(
-      children: [
-        // Item Name
-        Card(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.grey.shade300),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextFormField(
-              controller: _itemNameController,
-              decoration: const InputDecoration(
-                labelText: 'Item Name',
-                hintText: 'e.g., Sony PS-LX2 Turntable',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter the item name';
-                }
-                return null;
-              },
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        
-        // Quantity
-        Card(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.grey.shade300),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextFormField(
-              controller: _quantityController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Quantity',
-                hintText: 'How many do you need?',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter quantity';
-                }
-                return null;
-              },
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        
-        // Desired Condition
-        Card(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.grey.shade300),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: DropdownButtonFormField<String>(
-              value: _selectedCondition,
-              decoration: const InputDecoration(
-                labelText: 'Desired Condition',
-                border: OutlineInputBorder(),
-              ),
-              items: _conditions.map((condition) {
-                return DropdownMenuItem<String>(
-                  value: condition,
-                  child: Text(condition),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedCondition = value!;
-                });
-              },
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        
-        // Location
-        Card(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.grey.shade300),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextFormField(
-              controller: _locationController,
-              decoration: const InputDecoration(
-                labelText: 'Location',
-                hintText: 'Delivery or pickup location',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter location';
-                }
-                return null;
-              },
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        
-        // Image Upload
-        Card(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.grey.shade300),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Photos/Reference (Optional)',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Upload a picture of the item or provide a reference link',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                const SizedBox(height: 8),
-                ImageUploadWidget(
-                  uploadPath: 'requests/${_selectedType.name}',
-                  onImagesChanged: (urls) {
-                    setState(() {
-                      _imageUrls = urls;
-                    });
-                  },
-                  maxImages: 3,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildServiceFields() {
-    return Column(
-      children: [
-        // Service Type
-        Card(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.grey.shade300),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: DropdownButtonFormField<String>(
-              decoration: const InputDecoration(
-                labelText: 'Service Type',
-                border: OutlineInputBorder(),
-              ),
-              items: _serviceTypes.map((type) {
-                return DropdownMenuItem<String>(
-                  value: type,
-                  child: Text(type),
-                );
-              }).toList(),
-              onChanged: (value) {
-                _serviceTypeController.text = value ?? '';
-              },
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please select service type';
-                }
-                return null;
-              },
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        
-        // Location where service is needed
-        Card(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.grey.shade300),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextFormField(
-              controller: _locationController,
-              decoration: const InputDecoration(
-                labelText: 'Service Location',
-                hintText: 'Address where service is needed',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter service location';
-                }
-                return null;
-              },
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        
-        // Preferred Date & Time
-        Card(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.grey.shade300),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Preferred Date & Time',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                InkWell(
-                  onTap: () async {
-                    final date = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime.now(),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
-                    );
-                    if (date != null) {
-                      final time = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay.now(),
-                      );
-                      if (time != null) {
-                        setState(() {
-                          _preferredDateTime = DateTime(
-                            date.year,
-                            date.month,
-                            date.day,
-                            time.hour,
-                            time.minute,
-                          );
-                        });
-                      }
-                    }
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      _preferredDateTime != null
-                          ? '${_preferredDateTime!.day}/${_preferredDateTime!.month}/${_preferredDateTime!.year} at ${_preferredDateTime!.hour}:${_preferredDateTime!.minute.toString().padLeft(2, '0')}'
-                          : 'Select preferred date & time',
-                      style: TextStyle(
-                        color: _preferredDateTime != null ? Colors.black : Colors.grey.shade600,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        
-        // Urgency
-        Card(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.grey.shade300),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: DropdownButtonFormField<String>(
-              value: _selectedUrgency,
-              decoration: const InputDecoration(
-                labelText: 'Urgency',
-                border: OutlineInputBorder(),
-              ),
-              items: _urgencyLevels.map((urgency) {
-                return DropdownMenuItem<String>(
-                  value: urgency,
-                  child: Text(urgency),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedUrgency = value!;
-                });
-              },
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        
-        // Photo/Video Upload for Problem
-        Card(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.grey.shade300),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Photo/Video of Problem (Optional)',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Upload a photo or short video to better explain the issue',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                const SizedBox(height: 8),
-                ImageUploadWidget(
-                  uploadPath: 'requests/service_problems',
-                  onImagesChanged: (urls) {
-                    setState(() {
-                      _imageUrls = urls;
-                    });
-                  },
-                  maxImages: 5,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRentalFields() {
-    return Column(
-      children: [
-        // Item to Rent
-        Card(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.grey.shade300),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextFormField(
-              controller: _itemToRentController,
-              decoration: const InputDecoration(
-                labelText: 'Item to Rent',
-                hintText: 'e.g., Canon EOS R5 Camera',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter item to rent';
-                }
-                return null;
-              },
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        
-        // Start Date & Time
-        Card(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.grey.shade300),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Start Date & Time',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                InkWell(
-                  onTap: () async {
-                    final date = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime.now(),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
-                    );
-                    if (date != null) {
-                      final time = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay.now(),
-                      );
-                      if (time != null) {
-                        setState(() {
-                          _startDate = DateTime(
-                            date.year,
-                            date.month,
-                            date.day,
-                            time.hour,
-                            time.minute,
-                          );
-                        });
-                      }
-                    }
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      _startDate != null
-                          ? '${_startDate!.day}/${_startDate!.month}/${_startDate!.year} at ${_startDate!.hour}:${_startDate!.minute.toString().padLeft(2, '0')}'
-                          : 'Select start date & time',
-                      style: TextStyle(
-                        color: _startDate != null ? Colors.black : Colors.grey.shade600,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        
-        // End Date & Time
-        Card(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.grey.shade300),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'End Date & Time',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                InkWell(
-                  onTap: () async {
-                    final date = await showDatePicker(
-                      context: context,
-                      initialDate: _startDate?.add(const Duration(days: 1)) ?? DateTime.now().add(const Duration(days: 1)),
-                      firstDate: _startDate?.add(const Duration(days: 1)) ?? DateTime.now().add(const Duration(days: 1)),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
-                    );
-                    if (date != null) {
-                      final time = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay.now(),
-                      );
-                      if (time != null) {
-                        setState(() {
-                          _endDate = DateTime(
-                            date.year,
-                            date.month,
-                            date.day,
-                            time.hour,
-                            time.minute,
-                          );
-                        });
-                      }
-                    }
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      _endDate != null
-                          ? '${_endDate!.day}/${_endDate!.month}/${_endDate!.year} at ${_endDate!.hour}:${_endDate!.minute.toString().padLeft(2, '0')}'
-                          : 'Select end date & time',
-                      style: TextStyle(
-                        color: _endDate != null ? Colors.black : Colors.grey.shade600,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        
-        // Location
-        Card(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.grey.shade300),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextFormField(
-              controller: _locationController,
-              decoration: const InputDecoration(
-                labelText: 'Pickup/Delivery Location',
-                hintText: 'Where to pickup or deliver the item',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter location';
-                }
-                return null;
-              },
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDeliveryFields() {
-    return Column(
-      children: [
-        // Pickup Location
-        Card(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.grey.shade300),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextFormField(
-              controller: _pickupLocationController,
-              decoration: const InputDecoration(
-                labelText: 'Pickup Location',
-                hintText: 'Full address for item collection',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter pickup location';
-                }
-                return null;
-              },
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        
-        // Drop-off Location
-        Card(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.grey.shade300),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextFormField(
-              controller: _dropoffLocationController,
-              decoration: const InputDecoration(
-                labelText: 'Drop-off Location',
-                hintText: 'Full address for item delivery',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter drop-off location';
-                }
-                return null;
-              },
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        
-        // Item Category
-        Card(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.grey.shade300),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: DropdownButtonFormField<String>(
-              decoration: const InputDecoration(
-                labelText: 'Item Category',
-                border: OutlineInputBorder(),
-              ),
-              items: _itemCategories.map((category) {
-                return DropdownMenuItem<String>(
-                  value: category,
-                  child: Text(category),
-                );
-              }).toList(),
-              onChanged: (value) {
-                _itemCategoryController.text = value ?? '';
-              },
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please select item category';
-                }
-                return null;
-              },
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        
-        // Item Description
-        Card(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.grey.shade300),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextFormField(
-              controller: _itemDescriptionController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Item Description',
-                hintText: 'Detailed description of parcel contents',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter item description';
-                }
-                return null;
-              },
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        
-        // Weight & Dimensions
-        Card(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.grey.shade300),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                TextFormField(
-                  controller: _weightController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Weight (Optional)',
-                    hintText: 'Approximate weight in kg',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _dimensionsController,
-                  decoration: const InputDecoration(
-                    labelText: 'Dimensions (Optional)',
-                    hintText: 'L x W x H in cm',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        
-        // Preferred Delivery Time
-        Card(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.grey.shade300),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: DropdownButtonFormField<String>(
-              value: _selectedDeliveryTime,
-              decoration: const InputDecoration(
-                labelText: 'Preferred Delivery Time',
-                border: OutlineInputBorder(),
-              ),
-              items: _deliveryTimes.map((time) {
-                return DropdownMenuItem<String>(
-                  value: time,
-                  child: Text(time),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedDeliveryTime = value!;
-                });
-              },
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        
-        // Special Instructions
-        Card(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.grey.shade300),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextFormField(
-              controller: _specialInstructionsController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Special Instructions (Optional)',
-                hintText: 'Any additional notes for the driver...',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ),
-        ),
-      ],
+  Widget _buildFlatField({required Widget child}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16.0),
+      color: Colors.white,
+      child: child,
     );
   }
 
@@ -1045,29 +252,970 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
       case RequestType.rental:
         return _buildRentalFields();
       case RequestType.ride:
-        return const SizedBox(); // Should not reach here
+        return const SizedBox(); // Should not reach here due to redirect above
       case RequestType.price:
-        return const SizedBox(); // Should not reach here
+        return const SizedBox(); // Should not reach here due to redirect above
     }
+  }
+
+  Widget _buildItemFields() {
+    return Column(
+      children: [
+        // Request Title
+        _buildFlatField(
+          child: TextFormField(
+            controller: _titleController,
+            decoration: const InputDecoration(
+              labelText: 'Request Title',
+              hintText: 'Enter a short, descriptive title',
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter a title';
+              }
+              return null;
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Item Name
+        _buildFlatField(
+          child: TextFormField(
+            controller: _itemNameController,
+            decoration: const InputDecoration(
+              labelText: 'Item Name',
+              hintText: 'e.g., Sony PS-LX2 Turntable',
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter the item name';
+              }
+              return null;
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Description
+        _buildFlatField(
+          child: TextFormField(
+            controller: _descriptionController,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              labelText: 'Description',
+              hintText: 'Provide detailed information...',
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter a description';
+              }
+              return null;
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Category (Use Category Picker)
+        _buildFlatField(
+          child: TextFormField(
+            readOnly: true,
+            decoration: const InputDecoration(
+              labelText: 'Category',
+              hintText: 'Select a category',
+              suffixIcon: Icon(Icons.arrow_drop_down),
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+            controller: TextEditingController(
+              text: _selectedSubcategory != null 
+                ? '$_selectedCategory > $_selectedSubcategory'
+                : _selectedCategory,
+            ),
+            onTap: _showCategoryPicker,
+            validator: (value) {
+              if (_selectedCategory == 'Electronics' && _selectedCategoryId == null) {
+                return 'Please select a category';
+              }
+              return null;
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Quantity
+        _buildFlatField(
+          child: TextFormField(
+            controller: _quantityController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Quantity',
+              hintText: 'How many do you need?',
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter the quantity';
+              }
+              return null;
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Desired Condition
+        _buildFlatField(
+          child: DropdownButtonFormField<String>(
+            value: _selectedCondition,
+            decoration: const InputDecoration(
+              labelText: 'Desired Condition',
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+            items: _conditions.map((condition) {
+              return DropdownMenuItem<String>(
+                value: condition,
+                child: Text(condition),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                _selectedCondition = value!;
+              });
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Location (Use Location Picker Widget)
+        _buildFlatField(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Location',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              LocationPickerWidget(
+                controller: _locationController,
+                onLocationSelected: (address, lat, lng) {
+                  setState(() {
+                    _locationController.text = address;
+                  });
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Budget
+        _buildFlatField(
+          child: TextFormField(
+            controller: _budgetController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Budget (Optional)',
+              hintText: 'Enter your budget range',
+              prefixText: '\$ ',
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Photo/Link
+        _buildFlatField(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Photo/Link (Optional)',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Upload a picture of the item or provide a reference link',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 8),
+              ImageUploadWidget(
+                uploadPath: 'request_images/items',
+                onImagesChanged: (urls) {
+                  setState(() {
+                    _imageUrls = urls;
+                  });
+                },
+                maxImages: 3,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildServiceFields() {
+    return Column(
+      children: [
+        // Service Type (Use Category Picker)
+        _buildFlatField(
+          child: DropdownButtonFormField<String>(
+            decoration: const InputDecoration(
+              labelText: 'Service Type',
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+            items: _serviceTypes.map((type) {
+              return DropdownMenuItem<String>(
+                value: type,
+                child: Text(type),
+              );
+            }).toList(),
+            onChanged: (value) {
+              _serviceTypeController.text = value ?? '';
+            },
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please select a service type';
+              }
+              return null;
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Request Title
+        _buildFlatField(
+          child: TextFormField(
+            controller: _titleController,
+            decoration: const InputDecoration(
+              labelText: 'Request Title',
+              hintText: 'Enter a short, descriptive title',
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter a title';
+              }
+              return null;
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Description
+        _buildFlatField(
+          child: TextFormField(
+            controller: _descriptionController,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              labelText: 'Description',
+              hintText: 'Provide detailed information about the service needed...',
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter a description';
+              }
+              return null;
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Location (Use Location Picker Widget)
+        _buildFlatField(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Location',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              LocationPickerWidget(
+                controller: _locationController,
+                onLocationSelected: (address, lat, lng) {
+                  setState(() {
+                    _locationController.text = address;
+                  });
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Preferred Date & Time (Remove Border)
+        _buildFlatField(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Preferred Date & Time',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: () async {
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime.now(),
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                  );
+                  if (date != null) {
+                    final time = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.now(),
+                    );
+                    if (time != null) {
+                      setState(() {
+                        _preferredDateTime = DateTime(
+                          date.year,
+                          date.month,
+                          date.day,
+                          time.hour,
+                          time.minute,
+                        );
+                      });
+                    }
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  width: double.infinity,
+                  color: const Color(0xFFF8F9FA),
+                  child: Text(
+                    _preferredDateTime == null
+                        ? 'Select date and time'
+                        : '${_preferredDateTime!.day}/${_preferredDateTime!.month}/${_preferredDateTime!.year} at ${TimeOfDay.fromDateTime(_preferredDateTime!).format(context)}',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Urgency
+        _buildFlatField(
+          child: DropdownButtonFormField<String>(
+            value: _selectedUrgency,
+            decoration: const InputDecoration(
+              labelText: 'Urgency',
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+            items: _urgencyLevels.map((urgency) {
+              return DropdownMenuItem<String>(
+                value: urgency,
+                child: Text(urgency),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                _selectedUrgency = value!;
+              });
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Budget
+        _buildFlatField(
+          child: TextFormField(
+            controller: _budgetController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Budget (Optional)',
+              hintText: 'Enter your budget range',
+              prefixText: '\$ ',
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Photo/Video
+        _buildFlatField(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Photo/Video (Optional)',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Upload a photo or short video to better explain the issue',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 8),
+              ImageUploadWidget(
+                uploadPath: 'request_images/services',
+                onImagesChanged: (urls) {
+                  setState(() {
+                    _imageUrls = urls;
+                  });
+                },
+                maxImages: 5,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRentalFields() {
+    return Column(
+      children: [
+        // Request Title
+        _buildFlatField(
+          child: TextFormField(
+            controller: _titleController,
+            decoration: const InputDecoration(
+              labelText: 'Request Title',
+              hintText: 'Enter a short, descriptive title',
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter a title';
+              }
+              return null;
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Description
+        _buildFlatField(
+          child: TextFormField(
+            controller: _descriptionController,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              labelText: 'Description',
+              hintText: 'Provide detailed information about the rental needed...',
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter a description';
+              }
+              return null;
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Item to Rent (Use Category Picker)
+        _buildFlatField(
+          child: DropdownButtonFormField<String>(
+            decoration: const InputDecoration(
+              labelText: 'Item to Rent',
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+            items: _rentalCategories.map((category) {
+              return DropdownMenuItem<String>(
+                value: category,
+                child: Text(category),
+              );
+            }).toList(),
+            onChanged: (value) {
+              _rentalItemController.text = value ?? '';
+            },
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please select what you want to rent';
+              }
+              return null;
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Start Date & Time
+        _buildFlatField(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Start Date & Time',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: () async {
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime.now(),
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                  );
+                  if (date != null) {
+                    final time = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.now(),
+                    );
+                    if (time != null) {
+                      setState(() {
+                        _startDateTime = DateTime(
+                          date.year,
+                          date.month,
+                          date.day,
+                          time.hour,
+                          time.minute,
+                        );
+                      });
+                    }
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  width: double.infinity,
+                  color: const Color(0xFFF8F9FA),
+                  child: Text(
+                    _startDateTime == null
+                        ? 'Select start date and time'
+                        : '${_startDateTime!.day}/${_startDateTime!.month}/${_startDateTime!.year} at ${TimeOfDay.fromDateTime(_startDateTime!).format(context)}',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // End Date & Time
+        _buildFlatField(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'End Date & Time',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: () async {
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: _startDateTime ?? DateTime.now(),
+                    firstDate: _startDateTime ?? DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                  );
+                  if (date != null) {
+                    final time = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.now(),
+                    );
+                    if (time != null) {
+                      setState(() {
+                        _endDateTime = DateTime(
+                          date.year,
+                          date.month,
+                          date.day,
+                          time.hour,
+                          time.minute,
+                        );
+                      });
+                    }
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  width: double.infinity,
+                  color: const Color(0xFFF8F9FA),
+                  child: Text(
+                    _endDateTime == null
+                        ? 'Select end date and time'
+                        : '${_endDateTime!.day}/${_endDateTime!.month}/${_endDateTime!.year} at ${TimeOfDay.fromDateTime(_endDateTime!).format(context)}',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Location (Use Location Picker)
+        _buildFlatField(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Location',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              LocationPickerWidget(
+                controller: _locationController,
+                onLocationSelected: (address, lat, lng) {
+                  setState(() {
+                    _locationController.text = address;
+                  });
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Budget
+        _buildFlatField(
+          child: TextFormField(
+            controller: _budgetController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Budget (per day/hour)',
+              hintText: 'Enter your budget',
+              prefixText: '\$ ',
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Pickup / Dropoff
+        _buildFlatField(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Pickup/Dropoff Preference',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: _pickupDropoffPreference,
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'pickup', child: Text('I will pickup')),
+                  DropdownMenuItem(value: 'delivery', child: Text('Please deliver')),
+                  DropdownMenuItem(value: 'flexible', child: Text('Either option works')),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _pickupDropoffPreference = value!;
+                  });
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Photo/Link
+        _buildFlatField(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Photo/Link (Optional)',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Upload photo or share link of similar item you want to rent',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 8),
+              ImageUploadWidget(
+                uploadPath: 'request_images/rentals',
+                onImagesChanged: (urls) {
+                  setState(() {
+                    _imageUrls = urls;
+                  });
+                },
+                maxImages: 3,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDeliveryFields() {
+    return Column(
+      children: [
+        // Request Title
+        _buildFlatField(
+          child: TextFormField(
+            controller: _titleController,
+            decoration: const InputDecoration(
+              labelText: 'Request Title',
+              hintText: 'Enter a short, descriptive title',
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter a title';
+              }
+              return null;
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Pickup Location
+        _buildFlatField(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Pickup Location',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              LocationPickerWidget(
+                controller: _pickupLocationController,
+                onLocationSelected: (address, lat, lng) {
+                  setState(() {
+                    _pickupLocationController.text = address;
+                  });
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Drop-off Location
+        _buildFlatField(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Drop-off Location',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              LocationPickerWidget(
+                controller: _dropoffLocationController,
+                onLocationSelected: (address, lat, lng) {
+                  setState(() {
+                    _dropoffLocationController.text = address;
+                  });
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Item Categories (Use Category Picker)
+        _buildFlatField(
+          child: DropdownButtonFormField<String>(
+            decoration: const InputDecoration(
+              labelText: 'Item Categories',
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+            items: _deliveryCategories.map((category) {
+              return DropdownMenuItem<String>(
+                value: category,
+                child: Text(category),
+              );
+            }).toList(),
+            onChanged: (value) {
+              _itemCategoryController.text = value ?? '';
+            },
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please select an item category';
+              }
+              return null;
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Item Description
+        _buildFlatField(
+          child: TextFormField(
+            controller: _descriptionController,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              labelText: 'Item Description',
+              hintText: 'Describe what needs to be delivered...',
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please describe the item(s)';
+              }
+              return null;
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Weight & Dimensions
+        _buildFlatField(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Weight & Dimensions (Optional)',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _weightController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        hintText: 'Weight (kg)',
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _dimensionsController,
+                      decoration: const InputDecoration(
+                        hintText: 'Dimensions (L x W x H)',
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Preferred Delivery Time
+        _buildFlatField(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Preferred Delivery Time',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: () async {
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime.now(),
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 30)),
+                  );
+                  if (date != null) {
+                    final time = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.now(),
+                    );
+                    if (time != null) {
+                      setState(() {
+                        _preferredDeliveryTime = DateTime(
+                          date.year,
+                          date.month,
+                          date.day,
+                          time.hour,
+                          time.minute,
+                        );
+                      });
+                    }
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  width: double.infinity,
+                  color: const Color(0xFFF8F9FA),
+                  child: Text(
+                    _preferredDeliveryTime == null
+                        ? 'Select preferred delivery time'
+                        : '${_preferredDeliveryTime!.day}/${_preferredDeliveryTime!.month}/${_preferredDeliveryTime!.year} at ${TimeOfDay.fromDateTime(_preferredDeliveryTime!).format(context)}',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Special Instructions
+        _buildFlatField(
+          child: TextFormField(
+            controller: _specialInstructionsController,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              labelText: 'Special Instructions (Optional)',
+              hintText: 'Any special handling requirements, access codes, etc.',
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Photo Upload
+        _buildFlatField(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Photo Upload (Optional)',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Upload photos of items to be delivered',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 8),
+              ImageUploadWidget(
+                uploadPath: 'request_images/deliveries',
+                onImagesChanged: (urls) {
+                  setState(() {
+                    _imageUrls = urls;
+                  });
+                },
+                maxImages: 5,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   Future<void> _submitRequest() async {
     if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    // Type-specific validation
-    if (_selectedType == RequestType.service && _preferredDateTime == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select preferred date & time')),
-      );
-      return;
-    }
-
-    if (_selectedType == RequestType.rental && (_startDate == null || _endDate == null)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select both start and end dates')),
-      );
       return;
     }
 
@@ -1078,71 +1226,25 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
     try {
       final currentUser = await _userService.getCurrentUserModel();
       if (currentUser == null) {
-        throw Exception('Please log in to create a request');
+        throw Exception('User not found');
       }
 
-      // Prepare type-specific data
-      Map<String, dynamic> typeSpecificData = {};
-      
-      switch (_selectedType) {
-        case RequestType.item:
-          typeSpecificData = {
-            'itemName': _itemNameController.text.trim(),
-            'quantity': int.tryParse(_quantityController.text.trim()) ?? 1,
-            'condition': _selectedCondition,
-          };
-          break;
-        case RequestType.service:
-          typeSpecificData = {
-            'serviceType': _serviceTypeController.text.trim(),
-            'preferredDateTime': _preferredDateTime?.toIso8601String(),
-            'urgency': _selectedUrgency,
-          };
-          break;
-        case RequestType.delivery:
-          typeSpecificData = {
-            'pickupLocation': _pickupLocationController.text.trim(),
-            'dropoffLocation': _dropoffLocationController.text.trim(),
-            'itemCategory': _itemCategoryController.text.trim(),
-            'itemDescription': _itemDescriptionController.text.trim(),
-            'weight': _weightController.text.trim().isNotEmpty ? _weightController.text.trim() : null,
-            'dimensions': _dimensionsController.text.trim().isNotEmpty ? _dimensionsController.text.trim() : null,
-            'preferredDeliveryTime': _selectedDeliveryTime,
-            'specialInstructions': _specialInstructionsController.text.trim().isNotEmpty ? _specialInstructionsController.text.trim() : null,
-          };
-          break;
-        case RequestType.rental:
-          typeSpecificData = {
-            'itemToRent': _itemToRentController.text.trim(),
-            'startDate': _startDate?.toIso8601String(),
-            'endDate': _endDate?.toIso8601String(),
-          };
-          break;
-        case RequestType.ride:
-        case RequestType.price:
-          // Should not reach here
-          break;
-      }
-
-      double? budget;
-      if (_budgetController.text.trim().isNotEmpty) {
-        budget = double.tryParse(_budgetController.text.trim());
-      }
-
-      await _requestService.createRequest(
+      // Create the request using the service method
+      String requestId = await _requestService.createRequest(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
-        budget: budget,
-        location: null, // TODO: Convert to LocationInfo
         type: _selectedType,
-        typeSpecificData: typeSpecificData,
+        budget: _budgetController.text.trim().isNotEmpty 
+            ? double.tryParse(_budgetController.text.trim()) 
+            : null,
         images: _imageUrls,
+        typeSpecificData: _getTypeSpecificData(),
       );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Request created successfully!'),
+          SnackBar(
+            content: Text('${_getTypeDisplayName(_selectedType)} created successfully!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -1150,6 +1252,9 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
       }
     } catch (e) {
       if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error creating request: $e'),
@@ -1157,66 +1262,49 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
           ),
         );
       }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFAFF),
-      appBar: AppBar(
-        title: Text('Create ${_getTypeDisplayName(_selectedType)} Request'),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        titleTextStyle: const TextStyle(
-          color: Colors.black87,
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-        ),
-        iconTheme: const IconThemeData(color: Colors.black87),
-      ),
-      body: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              _buildTypeSelector(),
-              const SizedBox(height: 16),
-              _buildCommonFields(),
-              _buildTypeSpecificFields(),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _submitRequest,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: _isLoading
-                      ? const CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        )
-                      : Text('Create ${_getTypeDisplayName(_selectedType)} Request'),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        ),
-      ),
-    );
+  Map<String, dynamic> _getTypeSpecificData() {
+    switch (_selectedType) {
+      case RequestType.item:
+        return {
+          'itemName': _itemNameController.text.trim(),
+          'category': _selectedCategory,
+          'categoryId': _selectedCategoryId ?? '',
+          'subCategoryId': _selectedSubCategoryId ?? '',
+          'subcategory': _selectedSubcategory ?? '',
+          'quantity': int.tryParse(_quantityController.text.trim()),
+          'condition': _selectedCondition,
+        };
+      case RequestType.service:
+        return {
+          'serviceType': _serviceTypeController.text.trim(),
+          'preferredDateTime': _preferredDateTime?.millisecondsSinceEpoch,
+          'urgency': _selectedUrgency,
+        };
+      case RequestType.delivery:
+        return {
+          'pickupLocation': _pickupLocationController.text.trim(),
+          'dropoffLocation': _dropoffLocationController.text.trim(),
+          'itemCategory': _itemCategoryController.text.trim(),
+          'itemDescription': _descriptionController.text.trim(),
+          'weight': _weightController.text.trim().isNotEmpty 
+              ? double.tryParse(_weightController.text.trim()) 
+              : null,
+          'dimensions': _dimensionsController.text.trim(),
+          'preferredDeliveryTime': _preferredDeliveryTime?.millisecondsSinceEpoch,
+          'specialInstructions': _specialInstructionsController.text.trim(),
+        };
+      case RequestType.rental:
+        return {
+          'itemToRent': _rentalItemController.text.trim(),
+          'startDate': _startDateTime?.millisecondsSinceEpoch,
+          'endDate': _endDateTime?.millisecondsSinceEpoch,
+          'pickupDropoffPreference': _pickupDropoffPreference,
+        };
+      default:
+        return {};
+    }
   }
 }
