@@ -203,7 +203,7 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
       );
 
       await _requestService.updateRequest(
-        widget.request.id,
+        requestId: widget.request.id,
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         budget: double.tryParse(_budgetController.text.trim()),

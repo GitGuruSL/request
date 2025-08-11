@@ -8,6 +8,7 @@ import '../../widgets/location_picker_widget.dart';
 import '../../widgets/category_picker.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/currency_helper.dart';
+import '../requests/ride/edit_ride_request_screen.dart';
 
 class UnifiedRequestEditScreen extends StatefulWidget {
   final RequestModel request;
@@ -270,6 +271,11 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Redirect ride requests to specific edit screen
+    if (_selectedType == RequestType.ride) {
+      return EditRideRequestScreen(request: widget.request);
+    }
+    
     return Scaffold(
       appBar: AppBar(
         title: Text('Edit ${_getTypeDisplayName(_selectedType)}'),

@@ -907,7 +907,6 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
   void _showFullScreenImage(int initialIndex) {
     showDialog(
       context: context,
-      backgroundColor: Colors.black,
       barrierColor: Colors.black87,
       builder: (context) => Dialog.fullscreen(
         backgroundColor: Colors.black,
