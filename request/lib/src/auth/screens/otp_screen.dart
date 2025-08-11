@@ -299,14 +299,10 @@ class _OTPScreenState extends State<OTPScreen> with TickerProviderStateMixin {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: _controllers[index].text.isNotEmpty
-                              ? Theme.of(context).colorScheme.primary
-                              : Colors.grey.shade300,
-                          width: _controllers[index].text.isNotEmpty ? 2 : 1,
+                          color: Colors.grey.shade300,
+                          width: 1,
                         ),
-                        color: _controllers[index].text.isNotEmpty
-                            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.08)
-                            : Colors.grey.shade50,
+                        color: Colors.grey.shade50,
                       ),
                       child: TextField(
                         controller: _controllers[index],
@@ -391,6 +387,7 @@ class _OTPScreenState extends State<OTPScreen> with TickerProviderStateMixin {
                       borderRadius: BorderRadius.circular(16),
                     ),
                     disabledBackgroundColor: Colors.grey.shade300,
+                    disabledForegroundColor: Colors.white,
                   ),
                   child: _isLoading
                       ? const SizedBox(
@@ -406,6 +403,7 @@ class _OTPScreenState extends State<OTPScreen> with TickerProviderStateMixin {
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
+                            color: Colors.white,
                           ),
                         ),
                 ),

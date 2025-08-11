@@ -4,6 +4,8 @@ import '../models/request_model.dart';
 import '../models/enhanced_user_model.dart';
 import '../services/enhanced_request_service.dart';
 import '../services/country_service.dart';
+import 'unified_request_response/unified_request_view_screen.dart';
+import 'requests/ride/view_ride_request_screen.dart';
 
 class BrowseScreen extends StatefulWidget {
   const BrowseScreen({super.key});
@@ -87,26 +89,8 @@ class _BrowseScreenState extends State<BrowseScreen> {
             final data = doc.data();
             data['id'] = doc.id; // Add document ID
             
-            // Create a simple display model instead of using RequestModel
-            final simpleRequest = {
-              'id': doc.id,
-              'title': data['title']?.toString() ?? 'No Title',
-              'description': data['description']?.toString() ?? 'No Description',
-              'type': data['type']?.toString() ?? 'item',
-              'status': data['status']?.toString() ?? 'active',
-            };
-            
-            // For now, create a minimal RequestModel with fallback values
-            final request = RequestModel(
-              id: doc.id,
-              requesterId: data['requesterId']?.toString() ?? '',
-              title: data['title']?.toString() ?? 'No Title',
-              description: data['description']?.toString() ?? 'No Description',
-              type: _parseRequestType(data['type']?.toString()),
-              status: _parseRequestStatus(data['status']?.toString()),
-              createdAt: DateTime.now(), // Use current time as fallback
-              updatedAt: DateTime.now(), // Use current time as fallback
-            );
+            // Use the fromMap constructor which handles all type conversions properly
+            final request = RequestModel.fromMap(data);
             
             loadedRequests.add(request);
             print('✅ Successfully parsed document ${doc.id}');
@@ -133,41 +117,6 @@ class _BrowseScreenState extends State<BrowseScreen> {
           _isLoading = false;
         });
       }
-    }
-  }
-
-  RequestType _parseRequestType(String? type) {
-    switch (type?.toLowerCase()) {
-      case 'service':
-        return RequestType.service;
-      case 'ride':
-        return RequestType.ride;
-      case 'delivery':
-        return RequestType.delivery;
-      case 'rental':
-        return RequestType.rental;
-      case 'price':
-        return RequestType.price;
-      default:
-        return RequestType.item;
-    }
-  }
-
-  RequestStatus _parseRequestStatus(String? status) {
-    switch (status?.toLowerCase()) {
-      case 'active':
-      case 'open':
-        return RequestStatus.active;
-      case 'inprogress':
-        return RequestStatus.inProgress;
-      case 'completed':
-        return RequestStatus.completed;
-      case 'cancelled':
-        return RequestStatus.cancelled;
-      case 'expired':
-        return RequestStatus.expired;
-      default:
-        return RequestStatus.draft;
     }
   }
 
@@ -534,41 +483,22 @@ class _BrowseScreenState extends State<BrowseScreen> {
   }
 
   void _showRequestDetail(RequestModel request) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(request.title),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Type: ${_getRequestTypeName(request.type)}'),
-            const SizedBox(height: 8),
-            Text('Description: ${request.description}'),
-            const SizedBox(height: 8),
-            if (request.budget != null)
-              Text('Budget: ${_currencySymbol ?? '\$'}${request.budget}'),
-            const SizedBox(height: 8),
-            Text('Location: ${request.location?.city ?? 'Not specified'}'),
-            const SizedBox(height: 8),
-            Text('Status: ${request.status}'),
-          ],
+    // Use specific view screen for ride requests, unified for others
+    if (request.type == RequestType.ride) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ViewRideRequestScreen(requestId: request.id),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _showComingSoon('Respond to Request');
-            },
-            child: const Text('Respond'),
-          ),
-        ],
-      ),
-    );
+      ).then((_) => _loadRequests()); // Refresh list when returning
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => UnifiedRequestViewScreen(requestId: request.id),
+        ),
+      ).then((_) => _loadRequests()); // Refresh list when returning
+    }
   }
 
   void _showComingSoon(String feature) {

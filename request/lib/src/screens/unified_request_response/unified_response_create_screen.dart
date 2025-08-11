@@ -1422,7 +1422,6 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
       // Submit the response
       await _requestService.createResponse(
         requestId: widget.request.id!,
-        responderId: currentUser.uid,
         message: _messageController.text.trim(),
         price: price,
         additionalInfo: additionalInfo,

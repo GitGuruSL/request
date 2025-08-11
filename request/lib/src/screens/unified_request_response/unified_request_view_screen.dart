@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/request_model.dart';
 import '../../models/enhanced_user_model.dart';
 import '../../services/enhanced_request_service.dart';
@@ -23,6 +24,7 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
   List<ResponseModel> _responses = [];
   bool _isLoading = true;
   bool _isOwner = false;
+  String _requesterName = '';
 
   @override
   void initState() {
@@ -36,17 +38,70 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
     });
 
     try {
-      final request = await _requestService.getRequest(widget.requestId);
-      final responses = await _requestService.getRequestResponses(widget.requestId);
+      // Check Firebase Auth state first
+      final firebaseUser = FirebaseAuth.instance.currentUser;
+      print('🔍 Debug Auth - Firebase User: ${firebaseUser?.uid ?? "NULL"}');
+      print('🔍 Debug Auth - Firebase User Email: ${firebaseUser?.email ?? "NULL"}');
+      print('🔍 Debug Auth - Firebase User Phone: ${firebaseUser?.phoneNumber ?? "NULL"}');
+      
+      final request = await _requestService.getRequestById(widget.requestId);
+      final responses = await _requestService.getResponsesForRequest(widget.requestId);
       final currentUser = await _userService.getCurrentUserModel();
+      
+      // Load requester name
+      String requesterName = 'Unknown User';
+      if (request != null) {
+        try {
+          final requesterUser = await _userService.getUserById(request.requesterId);
+          if (requesterUser != null && requesterUser.name.isNotEmpty) {
+            requesterName = requesterUser.name;
+          }
+        } catch (e) {
+          print('Error loading requester name: $e');
+        }
+      }
+      
+      // More robust owner check using both current user model and Firebase Auth
+      bool isOwner = false;
+      String currentUserId = '';
+      
+      // Try Firebase Auth first
+      if (firebaseUser?.uid != null) {
+        currentUserId = firebaseUser!.uid;
+      }
+      
+      // If Firebase Auth doesn't work, try user service
+      if (currentUserId.isEmpty && currentUser?.id != null) {
+        currentUserId = currentUser!.id;
+      }
+      
+      // Check ownership with additional safety checks
+      if (currentUserId.isNotEmpty && request?.requesterId != null) {
+        isOwner = currentUserId == request!.requesterId;
+      } else {
+        // If we can't determine the current user, assume ownership to hide respond button
+        // This is a safety measure to prevent users from responding to their own requests
+        isOwner = true;
+        print('⚠️ Warning: Could not determine current user, defaulting to owner=true for safety');
+      }
       
       if (mounted) {
         setState(() {
           _request = request;
           _responses = responses;
-          _isOwner = currentUser?.uid == request?.requesterId;
+          _isOwner = isOwner;
+          _requesterName = requesterName;
           _isLoading = false;
         });
+        
+        // Enhanced debug information
+        print('🔍 Debug Unified - Firebase User ID: ${firebaseUser?.uid ?? "NULL"}');
+        print('🔍 Debug Unified - Current User Model ID: ${currentUser?.id ?? "NULL"}');
+        print('🔍 Debug Unified - Final Current User ID: $currentUserId');
+        print('🔍 Debug Unified - Request Owner ID: ${request?.requesterId ?? "NULL"}');
+        print('🔍 Debug Unified - Is Owner: $isOwner');
+        print('🔍 Debug Unified - Requester Name: $requesterName');
+        print('🔍 Debug Unified - Will Show Respond Button: ${!isOwner && request != null}');
       }
     } catch (e) {
       if (mounted) {
@@ -97,10 +152,6 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1),
-        ),
       ),
       backgroundColor: Colors.grey[50],
       body: RefreshIndicator(
@@ -112,6 +163,8 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildRequestDetails(),
+              const SizedBox(height: 16),
+              _buildRequesterInfo(),
               const SizedBox(height: 24),
               _buildTypeSpecificDetails(),
               const SizedBox(height: 24),
@@ -120,9 +173,15 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
           ),
         ),
       ),
-      floatingActionButton: !_isOwner
+      floatingActionButton: (_request != null && 
+                              !_isOwner && 
+                              FirebaseAuth.instance.currentUser != null &&
+                              FirebaseAuth.instance.currentUser!.uid != _request!.requesterId)
           ? FloatingActionButton.extended(
               onPressed: () {
+                print('🔍 Respond button pressed - IsOwner: $_isOwner');
+                print('🔍 Respond button pressed - Current User: ${FirebaseAuth.instance.currentUser?.uid}');
+                print('🔍 Respond button pressed - Request Owner: ${_request!.requesterId}');
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -162,7 +221,6 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -212,12 +270,12 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
             const SizedBox(height: 8),
             Row(
               children: [
-                Icon(Icons.account_balance_wallet, color: Colors.green[600], size: 16),
+                Icon(Icons.account_balance_wallet, color: Colors.blue, size: 16),
                 const SizedBox(width: 4),
                 Text(
                   'Budget: \$${_request!.budget?.toStringAsFixed(2)}',
-                  style: TextStyle(
-                    color: Colors.green[600],
+                  style: const TextStyle(
+                    color: Colors.black87,
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
@@ -275,6 +333,76 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
     }
   }
 
+  Widget _buildRequesterInfo() {
+    final String firstLetter = _requesterName.isNotEmpty ? _requesterName[0].toUpperCase() : 'U';
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () {
+              // TODO: Navigate to user profile screen
+              print('Navigate to profile: ${_request!.requesterId}');
+            },
+            child: CircleAvatar(
+              radius: 20,
+              backgroundColor: Colors.blue[100],
+              child: Text(
+                firstLetter,
+                style: TextStyle(
+                  color: Colors.blue[700],
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _requesterName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+                Row(
+                  children: [
+                    Icon(Icons.verified, color: Colors.blue, size: 14),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Verified',
+                      style: TextStyle(
+                        color: Colors.blue,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          // Only show message button if viewing someone else's request
+          if (!_isOwner) 
+            IconButton(
+              onPressed: () {
+                // TODO: Implement contact functionality
+              },
+              icon: const Icon(Icons.message),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTypeSpecificDetails() {
     switch (_request!.type) {
       case RequestType.item:
@@ -294,14 +422,40 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
 
   Widget _buildItemFields() {
     final itemData = _request!.itemData;
-    if (itemData == null) return const SizedBox();
+    
+    // Debug information
+    print('🔍 Item Debug - TypeSpecificData: ${_request!.typeSpecificData}');
+    print('🔍 Item Debug - ItemData: $itemData');
+    
+    if (itemData == null) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Item Details',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'No additional item details available.',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -337,8 +491,7 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -350,16 +503,16 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
-              Text('Category: ', style: TextStyle(color: Colors.grey[600])),
-              Text(serviceData.category),
+              Text('Service Type: ', style: TextStyle(color: Colors.grey[600])),
+              Text(serviceData.serviceType),
             ],
           ),
-          if (serviceData.urgencyLevel != UrgencyLevel.flexible) ...[
+          if (serviceData.skillLevel != null) ...[
             const SizedBox(height: 6),
             Row(
               children: [
-                Text('Urgency: ', style: TextStyle(color: Colors.grey[600])),
-                Text(serviceData.urgencyLevel.name.toUpperCase()),
+                Text('Skill Level: ', style: TextStyle(color: Colors.grey[600])),
+                Text(serviceData.skillLevel!.toUpperCase()),
               ],
             ),
           ],
@@ -376,8 +529,7 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -438,8 +590,7 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -517,8 +668,7 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: const Center(
               child: Column(
@@ -549,8 +699,7 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

@@ -12,11 +12,7 @@ import 'src/navigation/main_navigation_screen.dart';
 import 'src/screens/browse_screen.dart';
 import 'src/screens/price_comparison_screen.dart';
 import 'src/screens/account_screen.dart';
-import 'src/screens/requests/item/create_item_request_screen.dart';
-import 'src/screens/requests/service/create_service_request_screen.dart';
 import 'src/screens/requests/ride/create_ride_request_screen.dart';
-import 'src/screens/requests/delivery/create_delivery_request_screen.dart';
-import 'src/screens/requests/rent/create_rent_request_screen.dart';
 import 'src/services/country_service.dart';
 import 'src/theme/app_theme.dart';
 
@@ -85,16 +81,8 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (context) => const PriceComparisonScreen());
           case '/account':
             return MaterialPageRoute(builder: (context) => const AccountScreen());
-          case '/create-item-request':
-            return MaterialPageRoute(builder: (context) => const CreateItemRequestScreen());
-          case '/create-service-request':
-            return MaterialPageRoute(builder: (context) => const CreateServiceRequestScreen());
           case '/create-ride-request':
             return MaterialPageRoute(builder: (context) => const CreateRideRequestScreen());
-          case '/create-delivery-request':
-            return MaterialPageRoute(builder: (context) => const CreateDeliveryRequestScreen());
-          case '/create-rental-request':
-            return MaterialPageRoute(builder: (context) => const CreateRentRequestScreen());
           default:
             return MaterialPageRoute(builder: (context) => const WelcomeScreen());
         }

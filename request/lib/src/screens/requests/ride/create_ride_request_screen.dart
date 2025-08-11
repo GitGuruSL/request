@@ -49,6 +49,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
     zoom: 14,
   );
   Set<Marker> _markers = {};
+  Set<Polyline> _polylines = {};
 
   bool _isLoading = false;
 
@@ -109,11 +110,27 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                 _mapController = controller;
               },
               markers: _markers,
+              polylines: _polylines,
               onTap: _onMapTapped,
               myLocationEnabled: true,
               myLocationButtonEnabled: false,
               zoomControlsEnabled: false,
               mapToolbarEnabled: false,
+            ),
+          ),
+          
+          // My Location Button (like in Uber)
+          Positioned(
+            right: 16,
+            top: 120,
+            child: FloatingActionButton(
+              mini: true,
+              backgroundColor: Colors.white,
+              onPressed: _goToCurrentLocation,
+              child: const Icon(
+                Icons.my_location,
+                color: Colors.black,
+              ),
             ),
           ),
           
@@ -270,6 +287,15 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                             _pickupLat = lat;
                             _pickupLng = lng;
                           });
+                          _updateMapMarkers();
+                          // Show feedback
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Pickup location set: $address'),
+                              duration: const Duration(seconds: 2),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
                         },
                       ),
                     ),
@@ -301,6 +327,15 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                             _destinationLat = lat;
                             _destinationLng = lng;
                           });
+                          _updateMapMarkers();
+                          // Show feedback
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Destination set: $address'),
+                              duration: const Duration(seconds: 2),
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
                         },
                       ),
                     ),
@@ -508,12 +543,107 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
     );
   }
 
-  void _onMapTapped() {
-    // Future: Handle map tapping for setting pickup/destination
+  void _updateMapMarkers() {
+    setState(() {
+      _markers.clear();
+      _polylines.clear();
+      
+      // Add pickup marker
+      if (_pickupLat != null && _pickupLng != null) {
+        _markers.add(
+          Marker(
+            markerId: const MarkerId('pickup'),
+            position: LatLng(_pickupLat!, _pickupLng!),
+            infoWindow: InfoWindow(
+              title: 'Pickup',
+              snippet: _pickupLocationController.text,
+            ),
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          ),
+        );
+      }
+      
+      // Add destination marker
+      if (_destinationLat != null && _destinationLng != null) {
+        _markers.add(
+          Marker(
+            markerId: const MarkerId('destination'),
+            position: LatLng(_destinationLat!, _destinationLng!),
+            infoWindow: InfoWindow(
+              title: 'Drop',
+              snippet: _destinationController.text,
+            ),
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          ),
+        );
+      }
+      
+      // Add route line if both locations are set
+      if (_pickupLat != null && _pickupLng != null && 
+          _destinationLat != null && _destinationLng != null) {
+        _polylines.add(
+          Polyline(
+            polylineId: const PolylineId('route'),
+            points: [
+              LatLng(_pickupLat!, _pickupLng!),
+              LatLng(_destinationLat!, _destinationLng!),
+            ],
+            color: const Color(0xFF2196F3),
+            width: 5,
+            patterns: [PatternItem.dash(20), PatternItem.gap(10)],
+          ),
+        );
+      }
+    });
+    
+    // Camera movement after setState
+    if (_pickupLat != null && _pickupLng != null && 
+        _destinationLat != null && _destinationLng != null) {
+      Future.delayed(const Duration(milliseconds: 200), () {
+        _fitMarkersOnMap();
+      });
+    } else if (_pickupLat != null && _pickupLng != null) {
+      // If only pickup is set, center on pickup
+      Future.delayed(const Duration(milliseconds: 200), () {
+        _mapController?.animateCamera(
+          CameraUpdate.newLatLngZoom(LatLng(_pickupLat!, _pickupLng!), 15),
+        );
+      });
+    } else if (_destinationLat != null && _destinationLng != null) {
+      // If only destination is set, center on destination
+      Future.delayed(const Duration(milliseconds: 200), () {
+        _mapController?.animateCamera(
+          CameraUpdate.newLatLngZoom(LatLng(_destinationLat!, _destinationLng!), 15),
+        );
+      });
+    }
+  }
+
+  void _fitMarkersOnMap() {
+    if (_mapController == null || _pickupLat == null || _destinationLat == null) return;
+    
+    final bounds = LatLngBounds(
+      southwest: LatLng(
+        _pickupLat! < _destinationLat! ? _pickupLat! : _destinationLat!,
+        _pickupLng! < _destinationLng! ? _pickupLng! : _destinationLng!,
+      ),
+      northeast: LatLng(
+        _pickupLat! > _destinationLat! ? _pickupLat! : _destinationLat!,
+        _pickupLng! > _destinationLng! ? _pickupLng! : _destinationLng!,
+      ),
+    );
+    
+    _mapController!.animateCamera(
+      CameraUpdate.newLatLngBounds(bounds, 120.0), // More padding for better view
+    );
+  }
+
+  void _onMapTapped(LatLng position) {
+    // For now, just show coordinates - can be enhanced to set pickup/destination
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Map interaction will be available soon!'),
-        duration: Duration(seconds: 1),
+      SnackBar(
+        content: Text('Tapped: ${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}'),
+        duration: const Duration(seconds: 2),
       ),
     );
   }

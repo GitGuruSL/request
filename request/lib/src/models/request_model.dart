@@ -409,15 +409,32 @@ class DeliveryRequestData {
 
   factory DeliveryRequestData.fromMap(Map<String, dynamic> map) {
     return DeliveryRequestData(
-      package: PackageInfo.fromMap(map['package']),
-      preferredPickupTime: DateTime.parse(map['preferredPickupTime']),
-      preferredDeliveryTime: DateTime.parse(map['preferredDeliveryTime']),
+      package: PackageInfo.fromMap(map['package'] ?? {}),
+      preferredPickupTime: _parseDateTime(map['preferredPickupTime']) ?? DateTime.now(),
+      preferredDeliveryTime: _parseDateTime(map['preferredDeliveryTime']) ?? DateTime.now().add(Duration(hours: 2)),
       isFlexibleTime: map['isFlexibleTime'] ?? false,
       requireSignature: map['requireSignature'] ?? false,
       isFragile: map['isFragile'] ?? false,
       needsRefrigeration: map['needsRefrigeration'] ?? false,
       deliveryInstructions: map['deliveryInstructions'],
     );
+  }
+  
+  // Helper method to safely parse DateTime
+  static DateTime? _parseDateTime(dynamic dateTime) {
+    if (dateTime == null) return null;
+    try {
+      if (dateTime is String) {
+        return DateTime.parse(dateTime);
+      } else if (dateTime is Map && dateTime.containsKey('_seconds')) {
+        // Handle Firestore Timestamp
+        int seconds = dateTime['_seconds'] ?? 0;
+        return DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
   }
 
   Map<String, dynamic> toMap() {
@@ -451,7 +468,7 @@ class PackageInfo {
     return PackageInfo(
       description: map['description'] ?? '',
       weight: map['weight']?.toDouble() ?? 0.0,
-      dimensions: PackageDimensions.fromMap(map['dimensions']),
+      dimensions: PackageDimensions.fromMap(map['dimensions'] ?? {}),
       category: map['category'],
     );
   }
@@ -518,14 +535,37 @@ class RentalRequestData {
   factory RentalRequestData.fromMap(Map<String, dynamic> map) {
     return RentalRequestData(
       itemCategory: map['itemCategory'] ?? '',
-      startDate: DateTime.parse(map['startDate']),
-      endDate: DateTime.parse(map['endDate']),
+      startDate: _parseDateTime(map['startDate']) ?? DateTime.now(),
+      endDate: _parseDateTime(map['endDate']) ?? DateTime.now().add(Duration(days: 1)),
       isFlexibleDates: map['isFlexibleDates'] ?? false,
       preferredBrand: map['preferredBrand'],
-      specifications: Map<String, String>.from(map['specifications'] ?? {}),
+      specifications: _parseStringMap(map['specifications'] ?? {}),
       needsDelivery: map['needsDelivery'] ?? false,
       needsSetup: map['needsSetup'] ?? false,
     );
+  }
+  
+  // Helper method to safely convert any map to Map<String, String>
+  static Map<String, String> _parseStringMap(Map<String, dynamic>? map) {
+    if (map == null) return {};
+    return map.map((key, value) => MapEntry(key, value?.toString() ?? ''));
+  }
+  
+  // Helper method to safely parse DateTime
+  static DateTime? _parseDateTime(dynamic dateTime) {
+    if (dateTime == null) return null;
+    try {
+      if (dateTime is String) {
+        return DateTime.parse(dateTime);
+      } else if (dateTime is Map && dateTime.containsKey('_seconds')) {
+        // Handle Firestore Timestamp
+        int seconds = dateTime['_seconds'] ?? 0;
+        return DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
   }
 
   Map<String, dynamic> toMap() {
@@ -569,11 +609,17 @@ class PriceRequestData {
       category: map['category'] ?? '',
       brand: map['brand'],
       model: map['model'],
-      specifications: Map<String, String>.from(map['specifications'] ?? {}),
+      specifications: _parseStringMap(map['specifications'] ?? {}),
       condition: map['condition'] ?? 'any',
       quantity: map['quantity'] ?? 1,
       compareNewAndUsed: map['compareNewAndUsed'] ?? true,
     );
+  }
+  
+  // Helper method to safely convert any map to Map<String, String>
+  static Map<String, String> _parseStringMap(Map<String, dynamic>? map) {
+    if (map == null) return {};
+    return map.map((key, value) => MapEntry(key, value?.toString() ?? ''));
   }
 
   Map<String, dynamic> toMap() {
