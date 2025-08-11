@@ -93,7 +93,7 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
   void _initializeFormData() {
     // Initialize common fields
     _messageController.text = widget.response.message;
-    _priceController.text = widget.response.price?.toString() ?? '';
+    _priceController.text = _formatPrice(widget.response.price);
     
     // Get fields from additionalInfo
     final additionalInfo = widget.response.additionalInfo;
@@ -111,23 +111,19 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
       _uploadedImages = List<String>.from(additionalInfo['images'] ?? []);
     }
     
-    print('DEBUG: Initialized images: $_uploadedImages');
-    print('DEBUG: Response images: ${widget.response.images}');
-    print('DEBUG: AdditionalInfo images: ${additionalInfo['images']}');
-    
     // Initialize type-specific fields based on request type
     switch (widget.request.type) {
       case RequestType.rental:
         // Rental price is stored in main price field
-        _rentalPriceController.text = widget.response.price?.toString() ?? '';
-        _securityDepositController.text = additionalInfo['securityDeposit']?.toString() ?? '';
+        _rentalPriceController.text = _formatPrice(widget.response.price);
+        _securityDepositController.text = _formatPrice(additionalInfo['securityDeposit']);
         _selectedRentalPeriod = additionalInfo['rentalPeriod']?.toString() ?? 'day';
         _selectedPickupDeliveryOption = additionalInfo['pickupDeliveryOption']?.toString() ?? 'User picks up';
         _rentalItemConditionController.text = additionalInfo['itemCondition']?.toString() ?? '';
         _rentalDescriptionController.text = additionalInfo['itemDescription']?.toString() ?? '';
         break;
       case RequestType.delivery:
-        _deliveryFeeController.text = additionalInfo['deliveryFee']?.toString() ?? '';
+        _deliveryFeeController.text = _formatPrice(additionalInfo['deliveryFee']);
         _estimatedPickupTimeController.text = additionalInfo['estimatedPickupTime']?.toString() ?? '';
         _estimatedDropoffTimeController.text = additionalInfo['estimatedDropoffTime']?.toString() ?? '';
         _packageSizeController.text = additionalInfo['packageSize']?.toString() ?? '';
@@ -136,18 +132,18 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
         _selectedVehicleType = additionalInfo['vehicleType']?.toString() ?? 'Car';
         break;
       case RequestType.ride:
-        _fareController.text = additionalInfo['fare']?.toString() ?? '';
+        _fareController.text = _formatPrice(additionalInfo['fare']);
         _routeDescriptionController.text = additionalInfo['routeDescription']?.toString() ?? '';
         _driverNotesController.text = additionalInfo['driverNotes']?.toString() ?? '';
         _selectedVehicleType = additionalInfo['vehicleType']?.toString() ?? 'Car';
         break;
       case RequestType.item:
         // Offer price is stored in main price field
-        _offerPriceController.text = widget.response.price?.toString() ?? '';
+        _offerPriceController.text = _formatPrice(widget.response.price);
         _itemConditionController.text = additionalInfo['itemCondition']?.toString() ?? '';
         _offerDescriptionController.text = additionalInfo['offerDescription']?.toString() ?? '';
         _selectedDeliveryMethod = additionalInfo['deliveryMethod']?.toString() ?? 'User pickup';
-        _deliveryCostController.text = additionalInfo['deliveryCost']?.toString() ?? '';
+        _deliveryCostController.text = _formatPrice(additionalInfo['deliveryCost']);
         _estimatedDeliveryController.text = additionalInfo['estimatedDelivery']?.toString() ?? '';
         _warrantyController.text = additionalInfo['warranty']?.toString() ?? '';
         break;
@@ -155,9 +151,9 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
         // Service price is stored in main price field
         _selectedPriceType = additionalInfo['priceType']?.toString() ?? 'Fixed Price';
         if (_selectedPriceType == 'Fixed Price') {
-          _estimatedCostController.text = widget.response.price?.toString() ?? '';
+          _estimatedCostController.text = _formatPrice(widget.response.price);
         } else {
-          _hourlyRateController.text = widget.response.price?.toString() ?? '';
+          _hourlyRateController.text = _formatPrice(widget.response.price);
         }
         _timeframeController.text = additionalInfo['timeframe']?.toString() ?? '';
         _solutionDescriptionController.text = additionalInfo['solutionDescription']?.toString() ?? '';
@@ -165,6 +161,19 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
       case RequestType.price:
         // Handle price comparison requests if needed
         break;
+    }
+  }
+
+  String _formatPrice(dynamic price) {
+    if (price == null) return '';
+    double? priceValue = price is double ? price : double.tryParse(price.toString());
+    if (priceValue == null) return '';
+    
+    // Remove unnecessary decimal places
+    if (priceValue == priceValue.roundToDouble()) {
+      return priceValue.round().toString();
+    } else {
+      return priceValue.toString();
     }
   }
 
