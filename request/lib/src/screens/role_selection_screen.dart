@@ -75,29 +75,29 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
   String _getRouteForRole(UserRole role) {
     switch (role) {
       case UserRole.general:
-        return '/dashboard';
+        return '/main-dashboard';
       case UserRole.driver:
         return '/driver-verification';
       case UserRole.delivery:
-        return '/delivery-setup';
+        return '/delivery-verification';
       case UserRole.business:
-        return '/business-setup';
+        return '/business-verification';
     }
   }
 
   void _navigateToRoleSetup() {
     switch (selectedRole!) {
       case UserRole.general:
-        Navigator.pushReplacementNamed(context, '/main');
+        Navigator.pushReplacementNamed(context, '/main-dashboard');
         break;
       case UserRole.driver:
-        Navigator.pushReplacementNamed(context, '/driver-setup');
+        Navigator.pushReplacementNamed(context, '/driver-verification');
         break;
       case UserRole.delivery:
-        Navigator.pushReplacementNamed(context, '/delivery-setup');
+        Navigator.pushReplacementNamed(context, '/delivery-verification');
         break;
       case UserRole.business:
-        Navigator.pushReplacementNamed(context, '/business-setup');
+        Navigator.pushReplacementNamed(context, '/business-verification');
         break;
     }
   }

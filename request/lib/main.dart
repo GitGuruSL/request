@@ -13,6 +13,11 @@ import 'src/screens/price_comparison_screen.dart';
 import 'src/screens/account_screen.dart';
 import 'src/screens/requests/ride/create_ride_request_screen.dart';
 import 'src/screens/unified_request_response/unified_response_edit_screen.dart';
+import 'src/screens/role_selection_screen.dart';
+import 'src/screens/driver_verification_screen.dart';
+import 'src/screens/business_verification_screen.dart';
+import 'src/screens/delivery_verification_screen.dart';
+import 'src/screens/verification_status_screen.dart';
 import 'src/services/country_service.dart';
 import 'src/theme/app_theme.dart';
 
@@ -73,6 +78,17 @@ class MyApp extends StatelessWidget {
             );
           case '/profile':
             return MaterialPageRoute(builder: (context) => const ProfileCompletionScreen());
+          case '/role-selection':
+            return MaterialPageRoute(builder: (context) => const RoleSelectionScreen());
+          case '/driver-verification':
+            return MaterialPageRoute(builder: (context) => const DriverVerificationScreen());
+          case '/business-verification':
+            return MaterialPageRoute(builder: (context) => const BusinessVerificationScreen());
+          case '/delivery-verification':
+            return MaterialPageRoute(builder: (context) => const DeliveryVerificationScreen());
+          case '/verification-status':
+            return MaterialPageRoute(builder: (context) => const VerificationStatusScreen());
+          case '/main-dashboard':
           case '/home':
             return MaterialPageRoute(builder: (context) => const MainNavigationScreen());
           case '/browse':
