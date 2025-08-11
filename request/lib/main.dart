@@ -13,6 +13,7 @@ import 'src/screens/browse_screen.dart';
 import 'src/screens/price_comparison_screen.dart';
 import 'src/screens/account_screen.dart';
 import 'src/screens/requests/ride/create_ride_request_screen.dart';
+import 'src/screens/unified_request_response/unified_response_edit_screen.dart';
 import 'src/services/country_service.dart';
 import 'src/theme/app_theme.dart';
 
@@ -83,6 +84,14 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (context) => const AccountScreen());
           case '/create-ride-request':
             return MaterialPageRoute(builder: (context) => const CreateRideRequestScreen());
+          case '/edit-response':
+            final args = settings.arguments as Map<String, dynamic>?;
+            return MaterialPageRoute(
+              builder: (context) => UnifiedResponseEditScreen(
+                response: args?['response'],
+                request: args?['request'],
+              ),
+            );
           default:
             return MaterialPageRoute(builder: (context) => const WelcomeScreen());
         }

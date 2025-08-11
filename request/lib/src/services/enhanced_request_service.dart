@@ -424,23 +424,11 @@ class EnhancedRequestService {
         break;
         
       case RequestType.service:
-        // Business users can respond to service requests
-        if (!user.hasRole(UserRole.business)) {
-          throw Exception('You must register as a business to respond to service requests');
-        }
-        if (!user.isRoleVerified(UserRole.business)) {
-          throw Exception('Your business registration must be approved before you can respond to service requests');
-        }
-        break;
-        
       case RequestType.item:
       case RequestType.rental:
       case RequestType.price:
         // These request types can be responded to by any verified user
-        // But businesses are preferred for item/rental requests
-        if (user.hasRole(UserRole.business) && !user.isRoleVerified(UserRole.business)) {
-          throw Exception('Your business registration must be approved before you can respond to this request');
-        }
+        // No specific role validation required - anyone can respond
         break;
         
       default:
@@ -616,6 +604,102 @@ class EnhancedRequestService {
 
   double _toRadians(double degree) {
     return degree * (math.pi / 180.0);
+  }
+
+  // Update response
+  Future<void> updateResponse({
+    required String responseId,
+    String? message,
+    double? price,
+    String? currency,
+    DateTime? availableFrom,
+    DateTime? availableUntil,
+    List<String>? images,
+    Map<String, dynamic>? additionalInfo,
+  }) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User must be authenticated');
+      }
+
+      // Get the response to verify ownership
+      final responseDoc = await _firestore
+          .collection(_responsesCollection)
+          .doc(responseId)
+          .get();
+      
+      if (!responseDoc.exists) {
+        throw Exception('Response not found');
+      }
+
+      final response = ResponseModel.fromMap(responseDoc.data()!);
+      
+      if (response.responderId != user.uid) {
+        throw Exception('Only response owner can update the response');
+      }
+
+      final updateData = <String, dynamic>{
+        'updatedAt': DateTime.now().toIso8601String(),
+      };
+
+      if (message != null) updateData['message'] = message;
+      if (price != null) updateData['price'] = price;
+      if (currency != null) updateData['currency'] = currency;
+      if (availableFrom != null) updateData['availableFrom'] = availableFrom.toIso8601String();
+      if (availableUntil != null) updateData['availableUntil'] = availableUntil.toIso8601String();
+      if (images != null) updateData['images'] = images;
+      if (additionalInfo != null) updateData['additionalInfo'] = additionalInfo;
+
+      await _firestore
+          .collection(_responsesCollection)
+          .doc(responseId)
+          .update(updateData);
+    } catch (e) {
+      throw Exception('Failed to update response: $e');
+    }
+  }
+
+  // Reject response
+  Future<void> rejectResponse(String responseId, [String? reason]) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User must be authenticated');
+      }
+
+      // Get response and request
+      final responseDoc = await _firestore
+          .collection(_responsesCollection)
+          .doc(responseId)
+          .get();
+      
+      if (!responseDoc.exists) {
+        throw Exception('Response not found');
+      }
+
+      final response = ResponseModel.fromMap(responseDoc.data()!);
+      final request = await getRequestById(response.requestId);
+      
+      if (request == null) {
+        throw Exception('Request not found');
+      }
+      if (request.requesterId != user.uid) {
+        throw Exception('Only request owner can reject responses');
+      }
+
+      // Update response as rejected
+      await _firestore
+          .collection(_responsesCollection)
+          .doc(responseId)
+          .update({
+        'isRejected': true,
+        'rejectionReason': reason ?? 'Not specified',
+        'rejectedAt': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      throw Exception('Failed to reject response: $e');
+    }
   }
 
   // Utility method to clean up draft requests (can be called during app initialization)

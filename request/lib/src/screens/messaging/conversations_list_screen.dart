@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/message_model.dart';
 import '../../services/messaging_service.dart';
 import '../../services/enhanced_user_service.dart';
+import '../unified_request_response/unified_request_view_screen.dart';
 import 'conversation_screen.dart';
 
 class ConversationsListScreen extends StatefulWidget {
@@ -83,6 +84,27 @@ class _ConversationsListScreenState extends State<ConversationsListScreen> {
     );
   }
 
+  Future<void> _navigateToRequest(String requestId) async {
+    try {
+      // Navigate directly using the request ID
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => UnifiedRequestViewScreen(requestId: requestId),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading request: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Widget _buildConversationTile(ConversationModel conversation) {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
     final otherUserId = conversation.participantIds
@@ -132,12 +154,30 @@ class _ConversationsListScreenState extends State<ConversationsListScreen> {
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  conversation.requestTitle,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.blue,
-                    fontWeight: FontWeight.w500,
+                GestureDetector(
+                  onTap: () => _navigateToRequest(conversation.requestId),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            conversation.requestTitle,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.blue,
+                              fontWeight: FontWeight.w500,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          Icons.launch,
+                          size: 12,
+                          color: Colors.blue[600],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 4),

@@ -29,6 +29,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   bool _isLoading = true;
   bool _isOwner = false;
   UserModel? _requesterUser;
+  UserModel? _currentUser;
 
   // Map related
   GoogleMapController? _mapController;
@@ -90,6 +91,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
             _responses = responses;
             _isOwner = isOwner;
             _requesterUser = requesterUser;
+            _currentUser = currentUser;
             _isLoading = false;
           });
           
@@ -117,6 +119,33 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
         );
       }
     }
+  }
+
+  // Role-based validation methods
+  bool _canUserRespond() {
+    if (_currentUser == null || _request == null) return false;
+    if (_isOwner) return false;
+
+    // For ride requests, user must have driver role and be approved
+    return _currentUser!.hasRole(UserRole.driver) && 
+           _currentUser!.isRoleVerified(UserRole.driver);
+  }
+
+  String? _getCannotRespondReason() {
+    if (_currentUser == null || _request == null) return null;
+    if (_isOwner) return null;
+
+    // Check if user has driver role
+    if (!_currentUser!.hasRole(UserRole.driver)) {
+      return 'You need to register as a driver to respond to ride requests';
+    }
+
+    // Check if driver role is approved
+    if (!_currentUser!.isRoleVerified(UserRole.driver)) {
+      return 'Your driver registration is pending approval. Please wait for verification.';
+    }
+
+    return null;
   }
 
   void _navigateToEditRideRequest() {
@@ -392,18 +421,46 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                               !_isOwner && 
                               FirebaseAuth.instance.currentUser != null &&
                               FirebaseAuth.instance.currentUser!.uid != _request!.requesterId)
-          ? FloatingActionButton.extended(
-              onPressed: () {
-                print('🔍 Ride Respond button pressed - IsOwner: $_isOwner');
-                print('🔍 Ride Respond button pressed - Current User: ${FirebaseAuth.instance.currentUser?.uid}');
-                print('🔍 Ride Respond button pressed - Request Owner: ${_request!.requesterId}');
-                _showResponseDialog();
-              },
-              icon: const Icon(Icons.reply),
-              label: const Text('Respond'),
-              backgroundColor: Colors.black,
-              foregroundColor: Colors.white,
-            )
+          ? (_canUserRespond()
+              ? FloatingActionButton.extended(
+                  onPressed: () {
+                    print('🔍 Ride Respond button pressed - IsOwner: $_isOwner');
+                    print('🔍 Ride Respond button pressed - Current User: ${FirebaseAuth.instance.currentUser?.uid}');
+                    print('🔍 Ride Respond button pressed - Request Owner: ${_request!.requesterId}');
+                    _showResponseDialog();
+                  },
+                  icon: const Icon(Icons.reply),
+                  label: const Text('Respond'),
+                  backgroundColor: Colors.black,
+                  foregroundColor: Colors.white,
+                )
+              : FloatingActionButton.extended(
+                  onPressed: () {
+                    final reason = _getCannotRespondReason();
+                    if (reason != null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(reason),
+                          backgroundColor: Colors.orange,
+                          duration: const Duration(seconds: 4),
+                          action: reason.contains('register') 
+                            ? SnackBarAction(
+                                label: 'Register',
+                                textColor: Colors.white,
+                                onPressed: () {
+                                  Navigator.pushNamed(context, '/driver-registration');
+                                },
+                              )
+                            : null,
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.lock_outline),
+                  label: const Text('Driver Required'),
+                  backgroundColor: Colors.grey,
+                  foregroundColor: Colors.white,
+                ))
           : null,
     );
   }
@@ -923,18 +980,18 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Offer Ride'),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               decoration: InputDecoration(
                 labelText: 'Your offer price',
-                prefixText: 'LKR ',
+                prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
               ),
               keyboardType: TextInputType.number,
             ),
-            SizedBox(height: 16),
-            TextField(
+            const SizedBox(height: 16),
+            const TextField(
               decoration: InputDecoration(
                 labelText: 'Message to requester',
                 hintText: 'Tell them about your vehicle, experience, etc.',

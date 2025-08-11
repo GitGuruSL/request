@@ -86,26 +86,36 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
     super.dispose();
   }
 
-    // Temporarily simplified role validation - full implementation needs enhanced models
+  // Role validation to ensure only appropriate users can respond to specific requests
   String? _validateUserRole(UserModel user) {
-    // TODO: Implement proper role validation when enhanced user model is available
-    return null; // Allow all users for now
-    /*
-    // Original validation logic - needs enhanced user model
-    if (widget.request.type == 'delivery') {
-      if (user.businessInfo?.businessType != 'delivery') {
-        return 'delivery_business_required';
-      }
-      if (user.businessInfo?.verificationStatus != 'approved') {
-        return 'business_verification_required';
-      }
-    } else if (widget.request.type == 'ride') {
-      if (user.driverInfo?.verificationStatus != 'approved') {
-        return 'driver_verification_required';
-      }
+    switch (widget.request.type) {
+      case RequestType.delivery:
+        // Check if user has delivery role
+        if (!user.hasRole(UserRole.delivery)) {
+          return 'delivery_business_required';
+        }
+        // Check if delivery role is approved
+        if (!user.isRoleVerified(UserRole.delivery)) {
+          return 'delivery_business_verification_required';
+        }
+        break;
+        
+      case RequestType.ride:
+        // Check if user has driver role
+        if (!user.hasRole(UserRole.driver)) {
+          return 'driver_registration_required';
+        }
+        // Check if driver role is approved
+        if (!user.isRoleVerified(UserRole.driver)) {
+          return 'driver_verification_required';
+        }
+        break;
+        
+      default:
+        // For other request types (item, service, rental), no specific role validation required
+        return null;
     }
     return null;
-    */
   }
 
   void _navigateToRegistration() {
@@ -1406,18 +1416,44 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
         setState(() {
           _isLoading = false;
         });
+        
+        // Show user-friendly error messages
+        String message;
+        String actionLabel = 'Register';
+        
+        switch (validationError) {
+          case 'delivery_business_required':
+            message = 'You need to register as a delivery business to respond to delivery requests';
+            break;
+          case 'delivery_business_verification_required':
+            message = 'Your delivery business registration is pending approval. Please wait for verification.';
+            actionLabel = 'Check Status';
+            break;
+          case 'driver_registration_required':
+            message = 'You need to register as a driver to respond to ride requests';
+            break;
+          case 'driver_verification_required':
+            message = 'Your driver registration is pending approval. Please wait for verification.';
+            actionLabel = 'Check Status';
+            break;
+          default:
+            message = 'You don\'t have permission to respond to this request';
+            actionLabel = 'Learn More';
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(validationError),
+            content: Text(message),
             backgroundColor: Colors.red,
-            action: SnackBarAction(
-              label: 'Register',
+            duration: const Duration(seconds: 6),
+            action: actionLabel == 'Register' ? SnackBarAction(
+              label: actionLabel,
               textColor: Colors.white,
               onPressed: () {
                 // Navigate to appropriate registration screen
                 _navigateToRegistration();
               },
-            ),
+            ) : null,
           ),
         );
         return;

@@ -164,7 +164,7 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              CurrencyHelper.instance.formatPrice(prices.first),
+              CurrencyHelper.instance.formatPrice(prices.first.toDouble()),
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 color: Colors.green,
@@ -188,11 +188,11 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Price Range: ${CurrencyHelper.instance.formatPrice(prices.first)} - ${CurrencyHelper.instance.formatPrice(prices.last)}',
+                      'Price Range: ${CurrencyHelper.instance.formatPrice(prices.first.toDouble())} - ${CurrencyHelper.instance.formatPrice(prices.last.toDouble())}',
                       style: TextStyle(color: Colors.grey[600]),
                     ),
                     Text(
-                      'Savings: ${CurrencyHelper.instance.formatPrice(prices.last - prices.first)}',
+                      'Savings: ${CurrencyHelper.instance.formatPrice((prices.last - prices.first).toDouble())}',
                       style: const TextStyle(
                         color: Colors.green,
                         fontWeight: FontWeight.bold,

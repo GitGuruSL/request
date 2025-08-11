@@ -32,6 +32,7 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
   bool _isOwner = false;
   String _requesterName = '';
   ResponseModel? _currentUserResponse;
+  UserModel? _currentUser;
 
   @override
   void initState() {
@@ -54,6 +55,9 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
       final request = await _requestService.getRequestById(widget.requestId);
       final responses = await _requestService.getResponsesForRequest(widget.requestId);
       final currentUser = await _userService.getCurrentUserModel();
+      
+      // Store current user for role validation
+      _currentUser = currentUser;
       
       // Load requester name
       String requesterName = 'Unknown User';
@@ -137,6 +141,59 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
     }
   }
 
+  // Check if current user can respond to this request type
+  bool _canUserRespond() {
+    if (_currentUser == null || _request == null) return false;
+    
+    switch (_request!.type) {
+      case RequestType.delivery:
+        // Must be registered and approved delivery business
+        return _currentUser!.hasRole(UserRole.delivery) && 
+               _currentUser!.isRoleVerified(UserRole.delivery);
+      case RequestType.ride:
+        // Must be registered and approved driver
+        return _currentUser!.hasRole(UserRole.driver) && 
+               _currentUser!.isRoleVerified(UserRole.driver);
+      case RequestType.item:
+      case RequestType.service:
+      case RequestType.rental:
+      case RequestType.price:
+      default:
+        // Other request types are open to all users
+        return true;
+    }
+  }
+
+  String _getCannotRespondReason() {
+    if (_currentUser == null || _request == null) return 'Please log in to respond';
+    
+    switch (_request!.type) {
+      case RequestType.delivery:
+        if (!_currentUser!.hasRole(UserRole.delivery)) {
+          return 'Register as delivery business to respond';
+        }
+        if (!_currentUser!.isRoleVerified(UserRole.delivery)) {
+          return 'Waiting for delivery business approval';
+        }
+        break;
+      case RequestType.ride:
+        if (!_currentUser!.hasRole(UserRole.driver)) {
+          return 'Register as driver to respond';
+        }
+        if (!_currentUser!.isRoleVerified(UserRole.driver)) {
+          return 'Waiting for driver approval';
+        }
+        break;
+      case RequestType.item:
+      case RequestType.service:
+      case RequestType.rental:
+      case RequestType.price:
+      default:
+        return 'You can respond to this request';
+    }
+    return 'Cannot respond to this request';
+  }
+
   void _navigateToEditRequest() {
     if (_request == null) return;
     
@@ -212,7 +269,8 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
       floatingActionButton: (_request != null && 
                               !_isOwner && 
                               FirebaseAuth.instance.currentUser != null &&
-                              FirebaseAuth.instance.currentUser!.uid != _request!.requesterId)
+                              FirebaseAuth.instance.currentUser!.uid != _request!.requesterId &&
+                              _canUserRespond())
           ? FloatingActionButton.extended(
               onPressed: () {
                 if (_currentUserResponse != null) {
@@ -236,7 +294,24 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
               backgroundColor: _currentUserResponse != null ? Colors.orange : Colors.blue,
               foregroundColor: Colors.white,
             )
-          : null,
+          : (_request != null && !_isOwner && !_canUserRespond())
+              ? FloatingActionButton.extended(
+                  onPressed: () {
+                    // Show why user cannot respond
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(_getCannotRespondReason()),
+                        backgroundColor: Colors.orange,
+                        duration: const Duration(seconds: 4),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.info_outline),
+                  label: const Text('Can\'t Respond'),
+                  backgroundColor: Colors.grey,
+                  foregroundColor: Colors.white,
+                )
+              : null,
     );
   }
 
@@ -812,168 +887,114 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        InkWell(
-          onTap: _isOwner && _responses.isNotEmpty ? () {
-            // Temporarily disabled - ViewAllResponsesScreen needs enhanced models
-            /*
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ViewAllResponsesScreen(request: _request!),
-              ),
-            ).then((_) => _loadRequestData());
-            */
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('View all responses feature temporarily disabled')),
-            );
-          } : null,
-          borderRadius: BorderRadius.circular(8),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              children: [
-                const Text(
-                  'Responses',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.blue[50],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${_responses.length}',
-                    style: TextStyle(
-                      color: Colors.blue[700],
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                if (_isOwner && _responses.isNotEmpty) ...[
-                  const SizedBox(width: 4),
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    size: 16,
-                    color: Colors.blue[600],
-                  ),
-                ],
-              ],
+        // Response header with count
+        Row(
+          children: [
+            const Text(
+              'Responses',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-          ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '${_responses.length}',
+                style: TextStyle(
+                  color: Colors.blue[700],
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            if (_isOwner && _responses.isNotEmpty) ...[
+              const Spacer(),
+              TextButton.icon(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('View all responses feature coming soon')),
+                  );
+                },
+                icon: Icon(Icons.visibility, size: 16, color: Colors.blue[700]),
+                label: Text(
+                  'View All',
+                  style: TextStyle(color: Colors.blue[700], fontSize: 14),
+                ),
+              ),
+            ],
+          ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
+        
+        // Simple response summary instead of detailed list
         if (_responses.isEmpty)
           Container(
+            width: double.infinity,
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Colors.grey[50],
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Center(
-              child: Column(
-                children: [
-                  Icon(Icons.inbox, size: 48, color: Colors.grey),
-                  SizedBox(height: 8),
-                  Text(
-                    'No responses yet',
-                    style: TextStyle(color: Colors.grey, fontSize: 16),
+            child: Column(
+              children: [
+                Icon(Icons.inbox_outlined, size: 48, color: Colors.grey[400]),
+                const SizedBox(height: 16),
+                Text(
+                  'No responses yet',
+                  style: TextStyle(
+                    color: Colors.grey[600], 
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
                   ),
-                  Text(
-                    'Be the first to respond to this request!',
-                    style: TextStyle(color: Colors.grey, fontSize: 12),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _isOwner 
+                    ? 'Your request is waiting for responses' 
+                    : 'Be the first to respond!',
+                  style: TextStyle(color: Colors.grey[500], fontSize: 14),
+                ),
+              ],
             ),
           )
         else
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _responses.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final response = _responses[index];
-              return Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 16,
-                          backgroundColor: Colors.blue[100],
-                          child: Text(
-                            'U',
-                            style: TextStyle(color: Colors.blue[700], fontWeight: FontWeight.w500),
-                          ),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.green[50],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green[600], size: 24),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${_responses.length} Response${_responses.length == 1 ? '' : 's'} Received',
+                        style: TextStyle(
+                          color: Colors.green[800],
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'User ${response.responderId}', // TODO: Get actual user name
-                                style: const TextStyle(fontWeight: FontWeight.w500),
-                              ),
-                              Text(
-                                _formatDate(response.createdAt),
-                                style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Text(
-                          response.price != null 
-                            ? CurrencyHelper.instance.formatPrice(response.price!)
-                            : 'Not specified',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(response.message),
-                    if (_isOwner) ...[
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () {
-                                // TODO: Implement reject response
-                              },
-                              child: const Text('Decline'),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () {
-                                // TODO: Implement accept response
-                              },
-                              child: const Text('Accept'),
-                            ),
-                          ),
-                        ],
+                      ),
+                      Text(
+                        _isOwner 
+                          ? 'Tap "View All" to see response details'
+                          : 'Thank you for your interest in this request',
+                        style: TextStyle(color: Colors.green[700], fontSize: 14),
                       ),
                     ],
-                  ],
+                  ),
                 ),
-              );
-            },
+              ],
+            ),
           ),
       ],
     );
@@ -1089,27 +1110,14 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
   void _navigateToEditResponse() {
     if (_currentUserResponse == null) return;
     
-    // Navigate to appropriate edit screen based on request type
-    switch (_request!.type) {
-      case RequestType.ride:
-        Navigator.pushNamed(
-          context,
-          '/edit-ride-response',
-          arguments: {
-            'response': _currentUserResponse,
-            'request': _request,
-          },
-        ).then((_) => _loadRequestData());
-        break;
-      default:
-        // For now, show a message that editing is not available for this type
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Response editing is currently only available for ride requests'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        break;
-    }
+    // Navigate to unified response edit screen
+    Navigator.pushNamed(
+      context,
+      '/edit-response',
+      arguments: {
+        'response': _currentUserResponse,
+        'request': _request,
+      },
+    ).then((_) => _loadRequestData());
   }
 }
