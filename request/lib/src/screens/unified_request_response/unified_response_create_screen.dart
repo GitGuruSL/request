@@ -48,7 +48,14 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
   final _deliveryFeeController = TextEditingController();
   final _estimatedPickupTimeController = TextEditingController();
   final _estimatedDropoffTimeController = TextEditingController();
-  final _specialConsiderationsController = TextEditingController();
+  final _packageSizeController = TextEditingController();
+  final _specialInstructionsController = TextEditingController();
+  final _deliveryNotesController = TextEditingController();
+  
+  // Ride response controllers
+  final _fareController = TextEditingController();
+  final _routeDescriptionController = TextEditingController();
+  final _driverNotesController = TextEditingController();
 
   // State variables
   String _selectedDeliveryMethod = 'User pickup';
@@ -56,6 +63,7 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
   String _selectedRentalPeriod = 'day';
   String _selectedPickupDeliveryOption = 'User picks up';
   String _selectedVehicleType = 'Car';
+  String _selectedCurrency = 'LKR';
   DateTime? _availableFrom;
   DateTime? _availableUntil;
   List<String> _uploadedImages = [];
@@ -82,7 +90,12 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
     _deliveryFeeController.dispose();
     _estimatedPickupTimeController.dispose();
     _estimatedDropoffTimeController.dispose();
-    _specialConsiderationsController.dispose();
+    _packageSizeController.dispose();
+    _specialInstructionsController.dispose();
+    _deliveryNotesController.dispose();
+    _fareController.dispose();
+    _routeDescriptionController.dispose();
+    _driverNotesController.dispose();
     super.dispose();
   }
 
@@ -1350,12 +1363,12 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Special Considerations (Optional)',
+                'Special Instructions (Optional)',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _specialConsiderationsController,
+                controller: _specialInstructionsController,
                 maxLines: 3,
                 decoration: const InputDecoration(
                   hintText: 'Any notes or concerns about the delivery (e.g., size limitations)',
@@ -1516,7 +1529,7 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
             'vehicleType': _selectedVehicleType,
             'estimatedPickupTime': _estimatedPickupTimeController.text.trim(),
             'estimatedDropoffTime': _estimatedDropoffTimeController.text.trim(),
-            'specialConsiderations': _specialConsiderationsController.text.trim(),
+            'specialInstructions': _specialInstructionsController.text.trim(),
           };
           break;
         default:
@@ -1528,6 +1541,10 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
         requestId: widget.request.id!,
         message: _messageController.text.trim(),
         price: price,
+        currency: _selectedCurrency,
+        availableFrom: _availableFrom,
+        availableUntil: _availableUntil,
+        images: _uploadedImages,
         additionalInfo: additionalInfo,
       );
 

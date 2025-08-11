@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/request_model.dart';
 import '../models/enhanced_user_model.dart';
 import 'enhanced_user_service.dart';
+import 'notification_service.dart';
 
 class EnhancedRequestService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -394,6 +395,20 @@ class EnhancedRequestService {
           .doc(responseId)
           .set(response.toMap());
 
+      // Send notification to the requester
+      try {
+        await NotificationService.instance.sendNewResponseNotification(
+          requestId: requestId,
+          requestTitle: request.title,
+          requesterId: request.requesterId,
+          responderName: userModel.name,
+          responsePrice: price,
+          currency: currency ?? 'LKR',
+        );
+      } catch (e) {
+        print('Failed to send new response notification: $e');
+      }
+
       return responseId;
     } catch (e) {
       throw Exception('Failed to create response: $e');
@@ -500,6 +515,24 @@ class EnhancedRequestService {
         status: RequestStatus.inProgress,
         assignedTo: response.responderId,
       );
+
+      // Send notification to the responder about acceptance
+      try {
+        final userModel = await _userService.getCurrentUserModel();
+        
+        if (userModel != null) {
+          await NotificationService.instance.sendResponseAcceptedNotification(
+            requestId: response.requestId,
+            requestTitle: request.title,
+            responderId: response.responderId,
+            requesterName: userModel.name,
+            responsePrice: response.price,
+            currency: response.currency ?? 'LKR',
+          );
+        }
+      } catch (e) {
+        print('Failed to send response accepted notification: $e');
+      }
     } catch (e) {
       throw Exception('Failed to accept response: $e');
     }
@@ -655,6 +688,25 @@ class EnhancedRequestService {
           .collection(_responsesCollection)
           .doc(responseId)
           .update(updateData);
+
+      // Send notification to the requester about the update
+      try {
+        final request = await getRequestById(response.requestId);
+        final userModel = await _userService.getCurrentUserModel();
+        
+        if (request != null && userModel != null) {
+          await NotificationService.instance.sendResponseUpdateNotification(
+            requestId: response.requestId,
+            requestTitle: request.title,
+            requesterId: request.requesterId,
+            responderName: userModel.name,
+            responsePrice: price ?? response.price,
+            currency: currency ?? response.currency ?? 'LKR',
+          );
+        }
+      } catch (e) {
+        print('Failed to send response update notification: $e');
+      }
     } catch (e) {
       throw Exception('Failed to update response: $e');
     }
@@ -697,6 +749,23 @@ class EnhancedRequestService {
         'rejectionReason': reason ?? 'Not specified',
         'rejectedAt': DateTime.now().toIso8601String(),
       });
+
+      // Send notification to the responder about rejection
+      try {
+        final userModel = await _userService.getCurrentUserModel();
+        
+        if (userModel != null) {
+          await NotificationService.instance.sendResponseRejectedNotification(
+            requestId: response.requestId,
+            requestTitle: request.title,
+            responderId: response.responderId,
+            requesterName: userModel.name,
+            rejectionReason: reason,
+          );
+        }
+      } catch (e) {
+        print('Failed to send response rejected notification: $e');
+      }
     } catch (e) {
       throw Exception('Failed to reject response: $e');
     }
