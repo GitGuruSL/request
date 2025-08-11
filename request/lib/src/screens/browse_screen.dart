@@ -449,7 +449,9 @@ class _BrowseScreenState extends State<BrowseScreen> {
                     ),
                   ),
                   Text(
-                    '${_currencySymbol ?? '\$'}${request.budget}',
+                    request.budget != null 
+                      ? CountryService.instance.formatPrice(request.budget!)
+                      : 'Budget not specified',
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontSize: 12,

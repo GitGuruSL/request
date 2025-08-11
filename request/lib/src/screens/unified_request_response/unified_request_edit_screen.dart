@@ -4,7 +4,7 @@ import '../../models/enhanced_user_model.dart';
 import '../../services/enhanced_request_service.dart';
 import '../../services/enhanced_user_service.dart';
 import '../../widgets/image_upload_widget.dart';
-import '../../widgets/location_picker_widget.dart';
+import '../../widgets/accurate_location_picker_widget.dart';
 import '../../widgets/category_picker.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/currency_helper.dart';
@@ -74,6 +74,12 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
   // Location coordinates storage
   double? _selectedLatitude;
   double? _selectedLongitude;
+  
+  // Delivery specific coordinates
+  double? _pickupLatitude;
+  double? _pickupLongitude;
+  double? _dropoffLatitude;
+  double? _dropoffLongitude;
 
   final List<String> _conditions = ['New', 'Used', 'For Parts', 'Any Condition'];
   final List<String> _urgencyLevels = ['Flexible', 'ASAP', 'Specific Date'];
@@ -498,11 +504,17 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 8),
-              LocationPickerWidget(
+              AccurateLocationPickerWidget(
                 controller: _locationController,
+                labelText: '',
+                hintText: 'Enter item pickup location',
+                isRequired: true,
+                prefixIcon: Icons.location_on,
                 onLocationSelected: (address, lat, lng) {
                   setState(() {
                     _locationController.text = address;
+                    _selectedLatitude = lat;
+                    _selectedLongitude = lng;
                   });
                 },
               ),
@@ -676,8 +688,12 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 8),
-              LocationPickerWidget(
+              AccurateLocationPickerWidget(
                 controller: _locationController,
+                labelText: '',
+                hintText: 'Enter service location',
+                isRequired: true,
+                prefixIcon: Icons.location_on,
                 onLocationSelected: (address, lat, lng) {
                   setState(() {
                     _locationController.text = address;
@@ -1033,11 +1049,17 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 8),
-              LocationPickerWidget(
+              AccurateLocationPickerWidget(
                 controller: _locationController,
+                labelText: '',
+                hintText: 'Enter rental pickup location',
+                isRequired: true,
+                prefixIcon: Icons.location_on,
                 onLocationSelected: (address, lat, lng) {
                   setState(() {
                     _locationController.text = address;
+                    _selectedLatitude = lat;
+                    _selectedLongitude = lng;
                   });
                 },
               ),
@@ -1156,11 +1178,17 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 8),
-              LocationPickerWidget(
+              AccurateLocationPickerWidget(
                 controller: _pickupLocationController,
+                labelText: '',
+                hintText: 'Enter pickup location',
+                isRequired: true,
+                prefixIcon: Icons.location_on,
                 onLocationSelected: (address, lat, lng) {
                   setState(() {
                     _pickupLocationController.text = address;
+                    _pickupLatitude = lat;
+                    _pickupLongitude = lng;
                   });
                 },
               ),
@@ -1179,12 +1207,17 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 8),
-              LocationPickerWidget(
+              AccurateLocationPickerWidget(
                 controller: _dropoffLocationController,
+                labelText: '',
+                hintText: 'Enter dropoff location',
+                isRequired: true,
+                prefixIcon: Icons.location_on,
                 onLocationSelected: (address, lat, lng) {
                   setState(() {
                     _dropoffLocationController.text = address;
-                    // For delivery, we might need separate variables for pickup/dropoff coordinates
+                    _dropoffLatitude = lat;
+                    _dropoffLongitude = lng;
                   });
                 },
               ),

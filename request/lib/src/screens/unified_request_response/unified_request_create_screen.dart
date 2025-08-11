@@ -4,7 +4,7 @@ import '../../models/enhanced_user_model.dart';
 import '../../services/enhanced_request_service.dart';
 import '../../services/enhanced_user_service.dart';
 import '../../widgets/image_upload_widget.dart';
-import '../../widgets/location_picker_widget.dart';
+import '../../widgets/accurate_location_picker_widget.dart';
 import '../../widgets/category_picker.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/currency_helper.dart';
@@ -378,11 +378,17 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 8),
-              LocationPickerWidget(
+              AccurateLocationPickerWidget(
                 controller: _locationController,
+                labelText: '',
+                hintText: 'Enter item pickup location',
+                isRequired: true,
+                prefixIcon: Icons.location_on,
                 onLocationSelected: (address, lat, lng) {
                   setState(() {
                     _locationController.text = address;
+                    _selectedLatitude = lat;
+                    _selectedLongitude = lng;
                   });
                 },
               ),
@@ -555,11 +561,17 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 8),
-              LocationPickerWidget(
+              AccurateLocationPickerWidget(
                 controller: _locationController,
+                labelText: '',
+                hintText: 'Enter service location',
+                isRequired: true,
+                prefixIcon: Icons.location_on,
                 onLocationSelected: (address, lat, lng) {
                   setState(() {
                     _locationController.text = address;
+                    _selectedLatitude = lat;
+                    _selectedLongitude = lng;
                   });
                 },
               ),
@@ -909,11 +921,17 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 8),
-              LocationPickerWidget(
+              AccurateLocationPickerWidget(
                 controller: _locationController,
+                labelText: '',
+                hintText: 'Enter rental pickup location',
+                isRequired: true,
+                prefixIcon: Icons.location_on,
                 onLocationSelected: (address, lat, lng) {
                   setState(() {
                     _locationController.text = address;
+                    _selectedLatitude = lat;
+                    _selectedLongitude = lng;
                   });
                 },
               ),
@@ -1031,8 +1049,12 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 8),
-              LocationPickerWidget(
+              AccurateLocationPickerWidget(
                 controller: _pickupLocationController,
+                labelText: '',
+                hintText: 'Enter pickup location',
+                isRequired: true,
+                prefixIcon: Icons.my_location,
                 onLocationSelected: (address, lat, lng) {
                   setState(() {
                     _pickupLocationController.text = address;
@@ -1054,8 +1076,12 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 8),
-              LocationPickerWidget(
+              AccurateLocationPickerWidget(
                 controller: _dropoffLocationController,
+                labelText: '',
+                hintText: 'Enter drop-off location',
+                isRequired: true,
+                prefixIcon: Icons.location_on,
                 onLocationSelected: (address, lat, lng) {
                   setState(() {
                     _dropoffLocationController.text = address;

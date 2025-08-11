@@ -6,9 +6,11 @@ import '../../models/enhanced_user_model.dart';
 import '../../services/enhanced_request_service.dart';
 import '../../services/enhanced_user_service.dart';
 import '../../services/messaging_service.dart';
+import '../../utils/currency_helper.dart';
 import '../messaging/conversation_screen.dart';
 import 'unified_response_create_screen.dart';
 import 'unified_request_edit_screen.dart';
+// import 'view_all_responses_screen.dart'; // Temporarily disabled
 
 class UnifiedRequestViewScreen extends StatefulWidget {
   final String requestId;
@@ -29,6 +31,7 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
   bool _isLoading = true;
   bool _isOwner = false;
   String _requesterName = '';
+  ResponseModel? _currentUserResponse;
 
   @override
   void initState() {
@@ -88,13 +91,25 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
         isOwner = true;
         print('⚠️ Warning: Could not determine current user, defaulting to owner=true for safety');
       }
-      
+
+      // Find current user's response if they have one
+      ResponseModel? currentUserResponse;
+      if (currentUserId.isNotEmpty) {
+        for (final response in responses) {
+          if (response.responderId == currentUserId) {
+            currentUserResponse = response;
+            break;
+          }
+        }
+      }
+
       if (mounted) {
         setState(() {
           _request = request;
           _responses = responses;
           _isOwner = isOwner;
           _requesterName = requesterName;
+          _currentUserResponse = currentUserResponse;
           _isLoading = false;
         });
         
@@ -200,19 +215,25 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                               FirebaseAuth.instance.currentUser!.uid != _request!.requesterId)
           ? FloatingActionButton.extended(
               onPressed: () {
-                print('🔍 Respond button pressed - IsOwner: $_isOwner');
-                print('🔍 Respond button pressed - Current User: ${FirebaseAuth.instance.currentUser?.uid}');
-                print('🔍 Respond button pressed - Request Owner: ${_request!.requesterId}');
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => UnifiedResponseCreateScreen(request: _request!),
-                  ),
-                ).then((_) => _loadRequestData());
+                if (_currentUserResponse != null) {
+                  // Navigate to edit response
+                  _navigateToEditResponse();
+                } else {
+                  // Navigate to create response
+                  print('🔍 Respond button pressed - IsOwner: $_isOwner');
+                  print('🔍 Respond button pressed - Current User: ${FirebaseAuth.instance.currentUser?.uid}');
+                  print('🔍 Respond button pressed - Request Owner: ${_request!.requesterId}');
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => UnifiedResponseCreateScreen(request: _request!),
+                    ),
+                  ).then((_) => _loadRequestData());
+                }
               },
-              icon: const Icon(Icons.reply),
-              label: const Text('Respond'),
-              backgroundColor: Colors.blue,
+              icon: Icon(_currentUserResponse != null ? Icons.edit : Icons.reply),
+              label: Text(_currentUserResponse != null ? 'Edit Response' : 'Respond'),
+              backgroundColor: _currentUserResponse != null ? Colors.orange : Colors.blue,
               foregroundColor: Colors.white,
             )
           : null,
@@ -294,7 +315,7 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                 Icon(Icons.account_balance_wallet, color: Colors.blue, size: 16),
                 const SizedBox(width: 4),
                 Text(
-                  'Budget: \$${_request!.budget?.toStringAsFixed(2)}',
+                  'Budget: ${CurrencyHelper.instance.formatPrice(_request!.budget!)}',
                   style: const TextStyle(
                     color: Colors.black87,
                     fontSize: 14,
@@ -791,29 +812,57 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            const Text(
-              'Responses',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.blue[50],
-                borderRadius: BorderRadius.circular(12),
+        InkWell(
+          onTap: _isOwner && _responses.isNotEmpty ? () {
+            // Temporarily disabled - ViewAllResponsesScreen needs enhanced models
+            /*
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ViewAllResponsesScreen(request: _request!),
               ),
-              child: Text(
-                '${_responses.length}',
-                style: TextStyle(
-                  color: Colors.blue[700],
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
+            ).then((_) => _loadRequestData());
+            */
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('View all responses feature temporarily disabled')),
+            );
+          } : null,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              children: [
+                const Text(
+                  'Responses',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
-              ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${_responses.length}',
+                    style: TextStyle(
+                      color: Colors.blue[700],
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                if (_isOwner && _responses.isNotEmpty) ...[
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: Colors.blue[600],
+                  ),
+                ],
+              ],
             ),
-          ],
+          ),
         ),
         const SizedBox(height: 16),
         if (_responses.isEmpty)
@@ -884,7 +933,9 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                           ),
                         ),
                         Text(
-                          '\$${response.price?.toStringAsFixed(2) ?? 'Not specified'}',
+                          response.price != null 
+                            ? CurrencyHelper.instance.formatPrice(response.price!)
+                            : 'Not specified',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -1032,6 +1083,33 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
       return '${difference.inMinutes}m ago';
     } else {
       return 'Just now';
+    }
+  }
+
+  void _navigateToEditResponse() {
+    if (_currentUserResponse == null) return;
+    
+    // Navigate to appropriate edit screen based on request type
+    switch (_request!.type) {
+      case RequestType.ride:
+        Navigator.pushNamed(
+          context,
+          '/edit-ride-response',
+          arguments: {
+            'response': _currentUserResponse,
+            'request': _request,
+          },
+        ).then((_) => _loadRequestData());
+        break;
+      default:
+        // For now, show a message that editing is not available for this type
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Response editing is currently only available for ride requests'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        break;
     }
   }
 }

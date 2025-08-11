@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import '../../services/auth_service.dart';
-import '../../services/country_service.dart';
 import '../../services/custom_otp_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -22,14 +20,10 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   
   bool _isPhoneLogin = true;
   bool _isLoading = false;
-  bool _showPasswordField = false;
-  bool _obscurePassword = true;
-  String? _currentEmail;
   
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -83,7 +77,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     _animationController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
-    _passwordController.dispose();
     super.dispose();
   }
 
@@ -119,24 +112,26 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         // Email login flow
         final email = _emailController.text.trim();
         
-        if (_showPasswordField) {
-          // User has entered password, attempt login
-          await _loginWithPassword(email, _passwordController.text);
-        } else {
-          // Check if email is already registered
-          final userCheck = await AuthService.instance.checkUserExists(email: email);
+        // Check if email is already registered
+        final userCheck = await AuthService.instance.checkUserExists(email: email);
+        
+        if (userCheck.exists) {
+          // Existing user - navigate to password screen
+          setState(() {
+            _isLoading = false;
+          });
           
-          if (userCheck.exists) {
-            // Existing user - show password field
-            setState(() {
-              _showPasswordField = true;
-              _currentEmail = email;
-              _isLoading = false;
-            });
-          } else {
-            // New user - send OTP for registration
-            await _sendEmailRegistrationOTP(email);
-          }
+          Navigator.pushNamed(
+            context,
+            '/password',
+            arguments: {
+              'isNewUser': false,
+              'emailOrPhone': email,
+            },
+          );
+        } else {
+          // New user - send OTP for registration
+          await _sendEmailRegistrationOTP(email);
         }
       }
       
@@ -150,41 +145,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     }
   }
 
-  Future<void> _loginWithPassword(String email, String password) async {
-    try {
-      final authResult = await AuthService.instance.signInWithEmailPassword(
-        email: email,
-        password: password,
-      );
-      
-      setState(() {
-        _isLoading = false;
-      });
-      
-      if (authResult.success) {
-        // Check if profile is complete before navigating to home
-        final isProfileComplete = await AuthService.instance.isCurrentUserProfileComplete();
-        
-        if (isProfileComplete) {
-          Navigator.pushReplacementNamed(context, '/home');
-        } else {
-          Navigator.pushReplacementNamed(context, '/role-selection');
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(authResult.error ?? 'Login failed')),
-        );
-      }
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login failed: $e')),
-      );
-    }
-  }
-  
   Future<void> _sendLoginOTP(String phoneNumber) async {
     await AuthService.instance.sendLoginOTP(
       phoneNumber: phoneNumber,
@@ -454,7 +414,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                       prefixIcon: Icon(Icons.email),
                                     ),
                                     keyboardType: TextInputType.emailAddress,
-                                    enabled: !_showPasswordField,
                                     validator: (value) {
                                       if (value == null || value.isEmpty) {
                                         return 'Please enter your email address';
@@ -466,60 +425,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                     },
                                   ),
                             ),
-                            
-                            // Password field (shown only when email user exists)
-                            if (!_isPhoneLogin && _showPasswordField) ...[
-                              const SizedBox(height: 16),
-                              Text(
-                                'Welcome back! Please enter your password for:',
-                                style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _currentEmail ?? '',
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 16),
-                              TextFormField(
-                                key: const ValueKey('password'),
-                                controller: _passwordController,
-                                obscureText: _obscurePassword,
-                                decoration: InputDecoration(
-                                  labelText: 'Password',
-                                  prefixIcon: const Icon(Icons.lock),
-                                  suffixIcon: IconButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        _obscurePassword = !_obscurePassword;
-                                      });
-                                    },
-                                    icon: Icon(
-                                      _obscurePassword ? Icons.visibility : Icons.visibility_off,
-                                    ),
-                                  ),
-                                ),
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please enter your password';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 8),
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: TextButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _showPasswordField = false;
-                                      _emailController.clear();
-                                      _passwordController.clear();
-                                    });
-                                  },
-                                  child: const Text('Use different email'),
-                                ),
-                              ),
-                            ],
                           ],
                         ),
                       ),
@@ -544,7 +449,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                               : Text(
                                   _isPhoneLogin 
                                     ? 'Send OTP' 
-                                    : (_showPasswordField ? 'Login' : 'Continue'),
+                                    : 'Continue',
                                   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                                 ),
                         ),

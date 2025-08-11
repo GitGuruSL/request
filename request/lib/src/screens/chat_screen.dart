@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/enhanced_user_model.dart';
 import '../models/request_model.dart';
+import '../utils/currency_helper.dart';
 
 class ChatScreen extends StatefulWidget {
   final RequestModel request;
@@ -172,7 +173,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 if (widget.request.budget != null)
                   Text(
-                    '\$${widget.request.budget!.toStringAsFixed(0)}',
+                    CurrencyHelper.instance.formatPrice(widget.request.budget!),
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       color: Colors.green[700],

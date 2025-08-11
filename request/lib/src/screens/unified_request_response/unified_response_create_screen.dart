@@ -86,6 +86,43 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
     super.dispose();
   }
 
+    // Temporarily simplified role validation - full implementation needs enhanced models
+  String? _validateUserRole(UserModel user) {
+    // TODO: Implement proper role validation when enhanced user model is available
+    return null; // Allow all users for now
+    /*
+    // Original validation logic - needs enhanced user model
+    if (widget.request.type == 'delivery') {
+      if (user.businessInfo?.businessType != 'delivery') {
+        return 'delivery_business_required';
+      }
+      if (user.businessInfo?.verificationStatus != 'approved') {
+        return 'business_verification_required';
+      }
+    } else if (widget.request.type == 'ride') {
+      if (user.driverInfo?.verificationStatus != 'approved') {
+        return 'driver_verification_required';
+      }
+    }
+    return null;
+    */
+  }
+
+  void _navigateToRegistration() {
+    switch (widget.request.type) {
+      case RequestType.delivery:
+        // Navigate to business registration
+        Navigator.pushNamed(context, '/business-registration');
+        break;
+      case RequestType.ride:
+        // Navigate to driver registration
+        Navigator.pushNamed(context, '/driver-registration');
+        break;
+      default:
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1361,6 +1398,29 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
       final currentUser = await _userService.getCurrentUserModel();
       if (currentUser == null) {
         throw Exception('User not found');
+      }
+
+      // Role-based validation
+      final validationError = _validateUserRole(currentUser);
+      if (validationError != null) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(validationError),
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Register',
+              textColor: Colors.white,
+              onPressed: () {
+                // Navigate to appropriate registration screen
+                _navigateToRegistration();
+              },
+            ),
+          ),
+        );
+        return;
       }
 
       // Prepare response data
