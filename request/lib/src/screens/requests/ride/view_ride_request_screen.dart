@@ -9,6 +9,7 @@ import '../../../models/enhanced_user_model.dart';
 import '../../../services/enhanced_request_service.dart';
 import '../../../services/enhanced_user_service.dart';
 import '../../../utils/currency_helper.dart';
+import 'edit_ride_request_screen.dart';
 
 class ViewRideRequestScreen extends StatefulWidget {
   final String requestId;
@@ -116,6 +117,16 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
         );
       }
     }
+  }
+
+  void _navigateToEditRideRequest() {
+    if (_request == null) return;
+    
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => EditRideRequestScreen(request: _request!),
+      ),
+    ).then((_) => _loadRequestData()); // Reload data when coming back
   }
 
   void _setupMapMarkers() {
@@ -306,6 +317,13 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                         textAlign: TextAlign.center,
                       ),
                     ),
+                    if (_isOwner) ...[
+                      IconButton(
+                        onPressed: _navigateToEditRideRequest,
+                        icon: const Icon(Icons.edit),
+                        tooltip: 'Edit Request',
+                      ),
+                    ],
                     IconButton(
                       onPressed: () {}, // TODO: Add share functionality
                       icon: const Icon(Icons.share),
@@ -697,12 +715,13 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
               ],
             ),
           ),
-          IconButton(
-            onPressed: () {
-              // TODO: Implement contact functionality
-            },
-            icon: const Icon(Icons.message),
-          ),
+          if (!_isOwner) // Hide message icon from requester/owner
+            IconButton(
+              onPressed: () {
+                // TODO: Implement contact functionality
+              },
+              icon: const Icon(Icons.message),
+            ),
         ],
       ),
     );

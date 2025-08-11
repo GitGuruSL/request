@@ -61,18 +61,18 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
     _budgetController.text = widget.request.budget?.toString() ?? '';
     _imageUrls = List<String>.from(widget.request.images ?? []);
     
-    if (widget.request.metadata != null) {
-      final metadata = widget.request.metadata!;
-      _rideType = metadata['rideType'] ?? 'Regular';
-      _passengerCount = metadata['passengerCount'] ?? 1;
-      _allowSharing = metadata['allowSharing'] ?? true;
-      _specialRequestsController.text = metadata['specialRequests'] ?? '';
-      _destinationController.text = metadata['destination'] ?? '';
+    if (widget.request.typeSpecificData != null) {
+      final typeSpecificData = widget.request.typeSpecificData!;
+      _rideType = typeSpecificData['rideType'] ?? 'Regular';
+      _passengerCount = typeSpecificData['passengerCount'] ?? 1;
+      _allowSharing = typeSpecificData['allowSharing'] ?? true;
+      _specialRequestsController.text = typeSpecificData['specialRequests'] ?? '';
+      _destinationController.text = typeSpecificData['destination'] ?? '';
       
-      if (metadata['departureTime'] != null) {
-        _departureTime = metadata['departureTime'] is DateTime 
-          ? metadata['departureTime']
-          : DateTime.tryParse(metadata['departureTime'].toString());
+      if (typeSpecificData['departureTime'] != null) {
+        _departureTime = typeSpecificData['departureTime'] is DateTime 
+          ? typeSpecificData['departureTime']
+          : DateTime.tryParse(typeSpecificData['departureTime'].toString());
       }
     }
   }
@@ -133,33 +133,42 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
     });
 
     try {
-      final user = await _userService.getCurrentUser();
+      final user = await _userService.getCurrentUserModel();
       if (user == null) {
         throw Exception('User not logged in');
       }
 
-      final updatedData = {
-        'title': _titleController.text.trim(),
-        'description': _descriptionController.text.trim(),
-        'budget': double.tryParse(_budgetController.text.trim()),
-        'location': {
-          'address': _pickupLocationController.text.trim(),
-          'latitude': 0.0, // Will be updated by LocationPicker
-          'longitude': 0.0,
-        },
-        'images': _imageUrls,
-        'metadata': {
-          'rideType': _rideType,
-          'departureTime': _departureTime,
-          'passengerCount': _passengerCount,
-          'allowSharing': _allowSharing,
-          'specialRequests': _specialRequestsController.text.trim(),
-          'destination': _destinationController.text.trim(),
-        },
-        'updatedAt': DateTime.now(),
+      final locationInfo = LocationInfo(
+        address: _pickupLocationController.text.trim(),
+        latitude: 0.0, // Will be updated by LocationPicker
+        longitude: 0.0,
+      );
+
+      final destinationInfo = LocationInfo(
+        address: _destinationController.text.trim(),
+        latitude: 0.0,
+        longitude: 0.0,
+      );
+
+      final typeSpecificData = {
+        'rideType': _rideType,
+        'departureTime': _departureTime?.toIso8601String(),
+        'passengerCount': _passengerCount,
+        'allowSharing': _allowSharing,
+        'specialRequests': _specialRequestsController.text.trim(),
+        'destination': _destinationController.text.trim(),
       };
 
-      await _requestService.updateRequest(widget.request.id, updatedData);
+      await _requestService.updateRequest(
+        requestId: widget.request.id,
+        title: _titleController.text.trim(),
+        description: _descriptionController.text.trim(),
+        budget: double.tryParse(_budgetController.text.trim()),
+        location: locationInfo,
+        destinationLocation: destinationInfo,
+        images: _imageUrls,
+        typeSpecificData: typeSpecificData,
+      );
 
       if (mounted) {
         Navigator.of(context).pop(true);

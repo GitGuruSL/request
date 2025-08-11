@@ -6,6 +6,7 @@ import '../../models/enhanced_user_model.dart';
 import '../../services/enhanced_request_service.dart';
 import '../../services/enhanced_user_service.dart';
 import 'unified_response_create_screen.dart';
+import 'unified_request_edit_screen.dart';
 
 class UnifiedRequestViewScreen extends StatefulWidget {
   final String requestId;
@@ -118,6 +119,16 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
     }
   }
 
+  void _navigateToEditRequest() {
+    if (_request == null) return;
+    
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => UnifiedRequestEditScreen(request: _request!),
+      ),
+    ).then((_) => _loadRequestData()); // Reload data when coming back
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -152,6 +163,13 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
+        actions: _isOwner ? [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: _navigateToEditRequest,
+            tooltip: 'Edit Request',
+          ),
+        ] : null,
       ),
       backgroundColor: Colors.grey[50],
       body: RefreshIndicator(
