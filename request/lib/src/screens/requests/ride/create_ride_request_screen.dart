@@ -1,3 +1,5 @@
+import 'package:flutter/services.dart';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../models/request_model.dart';
@@ -8,6 +10,7 @@ import '../../../widgets/image_upload_widget.dart';
 import '../../../widgets/accurate_location_picker_widget.dart';
 import '../../../utils/currency_helper.dart';
 import '../../../utils/distance_calculator.dart';
+import '../../../services/google_directions_service.dart';
 
 class CreateRideRequestScreen extends StatefulWidget {
   const CreateRideRequestScreen({super.key});
@@ -110,61 +113,176 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
     super.dispose();
   }
 
-  void _calculateDistance() {
+  void _calculateDistance() async {
     if (_pickupLat != null && _pickupLng != null && 
         _destinationLat != null && _destinationLng != null) {
       
-      _distance = DistanceCalculator.calculateDistance(
-        startLat: _pickupLat!,
-        startLng: _pickupLng!,
-        endLat: _destinationLat!,
-        endLng: _destinationLng!,
-      );
+      try {
+        // Get route information from Google Directions API
+        Map<String, dynamic> routeInfo = await GoogleDirectionsService.getRouteInfo(
+          origin: LatLng(_pickupLat!, _pickupLng!),
+          destination: LatLng(_destinationLat!, _destinationLng!),
+          travelMode: _selectedVehicleType == 'bike' ? 'driving' : 'driving',
+        );
+
+        if (routeInfo.isNotEmpty) {
+          // Use Google Directions API data
+          _distance = (routeInfo['distance'] / 1000.0); // Convert meters to km
+          _estimatedTime = routeInfo['durationText'];
+        } else {
+          // Fallback to haversine calculation
+          _distance = DistanceCalculator.calculateDistance(
+            startLat: _pickupLat!,
+            startLng: _pickupLng!,
+            endLat: _destinationLat!,
+            endLng: _destinationLng!,
+          );
+          
+          _estimatedTime = DistanceCalculator.estimateTravelTime(
+            _distance!,
+            vehicleType: _selectedVehicleType,
+          );
+        }
+      } catch (e) {
+        print('Error getting route info: $e');
+        // Fallback to haversine calculation
+        _distance = DistanceCalculator.calculateDistance(
+          startLat: _pickupLat!,
+          startLng: _pickupLng!,
+          endLat: _destinationLat!,
+          endLng: _destinationLng!,
+        );
+        
+        _estimatedTime = DistanceCalculator.estimateTravelTime(
+          _distance!,
+          vehicleType: _selectedVehicleType,
+        );
+        
+        print('Fallback distance calculated: $_distance km, time: $_estimatedTime');
+      }
       
-      _estimatedTime = DistanceCalculator.estimateTravelTime(
-        _distance!,
-        vehicleType: _selectedVehicleType,
-      );
-      
-      setState(() {});
+      setState(() {
+        print('Distance updated in setState: $_distance km');
+      });
       
       // Update map with route
       _updateMapWithRoute();
     }
   }
 
-  void _updateMapWithRoute() {
+  Future<BitmapDescriptor> _createCustomMarker(IconData icon, Color color) async {
+    final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
+    final Canvas canvas = Canvas(pictureRecorder);
+    final Paint paint = Paint()..color = color;
+    const double radius = 20.0;
+    
+    // Draw circle background
+    canvas.drawCircle(const Offset(radius, radius), radius, paint);
+    
+    // Draw white circle border
+    final Paint borderPaint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 3.0
+      ..style = PaintingStyle.stroke;
+    canvas.drawCircle(const Offset(radius, radius), radius, borderPaint);
+    
+    // Draw icon
+    TextPainter textPainter = TextPainter(textDirection: TextDirection.ltr);
+    textPainter.text = TextSpan(
+      text: String.fromCharCode(icon.codePoint),
+      style: TextStyle(
+        fontSize: 20.0,
+        fontFamily: icon.fontFamily,
+        color: Colors.white,
+      ),
+    );
+    textPainter.layout();
+    textPainter.paint(canvas, const Offset(10, 10));
+    
+    // Convert to image
+    final ui.Image markerAsImage = await pictureRecorder.endRecording().toImage(
+      (radius * 2).toInt(),
+      (radius * 2).toInt(),
+    );
+    
+    final ByteData? byteData = await markerAsImage.toByteData(format: ui.ImageByteFormat.png);
+    final Uint8List uint8List = byteData!.buffer.asUint8List();
+    
+    return BitmapDescriptor.bytes(uint8List);
+  }
+
+  void _updateMapWithRoute() async {
     if (_pickupLat != null && _pickupLng != null && 
         _destinationLat != null && _destinationLng != null) {
       
-      // Add markers
+      // Create custom human icon for pickup
+      final BitmapDescriptor humanIcon = await _createCustomMarker(Icons.person, Colors.blue);
+      final BitmapDescriptor destinationIcon = await _createCustomMarker(Icons.location_on, Colors.red);
+      
+      // Add markers with human icon for pickup
       _markers = {
         Marker(
           markerId: const MarkerId('pickup'),
           position: LatLng(_pickupLat!, _pickupLng!),
           infoWindow: InfoWindow(title: 'Pickup', snippet: _pickupLocationController.text),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          icon: humanIcon,
         ),
         Marker(
           markerId: const MarkerId('destination'),
           position: LatLng(_destinationLat!, _destinationLng!),
           infoWindow: InfoWindow(title: 'Destination', snippet: _destinationController.text),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          icon: destinationIcon,
         ),
       };
 
-      // Add polyline (simple straight line for now)
-      _polylines = {
-        Polyline(
-          polylineId: const PolylineId('route'),
-          points: [
-            LatLng(_pickupLat!, _pickupLng!),
-            LatLng(_destinationLat!, _destinationLng!),
-          ],
-          color: Colors.blue,
-          width: 3,
-        ),
-      };
+      try {
+        // Get route points from Google Directions API
+        List<LatLng> routePoints = await GoogleDirectionsService.getDirections(
+          origin: LatLng(_pickupLat!, _pickupLng!),
+          destination: LatLng(_destinationLat!, _destinationLng!),
+          travelMode: _selectedVehicleType == 'bike' ? 'driving' : 'driving',
+        );
+
+        if (routePoints.isNotEmpty) {
+          // Add polyline with actual route
+          _polylines = {
+            Polyline(
+              polylineId: const PolylineId('route'),
+              points: routePoints,
+              color: Colors.blue,
+              width: 4,
+              patterns: [],
+            ),
+          };
+        } else {
+          // Fallback to straight line if directions API fails
+          _polylines = {
+            Polyline(
+              polylineId: const PolylineId('route'),
+              points: [
+                LatLng(_pickupLat!, _pickupLng!),
+                LatLng(_destinationLat!, _destinationLng!),
+              ],
+              color: Colors.blue,
+              width: 3,
+            ),
+          };
+        }
+      } catch (e) {
+        print('Error getting directions: $e');
+        // Fallback to straight line
+        _polylines = {
+          Polyline(
+            polylineId: const PolylineId('route'),
+            points: [
+              LatLng(_pickupLat!, _pickupLng!),
+              LatLng(_destinationLat!, _destinationLng!),
+            ],
+            color: Colors.blue,
+            width: 3,
+          ),
+        };
+      }
 
       // Adjust camera to show both points
       if (_mapController != null) {
@@ -273,6 +391,59 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
             ),
           ),
 
+          // Distance Info Overlay (positioned above bottom sheet)
+          if (_distance != null)
+            Positioned(
+              bottom: 50, // Fixed position from bottom
+              left: 16,
+              right: 16,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      spreadRadius: 2,
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.route, color: Colors.grey.shade700, size: 24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Distance: ${DistanceCalculator.formatDistance(_distance!)}',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade800,
+                            ),
+                          ),
+                          if (_estimatedTime != null)
+                            Text(
+                              'Estimated time: $_estimatedTime',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
           // Bottom Sheet with ride details
           DraggableScrollableSheet(
             initialChildSize: 0.4,
@@ -313,10 +484,6 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                     // Location inputs
                     _buildLocationInputs(),
                     const SizedBox(height: 24),
-
-                                        
-                    // Distance information
-                    _buildDistanceInfo(),
                     
                     // Vehicle selection
                     _buildVehicleSelection(),
@@ -444,49 +611,6 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildDistanceInfo() {
-    if (_distance == null) return const SizedBox.shrink();
-    
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue.shade200),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.route, color: Colors.blue.shade600),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Distance: ${DistanceCalculator.formatDistance(_distance!)}',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.blue.shade800,
-                  ),
-                ),
-                if (_estimatedTime != null)
-                  Text(
-                    'Estimated time: $_estimatedTime',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.blue.shade600,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 

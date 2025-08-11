@@ -1,3 +1,5 @@
+import 'package:flutter/services.dart';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../models/request_model.dart';
@@ -7,6 +9,7 @@ import '../../../services/enhanced_user_service.dart';
 import '../../../widgets/image_upload_widget.dart';
 import '../../../widgets/accurate_location_picker_widget.dart';
 import '../../../utils/currency_helper.dart';
+import '../../../services/google_directions_service.dart';
 
 class EditRideRequestScreen extends StatefulWidget {
   final RequestModel request;
@@ -673,12 +676,57 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
     );
   }
 
-  void _updateMapMarkers() {
+  Future<BitmapDescriptor> _createCustomMarker(IconData icon, Color color) async {
+    final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
+    final Canvas canvas = Canvas(pictureRecorder);
+    final Paint paint = Paint()..color = color;
+    const double radius = 20.0;
+    
+    // Draw circle background
+    canvas.drawCircle(const Offset(radius, radius), radius, paint);
+    
+    // Draw white circle border
+    final Paint borderPaint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 3.0
+      ..style = PaintingStyle.stroke;
+    canvas.drawCircle(const Offset(radius, radius), radius, borderPaint);
+    
+    // Draw icon
+    TextPainter textPainter = TextPainter(textDirection: TextDirection.ltr);
+    textPainter.text = TextSpan(
+      text: String.fromCharCode(icon.codePoint),
+      style: TextStyle(
+        fontSize: 20.0,
+        fontFamily: icon.fontFamily,
+        color: Colors.white,
+      ),
+    );
+    textPainter.layout();
+    textPainter.paint(canvas, const Offset(10, 10));
+    
+    // Convert to image
+    final ui.Image markerAsImage = await pictureRecorder.endRecording().toImage(
+      (radius * 2).toInt(),
+      (radius * 2).toInt(),
+    );
+    
+    final ByteData? byteData = await markerAsImage.toByteData(format: ui.ImageByteFormat.png);
+    final Uint8List uint8List = byteData!.buffer.asUint8List();
+    
+    return BitmapDescriptor.bytes(uint8List);
+  }
+
+  void _updateMapMarkers() async {
+    // Create custom icons
+    final BitmapDescriptor humanIcon = await _createCustomMarker(Icons.person, Colors.blue);
+    final BitmapDescriptor destinationIcon = await _createCustomMarker(Icons.location_on, Colors.red);
+    
     setState(() {
       _markers.clear();
       _polylines.clear();
       
-      // Add pickup marker
+      // Add pickup marker with human icon
       if (_pickupLat != null && _pickupLng != null) {
         _markers.add(
           Marker(
@@ -688,12 +736,12 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
               title: 'Pickup',
               snippet: _pickupLocationController.text,
             ),
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+            icon: humanIcon,
           ),
         );
       }
       
-      // Add destination marker
+      // Add destination marker with custom icon
       if (_destinationLat != null && _destinationLng != null) {
         _markers.add(
           Marker(
@@ -703,7 +751,7 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
               title: 'Drop',
               snippet: _destinationController.text,
             ),
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+            icon: destinationIcon,
           ),
         );
       }
