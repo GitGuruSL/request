@@ -860,7 +860,7 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
               Row(
                 children: [
                   Expanded(
-                    flex: 2,
+                    flex: 3,
                     child: TextFormField(
                       controller: _rentalPriceController,
                       keyboardType: TextInputType.number,
@@ -883,8 +883,9 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                       },
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   Expanded(
+                    flex: 2,
                     child: DropdownButtonFormField<String>(
                       value: _selectedRentalPeriod,
                       decoration: const InputDecoration(
@@ -894,7 +895,14 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                         fillColor: Color(0xFFF8F9FA),
                       ),
                       items: ['day', 'week', 'hour'].map((period) =>
-                          DropdownMenuItem(value: period, child: Text('per $period'))).toList(),
+                          DropdownMenuItem(
+                            value: period, 
+                            child: Text(
+                              'per $period',
+                              style: const TextStyle(fontSize: 14),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          )).toList(),
                       onChanged: (value) {
                         setState(() {
                           _selectedRentalPeriod = value!;

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../home/screens/home_screen.dart';
 import '../screens/browse_screen.dart';
-import '../screens/price_comparison_screen.dart';
+import '../screens/messaging/conversations_list_screen.dart';
 import '../screens/account_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
@@ -17,7 +17,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   final List<Widget> _screens = [
     const HomeScreen(),
     const BrowseScreen(),
-    const PriceComparisonScreen(),
+    const ConversationsListScreen(),
     const AccountScreen(),
   ];
 
@@ -47,9 +47,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             label: 'Browse',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.compare_arrows_outlined),
-            activeIcon: Icon(Icons.compare_arrows),
-            label: 'Price',
+            icon: Icon(Icons.message_outlined),
+            activeIcon: Icon(Icons.message),
+            label: 'Messages',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.account_circle_outlined),

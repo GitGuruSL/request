@@ -638,7 +638,12 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
           Row(
             children: [
               Text('Daily Rate: ', style: TextStyle(color: Colors.grey[600])),
-              Text('\$${rentalResponse.dailyRate.toStringAsFixed(2)}/day'),
+              Expanded(
+                child: Text(
+                  '\$${rentalResponse.dailyRate.toStringAsFixed(2)}/day',
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 6),
@@ -646,16 +651,27 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
             Row(
               children: [
                 Text('Security Deposit: ', style: TextStyle(color: Colors.grey[600])),
-                Text('\$${rentalResponse.deposit.toStringAsFixed(2)}'),
+                Expanded(
+                  child: Text(
+                    '\$${rentalResponse.deposit.toStringAsFixed(2)}',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 6),
           ],
           if (rentalResponse.availableFrom != null && rentalResponse.availableUntil != null) ...[
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Available: ', style: TextStyle(color: Colors.grey[600])),
-                Text('${rentalResponse.availableFrom.toString().split(' ')[0]} - ${rentalResponse.availableUntil.toString().split(' ')[0]}'),
+                Expanded(
+                  child: Text(
+                    '${rentalResponse.availableFrom.toString().split(' ')[0]} - ${rentalResponse.availableUntil.toString().split(' ')[0]}',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 6),
@@ -664,7 +680,12 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
             Row(
               children: [
                 Text('Condition: ', style: TextStyle(color: Colors.grey[600])),
-                Text(rentalResponse.itemCondition!),
+                Expanded(
+                  child: Text(
+                    rentalResponse.itemCondition!,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 6),

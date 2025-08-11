@@ -5,6 +5,8 @@ import '../../models/request_model.dart';
 import '../../models/enhanced_user_model.dart';
 import '../../services/enhanced_request_service.dart';
 import '../../services/enhanced_user_service.dart';
+import '../../services/messaging_service.dart';
+import '../messaging/conversation_screen.dart';
 import 'unified_response_create_screen.dart';
 import 'unified_request_edit_screen.dart';
 
@@ -20,6 +22,7 @@ class UnifiedRequestViewScreen extends StatefulWidget {
 class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
   final EnhancedRequestService _requestService = EnhancedRequestService();
   final EnhancedUserService _userService = EnhancedUserService();
+  final MessagingService _messagingService = MessagingService();
   
   RequestModel? _request;
   List<ResponseModel> _responses = [];
@@ -470,8 +473,29 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
           // Only show message button if viewing someone else's request
           if (!_isOwner) 
             IconButton(
-              onPressed: () {
-                // TODO: Implement contact functionality
+              onPressed: () async {
+                try {
+                  // Create or get existing conversation
+                  final conversation = await _messagingService.createConversationFromRequest(_request!);
+                  
+                  if (mounted) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ConversationScreen(
+                          conversation: conversation,
+                          request: _request,
+                        ),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error starting conversation: $e')),
+                    );
+                  }
+                }
               },
               icon: const Icon(Icons.message),
             ),

@@ -3,10 +3,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/request_model.dart';
 import '../models/enhanced_user_model.dart';
+import 'enhanced_user_service.dart';
 
 class EnhancedRequestService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final EnhancedUserService _userService = EnhancedUserService();
 
   static const String _requestsCollection = 'requests';
   static const String _responsesCollection = 'responses';
@@ -42,7 +44,7 @@ class EnhancedRequestService {
         title: title,
         description: description,
         type: type,
-        status: RequestStatus.draft,
+        status: RequestStatus.active,
         priority: priority,
         location: location,
         destinationLocation: destinationLocation,
@@ -350,17 +352,26 @@ class EnhancedRequestService {
         throw Exception('User must be authenticated');
       }
 
-      // Check if request exists and is active
+      // Get user model to check roles
+      final userModel = await _userService.getCurrentUserModel();
+      if (userModel == null) {
+        throw Exception('User profile not found');
+      }
+
+      // Check if request exists and is accepting responses
       final request = await getRequestById(requestId);
       if (request == null) {
         throw Exception('Request not found');
       }
-      if (request.status != RequestStatus.active) {
-        throw Exception('Request is not active');
+      if (request.status != RequestStatus.active && request.status != RequestStatus.open) {
+        throw Exception('This request is not accepting responses');
       }
       if (request.requesterId == user.uid) {
         throw Exception('Cannot respond to your own request');
       }
+
+      // Role-based access control
+      await _validateUserCanRespondToRequest(userModel, request);
 
       final responseId = _firestore.collection(_responsesCollection).doc().id;
       
@@ -386,6 +397,55 @@ class EnhancedRequestService {
       return responseId;
     } catch (e) {
       throw Exception('Failed to create response: $e');
+    }
+  }
+
+  // Role-based validation for responding to requests
+  Future<void> _validateUserCanRespondToRequest(UserModel user, RequestModel request) async {
+    switch (request.type) {
+      case RequestType.ride:
+        // Only approved drivers can respond to ride requests
+        if (!user.hasRole(UserRole.driver)) {
+          throw Exception('You must register as a driver to respond to ride requests');
+        }
+        if (!user.isRoleVerified(UserRole.driver)) {
+          throw Exception('Your driver registration must be approved before you can respond to ride requests');
+        }
+        break;
+        
+      case RequestType.delivery:
+        // Only approved delivery companies can respond to delivery requests
+        if (!user.hasRole(UserRole.delivery)) {
+          throw Exception('You must register as a delivery service to respond to delivery requests');
+        }
+        if (!user.isRoleVerified(UserRole.delivery)) {
+          throw Exception('Your delivery service registration must be approved before you can respond to delivery requests');
+        }
+        break;
+        
+      case RequestType.service:
+        // Business users can respond to service requests
+        if (!user.hasRole(UserRole.business)) {
+          throw Exception('You must register as a business to respond to service requests');
+        }
+        if (!user.isRoleVerified(UserRole.business)) {
+          throw Exception('Your business registration must be approved before you can respond to service requests');
+        }
+        break;
+        
+      case RequestType.item:
+      case RequestType.rental:
+      case RequestType.price:
+        // These request types can be responded to by any verified user
+        // But businesses are preferred for item/rental requests
+        if (user.hasRole(UserRole.business) && !user.isRoleVerified(UserRole.business)) {
+          throw Exception('Your business registration must be approved before you can respond to this request');
+        }
+        break;
+        
+      default:
+        // For any other request types, allow general users
+        break;
     }
   }
 
