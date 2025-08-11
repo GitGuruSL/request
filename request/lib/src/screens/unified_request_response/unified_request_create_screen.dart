@@ -393,10 +393,16 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
               children: [
                 const Text(
                   'Photos/Reference (Optional)',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Upload a picture of the item or provide a reference link',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
                 const SizedBox(height: 8),
                 ImageUploadWidget(
+                  uploadPath: 'requests/${_selectedType.name}',
                   onImagesChanged: (urls) {
                     setState(() {
                       _imageUrls = urls;
@@ -572,6 +578,44 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
                   _selectedUrgency = value!;
                 });
               },
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Photo/Video Upload for Problem
+        Card(
+          color: Colors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(color: Colors.grey.shade300),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Photo/Video of Problem (Optional)',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Upload a photo or short video to better explain the issue',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 8),
+                ImageUploadWidget(
+                  uploadPath: 'requests/service_problems',
+                  onImagesChanged: (urls) {
+                    setState(() {
+                      _imageUrls = urls;
+                    });
+                  },
+                  maxImages: 5,
+                ),
+              ],
             ),
           ),
         ),

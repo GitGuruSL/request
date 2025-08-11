@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/country_service.dart';
 import '../../services/auth_service.dart';
 import '../../models/request_model.dart';
-import '../unified_request_response/unified_request_create_screen.dart';
+import '../../screens/unified_request_response/unified_request_create_screen.dart';
 import '../../screens/price_comparison_screen.dart';
 import '../../models/enhanced_user_model.dart';
 
@@ -422,12 +422,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       subtitle: const Text('Request price quotes for items or services'),
                       onTap: () {
                         Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const PriceComparisonScreen(),
-                          ),
-                        );
+                        Navigator.pushNamed(context, '/price');
                       },
                     ),
                   ],
