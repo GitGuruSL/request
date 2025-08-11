@@ -117,53 +117,44 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
     if (_pickupLat != null && _pickupLng != null && 
         _destinationLat != null && _destinationLng != null) {
       
+      // Always calculate fallback distance first
+      final fallbackDistance = DistanceCalculator.calculateDistance(
+        startLat: _pickupLat!,
+        startLng: _pickupLng!,
+        endLat: _destinationLat!,
+        endLng: _destinationLng!,
+      );
+      
+      final fallbackTime = DistanceCalculator.estimateTravelTime(
+        fallbackDistance,
+        vehicleType: _selectedVehicleType,
+      );
+      
+      // Set fallback values first
+      _distance = fallbackDistance;
+      _estimatedTime = fallbackTime;
+      
+      setState(() {});
+      
+      // Try to get better estimates from Google API in the background
       try {
-        // Get route information from Google Directions API
         Map<String, dynamic> routeInfo = await GoogleDirectionsService.getRouteInfo(
           origin: LatLng(_pickupLat!, _pickupLng!),
           destination: LatLng(_destinationLat!, _destinationLng!),
-          travelMode: _selectedVehicleType == 'bike' ? 'driving' : 'driving',
+          travelMode: 'driving',
         );
 
         if (routeInfo.isNotEmpty) {
-          // Use Google Directions API data
-          _distance = (routeInfo['distance'] / 1000.0); // Convert meters to km
+          // Update with API data
+          _distance = (routeInfo['distance'] / 1000.0);
           _estimatedTime = routeInfo['durationText'];
-        } else {
-          // Fallback to haversine calculation
-          _distance = DistanceCalculator.calculateDistance(
-            startLat: _pickupLat!,
-            startLng: _pickupLng!,
-            endLat: _destinationLat!,
-            endLng: _destinationLng!,
-          );
           
-          _estimatedTime = DistanceCalculator.estimateTravelTime(
-            _distance!,
-            vehicleType: _selectedVehicleType,
-          );
+          setState(() {});
         }
       } catch (e) {
-        print('Error getting route info: $e');
-        // Fallback to haversine calculation
-        _distance = DistanceCalculator.calculateDistance(
-          startLat: _pickupLat!,
-          startLng: _pickupLng!,
-          endLat: _destinationLat!,
-          endLng: _destinationLng!,
-        );
-        
-        _estimatedTime = DistanceCalculator.estimateTravelTime(
-          _distance!,
-          vehicleType: _selectedVehicleType,
-        );
-        
-        print('Fallback distance calculated: $_distance km, time: $_estimatedTime');
+        print('Google Directions API error: $e');
+        // Keep fallback values
       }
-      
-      setState(() {
-        print('Distance updated in setState: $_distance km');
-      });
       
       // Update map with route
       _updateMapWithRoute();
@@ -391,59 +382,6 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
             ),
           ),
 
-          // Distance Info Overlay (positioned above bottom sheet)
-          if (_distance != null)
-            Positioned(
-              bottom: 50, // Fixed position from bottom
-              left: 16,
-              right: 16,
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
-                      spreadRadius: 2,
-                      blurRadius: 6,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.route, color: Colors.grey.shade700, size: 24),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Distance: ${DistanceCalculator.formatDistance(_distance!)}',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey.shade800,
-                            ),
-                          ),
-                          if (_estimatedTime != null)
-                            Text(
-                              'Estimated time: $_estimatedTime',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
           // Bottom Sheet with ride details
           DraggableScrollableSheet(
             initialChildSize: 0.4,
@@ -483,7 +421,11 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
 
                     // Location inputs
                     _buildLocationInputs(),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
+
+                    // Distance information card
+                    if (_distance != null) _buildDistanceCard(),
+                    if (_distance != null) const SizedBox(height: 16),
                     
                     // Vehicle selection
                     _buildVehicleSelection(),
@@ -519,98 +461,141 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
   Widget _buildLocationInputs() {
     return Column(
       children: [
+        // Pickup location
         Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: Colors.grey[50],
-          ),
-          child: Column(
+          padding: const EdgeInsets.all(12),
+          child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Colors.green,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: AccurateLocationPickerWidget(
-                        controller: _pickupLocationController,
-                        labelText: '',
-                        hintText: 'Pickup location',
-                        isRequired: true,
-                        prefixIcon: Icons.my_location,
-                        onLocationSelected: (address, lat, lng) {
-                          setState(() {
-                            _pickupLat = lat;
-                            _pickupLng = lng;
-                          });
-                          _calculateDistance();
-                          // Show feedback
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Pickup location set: $address'),
-                              duration: const Duration(seconds: 2),
-                              backgroundColor: Colors.green,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: Colors.green,
+                  shape: BoxShape.circle,
                 ),
               ),
-              Divider(height: 1, color: Colors.grey[300]),
+              const SizedBox(width: 12),
+              Expanded(
+                child: AccurateLocationPickerWidget(
+                  controller: _pickupLocationController,
+                  labelText: '',
+                  hintText: 'Pickup location',
+                  isRequired: true,
+                  prefixIcon: Icons.my_location,
+                  onLocationSelected: (address, lat, lng) {
+                    setState(() {
+                      _pickupLat = lat;
+                      _pickupLng = lng;
+                    });
+                    _calculateDistance();
+                    // Show feedback
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Pickup location set: $address'),
+                        duration: const Duration(seconds: 2),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Destination location
+        Container(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
               Container(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: AccurateLocationPickerWidget(
+                  controller: _destinationController,
+                  labelText: '',
+                  hintText: 'Where to?',
+                  isRequired: true,
+                  prefixIcon: Icons.location_on,
+                  onLocationSelected: (address, lat, lng) {
+                    setState(() {
+                      _destinationLat = lat;
+                      _destinationLng = lng;
+                    });
+                    _calculateDistance(); // Add this line
+                    // Show feedback
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Destination set: $address'),
+                        duration: const Duration(seconds: 2),
+                        backgroundColor: Colors.orange,
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: AccurateLocationPickerWidget(
-                        controller: _destinationController,
-                        labelText: '',
-                        hintText: 'Where to?',
-                        isRequired: true,
-                        prefixIcon: Icons.location_on,
-                        onLocationSelected: (address, lat, lng) {
-                          setState(() {
-                            _destinationLat = lat;
-                            _destinationLng = lng;
-                          });
-                          _calculateDistance();
-                          // Show feedback
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Destination set: $address'),
-                              duration: const Duration(seconds: 2),
-                              backgroundColor: Colors.orange,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
               ),
             ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildDistanceCard() {
+    if (_distance == null) return const SizedBox.shrink();
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.route, color: Colors.blue.shade600, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Distance: ${DistanceCalculator.formatDistance(_distance!)}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade800,
+                  ),
+                ),
+                if (_estimatedTime != null)
+                  Text(
+                    'Estimated time: $_estimatedTime',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
