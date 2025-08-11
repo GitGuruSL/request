@@ -270,54 +270,30 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
 
   Widget _buildStatusBadge() {
     if (widget.response.isAccepted) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        decoration: BoxDecoration(
-          color: Colors.green[100],
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.green[300]!),
-        ),
-        child: Text(
-          'Accepted',
-          style: TextStyle(
-            color: Colors.green[700],
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
-          ),
+      return const Text(
+        'Accepted',
+        style: TextStyle(
+          color: Colors.black54,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
         ),
       );
     } else if (widget.response.rejectionReason != null) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        decoration: BoxDecoration(
-          color: Colors.red[100],
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.red[300]!),
-        ),
-        child: Text(
-          'Rejected',
-          style: TextStyle(
-            color: Colors.red[700],
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
-          ),
+      return const Text(
+        'Rejected',
+        style: TextStyle(
+          color: Colors.black54,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
         ),
       );
     } else {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        decoration: BoxDecoration(
-          color: Colors.orange[100],
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.orange[300]!),
-        ),
-        child: Text(
-          'Pending',
-          style: TextStyle(
-            color: Colors.orange[700],
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
-          ),
+      return const Text(
+        'Pending',
+        style: TextStyle(
+          color: Colors.black54,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
         ),
       );
     }
@@ -602,14 +578,9 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
                         ),
                       ),
                       // Message button
-                      ElevatedButton.icon(
+                      IconButton(
                         onPressed: () => _startConversation(),
-                        icon: const Icon(Icons.message, size: 18),
-                        label: const Text('Message'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue[600],
-                          foregroundColor: Colors.white,
-                        ),
+                        icon: const Icon(Icons.message),
                       ),
                     ],
                   ),
