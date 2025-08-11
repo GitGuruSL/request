@@ -86,26 +86,13 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             // User Name on the left
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _getUserName(),
-                    style: TextStyle(
-                      color: AppTheme.textPrimary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (_selectedCountry != null)
-                    Text(
-                      '$_selectedCountry $_currencySymbol',
-                      style: TextStyle(
-                        color: AppTheme.textSecondary,
-                        fontSize: 12,
-                      ),
-                    ),
-                ],
+              child: Text(
+                _getUserName(),
+                style: TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
             // Notification and Profile on the right

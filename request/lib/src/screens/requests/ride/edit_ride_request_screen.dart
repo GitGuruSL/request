@@ -5,7 +5,7 @@ import '../../../models/enhanced_user_model.dart';
 import '../../../services/enhanced_request_service.dart';
 import '../../../services/enhanced_user_service.dart';
 import '../../../widgets/image_upload_widget.dart';
-import '../../../widgets/location_picker_widget.dart';
+import '../../../widgets/accurate_location_picker_widget.dart';
 import '../../../utils/currency_helper.dart';
 
 class EditRideRequestScreen extends StatefulWidget {
@@ -369,7 +369,7 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: LocationPickerWidget(
+                      child: AccurateLocationPickerWidget(
                         controller: _pickupLocationController,
                         labelText: '',
                         hintText: 'Pickup location',
@@ -409,7 +409,7 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: LocationPickerWidget(
+                      child: AccurateLocationPickerWidget(
                         controller: _destinationController,
                         labelText: '',
                         hintText: 'Where to?',

@@ -5,8 +5,9 @@ import '../../../models/enhanced_user_model.dart';
 import '../../../services/enhanced_request_service.dart';
 import '../../../services/enhanced_user_service.dart';
 import '../../../widgets/image_upload_widget.dart';
-import '../../../widgets/location_picker_widget.dart';
+import '../../../widgets/accurate_location_picker_widget.dart';
 import '../../../utils/currency_helper.dart';
+import '../../../utils/distance_calculator.dart';
 
 class CreateRideRequestScreen extends StatefulWidget {
   const CreateRideRequestScreen({super.key});
@@ -28,7 +29,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
   final _budgetController = TextEditingController();
   
   // Ride-specific fields
-  String _selectedVehicleType = 'economy';
+  String _selectedVehicleType = 'bike';
   DateTime? _departureTime;
   int _passengerCount = 1;
   bool _scheduleForLater = false;
@@ -36,11 +37,13 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
   final _specialRequestsController = TextEditingController();
   List<String> _imageUrls = [];
   
-  // Location coordinates (for future map integration)
+  // Location coordinates and distance
   double? _pickupLat;
   double? _pickupLng;
   double? _destinationLat; 
   double? _destinationLng;
+  double? _distance; // Distance in kilometers
+  String? _estimatedTime;
 
   // Google Maps
   GoogleMapController? _mapController;
@@ -55,33 +58,44 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
 
   final List<Map<String, dynamic>> _vehicleTypes = [
     {
-      'id': 'economy',
-      'name': 'Economy',
-      'description': 'Affordable rides',
+      'id': 'bike',
+      'name': 'Bike',
+      'description': 'Quick & affordable',
+      'icon': Icons.two_wheeler,
+      'passengers': '1',
+      'capacity': '1 passenger + small bag',
+    },
+    {
+      'id': 'threewheeler',
+      'name': 'Three Wheeler',
+      'description': 'Local transport',
+      'icon': Icons.local_taxi,
+      'passengers': '1-3',
+      'capacity': '3 passengers + luggage',
+    },
+    {
+      'id': 'car',
+      'name': 'Car',
+      'description': 'Comfortable ride',
       'icon': Icons.directions_car,
       'passengers': '1-4',
+      'capacity': '4 passengers + luggage',
     },
     {
-      'id': 'premium',
-      'name': 'Premium',
-      'description': 'Comfortable rides',
-      'icon': Icons.local_taxi,
-      'passengers': '1-4', 
-    },
-    {
-      'id': 'suv',
-      'name': 'SUV',
+      'id': 'van',
+      'name': 'Van',
       'description': 'Extra space',
       'icon': Icons.airport_shuttle,
-      'passengers': '1-6',
+      'passengers': '1-8',
+      'capacity': '8 passengers + luggage',
     },
     {
-      'id': 'shared',
-      'name': 'Shared',
-      'description': 'Share & save',
-      'icon': Icons.people,
-      'passengers': '1-2',
-      'price': '${CurrencyHelper.instance.getCurrencySymbol()}100-150',
+      'id': 'bus',
+      'name': 'Bus',
+      'description': 'Group transport',
+      'icon': Icons.directions_bus,
+      'passengers': '15+',
+      'capacity': '15+ passengers',
     },
   ];
 
@@ -94,6 +108,84 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
     _budgetController.dispose();
     _specialRequestsController.dispose();
     super.dispose();
+  }
+
+  void _calculateDistance() {
+    if (_pickupLat != null && _pickupLng != null && 
+        _destinationLat != null && _destinationLng != null) {
+      
+      _distance = DistanceCalculator.calculateDistance(
+        startLat: _pickupLat!,
+        startLng: _pickupLng!,
+        endLat: _destinationLat!,
+        endLng: _destinationLng!,
+      );
+      
+      _estimatedTime = DistanceCalculator.estimateTravelTime(
+        _distance!,
+        vehicleType: _selectedVehicleType,
+      );
+      
+      setState(() {});
+      
+      // Update map with route
+      _updateMapWithRoute();
+    }
+  }
+
+  void _updateMapWithRoute() {
+    if (_pickupLat != null && _pickupLng != null && 
+        _destinationLat != null && _destinationLng != null) {
+      
+      // Add markers
+      _markers = {
+        Marker(
+          markerId: const MarkerId('pickup'),
+          position: LatLng(_pickupLat!, _pickupLng!),
+          infoWindow: InfoWindow(title: 'Pickup', snippet: _pickupLocationController.text),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        ),
+        Marker(
+          markerId: const MarkerId('destination'),
+          position: LatLng(_destinationLat!, _destinationLng!),
+          infoWindow: InfoWindow(title: 'Destination', snippet: _destinationController.text),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        ),
+      };
+
+      // Add polyline (simple straight line for now)
+      _polylines = {
+        Polyline(
+          polylineId: const PolylineId('route'),
+          points: [
+            LatLng(_pickupLat!, _pickupLng!),
+            LatLng(_destinationLat!, _destinationLng!),
+          ],
+          color: Colors.blue,
+          width: 3,
+        ),
+      };
+
+      // Adjust camera to show both points
+      if (_mapController != null) {
+        double minLat = _pickupLat! < _destinationLat! ? _pickupLat! : _destinationLat!;
+        double maxLat = _pickupLat! > _destinationLat! ? _pickupLat! : _destinationLat!;
+        double minLng = _pickupLng! < _destinationLng! ? _pickupLng! : _destinationLng!;
+        double maxLng = _pickupLng! > _destinationLng! ? _pickupLng! : _destinationLng!;
+
+        _mapController!.animateCamera(
+          CameraUpdate.newLatLngBounds(
+            LatLngBounds(
+              southwest: LatLng(minLat, minLng),
+              northeast: LatLng(maxLat, maxLng),
+            ),
+            100.0, // padding
+          ),
+        );
+      }
+      
+      setState(() {});
+    }
   }
 
   @override
@@ -222,6 +314,10 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                     _buildLocationInputs(),
                     const SizedBox(height: 24),
 
+                                        
+                    // Distance information
+                    _buildDistanceInfo(),
+                    
                     // Vehicle selection
                     _buildVehicleSelection(),
                     const SizedBox(height: 24),
@@ -277,17 +373,18 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: LocationPickerWidget(
+                      child: AccurateLocationPickerWidget(
                         controller: _pickupLocationController,
                         labelText: '',
                         hintText: 'Pickup location',
                         isRequired: true,
+                        prefixIcon: Icons.my_location,
                         onLocationSelected: (address, lat, lng) {
                           setState(() {
                             _pickupLat = lat;
                             _pickupLng = lng;
                           });
-                          _updateMapMarkers();
+                          _calculateDistance();
                           // Show feedback
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
@@ -317,17 +414,18 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: LocationPickerWidget(
+                      child: AccurateLocationPickerWidget(
                         controller: _destinationController,
                         labelText: '',
                         hintText: 'Where to?',
                         isRequired: true,
+                        prefixIcon: Icons.location_on,
                         onLocationSelected: (address, lat, lng) {
                           setState(() {
                             _destinationLat = lat;
                             _destinationLng = lng;
                           });
-                          _updateMapMarkers();
+                          _calculateDistance();
                           // Show feedback
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
@@ -346,6 +444,49 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildDistanceInfo() {
+    if (_distance == null) return const SizedBox.shrink();
+    
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.route, color: Colors.blue.shade600),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Distance: ${DistanceCalculator.formatDistance(_distance!)}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.blue.shade800,
+                  ),
+                ),
+                if (_estimatedTime != null)
+                  Text(
+                    'Estimated time: $_estimatedTime',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.blue.shade600,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -375,6 +516,14 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                   setState(() {
                     _selectedVehicleType = vehicle['id'];
                   });
+                  // Recalculate estimated time for new vehicle type
+                  if (_distance != null) {
+                    _estimatedTime = DistanceCalculator.estimateTravelTime(
+                      _distance!,
+                      vehicleType: _selectedVehicleType,
+                    );
+                    setState(() {});
+                  }
                 },
                 child: Container(
                   width: 120,
@@ -398,8 +547,9 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                           Text(
                             vehicle['passengers'],
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 10,
                               color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],

@@ -22,10 +22,14 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   
   bool _isPhoneLogin = true;
   bool _isLoading = false;
+  bool _showPasswordField = false;
+  bool _obscurePassword = true;
+  String? _currentEmail;
   
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -79,6 +83,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     _animationController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -114,15 +119,24 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         // Email login flow
         final email = _emailController.text.trim();
         
-        // Check if email is already registered
-        final userCheck = await AuthService.instance.checkUserExists(email: email);
-        
-        if (userCheck.exists) {
-          // Existing user - ask for password
-          await _showPasswordDialog(email);
+        if (_showPasswordField) {
+          // User has entered password, attempt login
+          await _loginWithPassword(email, _passwordController.text);
         } else {
-          // New user - send OTP for registration
-          await _sendEmailRegistrationOTP(email);
+          // Check if email is already registered
+          final userCheck = await AuthService.instance.checkUserExists(email: email);
+          
+          if (userCheck.exists) {
+            // Existing user - show password field
+            setState(() {
+              _showPasswordField = true;
+              _currentEmail = email;
+              _isLoading = false;
+            });
+          } else {
+            // New user - send OTP for registration
+            await _sendEmailRegistrationOTP(email);
+          }
         }
       }
       
@@ -132,6 +146,41 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
+  Future<void> _loginWithPassword(String email, String password) async {
+    try {
+      final authResult = await AuthService.instance.signInWithEmailPassword(
+        email: email,
+        password: password,
+      );
+      
+      setState(() {
+        _isLoading = false;
+      });
+      
+      if (authResult.success) {
+        // Check if profile is complete before navigating to home
+        final isProfileComplete = await AuthService.instance.isCurrentUserProfileComplete();
+        
+        if (isProfileComplete) {
+          Navigator.pushReplacementNamed(context, '/home');
+        } else {
+          Navigator.pushReplacementNamed(context, '/role-selection');
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(authResult.error ?? 'Login failed')),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Login failed: $e')),
       );
     }
   }
@@ -246,95 +295,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to send OTP: $e')),
       );
-    }
-  }
-  
-  Future<void> _showPasswordDialog(String email) async {
-    final passwordController = TextEditingController();
-    
-    final result = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('Enter Password'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Welcome back! Please enter your password for:'),
-            const SizedBox(height: 8),
-            Text(
-              email,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'Password',
-                prefixIcon: Icon(Icons.lock),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (passwordController.text.isNotEmpty) {
-                Navigator.pop(context, true);
-              }
-            },
-            child: const Text('Login'),
-          ),
-        ],
-      ),
-    );
-    
-    setState(() {
-      _isLoading = false;
-    });
-    
-    if (result == true && passwordController.text.isNotEmpty) {
-      // Attempt login with email and password
-      setState(() {
-        _isLoading = true;
-      });
-      
-      final authResult = await AuthService.instance.signInWithEmailPassword(
-        email: email,
-        password: passwordController.text,
-      );
-      
-      setState(() {
-        _isLoading = false;
-      });
-      
-      if (authResult.success) {
-        // Check if profile is complete before navigating to home
-        final isProfileComplete = await AuthService.instance.isCurrentUserProfileComplete();
-        
-        if (isProfileComplete) {
-          Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
-        } else {
-          // Profile incomplete - redirect to profile completion
-          Navigator.pushNamed(
-            context,
-            '/profile',
-            arguments: {
-              'emailOrPhone': _emailController.text.trim(),
-              'isEmail': true,
-            },
-          );
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(authResult.error ?? 'Login failed')),
-        );
-      }
     }
   }
 
@@ -458,50 +418,109 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                       // Input field form
                       Form(
                         key: _formKey,
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 300),
-                          child: _isPhoneLogin
-                            ? IntlPhoneField(
-                                key: const ValueKey('phone'),
-                                controller: _phoneController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Phone Number',
-                                  prefixIcon: Icon(Icons.phone),
+                        child: Column(
+                          children: [
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 300),
+                              child: _isPhoneLogin
+                                ? IntlPhoneField(
+                                    key: const ValueKey('phone'),
+                                    controller: _phoneController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Phone Number',
+                                      prefixIcon: Icon(Icons.phone),
+                                    ),
+                                    initialCountryCode: widget.countryCode.isNotEmpty 
+                                        ? widget.countryCode 
+                                        : 'US',
+                                    onCountryChanged: (country) {
+                                      phoneCode = '+${country.dialCode}';
+                                    },
+                                    onChanged: (phone) {
+                                      completePhoneNumber = phone.completeNumber;
+                                    },
+                                    validator: (phone) {
+                                      if (phone == null || phone.number.isEmpty) {
+                                        return 'Please enter a valid phone number';
+                                      }
+                                      return null;
+                                    },
+                                  )
+                                : TextFormField(
+                                    key: const ValueKey('email'),
+                                    controller: _emailController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Email Address',
+                                      prefixIcon: Icon(Icons.email),
+                                    ),
+                                    keyboardType: TextInputType.emailAddress,
+                                    enabled: !_showPasswordField,
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Please enter your email address';
+                                      }
+                                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                                        return 'Please enter a valid email address';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                            ),
+                            
+                            // Password field (shown only when email user exists)
+                            if (!_isPhoneLogin && _showPasswordField) ...[
+                              const SizedBox(height: 16),
+                              Text(
+                                'Welcome back! Please enter your password for:',
+                                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _currentEmail ?? '',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 16),
+                              TextFormField(
+                                key: const ValueKey('password'),
+                                controller: _passwordController,
+                                obscureText: _obscurePassword,
+                                decoration: InputDecoration(
+                                  labelText: 'Password',
+                                  prefixIcon: const Icon(Icons.lock),
+                                  suffixIcon: IconButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscurePassword = !_obscurePassword;
+                                      });
+                                    },
+                                    icon: Icon(
+                                      _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                                    ),
+                                  ),
                                 ),
-                                initialCountryCode: widget.countryCode.isNotEmpty 
-                                    ? widget.countryCode 
-                                    : 'US',
-                                onCountryChanged: (country) {
-                                  phoneCode = '+${country.dialCode}';
-                                },
-                                onChanged: (phone) {
-                                  completePhoneNumber = phone.completeNumber;
-                                },
-                                validator: (phone) {
-                                  if (phone == null || phone.number.isEmpty) {
-                                    return 'Please enter a valid phone number';
-                                  }
-                                  return null;
-                                },
-                              )
-                            : TextFormField(
-                                key: const ValueKey('email'),
-                                controller: _emailController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Email Address',
-                                  prefixIcon: Icon(Icons.email),
-                                ),
-                                keyboardType: TextInputType.emailAddress,
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
-                                    return 'Please enter your email address';
-                                  }
-                                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                                    return 'Please enter a valid email address';
+                                    return 'Please enter your password';
                                   }
                                   return null;
                                 },
                               ),
+                              const SizedBox(height: 8),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: TextButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      _showPasswordField = false;
+                                      _emailController.clear();
+                                      _passwordController.clear();
+                                    });
+                                  },
+                                  child: const Text('Use different email'),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                       
@@ -523,7 +542,9 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                           child: _isLoading
                               ? const CircularProgressIndicator(color: Colors.white)
                               : Text(
-                                  _isPhoneLogin ? 'Send OTP' : 'Continue',
+                                  _isPhoneLogin 
+                                    ? 'Send OTP' 
+                                    : (_showPasswordField ? 'Login' : 'Continue'),
                                   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                                 ),
                         ),

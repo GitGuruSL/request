@@ -606,22 +606,72 @@ class EnhancedRequestService {
     double dLat = _toRadians(lat2 - lat1);
     double dLon = _toRadians(lon2 - lon1);
     
-    double a = (dLat / 2).sin() * (dLat / 2).sin() +
-        lat1.cos() * lat2.cos() * (dLon / 2).sin() * (dLon / 2).sin();
-    double c = 2 * a.sqrt().asin();
+    double a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_toRadians(lat1)) * math.cos(_toRadians(lat2)) * 
+        math.sin(dLon / 2) * math.sin(dLon / 2);
+    double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
     
     return earthRadius * c;
   }
 
   double _toRadians(double degree) {
-    return degree * (3.141592653589793 / 180.0);
+    return degree * (math.pi / 180.0);
   }
-}
 
-// Helper extension for math operations
-extension MathExtension on double {
-  double sin() => math.sin(this);
-  double cos() => math.cos(this);
-  double asin() => math.asin(this);
-  double sqrt() => math.sqrt(this);
+  // Utility method to clean up draft requests (can be called during app initialization)
+  Future<int> cleanupDraftRequests() async {
+    try {
+      final querySnapshot = await _firestore
+          .collection(_requestsCollection)
+          .where('status', isEqualTo: RequestStatus.draft.name)
+          .get();
+
+      int deletedCount = 0;
+      final batch = _firestore.batch();
+
+      for (final doc in querySnapshot.docs) {
+        batch.delete(doc.reference);
+        deletedCount++;
+      }
+
+      if (deletedCount > 0) {
+        await batch.commit();
+        print('Cleaned up $deletedCount draft requests');
+      }
+
+      return deletedCount;
+    } catch (e) {
+      print('Error cleaning up draft requests: $e');
+      return 0;
+    }
+  }
+
+  // Utility method to delete draft requests for a specific user
+  Future<int> cleanupUserDraftRequests(String userId) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection(_requestsCollection)
+          .where('requesterId', isEqualTo: userId)
+          .where('status', isEqualTo: RequestStatus.draft.name)
+          .get();
+
+      int deletedCount = 0;
+      final batch = _firestore.batch();
+
+      for (final doc in querySnapshot.docs) {
+        batch.delete(doc.reference);
+        deletedCount++;
+      }
+
+      if (deletedCount > 0) {
+        await batch.commit();
+        print('Cleaned up $deletedCount draft requests for user $userId');
+      }
+
+      return deletedCount;
+    } catch (e) {
+      print('Error cleaning up user draft requests: $e');
+      return 0;
+    }
+  }
 }

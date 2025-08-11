@@ -5,7 +5,7 @@ import '../../../models/enhanced_user_model.dart';
 import '../../../services/enhanced_request_service.dart';
 import '../../../services/enhanced_user_service.dart';
 import '../../../widgets/image_upload_widget.dart';
-import '../../../widgets/location_picker_widget.dart';
+import '../../../widgets/accurate_location_picker_widget.dart';
 import '../../../utils/currency_helper.dart';
 
 class EditRideResponseScreen extends StatefulWidget {
@@ -469,7 +469,7 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
 
             _buildSectionTitle('Your Location'),
             const SizedBox(height: 12),
-            LocationPickerWidget(
+            AccurateLocationPickerWidget(
               controller: _locationController,
               labelText: 'Your Current Location',
               hintText: 'Where are you located?',

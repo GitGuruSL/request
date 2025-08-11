@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import '../services/google_places_service.dart';
 import 'dart:async';
 
 class LocationPickerWidget extends StatefulWidget {
@@ -25,7 +26,7 @@ class LocationPickerWidget extends StatefulWidget {
 
 class _LocationPickerWidgetState extends State<LocationPickerWidget> {
   bool _isLoadingLocation = false;
-  List<String> _searchSuggestions = [];
+  List<PlaceSuggestion> _searchSuggestions = [];
   bool _showSuggestions = false;
   Timer? _debounceTimer;
   final LayerLink _layerLink = LayerLink();
@@ -240,52 +241,27 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 300), () async {
       try {
-        // Create realistic suggestions based on the query
-        List<String> suggestions = [];
-        
-        // Add common locations based on query
-        if (query.toLowerCase().contains('col')) {
-          suggestions.add('Colombo, Sri Lanka');
-          suggestions.add('Colombo 1, Sri Lanka');
-          suggestions.add('Colombo 2, Fort, Sri Lanka');
-        }
-        if (query.toLowerCase().contains('kan') || query.toLowerCase().contains('candy')) {
-          suggestions.add('Kandy, Sri Lanka');
-        }
-        if (query.toLowerCase().contains('gal')) {
-          suggestions.add('Galle, Sri Lanka');
-        }
-        if (query.toLowerCase().contains('mat') || query.toLowerCase().contains('mata')) {
-          suggestions.add('Matara, Sri Lanka');
-        }
-        if (query.toLowerCase().contains('neg')) {
-          suggestions.add('Negombo, Sri Lanka');
-        }
-        
-        // Add generic suggestions with the query
-        suggestions.addAll([
-          '$query, Colombo, Sri Lanka',
-          '$query, Kandy, Sri Lanka', 
-          '$query, Galle, Sri Lanka',
-        ]);
-        
-        // Remove duplicates and limit to 5
-        suggestions = suggestions.toSet().toList().take(5).toList();
+        final predictions = await GooglePlacesService.searchPlaces(query);
         
         if (mounted) {
           setState(() {
-            _searchSuggestions = suggestions;
-            _showSuggestions = suggestions.isNotEmpty;
+            _searchSuggestions = predictions;
+            _showSuggestions = _searchSuggestions.isNotEmpty;
           });
-          _showOverlay();
+          
+          if (_showSuggestions) {
+            _showOverlay();
+          } else {
+            _removeOverlay();
+          }
         }
       } catch (e) {
         if (mounted) {
           setState(() {
-            _searchSuggestions = ['$query, Sri Lanka'];
-            _showSuggestions = true;
+            _searchSuggestions = [];
+            _showSuggestions = false;
           });
-          _showOverlay();
+          _removeOverlay();
         }
       }
     });
@@ -313,7 +289,7 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
                 borderRadius: BorderRadius.circular(8),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -325,14 +301,35 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
                 itemCount: _searchSuggestions.length,
                 separatorBuilder: (context, index) => const Divider(height: 1),
                 itemBuilder: (context, index) {
+                  final suggestion = _searchSuggestions[index];
                   return InkWell(
-                    onTap: () {
-                      widget.controller.text = _searchSuggestions[index];
-                      widget.onLocationSelected?.call(
-                        _searchSuggestions[index],
-                        null,
-                        null,
-                      );
+                    onTap: () async {
+                      widget.controller.text = suggestion.description;
+                      
+                      try {
+                        final placeDetails = await GooglePlacesService.getPlaceDetails(suggestion.placeId);
+                        
+                        if (placeDetails != null) {
+                          widget.onLocationSelected?.call(
+                            suggestion.description,
+                            placeDetails.latitude,
+                            placeDetails.longitude,
+                          );
+                        } else {
+                          widget.onLocationSelected?.call(
+                            suggestion.description,
+                            null,
+                            null,
+                          );
+                        }
+                      } catch (e) {
+                        widget.onLocationSelected?.call(
+                          suggestion.description,
+                          null,
+                          null,
+                        );
+                      }
+                      
                       _focusNode.unfocus();
                       setState(() {
                         _isReadOnly = true;
@@ -352,7 +349,7 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              _searchSuggestions[index],
+                              suggestion.description,
                               style: const TextStyle(fontSize: 14),
                             ),
                           ),
