@@ -64,10 +64,10 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
         );
         
         if (success) {
-          // Profile created successfully, navigate to role selection
+          // Profile created successfully
           Navigator.pushNamedAndRemoveUntil(
             context,
-            '/role-selection',
+            '/home',
             (route) => false,
           );
         } else {
@@ -183,7 +183,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                     onPressed: () {
                       Navigator.pushNamedAndRemoveUntil(
                         context,
-                        '/role-selection',
+                        '/home',
                         (route) => false,
                       );
                     },

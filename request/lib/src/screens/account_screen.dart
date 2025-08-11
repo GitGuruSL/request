@@ -215,6 +215,11 @@ class _AccountScreenState extends State<AccountScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              const Spacer(),
+              TextButton(
+                onPressed: () => Navigator.pushNamed(context, '/verification-status'),
+                child: const Text('View All'),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -228,11 +233,41 @@ class _AccountScreenState extends State<AccountScreen> {
             _currentUser!.isEmailVerified,
             _currentUser!.email,
           ),
-          if (_currentUser!.roles.contains(UserRole.driver))
+          
+          // Show active role verification status
+          if (_currentUser!.activeRole != UserRole.general)
             _buildVerificationItem(
-              'Driver Verification',
-              _currentUser!.isRoleVerified(UserRole.driver),
-              _currentUser!.isRoleVerified(UserRole.driver) ? 'Verified' : 'Pending',
+              '${_getRoleDisplayName(_currentUser!.activeRole)} Verification',
+              _currentUser!.isRoleVerified(_currentUser!.activeRole),
+              _currentUser!.isRoleVerified(_currentUser!.activeRole) ? 'Verified' : 'Pending Review',
+            ),
+            
+          // Show additional roles count if user has multiple roles
+          if (_currentUser!.roles.length > 1)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.group,
+                    color: Colors.blue[600],
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'You have ${_currentUser!.roles.length} roles',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pushNamed(context, '/verification-status'),
+                    child: const Text('Manage'),
+                  ),
+                ],
+              ),
             ),
         ],
       ),
@@ -304,6 +339,20 @@ class _AccountScreenState extends State<AccountScreen> {
           ),
           _buildDivider(),
           _buildMenuItem(
+            icon: Icons.badge,
+            title: 'Role Management',
+            subtitle: 'Manage your roles and verification status',
+            onTap: () => Navigator.pushNamed(context, '/verification-status'),
+          ),
+          _buildDivider(),
+          _buildMenuItem(
+            icon: Icons.person_add,
+            title: 'Add New Role',
+            subtitle: 'Become a driver, business owner, or delivery partner',
+            onTap: () => Navigator.pushNamed(context, '/role-selection'),
+          ),
+          _buildDivider(),
+          _buildMenuItem(
             icon: Icons.history,
             title: 'Request History',
             onTap: () => _showComingSoon('Request History'),
@@ -342,6 +391,7 @@ class _AccountScreenState extends State<AccountScreen> {
     required IconData icon,
     required String title,
     required VoidCallback onTap,
+    String? subtitle,
     Color? textColor,
   }) {
     return ListTile(
@@ -356,6 +406,15 @@ class _AccountScreenState extends State<AccountScreen> {
           fontWeight: FontWeight.w500,
         ),
       ),
+      subtitle: subtitle != null
+          ? Text(
+              subtitle,
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 12,
+              ),
+            )
+          : null,
       trailing: Icon(
         Icons.arrow_forward_ios,
         size: 16,
@@ -376,6 +435,19 @@ class _AccountScreenState extends State<AccountScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('$feature - Coming Soon')),
     );
+  }
+
+  String _getRoleDisplayName(UserRole role) {
+    switch (role) {
+      case UserRole.general:
+        return 'General User';
+      case UserRole.driver:
+        return 'Driver';
+      case UserRole.delivery:
+        return 'Delivery Partner';
+      case UserRole.business:
+        return 'Business Owner';
+    }
   }
 
   Future<void> _signOut() async {

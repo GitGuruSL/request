@@ -16,12 +16,27 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
   UserRole? selectedRole;
   bool _isLoading = false;
   User? currentUser; // Change to Firebase User instead of EnhancedUserModel
-  final bool isInitialSetup = true; // Add this property
+  bool isInitialSetup = true; // Will be determined based on navigation
 
   @override
   void initState() {
     super.initState();
     _loadCurrentUser();
+    // Check if this is initial setup or coming from account page
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final route = ModalRoute.of(context);
+      if (route != null && route.settings.arguments != null) {
+        final args = route.settings.arguments as Map<String, dynamic>?;
+        setState(() {
+          isInitialSetup = args?['isInitialSetup'] ?? false;
+        });
+      } else {
+        // If navigated from account page, it's not initial setup
+        setState(() {
+          isInitialSetup = false;
+        });
+      }
+    });
   }
 
   Future<void> _loadCurrentUser() async {
@@ -59,7 +74,12 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
       }
 
       // Navigate based on role
-      // (This is now handled above)
+      if (isInitialSetup) {
+        Navigator.pushReplacementNamed(context, _getRouteForRole(role));
+      } else {
+        // Coming from account page, navigate and return to account
+        Navigator.pushNamed(context, _getRouteForRole(role));
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -209,7 +229,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                         : Text(
                             isInitialSetup 
                                 ? 'Continue' 
-                                : 'Switch Role',
+                                : 'Add Role',
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
