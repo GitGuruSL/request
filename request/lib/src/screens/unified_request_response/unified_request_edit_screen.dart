@@ -67,6 +67,8 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
   DateTime? _preferredDeliveryTime;
   List<String> _imageUrls = [];
   bool _isLoading = false;
+  double? _currentLatitude;
+  double? _currentLongitude;
 
   // Location coordinates storage
   double? _selectedLatitude;
@@ -91,8 +93,8 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
 
   void _populateFormFromRequest() {
     // Populate common fields
-    _titleController.text = widget.request.title;
-    _descriptionController.text = widget.request.description ?? '';
+    _titleController.text = widget.request.title ?? '';
+    _descriptionController.text = widget.request.description?.toString() ?? '';
     _budgetController.text = widget.request.budget?.toString() ?? '';
     _imageUrls = List<String>.from(widget.request.images ?? []);
     
@@ -108,13 +110,13 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
     
     switch (widget.request.type) {
       case RequestType.item:
-        _itemNameController.text = typeData['itemName'] ?? '';
-        _selectedCategory = typeData['category'] ?? 'Electronics';
-        _selectedCategoryId = typeData['categoryId'] ?? typeData['category'];
-        _selectedSubcategory = typeData['subcategory'];
-        _selectedSubCategoryId = typeData['subcategoryId'] ?? typeData['subcategory'];
+        _itemNameController.text = typeData['itemName']?.toString() ?? '';
+        _selectedCategory = typeData['category']?.toString() ?? 'Electronics';
+        _selectedCategoryId = typeData['categoryId']?.toString() ?? typeData['category']?.toString();
+        _selectedSubcategory = typeData['subcategory']?.toString();
+        _selectedSubCategoryId = typeData['subcategoryId']?.toString() ?? typeData['subcategory']?.toString();
         _quantityController.text = typeData['quantity']?.toString() ?? '';
-        _selectedCondition = typeData['condition'] ?? 'New';
+        _selectedCondition = typeData['condition']?.toString() ?? 'New';
         
         // Ensure categoryId is set if we have a category
         if (_selectedCategory?.isNotEmpty == true && (_selectedCategoryId?.isEmpty ?? true)) {
@@ -123,11 +125,11 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
         break;
         
       case RequestType.service:
-        _selectedCategory = typeData['serviceType'] ?? '';
-        _selectedCategoryId = typeData['categoryId'] ?? typeData['serviceType'];
-        _selectedSubcategory = typeData['subcategory'];
-        _selectedSubCategoryId = typeData['subcategoryId'] ?? typeData['subcategory'];
-        _selectedUrgency = typeData['urgency'] ?? 'Flexible';
+        _selectedCategory = typeData['serviceType']?.toString() ?? '';
+        _selectedCategoryId = typeData['categoryId']?.toString() ?? typeData['serviceType']?.toString();
+        _selectedSubcategory = typeData['subcategory']?.toString();
+        _selectedSubCategoryId = typeData['subcategoryId']?.toString() ?? typeData['subcategory']?.toString();
+        _selectedUrgency = typeData['urgency']?.toString() ?? 'Flexible';
         if (typeData['preferredDateTime'] != null) {
           _preferredDateTime = DateTime.fromMillisecondsSinceEpoch(typeData['preferredDateTime']);
         }
@@ -139,23 +141,47 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
         break;
         
       case RequestType.delivery:
-        _pickupLocationController.text = typeData['pickupLocation'] ?? '';
-        _dropoffLocationController.text = typeData['dropoffLocation'] ?? '';
-        _itemCategoryController.text = typeData['itemCategory'] ?? '';
-        _itemDescriptionController.text = typeData['itemDescription'] ?? '';
+        _pickupLocationController.text = typeData['pickupLocation']?.toString() ?? '';
+        _dropoffLocationController.text = typeData['dropoffLocation']?.toString() ?? '';
+        
+        // Load category data into the CategoryPicker variables
+        _selectedCategory = typeData['itemCategory']?.toString() ?? typeData['category']?.toString() ?? '';
+        _selectedCategoryId = typeData['categoryId']?.toString() ?? typeData['itemCategory']?.toString() ?? typeData['category']?.toString();
+        _selectedSubcategory = typeData['subcategory']?.toString();
+        _selectedSubCategoryId = typeData['subcategoryId']?.toString() ?? typeData['subcategory']?.toString();
+        
+        _itemDescriptionController.text = typeData['itemDescription']?.toString() ?? '';
         _weightController.text = typeData['weight']?.toString() ?? '';
-        _dimensionsController.text = typeData['dimensions'] ?? '';
-        _selectedDeliveryTime = typeData['preferredDeliveryTime'] ?? 'Anytime';
-        _specialInstructionsController.text = typeData['specialInstructions'] ?? '';
+        _dimensionsController.text = typeData['dimensions']?.toString() ?? '';
+        _specialInstructionsController.text = typeData['specialInstructions']?.toString() ?? '';
+        
+        // Handle preferredDeliveryTime - could be either a timestamp or string
+        final deliveryTimeData = typeData['preferredDeliveryTime'];
+        if (deliveryTimeData is int) {
+          // It's a timestamp, convert to DateTime
+          _preferredDeliveryTime = DateTime.fromMillisecondsSinceEpoch(deliveryTimeData);
+          _selectedDeliveryTime = 'Specific Date'; // Default to specific date when we have a timestamp
+        } else if (deliveryTimeData is String) {
+          // It's a string selection
+          _selectedDeliveryTime = deliveryTimeData;
+        } else {
+          // Default fallback
+          _selectedDeliveryTime = 'Anytime';
+        }
+        
+        // Ensure categoryId is set if we have a category
+        if (_selectedCategory?.isNotEmpty == true && (_selectedCategoryId?.isEmpty ?? true)) {
+          _selectedCategoryId = _selectedCategory;
+        }
         break;
         
       case RequestType.rental:
-        _itemToRentController.text = typeData['itemToRent'] ?? '';
-        _selectedCategory = typeData['category'] ?? '';
-        _selectedCategoryId = typeData['categoryId'] ?? typeData['category'];
-        _selectedSubcategory = typeData['subcategory'];
-        _selectedSubCategoryId = typeData['subcategoryId'] ?? typeData['subcategory'];
-        _pickupDropoffPreference = typeData['pickupDropoffPreference'] ?? 'pickup';
+        _itemToRentController.text = typeData['itemToRent']?.toString() ?? '';
+        _selectedCategory = typeData['category']?.toString() ?? '';
+        _selectedCategoryId = typeData['categoryId']?.toString() ?? typeData['category']?.toString();
+        _selectedSubcategory = typeData['subcategory']?.toString();
+        _selectedSubCategoryId = typeData['subcategoryId']?.toString() ?? typeData['subcategory']?.toString();
+        _pickupDropoffPreference = typeData['pickupDropoffPreference']?.toString() ?? 'pickup';
         
         // Set both date formats for compatibility
         if (typeData['startDate'] != null) {
@@ -649,6 +675,8 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
                 onLocationSelected: (address, lat, lng) {
                   setState(() {
                     _locationController.text = address;
+                    _selectedLatitude = lat;
+                    _selectedLongitude = lng;
                   });
                 },
               ),
@@ -1150,6 +1178,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
                 onLocationSelected: (address, lat, lng) {
                   setState(() {
                     _dropoffLocationController.text = address;
+                    // For delivery, we might need separate variables for pickup/dropoff coordinates
                   });
                 },
               ),
@@ -1160,48 +1189,64 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
         
         // Item Categories (Use Category Picker)
         _buildFlatField(
-          child: GestureDetector(
-            onTap: () async {
-              final result = await showModalBottomSheet<Map<String, String>>(
-                context: context,
-                isScrollControlled: true,
-                builder: (context) => DraggableScrollableSheet(
-                  expand: false,
-                  builder: (context, scrollController) => CategoryPicker(
-                    requestType: 'delivery',
-                    scrollController: scrollController,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Item Category',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () async {
+                  final result = await showModalBottomSheet<Map<String, String>>(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.white,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                    ),
+                    builder: (context) => SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.8,
+                      child: CategoryPicker(
+                        requestType: 'delivery',
+                        scrollController: ScrollController(),
+                      ),
+                    ),
+                  );
+                  
+                  if (result != null && result['category'] != null) {
+                    setState(() {
+                      _selectedCategory = result['category']!;
+                      _selectedSubcategory = result['subcategory'];
+                      _selectedCategoryId = result['category']!;
+                      _selectedSubCategoryId = result['subcategory'];
+                    });
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _selectedSubcategory ?? _selectedCategory ?? 'Select item category',
+                        style: TextStyle(
+                          color: (_selectedSubcategory != null || _selectedCategory != null) 
+                              ? Colors.black 
+                              : Colors.grey.shade600,
+                        ),
+                      ),
+                      const Icon(Icons.arrow_drop_down),
+                    ],
                   ),
                 ),
-              );
-              
-              if (result != null) {
-                setState(() {
-                  _selectedCategory = result['category'] ?? _selectedCategory;
-                  _selectedSubcategory = result['subcategory'] ?? _selectedSubcategory;
-                  _selectedCategoryId = result['category'];
-                  _selectedSubCategoryId = result['subcategory'];
-                });
-              }
-            },
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(8),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    _selectedSubcategory ?? 'Select item category',
-                    style: TextStyle(
-                      color: _selectedSubcategory != null ? Colors.black : Colors.grey.shade600,
-                    ),
-                  ),
-                  const Icon(Icons.arrow_drop_down),
-                ],
-              ),
-            ),
+            ],
           ),
         ),
         const SizedBox(height: 16),
@@ -1393,11 +1438,20 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
       // Update the request using the service method
       LocationInfo? locationInfo;
       if (_locationController.text.trim().isNotEmpty) {
-        locationInfo = LocationInfo(
-          address: _locationController.text.trim(),
-          latitude: null, // We'll need to geocode this if needed
-          longitude: null,
-        );
+        if (_selectedLatitude != null && _selectedLongitude != null) {
+          locationInfo = LocationInfo(
+            address: _locationController.text.trim(),
+            latitude: _selectedLatitude!,
+            longitude: _selectedLongitude!,
+          );
+        } else {
+          // Create location with just address if coordinates are not available
+          locationInfo = LocationInfo(
+            address: _locationController.text.trim(),
+            latitude: 0.0, // Default coordinates
+            longitude: 0.0,
+          );
+        }
       }
 
       await _requestService.updateRequest(
@@ -1462,7 +1516,11 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
         return {
           'pickupLocation': _pickupLocationController.text.trim(),
           'dropoffLocation': _dropoffLocationController.text.trim(),
-          'itemCategory': _itemCategoryController.text.trim(),
+          'itemCategory': _selectedCategory?.trim() ?? '',
+          'category': _selectedCategory?.trim() ?? '', // Store in both fields for compatibility
+          'categoryId': _selectedCategoryId?.trim() ?? '',
+          'subcategory': _selectedSubcategory?.trim(),
+          'subcategoryId': _selectedSubCategoryId?.trim() ?? '',
           'itemDescription': _descriptionController.text.trim(),
           'weight': _weightController.text.trim().isNotEmpty 
               ? double.tryParse(_weightController.text.trim()) 

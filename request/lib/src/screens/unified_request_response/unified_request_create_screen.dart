@@ -67,6 +67,8 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
   DateTime? _preferredDeliveryTime;
   List<String> _imageUrls = [];
   bool _isLoading = false;
+  double? _selectedLatitude;
+  double? _selectedLongitude;
 
   final List<String> _conditions = ['New', 'Used', 'For Parts', 'Any Condition'];
   final List<String> _urgencyLevels = ['Flexible', 'ASAP', 'Specific Date'];
@@ -731,48 +733,64 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
         
         // Item to Rent (Use Category Picker)
         _buildFlatField(
-          child: GestureDetector(
-            onTap: () async {
-              final result = await showModalBottomSheet<Map<String, String>>(
-                context: context,
-                isScrollControlled: true,
-                builder: (context) => DraggableScrollableSheet(
-                  expand: false,
-                  builder: (context, scrollController) => CategoryPicker(
-                    requestType: 'rent',
-                    scrollController: scrollController,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Item to Rent',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () async {
+                  final result = await showModalBottomSheet<Map<String, String>>(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.white,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                    ),
+                    builder: (context) => SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.8,
+                      child: CategoryPicker(
+                        requestType: 'rent',
+                        scrollController: ScrollController(),
+                      ),
+                    ),
+                  );
+                  
+                  if (result != null && result['category'] != null) {
+                    setState(() {
+                      _selectedCategory = result['category']!;
+                      _selectedSubcategory = result['subcategory'];
+                      _selectedCategoryId = result['category']!;
+                      _selectedSubCategoryId = result['subcategory'];
+                    });
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _selectedSubcategory ?? _selectedCategory ?? 'Select item to rent',
+                        style: TextStyle(
+                          color: (_selectedSubcategory != null || _selectedCategory != null) 
+                              ? Colors.black 
+                              : Colors.grey.shade600,
+                        ),
+                      ),
+                      const Icon(Icons.arrow_drop_down),
+                    ],
                   ),
                 ),
-              );
-              
-              if (result != null) {
-                setState(() {
-                  _selectedCategory = result['category'] ?? _selectedCategory;
-                  _selectedSubcategory = result['subcategory'] ?? _selectedSubcategory;
-                  _selectedCategoryId = result['category'];
-                  _selectedSubCategoryId = result['subcategory'];
-                });
-              }
-            },
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(8),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    _selectedSubcategory ?? 'Select item to rent',
-                    style: TextStyle(
-                      color: _selectedSubcategory != null ? Colors.black : Colors.grey.shade600,
-                    ),
-                  ),
-                  const Icon(Icons.arrow_drop_down),
-                ],
-              ),
-            ),
+            ],
           ),
         ),
         const SizedBox(height: 16),
@@ -1280,11 +1298,30 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
         throw Exception('User not found');
       }
 
-      // Create the request using the service method
+      // Create request using the service method
+      LocationInfo? locationInfo;
+      if (_locationController.text.trim().isNotEmpty) {
+        if (_selectedLatitude != null && _selectedLongitude != null) {
+          locationInfo = LocationInfo(
+            address: _locationController.text.trim(),
+            latitude: _selectedLatitude!,
+            longitude: _selectedLongitude!,
+          );
+        } else {
+          // Create location with just address if coordinates are not available
+          locationInfo = LocationInfo(
+            address: _locationController.text.trim(),
+            latitude: 0.0, // Default coordinates
+            longitude: 0.0,
+          );
+        }
+      }
+
       String requestId = await _requestService.createRequest(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         type: _selectedType,
+        location: locationInfo,
         budget: _budgetController.text.trim().isNotEmpty 
             ? double.tryParse(_budgetController.text.trim()) 
             : null,
@@ -1342,7 +1379,11 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
         return {
           'pickupLocation': _pickupLocationController.text.trim(),
           'dropoffLocation': _dropoffLocationController.text.trim(),
-          'itemCategory': _itemCategoryController.text.trim(),
+          'itemCategory': _selectedCategory?.trim() ?? '',
+          'category': _selectedCategory?.trim() ?? '', // Store in both fields for compatibility
+          'categoryId': _selectedCategoryId?.trim() ?? '',
+          'subcategory': _selectedSubcategory?.trim(),
+          'subcategoryId': _selectedSubCategoryId?.trim() ?? '',
           'itemDescription': _descriptionController.text.trim(),
           'weight': _weightController.text.trim().isNotEmpty 
               ? double.tryParse(_weightController.text.trim()) 
@@ -1354,6 +1395,10 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
       case RequestType.rental:
         return {
           'itemToRent': _rentalItemController.text.trim(),
+          'category': _selectedCategory,
+          'categoryId': _selectedCategoryId ?? '',
+          'subCategoryId': _selectedSubCategoryId ?? '',
+          'subcategory': _selectedSubcategory ?? '',
           'startDate': _startDateTime?.millisecondsSinceEpoch,
           'endDate': _endDateTime?.millisecondsSinceEpoch,
           'pickupDropoffPreference': _pickupDropoffPreference,
