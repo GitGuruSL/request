@@ -10,7 +10,7 @@ import '../../utils/currency_helper.dart';
 import '../messaging/conversation_screen.dart';
 import 'unified_response_create_screen.dart';
 import 'unified_request_edit_screen.dart';
-// import 'view_all_responses_screen.dart'; // Temporarily disabled
+import 'view_all_responses_screen.dart';
 
 class UnifiedRequestViewScreen extends StatefulWidget {
   final String requestId;
@@ -914,8 +914,13 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
               const Spacer(),
               TextButton.icon(
                 onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('View all responses feature coming soon')),
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ViewAllResponsesScreen(
+                        request: _request!,
+                      ),
+                    ),
                   );
                 },
                 icon: Icon(Icons.visibility, size: 16, color: Colors.blue[700]),
