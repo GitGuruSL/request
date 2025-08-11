@@ -82,6 +82,12 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
   void initState() {
     super.initState();
     _initializeFormData();
+    // Force a rebuild after initialization to ensure images are displayed
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
   }
 
   void _initializeFormData() {
@@ -104,6 +110,10 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
     if (_uploadedImages.isEmpty && additionalInfo['images'] != null) {
       _uploadedImages = List<String>.from(additionalInfo['images'] ?? []);
     }
+    
+    print('DEBUG: Initialized images: $_uploadedImages');
+    print('DEBUG: Response images: ${widget.response.images}');
+    print('DEBUG: AdditionalInfo images: ${additionalInfo['images']}');
     
     // Initialize type-specific fields based on request type
     switch (widget.request.type) {
@@ -705,6 +715,7 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
               ),
               const SizedBox(height: 16),
               ImageUploadWidget(
+                key: ValueKey('item_images_${_uploadedImages.length}'),
                 initialImages: _uploadedImages,
                 uploadPath: 'responses/item',
                 onImagesChanged: (images) {
@@ -977,6 +988,7 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
               ),
               const SizedBox(height: 16),
               ImageUploadWidget(
+                key: ValueKey('service_images_${_uploadedImages.length}'),
                 initialImages: _uploadedImages,
                 uploadPath: 'responses/service',
                 onImagesChanged: (images) {
@@ -1308,6 +1320,7 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
               ),
               const SizedBox(height: 16),
               ImageUploadWidget(
+                key: ValueKey('rental_images_${_uploadedImages.length}'),
                 initialImages: _uploadedImages,
                 uploadPath: 'responses/rental',
                 onImagesChanged: (images) {
