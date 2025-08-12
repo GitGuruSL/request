@@ -149,6 +149,24 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
     return null;
   }
 
+  bool _hasUserResponded() {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return false;
+
+    return _responses.any((response) => response.responderId == currentUser.uid);
+  }
+
+  ResponseModel? _getUserResponse() {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return null;
+
+    try {
+      return _responses.firstWhere((response) => response.responderId == currentUser.uid);
+    } catch (e) {
+      return null;
+    }
+  }
+
   void _navigateToEditRideRequest() {
     if (_request == null) return;
     
@@ -425,13 +443,14 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
           ? (_canUserRespond()
               ? FloatingActionButton.extended(
                   onPressed: () {
-                    print('🔍 Ride Respond button pressed - IsOwner: $_isOwner');
-                    print('🔍 Ride Respond button pressed - Current User: ${FirebaseAuth.instance.currentUser?.uid}');
-                    print('🔍 Ride Respond button pressed - Request Owner: ${_request!.requesterId}');
+                    print('🔍 Ride ${_hasUserResponded() ? 'Edit' : 'Respond'} button pressed - IsOwner: $_isOwner');
+                    print('🔍 Ride ${_hasUserResponded() ? 'Edit' : 'Respond'} button pressed - Current User: ${FirebaseAuth.instance.currentUser?.uid}');
+                    print('🔍 Ride ${_hasUserResponded() ? 'Edit' : 'Respond'} button pressed - Request Owner: ${_request!.requesterId}');
+                    print('🔍 Ride ${_hasUserResponded() ? 'Edit' : 'Respond'} button pressed - Has User Responded: ${_hasUserResponded()}');
                     _showResponseDialog();
                   },
-                  icon: const Icon(Icons.reply),
-                  label: const Text('Respond'),
+                  icon: Icon(_hasUserResponded() ? Icons.edit : Icons.reply),
+                  label: Text(_hasUserResponded() ? 'Edit' : 'Respond'),
                   backgroundColor: Colors.black,
                   foregroundColor: Colors.white,
                 )
@@ -977,13 +996,19 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
 
   void _showResponseDialog() {
     // Navigate to the comprehensive ride response screen
+    final existingResponse = _getUserResponse();
+    
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => CreateRideResponseScreen(
           request: _request!,
+          existingResponse: existingResponse,
         ),
       ),
-    );
+    ).then((_) {
+      // Refresh the responses when returning from the response screen
+      _loadRequestData(); // Reload data when coming back
+    });
   }
 
   String _formatDate(DateTime date) {
