@@ -33,10 +33,16 @@ void main() async {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
+    } else {
+      // No action needed; app already initialized. Avoid duplicate-app noise.
     }
     await CountryService.instance.initialize();
   } catch (e) {
-    print('Initialization failed: $e');
+    if (e.toString().contains('duplicate-app')) {
+      debugPrint('Firebase already initialized (hot reload)');
+    } else {
+      debugPrint('Initialization failed: $e');
+    }
   }
   
   runApp(const MyApp());

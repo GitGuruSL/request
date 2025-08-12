@@ -20,6 +20,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _currencySymbol;
   List<RequestModel> _requests = [];
   bool _isLoading = true;
+  bool _usingFallback = false; // Indicates index-based query fallback in use
   Map<String, dynamic>? _userData;
 
   @override
@@ -68,9 +69,11 @@ class _HomeScreenState extends State<HomeScreen> {
       _requests = querySnapshot.docs
           .map((doc) => RequestModel.fromMap(doc.data() as Map<String, dynamic>))
           .toList();
+      _usingFallback = false; // succeeded with primary indexed query
     } on FirebaseException catch (e) {
       if (e.code == 'failed-precondition') {
-        print('⚠️ Index not ready. Retrying without status filter.');
+        // Suppress noisy repeating logs; set fallback flag for UI
+        _usingFallback = true;
         try {
           final fallbackSnapshot = await FirebaseFirestore.instance
               .collection('requests')
@@ -81,13 +84,13 @@ class _HomeScreenState extends State<HomeScreen> {
               .map((doc) => RequestModel.fromMap(doc.data() as Map<String, dynamic>))
               .toList();
         } catch (inner) {
-          print('Fallback also failed: $inner');
+          debugPrint('HomeScreen fallback query failed: $inner');
         }
       } else {
-        print('Error loading requests: $e');
+        debugPrint('HomeScreen error loading requests: $e');
       }
     } catch (e) {
-      print('Error loading requests: $e');
+      debugPrint('HomeScreen unexpected error: $e');
     }
   }
 
@@ -143,6 +146,29 @@ class _HomeScreenState extends State<HomeScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
+                if (_usingFallback)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: Material(
+                      color: Colors.amber.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                      child: ListTile(
+                        dense: true,
+                        leading: const Icon(Icons.info_outline, color: Colors.amber),
+                        title: const Text('Limited filtering in effect'),
+                        subtitle: const Text('Optimized results will appear once indexing completes.'),
+                        trailing: IconButton(
+                          tooltip: 'Retry full query',
+                          icon: const Icon(Icons.refresh),
+                          onPressed: () async {
+                            setState(() => _isLoading = true);
+                            await _loadRequests();
+                            if (mounted) setState(() => _isLoading = false);
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
                 // Country Info Card
                 Card(
                   margin: const EdgeInsets.all(16),
