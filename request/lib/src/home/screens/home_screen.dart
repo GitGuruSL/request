@@ -61,16 +61,30 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadRequests() async {
     try {
-      // Get country-filtered query
-      Query? query = CountryService.instance.getCountryFilteredQuery(
+      Query query = CountryService.instance.getCountryFilteredQuery(
         FirebaseFirestore.instance.collection('requests')
       );
-      
-      if (query != null) {
-        final querySnapshot = await query.limit(20).get();
-        _requests = querySnapshot.docs
-            .map((doc) => RequestModel.fromMap(doc.data() as Map<String, dynamic>))
-            .toList();
+      final querySnapshot = await query.limit(20).get();
+      _requests = querySnapshot.docs
+          .map((doc) => RequestModel.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
+    } on FirebaseException catch (e) {
+      if (e.code == 'failed-precondition') {
+        print('⚠️ Index not ready. Retrying without status filter.');
+        try {
+          final fallbackSnapshot = await FirebaseFirestore.instance
+              .collection('requests')
+              .orderBy('createdAt', descending: true)
+              .limit(20)
+              .get();
+          _requests = fallbackSnapshot.docs
+              .map((doc) => RequestModel.fromMap(doc.data() as Map<String, dynamic>))
+              .toList();
+        } catch (inner) {
+          print('Fallback also failed: $inner');
+        }
+      } else {
+        print('Error loading requests: $e');
       }
     } catch (e) {
       print('Error loading requests: $e');

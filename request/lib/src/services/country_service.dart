@@ -113,17 +113,31 @@ class CountryService {
   Query<Map<String, dynamic>> getCountryFilteredQuery(
     CollectionReference<Map<String, dynamic>> collection
   ) {
-    if (_currentCountryName == null) {
-      // If no country set, return all active requests (fallback)
+    try {
+      if (_currentCountryName == null) {
+        // If no country set, return all active requests (fallback)
+        return collection
+            .where('status', whereNotIn: ['completed', 'fulfilled'])
+            .orderBy('createdAt', descending: true);
+      }
+
       return collection
+          .where('country', isEqualTo: _currentCountryName!)
           .where('status', whereNotIn: ['completed', 'fulfilled'])
           .orderBy('createdAt', descending: true);
+    } on FirebaseException catch (e) {
+      // Graceful fallback if composite index not yet created
+      if (e.code == 'failed-precondition') {
+        print('⚠️ Missing index for country+status query. Falling back to simpler query.');
+        if (_currentCountryName != null) {
+          return collection
+              .where('country', isEqualTo: _currentCountryName!)
+              .orderBy('createdAt', descending: true);
+        }
+        return collection.orderBy('createdAt', descending: true);
+      }
+      rethrow;
     }
-    
-    return collection
-        .where('country', isEqualTo: _currentCountryName!)
-        .where('status', whereNotIn: ['completed', 'fulfilled'])
-        .orderBy('createdAt', descending: true);
   }
   
   /// Save country info to SharedPreferences
