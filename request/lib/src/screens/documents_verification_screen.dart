@@ -383,7 +383,7 @@ class _DocumentsVerificationScreenState extends State<DocumentsVerificationScree
         Navigator.pushNamed(context, '/new-driver-verification');
         break;
       case UserRole.business:
-        Navigator.pushNamed(context, '/new-business-verification');
+        Navigator.pushNamed(context, '/business-verification');
         break;
       case UserRole.delivery:
         Navigator.pushNamed(context, '/delivery-verification');

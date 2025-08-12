@@ -56,6 +56,27 @@ class _BusinessDocumentsViewScreenState extends State<BusinessDocumentsViewScree
         backgroundColor: AppTheme.backgroundColor,
         foregroundColor: AppTheme.textPrimary,
         elevation: 0,
+        actions: [
+          Container(
+            margin: EdgeInsets.all(8),
+            child: ElevatedButton(
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('⚠️ WRONG PAGE: Business Documents View Screen (Read-Only)'),
+                    backgroundColor: Colors.orange,
+                    duration: Duration(seconds: 3),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
+              child: Text('DEBUG: Wrong Page!'),
+            ),
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

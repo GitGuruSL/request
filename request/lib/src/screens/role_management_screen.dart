@@ -493,10 +493,10 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
   void _manageRole(UserRole role) {
     switch (role) {
       case UserRole.driver:
-        Navigator.pushNamed(context, '/new-driver-documents-view').then((_) => _loadUserData());
+        Navigator.pushNamed(context, '/driver-documents-view').then((_) => _loadUserData());
         break;
       case UserRole.business:
-        Navigator.pushNamed(context, '/business-documents-view').then((_) => _loadUserData());
+        Navigator.pushNamed(context, '/business-verification').then((_) => _loadUserData());
         break;
       default:
         break;

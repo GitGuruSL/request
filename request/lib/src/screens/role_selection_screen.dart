@@ -117,7 +117,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
         Navigator.pushReplacementNamed(context, '/delivery-verification');
         break;
       case UserRole.business:
-        Navigator.pushReplacementNamed(context, '/new-business-verification');
+        Navigator.pushReplacementNamed(context, '/business-verification');
         break;
     }
   }
