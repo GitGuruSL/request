@@ -144,31 +144,23 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
   // Check if current user can respond to this request type
   bool _canUserRespond() {
     if (_currentUser == null || _request == null) return false;
-  // If user already responded, allow editing even if roles changed later
-  if (_currentUserResponse != null) return true;
-    
+    if (_isOwner) return false; // owners never respond
+    if (_currentUserResponse != null) return true; // can always edit own existing response
+
     switch (_request!.type) {
       case RequestType.delivery:
-    // Accept either approved delivery role OR (legacy) approved business role
-    final hasDelivery = _currentUser!.hasRole(UserRole.delivery) &&
-      _currentUser!.isRoleVerified(UserRole.delivery);
-    final hasLegacyBusiness = _currentUser!.hasRole(UserRole.business) &&
-      _currentUser!.isRoleVerified(UserRole.business);
-    final can = hasDelivery || hasLegacyBusiness;
-    // Debug
-    // ignore: avoid_print
-    print('🔍 Delivery can respond? delivery=$hasDelivery business=$hasLegacyBusiness => $can');
-    return can;
+        final hasDelivery = _currentUser!.hasRole(UserRole.delivery) && _currentUser!.isRoleVerified(UserRole.delivery);
+        final hasBusiness = _currentUser!.hasRole(UserRole.business) && _currentUser!.isRoleVerified(UserRole.business);
+        final can = hasDelivery || hasBusiness;
+        print('🔍 Delivery can respond? delivery=$hasDelivery business=$hasBusiness => $can');
+        return can;
       case RequestType.ride:
-        // Must be registered and approved driver
-        return _currentUser!.hasRole(UserRole.driver) && 
-               _currentUser!.isRoleVerified(UserRole.driver);
+        return _currentUser!.hasRole(UserRole.driver) && _currentUser!.isRoleVerified(UserRole.driver);
       case RequestType.item:
       case RequestType.service:
       case RequestType.rental:
       case RequestType.price:
       default:
-        // Other request types are open to all users
         return true;
     }
   }
@@ -176,7 +168,10 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
   String _getCannotRespondReason() {
     if (_currentUser == null || _request == null) return 'Please log in to respond';
     
-    switch (_request!.type) {
+  // If owner, provide clearer message
+  if (_isOwner) return 'You created this request';
+
+  switch (_request!.type) {
       case RequestType.delivery:
         if (_currentUserResponse != null) return 'You already responded';
         final hasDeliveryRole = _currentUser!.hasRole(UserRole.delivery);
@@ -308,7 +303,7 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
               backgroundColor: _currentUserResponse != null ? Colors.orange : Colors.blue,
               foregroundColor: Colors.white,
             )
-          : (_request != null && !_isOwner && !_canUserRespond())
+          : (_request != null && !_canUserRespond())
               ? FloatingActionButton.extended(
                   onPressed: () {
                     // Show why user cannot respond

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_core/firebase_core.dart' as firebase_core show Firebase;
 import 'firebase_options.dart';
 import 'src/auth/screens/splash_screen.dart';
 import 'src/auth/screens/welcome_screen.dart';
@@ -27,9 +28,12 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    // Guard against duplicate initialization during hot restart
+    if (firebase_core.Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
     await CountryService.instance.initialize();
   } catch (e) {
     print('Initialization failed: $e');
