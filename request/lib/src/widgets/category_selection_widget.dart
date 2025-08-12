@@ -68,7 +68,14 @@ class _CategorySelectionWidgetState extends State<CategorySelectionWidget> {
           categories = await _categoryService.getDeliveryCategories();
           break;
         default:
-          categories = await _categoryService.getCategoriesByType(widget.categoryType);
+          // Use getCategoriesForType which returns CategoryModel list
+          final categoryModels = await _categoryService.getCategoriesForType(widget.categoryType);
+          categories = categoryModels.map((cm) => Category(
+            id: cm.id,
+            name: cm.category, // CategoryModel uses 'category' field
+            type: cm.type,
+            subCategories: [], // No subcategories in simplified structure
+          )).toList();
       }
       
       List<CategoryOption> options = [];

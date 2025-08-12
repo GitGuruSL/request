@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/enhanced_user_service.dart';
 import '../models/enhanced_user_model.dart';
 import '../theme/app_theme.dart';
+import 'driver_documents_view_screen.dart';
+import 'new_business_documents_screen.dart';
 
 class RoleManagementScreen extends StatefulWidget {
   const RoleManagementScreen({Key? key}) : super(key: key);
 
   @override
-  State<RoleManagementScreen> createState() => _RoleManagementScreenState();
+  _RoleManagementScreenState createState() => _RoleManagementScreenState();
 }
 
 class _RoleManagementScreenState extends State<RoleManagementScreen> {
@@ -21,9 +24,15 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
     _loadUserData();
   }
 
+  Map<UserRole, VerificationStatus> _verificationStatuses = {};
+
   Future<void> _loadUserData() async {
     try {
       final user = await _userService.getCurrentUserModel();
+      
+      // Also load verification statuses from the verification collections
+      await _loadVerificationStatuses();
+      
       if (mounted) {
         setState(() {
           _currentUser = user;
@@ -37,6 +46,52 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _loadVerificationStatuses() async {
+    try {
+      final user = await _userService.getCurrentUser();
+      if (user == null) return;
+
+      // Check driver verification status
+      final driverDoc = await FirebaseFirestore.instance
+          .collection('new_driver_verifications')
+          .doc(user.uid)
+          .get();
+      
+      if (driverDoc.exists) {
+        final data = driverDoc.data()!;
+        final status = data['status'] as String? ?? 'pending';
+        _verificationStatuses[UserRole.driver] = _parseVerificationStatus(status);
+      }
+
+      // Check business verification status
+      final businessDoc = await FirebaseFirestore.instance
+          .collection('new_business_verifications')
+          .doc(user.uid)
+          .get();
+      
+      if (businessDoc.exists) {
+        final data = businessDoc.data()!;
+        final status = data['status'] as String? ?? 'pending';
+        _verificationStatuses[UserRole.business] = _parseVerificationStatus(status);
+      }
+    } catch (e) {
+      print('Error loading verification statuses: $e');
+    }
+  }
+
+  VerificationStatus _parseVerificationStatus(String status) {
+    switch (status.toLowerCase()) {
+      case 'approved':
+        return VerificationStatus.approved;
+      case 'rejected':
+        return VerificationStatus.rejected;
+      case 'pending':
+        return VerificationStatus.pending;
+      default:
+        return VerificationStatus.pending;
     }
   }
 
@@ -102,13 +157,28 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
   Widget _buildRoleCard(UserRole role) {
     final hasRole = _currentUser?.hasRole(role) == true;
     final roleData = _currentUser?.getRoleInfo(role);
-    final verificationStatus = roleData?.verificationStatus;
+    
+    // Check if there's a verification request submitted (even if not officially a role yet)
+    final submittedVerificationStatus = _verificationStatuses[role];
+    final hasVerificationRequest = submittedVerificationStatus != null;
+    
+    // Use submitted verification status if available, otherwise use user's role status
+    final verificationStatus = submittedVerificationStatus ?? roleData?.verificationStatus;
     
     String roleTitle = _getRoleDisplayName(role);
-    String statusText = hasRole ? _getVerificationStatusText(verificationStatus) : 'Not Registered';
-    Color statusColor = hasRole ? _getVerificationStatusColor(verificationStatus) : Colors.grey;
+    String statusText;
+    Color statusColor;
+    
+    if (hasVerificationRequest || hasRole) {
+      statusText = _getVerificationStatusText(verificationStatus);
+      statusColor = _getVerificationStatusColor(verificationStatus);
+    } else {
+      statusText = 'Not Registered';
+      statusColor = Colors.grey;
+    }
+    
     IconData roleIcon = _getRoleIcon(role);
-    String subtitle = _getRoleSubtitle(role, hasRole);
+    String subtitle = _getRoleSubtitle(role, hasVerificationRequest || hasRole);
 
     return Container(
       width: double.infinity,
@@ -163,11 +233,11 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
             ],
           ),
           
-          if (hasRole) ...[
+          if (hasVerificationRequest || hasRole) ...[
             const SizedBox(height: 20),
             _buildRoleDetails(role, verificationStatus),
             const SizedBox(height: 20),
-            _buildRoleActions(role),
+            _buildRoleActions(role, hasVerificationRequest, verificationStatus),
           ] else ...[
             const SizedBox(height: 16),
             Text(
@@ -226,7 +296,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
     );
   }
 
-  Widget _buildRoleActions(UserRole role) {
+  Widget _buildRoleActions(UserRole role, bool hasVerificationRequest, VerificationStatus? status) {
     if (role == UserRole.driver) {
       // Driver gets simplified single manage icon
       return Row(
@@ -236,7 +306,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
             onPressed: () => _manageDriverDetails(),
             icon: const Icon(Icons.settings, size: 24),
             style: IconButton.styleFrom(
-              backgroundColor: _getVerificationStatusColor(_currentUser?.getRoleInfo(role)?.verificationStatus),
+              backgroundColor: _getVerificationStatusColor(status),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.all(12),
             ),
@@ -255,7 +325,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
             icon: const Icon(Icons.visibility, size: 18),
             label: const Text('View Details'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: _getVerificationStatusColor(_currentUser?.getRoleInfo(role)?.verificationStatus),
+              backgroundColor: _getVerificationStatusColor(status),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: const RoundedRectangleBorder(),
@@ -270,7 +340,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
             label: const Text('Manage'),
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: Colors.transparent),
-              foregroundColor: _getVerificationStatusColor(_currentUser?.getRoleInfo(role)?.verificationStatus),
+              foregroundColor: _getVerificationStatusColor(status),
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: const RoundedRectangleBorder(),
             ),
@@ -357,10 +427,10 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
   void _registerRole(UserRole role) {
     switch (role) {
       case UserRole.driver:
-        Navigator.pushNamed(context, '/driver-verification').then((_) => _loadUserData());
+        Navigator.pushNamed(context, '/new-driver-verification').then((_) => _loadUserData());
         break;
       case UserRole.business:
-        Navigator.pushNamed(context, '/business-verification').then((_) => _loadUserData());
+        Navigator.pushNamed(context, '/new-business-verification').then((_) => _loadUserData());
         break;
       default:
         break;
@@ -374,10 +444,10 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
   void _manageRole(UserRole role) {
     switch (role) {
       case UserRole.driver:
-        Navigator.pushNamed(context, '/driver-verification').then((_) => _loadUserData());
+        Navigator.pushNamed(context, '/new-driver-documents-view').then((_) => _loadUserData());
         break;
       case UserRole.business:
-        Navigator.pushNamed(context, '/business-verification').then((_) => _loadUserData());
+        Navigator.pushNamed(context, '/new-business-documents-view').then((_) => _loadUserData());
         break;
       default:
         break;
@@ -385,7 +455,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
   }
 
   void _manageDriverDetails() {
-    Navigator.pushNamed(context, '/driver-documents-verification').then((_) => _loadUserData());
+    Navigator.pushNamed(context, '/driver-documents-view').then((_) => _loadUserData());
   }
 
   List<_RoleRequirement> _getRoleRequirements(UserRole role, VerificationStatus? status) {

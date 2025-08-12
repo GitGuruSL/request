@@ -380,10 +380,10 @@ class _DocumentsVerificationScreenState extends State<DocumentsVerificationScree
   void _navigateToRoleVerification(UserRole role) {
     switch (role) {
       case UserRole.driver:
-        Navigator.pushNamed(context, '/driver-verification');
+        Navigator.pushNamed(context, '/new-driver-verification');
         break;
       case UserRole.business:
-        Navigator.pushNamed(context, '/business-verification');
+        Navigator.pushNamed(context, '/new-business-verification');
         break;
       case UserRole.delivery:
         Navigator.pushNamed(context, '/delivery-verification');

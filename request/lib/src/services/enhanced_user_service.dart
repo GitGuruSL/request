@@ -11,6 +11,11 @@ class EnhancedUserService {
   // Get current user
   User? get currentUser => _auth.currentUser;
 
+  // Get current user document
+  Future<User?> getCurrentUser() async {
+    return _auth.currentUser;
+  }
+
   // Create user document with role
   Future<void> createUserDocument({
     required String userId,
@@ -700,6 +705,43 @@ class EnhancedUserService {
       };
     } catch (e) {
       throw Exception('Failed to get user stats: $e');
+    }
+  }
+
+  // Add methods for new verification system
+  Future<void> submitDriverVerification(Map<String, dynamic> driverData) async {
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) throw Exception('User not authenticated');
+
+      // Store in new_driver_verifications collection
+      await _firestore
+          .collection('new_driver_verifications')
+          .doc(currentUser.uid)
+          .set(driverData);
+
+      print('Driver verification submitted successfully');
+    } catch (e) {
+      print('Error submitting driver verification: $e');
+      throw e;
+    }
+  }
+
+  Future<void> submitBusinessVerification(Map<String, dynamic> businessData) async {
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) throw Exception('User not authenticated');
+
+      // Store in new_business_verifications collection
+      await _firestore
+          .collection('new_business_verifications')
+          .doc(currentUser.uid)
+          .set(businessData);
+
+      print('Business verification submitted successfully');
+    } catch (e) {
+      print('Error submitting business verification: $e');
+      throw e;
     }
   }
 }

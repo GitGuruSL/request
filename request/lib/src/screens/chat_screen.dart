@@ -5,7 +5,7 @@ import '../utils/currency_helper.dart';
 
 class ChatScreen extends StatefulWidget {
   final RequestModel request;
-  final EnhancedUserModel otherUser;
+  final UserModel otherUser;
   
   const ChatScreen({
     super.key,
@@ -82,7 +82,7 @@ class _ChatScreenState extends State<ChatScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              widget.otherUser.displayName ?? 'User',
+              widget.otherUser.name.isNotEmpty ? widget.otherUser.name : 'User',
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             Text(

@@ -3,6 +3,7 @@ import '../../models/request_model.dart';
 import '../../models/enhanced_user_model.dart';
 import '../../services/enhanced_request_service.dart';
 import '../../services/enhanced_user_service.dart';
+import '../../utils/currency_helper.dart';
 
 class CreatePriceRequestScreen extends StatefulWidget {
   const CreatePriceRequestScreen({super.key});
@@ -20,9 +21,14 @@ class _CreatePriceRequestScreenState extends State<CreatePriceRequestScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _locationController = TextEditingController();
+  final _budgetController = TextEditingController();
   
   // Price-specific fields
   String _requestType = 'Product Price';
+  String _category = 'Electronics';
+  String _condition = 'New';
+  int _quantity = 1;
+  bool _compareNewAndUsed = true;
   final _brandController = TextEditingController();
   final _modelController = TextEditingController();
   final _specificationsController = TextEditingController();
@@ -43,6 +49,7 @@ class _CreatePriceRequestScreenState extends State<CreatePriceRequestScreen> {
     _titleController.dispose();
     _descriptionController.dispose();
     _locationController.dispose();
+    _budgetController.dispose();
     _brandController.dispose();
     _modelController.dispose();
     _specificationsController.dispose();

@@ -107,4 +107,47 @@ class FileUploadService {
       return false;
     }
   }
+
+  /// Upload driver document with specific type
+  Future<String> uploadDriverDocument(String userId, File file, String documentType) async {
+    try {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = '${documentType}_$timestamp.jpg';
+      final ref = _storage.ref().child('driver_documents/$userId/$fileName');
+      final uploadTask = await ref.putFile(file);
+      final downloadUrl = await uploadTask.ref.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      print('Error uploading driver document: $e');
+      throw e;
+    }
+  }
+
+  /// Upload vehicle image with index
+  Future<String> uploadVehicleImage(String userId, File file, int imageIndex) async {
+    try {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = 'vehicle_image_${imageIndex}_$timestamp.jpg';
+      final ref = _storage.ref().child('vehicle_images/$userId/$fileName');
+      final uploadTask = await ref.putFile(file);
+      final downloadUrl = await uploadTask.ref.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      print('Error uploading vehicle image: $e');
+      throw e;
+    }
+  }
+
+  /// Upload file with custom path
+  Future<String> uploadFile(File file, String path) async {
+    try {
+      final ref = _storage.ref().child(path);
+      final uploadTask = await ref.putFile(file);
+      final downloadUrl = await uploadTask.ref.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      print('Error uploading file: $e');
+      throw e;
+    }
+  }
 }

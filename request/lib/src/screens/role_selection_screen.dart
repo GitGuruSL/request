@@ -97,11 +97,11 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
       case UserRole.general:
         return '/main-dashboard';
       case UserRole.driver:
-        return '/driver-verification';
+        return '/new-driver-verification';
       case UserRole.delivery:
         return '/delivery-verification';
       case UserRole.business:
-        return '/business-verification';
+        return '/new-business-verification';
     }
   }
 
@@ -111,13 +111,13 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
         Navigator.pushReplacementNamed(context, '/main-dashboard');
         break;
       case UserRole.driver:
-        Navigator.pushReplacementNamed(context, '/driver-verification');
+        Navigator.pushReplacementNamed(context, '/new-driver-verification');
         break;
       case UserRole.delivery:
         Navigator.pushReplacementNamed(context, '/delivery-verification');
         break;
       case UserRole.business:
-        Navigator.pushReplacementNamed(context, '/business-verification');
+        Navigator.pushReplacementNamed(context, '/new-business-verification');
         break;
     }
   }

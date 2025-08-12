@@ -718,13 +718,13 @@ class _EnhancedMainDashboardState extends State<EnhancedMainDashboard> {
   void _completeVerification() {
     switch (currentUser!.activeRole) {
       case UserRole.driver:
-        Navigator.pushNamed(context, '/driver-verification');
+        Navigator.pushNamed(context, '/new-driver-verification');
         break;
       case UserRole.delivery:
         Navigator.pushNamed(context, '/delivery-verification');
         break;
       case UserRole.business:
-        Navigator.pushNamed(context, '/business-verification');
+        Navigator.pushNamed(context, '/new-business-verification');
         break;
       default:
         break;

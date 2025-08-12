@@ -419,13 +419,13 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
         route = '/main-dashboard';
         break;
       case UserRole.driver:
-        route = '/driver-verification';
+        route = '/new-driver-verification';
         break;
       case UserRole.delivery:
         route = '/delivery-verification';
         break;
       case UserRole.business:
-        route = '/business-verification';
+        route = '/new-business-verification';
         break;
     }
     

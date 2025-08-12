@@ -148,6 +148,10 @@ class _DriverDocumentsVerificationScreenState extends State<DriverDocumentsVerif
   }
 
   Widget _buildDocumentsSection() {
+    final driverData = _currentUser?.getRoleInfo(UserRole.driver)?.data;
+    final driverInfo = driverData is Map<String, dynamic> ? driverData : null;
+    final documentVerification = driverInfo?['documentVerification'] as Map<String, dynamic>? ?? {};
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -172,21 +176,15 @@ class _DriverDocumentsVerificationScreenState extends State<DriverDocumentsVerif
           const SizedBox(height: 16),
           _buildDocumentItem(
             'Driving License',
-            VerificationStatus.approved,
+            _getVerificationStatusFromDocument(documentVerification['license']),
             'license_document.jpg',
             'Required for driving verification',
           ),
           _buildDocumentItem(
             'Identity Card/Passport',
-            VerificationStatus.approved,
+            _getVerificationStatusFromDocument(documentVerification['driverPhoto']),
             'identity_document.jpg',
             'Identity verification document',
-          ),
-          _buildDocumentItem(
-            'Professional Certificate',
-            VerificationStatus.pending,
-            null,
-            'Optional professional driving certificate',
           ),
         ],
       ),
@@ -195,7 +193,7 @@ class _DriverDocumentsVerificationScreenState extends State<DriverDocumentsVerif
 
   Widget _buildVehicleDetails() {
     final driverData = _currentUser?.getRoleInfo(UserRole.driver)?.data;
-    final vehicleInfo = driverData is Map<String, dynamic> ? driverData['vehicle'] : null;
+    final driverInfo = driverData is Map<String, dynamic> ? driverData : null;
 
     return Container(
       width: double.infinity,
@@ -219,19 +217,22 @@ class _DriverDocumentsVerificationScreenState extends State<DriverDocumentsVerif
             ],
           ),
           const SizedBox(height: 16),
-          _buildInfoRow('Make & Model', vehicleInfo?['make'] != null && vehicleInfo?['model'] != null 
-            ? '${vehicleInfo['make']} ${vehicleInfo['model']}' : 'Not provided'),
-          _buildInfoRow('Year', vehicleInfo?['year']?.toString() ?? 'Not provided'),
-          _buildInfoRow('License Plate', vehicleInfo?['licensePlate'] ?? 'Not provided'),
-          _buildInfoRow('Color', vehicleInfo?['color'] ?? 'Not provided'),
-          _buildInfoRow('Vehicle Type', vehicleInfo?['type'] ?? 'Not provided'),
-          _buildInfoRow('Seating Capacity', vehicleInfo?['capacity']?.toString() ?? 'Not provided'),
+          _buildInfoRow('Make & Model', driverInfo?['vehicleModel'] ?? 'Not provided'),
+          _buildInfoRow('Year', driverInfo?['vehicleYear']?.toString() ?? 'Not provided'),
+          _buildInfoRow('License Plate', driverInfo?['vehicleNumber'] ?? 'Not provided'),
+          _buildInfoRow('Color', driverInfo?['vehicleColor'] ?? 'Not provided'),
+          _buildInfoRow('Vehicle Type', driverInfo?['vehicleType'] ?? 'Not provided'),
+          _buildInfoRow('Seating Capacity', 'Not provided'),
         ],
       ),
     );
   }
 
   Widget _buildVehicleDocuments() {
+    final driverData = _currentUser?.getRoleInfo(UserRole.driver)?.data;
+    final driverInfo = driverData is Map<String, dynamic> ? driverData : null;
+    final documentVerification = driverInfo?['documentVerification'] as Map<String, dynamic>? ?? {};
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -256,21 +257,15 @@ class _DriverDocumentsVerificationScreenState extends State<DriverDocumentsVerif
           const SizedBox(height: 16),
           _buildDocumentItem(
             'Vehicle Registration',
-            VerificationStatus.approved,
+            _getVerificationStatusFromDocument(documentVerification['vehicleRegistration']),
             'vehicle_registration.jpg',
             'Official vehicle registration document',
           ),
           _buildDocumentItem(
             'Insurance Certificate',
-            VerificationStatus.approved,
+            _getVerificationStatusFromDocument(documentVerification['insurance']),
             'insurance_certificate.jpg',
             'Valid vehicle insurance coverage',
-          ),
-          _buildDocumentItem(
-            'Vehicle Inspection',
-            VerificationStatus.rejected,
-            'inspection_report.jpg',
-            'Annual vehicle inspection report',
           ),
           const SizedBox(height: 16),
           _buildVehiclePhotos(),
@@ -546,22 +541,37 @@ class _DriverDocumentsVerificationScreenState extends State<DriverDocumentsVerif
   }
 
   Widget _buildVehiclePhotoItem(String title, String? imageUrl, Map<String, dynamic>? approval, String description, {required bool isRequired}) {
+    // Debug: print the approval data
+    print('DEBUG: $title - imageUrl: $imageUrl');
+    print('DEBUG: $title - approval: $approval');
+    
     VerificationStatus status = VerificationStatus.pending;
     if (imageUrl == null) {
       status = isRequired ? VerificationStatus.rejected : VerificationStatus.notRequired;
-    } else if (approval != null) {
-      final statusString = approval['status'] as String?;
-      switch (statusString) {
-        case 'approved':
-          status = VerificationStatus.approved;
-          break;
-        case 'rejected':
-          status = VerificationStatus.rejected;
-          break;
-        default:
-          status = VerificationStatus.pending;
+      print('DEBUG: $title - No image URL, status: $status');
+    } else {
+      // If we have an image URL, check approval status
+      if (approval != null) {
+        final statusString = approval['status'] as String?;
+        print('DEBUG: $title - statusString from approval: $statusString');
+        switch (statusString) {
+          case 'approved':
+            status = VerificationStatus.approved;
+            break;
+          case 'rejected':
+            status = VerificationStatus.rejected;
+            break;
+          default:
+            status = VerificationStatus.approved; // Default to approved if image exists
+        }
+      } else {
+        // If no approval data but image exists, assume approved
+        print('DEBUG: $title - No approval data, defaulting to approved');
+        status = VerificationStatus.approved;
       }
     }
+    
+    print('DEBUG: $title - Final status: $status');
 
     Color statusColor = _getStatusColor(status);
     String statusText = _getStatusText(status);
@@ -776,5 +786,20 @@ class _DriverDocumentsVerificationScreenState extends State<DriverDocumentsVerif
         ],
       ),
     );
+  }
+
+  VerificationStatus _getVerificationStatusFromDocument(Map<String, dynamic>? doc) {
+    if (doc == null) return VerificationStatus.pending;
+    
+    final status = doc['status'] as String?;
+    switch (status) {
+      case 'approved':
+        return VerificationStatus.approved;
+      case 'rejected':
+        return VerificationStatus.rejected;
+      case 'pending':
+      default:
+        return VerificationStatus.pending;
+    }
   }
 }

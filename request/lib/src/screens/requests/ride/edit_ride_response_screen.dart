@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../models/request_model.dart';
-import '../../../models/response_model.dart';
 import '../../../models/enhanced_user_model.dart';
 import '../../../services/enhanced_request_service.dart';
 import '../../../services/enhanced_user_service.dart';
@@ -60,25 +59,24 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
   }
 
   void _initializeFromResponse() {
-    _descriptionController.text = widget.response.description ?? '';
+    _descriptionController.text = widget.response.message;
     _priceController.text = widget.response.price?.toString() ?? '';
-    _locationController.text = widget.response.location ?? '';
-    _imageUrls = List<String>.from(widget.response.images ?? []);
+    _locationController.text = ''; // Response doesn't have location field
+    _imageUrls = List<String>.from(widget.response.images);
     
-    if (widget.response.metadata != null) {
-      final metadata = widget.response.metadata!;
-      _vehicleDetailsController.text = metadata['vehicleDetails'] ?? '';
-      _drivingExperienceController.text = metadata['drivingExperience'] ?? '';
-      _vehicleType = metadata['vehicleType'] ?? 'Sedan';
-      _availableSeats = metadata['availableSeats'] ?? 3;
-      _smokingAllowed = metadata['smokingAllowed'] ?? false;
-      _petsAllowed = metadata['petsAllowed'] ?? true;
+    // Use additionalInfo instead of metadata
+    final additionalInfo = widget.response.additionalInfo;
+    _vehicleDetailsController.text = additionalInfo['vehicleDetails'] ?? '';
+    _drivingExperienceController.text = additionalInfo['drivingExperience'] ?? '';
+    _vehicleType = additionalInfo['vehicleType'] ?? 'Sedan';
+    _availableSeats = additionalInfo['availableSeats'] ?? 3;
+    _smokingAllowed = additionalInfo['smokingAllowed'] ?? false;
+    _petsAllowed = additionalInfo['petsAllowed'] ?? true;
       
-      if (metadata['departureTime'] != null) {
-        _departureTime = metadata['departureTime'] is DateTime 
-          ? metadata['departureTime']
-          : DateTime.tryParse(metadata['departureTime'].toString());
-      }
+    if (additionalInfo['departureTime'] != null) {
+      _departureTime = additionalInfo['departureTime'] is DateTime 
+        ? additionalInfo['departureTime']
+        : DateTime.tryParse(additionalInfo['departureTime'].toString());
     }
   }
 
@@ -142,24 +140,21 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
         throw Exception('User not logged in');
       }
 
-      final updatedData = {
-        'description': _descriptionController.text.trim(),
-        'price': double.tryParse(_priceController.text.trim()) ?? 0.0,
-        'location': _locationController.text.trim(),
-        'images': _imageUrls,
-        'metadata': {
-          'vehicleDetails': _vehicleDetailsController.text.trim(),
+      await _requestService.updateResponse(
+        responseId: widget.response.id,
+        message: _descriptionController.text.trim(),
+        price: double.tryParse(_priceController.text),
+        images: _imageUrls,
+        additionalInfo: {
           'vehicleType': _vehicleType,
           'availableSeats': _availableSeats,
-          'departureTime': _departureTime,
           'smokingAllowed': _smokingAllowed,
           'petsAllowed': _petsAllowed,
+          'departureTime': _departureTime?.toIso8601String(),
+          'vehicleDetails': _vehicleDetailsController.text.trim(),
           'drivingExperience': _drivingExperienceController.text.trim(),
         },
-        'updatedAt': DateTime.now(),
-      };
-
-      await _requestService.updateResponse(widget.response.id, updatedData);
+      );
 
       if (mounted) {
         Navigator.of(context).pop(true);
