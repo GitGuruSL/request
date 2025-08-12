@@ -3,8 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/enhanced_user_service.dart';
 import '../models/enhanced_user_model.dart';
 import '../theme/app_theme.dart';
-import 'driver_documents_view_screen.dart';
-import 'new_business_documents_screen.dart';
 
 class RoleManagementScreen extends StatefulWidget {
   const RoleManagementScreen({Key? key}) : super(key: key);
@@ -28,10 +26,27 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
 
   Future<void> _loadUserData() async {
     try {
-      final user = await _userService.getCurrentUserModel();
+      print('🔍 Loading user data...');
+      
+      UserModel? user;
+      try {
+        user = await _userService.getCurrentUserModel();
+        print('✅ Successfully loaded user model: ${user?.name}');
+      } catch (userError) {
+        print('❌ Error loading user model: $userError');
+        print('📍 User error stack trace: ${StackTrace.current}');
+        throw userError;
+      }
       
       // Also load verification statuses from the verification collections
-      await _loadVerificationStatuses();
+      try {
+        await _loadVerificationStatuses();
+        print('✅ Successfully loaded verification statuses');
+      } catch (verificationError) {
+        print('❌ Error loading verification statuses: $verificationError');
+        print('📍 Verification error stack trace: ${StackTrace.current}');
+        // Don't throw here, just log the error
+      }
       
       if (mounted) {
         setState(() {
@@ -39,12 +54,34 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
           _isLoading = false;
         });
       }
-    } catch (e) {
-      print('Error loading user data: $e');
+    } catch (e, stackTrace) {
+      print('❌ Error loading user data: $e');
+      print('📍 Full error stack trace: $stackTrace');
+      
+      // Check if it's a casting error
+      if (e.toString().contains('is not a subtype of type') && e.toString().contains('List<dynamic>')) {
+        print('🎯 Detected List casting error');
+        print('🔍 This is likely a Firebase data structure mismatch');
+        print('💡 Suggestion: Check Firebase document structure for arrays vs maps');
+      }
+      
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
+        
+        // Show user-friendly error
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading user data. Please try again.'),
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: () => _loadUserData(),
+            ),
+          ),
+        );
       }
     }
   }
@@ -55,27 +92,39 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
       if (user == null) return;
 
       // Check driver verification status
-      final driverDoc = await FirebaseFirestore.instance
-          .collection('new_driver_verifications')
-          .doc(user.uid)
-          .get();
-      
-      if (driverDoc.exists) {
-        final data = driverDoc.data()!;
-        final status = data['status'] as String? ?? 'pending';
-        _verificationStatuses[UserRole.driver] = _parseVerificationStatus(status);
+      try {
+        final driverDoc = await FirebaseFirestore.instance
+            .collection('new_driver_verifications')
+            .doc(user.uid)
+            .get();
+        
+        if (driverDoc.exists) {
+          final data = driverDoc.data();
+          if (data != null) {
+            final status = data['status'] as String? ?? 'pending';
+            _verificationStatuses[UserRole.driver] = _parseVerificationStatus(status);
+          }
+        }
+      } catch (e) {
+        print('Error loading driver verification status: $e');
       }
 
       // Check business verification status
-      final businessDoc = await FirebaseFirestore.instance
-          .collection('new_business_verifications')
-          .doc(user.uid)
-          .get();
-      
-      if (businessDoc.exists) {
-        final data = businessDoc.data()!;
-        final status = data['status'] as String? ?? 'pending';
-        _verificationStatuses[UserRole.business] = _parseVerificationStatus(status);
+      try {
+        final businessDoc = await FirebaseFirestore.instance
+            .collection('new_business_verifications')
+            .doc(user.uid)
+            .get();
+        
+        if (businessDoc.exists) {
+          final data = businessDoc.data();
+          if (data != null) {
+            final status = data['status'] as String? ?? 'pending';
+            _verificationStatuses[UserRole.business] = _parseVerificationStatus(status);
+          }
+        }
+      } catch (e) {
+        print('Error loading business verification status: $e');
       }
     } catch (e) {
       print('Error loading verification statuses: $e');
@@ -427,10 +476,10 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
   void _registerRole(UserRole role) {
     switch (role) {
       case UserRole.driver:
-        Navigator.pushNamed(context, '/new-driver-verification').then((_) => _loadUserData());
+        Navigator.pushNamed(context, '/driver-verification').then((_) => _loadUserData());
         break;
       case UserRole.business:
-        Navigator.pushNamed(context, '/new-business-verification').then((_) => _loadUserData());
+        Navigator.pushNamed(context, '/business-verification').then((_) => _loadUserData());
         break;
       default:
         break;
@@ -447,7 +496,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
         Navigator.pushNamed(context, '/new-driver-documents-view').then((_) => _loadUserData());
         break;
       case UserRole.business:
-        Navigator.pushNamed(context, '/new-business-documents-view').then((_) => _loadUserData());
+        Navigator.pushNamed(context, '/business-documents-view').then((_) => _loadUserData());
         break;
       default:
         break;

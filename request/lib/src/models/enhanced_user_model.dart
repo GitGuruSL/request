@@ -80,15 +80,9 @@ class UserModel {
       name: map['name'] ?? '',
       email: map['email'] ?? '',
       phoneNumber: map['phoneNumber'],
-      roles: (map['roles'] as List<dynamic>?)
-          ?.map((e) => UserRole.values.byName(e))
-          .toList() ?? [UserRole.general],
+      roles: _parseRoles(map['roles']) ?? [UserRole.general],
       activeRole: UserRole.values.byName(map['activeRole'] ?? 'general'),
-      roleData: (map['roleData'] as Map<String, dynamic>?)
-          ?.map((key, value) => MapEntry(
-              UserRole.values.byName(key),
-              RoleData.fromMap(value)))
-          ?? {},
+      roleData: _parseRoleData(map['roleData']) ?? {},
       isEmailVerified: map['isEmailVerified'] ?? false,
       isPhoneVerified: map['isPhoneVerified'] ?? false,
       profileComplete: map['profileComplete'] ?? false,
@@ -129,6 +123,65 @@ class UserModel {
       return DateTime.parse(dateTime);
     } else {
       return DateTime.now();
+    }
+  }
+
+  // Helper method to safely parse roles from different data types
+  static List<UserRole>? _parseRoles(dynamic rolesData) {
+    if (rolesData == null) return null;
+    
+    if (rolesData is List) {
+      try {
+        return rolesData
+            .map((e) => UserRole.values.byName(e.toString()))
+            .toList();
+      } catch (e) {
+        print('Error parsing roles from List: $e');
+        return null;
+      }
+    } else if (rolesData is Map) {
+      // If it's a Map, extract the keys as role names
+      try {
+        return rolesData.keys
+            .map((key) => UserRole.values.byName(key.toString()))
+            .toList();
+      } catch (e) {
+        print('Error parsing roles from Map: $e');
+        return null;
+      }
+    } else {
+      print('Unexpected roles data type: ${rolesData.runtimeType}');
+      return null;
+    }
+  }
+
+  // Helper method to safely parse roleData from different data types
+  static Map<UserRole, RoleData>? _parseRoleData(dynamic roleDataRaw) {
+    if (roleDataRaw == null) return null;
+    
+    try {
+      if (roleDataRaw is Map<String, dynamic>) {
+        Map<UserRole, RoleData> result = {};
+        for (final entry in roleDataRaw.entries) {
+          try {
+            final role = UserRole.values.byName(entry.key);
+            if (entry.value is Map<String, dynamic>) {
+              result[role] = RoleData.fromMap(entry.value);
+            } else {
+              print('Invalid role data format for role ${entry.key}: ${entry.value.runtimeType}');
+            }
+          } catch (e) {
+            print('Error parsing role ${entry.key}: $e');
+          }
+        }
+        return result;
+      } else {
+        print('Unexpected roleData type: ${roleDataRaw.runtimeType}');
+        return null;
+      }
+    } catch (e) {
+      print('Error parsing roleData: $e');
+      return null;
     }
   }
 }

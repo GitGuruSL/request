@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Verification Admin Portal</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stats-cards {
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border: none;
+            transition: transform 0.2s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin: 0;
+        }
+        
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-bottom: 0;
+        }
+        
+        .driver-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border: none;
+            transition: all 0.2s;
+        }
+        
+        .driver-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .driver-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #e9ecef;
+        }
+        
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .status-approved {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-rejected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .document-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .document-item {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        
+        .document-item:hover {
+            border-color: #007bff;
+        }
+        
+        .document-image {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+        }
+        
+        .document-status {
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+        }
+        
+        .action-buttons {
+            margin-top: 1rem;
+        }
+        
+        .filters {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 3rem;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #6c757d;
+        }
+        
+        .image-modal .modal-body {
+            padding: 0;
+        }
+        
+        .image-modal .modal-body img {
+            width: 100%;
+            height: auto;
+        }
+        
+        .rejection-form {
+            background: #fff5f5;
+            border: 1px solid #fed7d7;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .vehicle-info {
+            background: #f0f8ff;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h1 class="mb-0">
+                        <i class="fas fa-car me-3"></i>
+                        Driver Verification Admin
+                    </h1>
+                    <p class="mb-0 mt-2 opacity-75">Review and approve driver verification requests</p>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-light" onclick="refreshData()">
+                        <i class="fas fa-sync-alt me-2"></i>
+                        Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Statistics -->
+        <div class="row stats-cards">
+            <div class="col-md-3">
+                <div class="stat-card text-center">
+                    <p class="stat-number text-warning" id="pendingCount">0</p>
+                    <p class="stat-label">Pending Review</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card text-center">
+                    <p class="stat-number text-success" id="approvedCount">0</p>
+                    <p class="stat-label">Approved</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card text-center">
+                    <p class="stat-number text-danger" id="rejectedCount">0</p>
+                    <p class="stat-label">Rejected</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card text-center">
+                    <p class="stat-number text-info" id="totalCount">0</p>
+                    <p class="stat-label">Total Requests</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters">
+            <div class="row align-items-center">
+                <div class="col-md-3">
+                    <label class="form-label">Status Filter:</label>
+                    <select id="statusFilter" class="form-select" onchange="filterDrivers()">
+                        <option value="all">All Statuses</option>
+                        <option value="pending" selected>Pending Review</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Sort By:</label>
+                    <select id="sortBy" class="form-select" onchange="sortDrivers()">
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                        <option value="name">Name A-Z</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Search:</label>
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search by name, phone, or license..." onkeyup="filterDrivers()">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <div>
+                        <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">
+                            <i class="fas fa-times me-1"></i>Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="loading">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3">Loading driver verification requests...</p>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <i class="fas fa-inbox fa-3x mb-3"></i>
+            <h4>No verification requests found</h4>
+            <p>There are no driver verification requests matching your criteria.</p>
+        </div>
+
+        <!-- Driver List -->
+        <div id="driversList"></div>
+    </div>
+
+    <!-- Image Preview Modal -->
+    <div class="modal fade image-modal" id="imageModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="imageModalTitle">Document Preview</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <img id="previewImage" src="" alt="Document" class="img-fluid">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-success" onclick="quickApproveDocument()">
+                        <i class="fas fa-check me-2"></i>Approve This Document
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="quickRejectDocument()">
+                        <i class="fas fa-times me-2"></i>Reject This Document
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rejection Reason Modal -->
+    <div class="modal fade" id="rejectionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Rejection Reason</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="rejectionReason" class="form-label">Please provide a reason for rejection:</label>
+                        <textarea id="rejectionReason" class="form-control" rows="4" placeholder="Enter detailed reason for rejection..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Common reasons:</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="addRejectionReason('Image quality too poor')">Poor Image Quality</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="addRejectionReason('Document is expired')">Expired Document</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="addRejectionReason('Information does not match')">Information Mismatch</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="addRejectionReason('Document is unclear or cut off')">Unclear/Cut Off</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmRejection()">
+                        <i class="fas fa-times me-2"></i>Confirm Rejection
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCtuD42SzwxKmSY5p-x5olFex2U_S9YrMk",
+            authDomain: "request-marketplace.firebaseapp.com",
+            projectId: "request-marketplace",
+            storageBucket: "request-marketplace.firebasestorage.app",
+            messagingSenderId: "355474518888",
+            appId: "1:355474518888:android:27570ce58b7a8346b91cdd"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        
+        // Global variables
+        let allDrivers = [];
+        let filteredDrivers = [];
+        let currentAction = null;
+        let currentDriverId = null;
+        let currentDocumentType = null;
+
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDriverVerifications();
+        });
+
+        // Load driver verification requests
+        async function loadDriverVerifications() {
+            try {
+                showLoading(true);
+                
+                const snapshot = await db.collection('new_driver_verifications').get();
+                allDrivers = [];
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    allDrivers.push({
+                        id: doc.id,
+                        ...data,
+                        createdAt: data.createdAt?.toDate() || new Date(),
+                        updatedAt: data.updatedAt?.toDate() || new Date()
+                    });
+                });
+
+                console.log(`Loaded ${allDrivers.length} driver verification requests`);
+                
+                filteredDrivers = [...allDrivers];
+                updateStatistics();
+                filterDrivers();
+                showLoading(false);
+                
+            } catch (error) {
+                console.error('Error loading driver verifications:', error);
+                showLoading(false);
+                showError('Failed to load verification requests: ' + error.message);
+            }
+        }
+
+        // Update statistics
+        function updateStatistics() {
+            const pending = allDrivers.filter(d => d.status === 'pending').length;
+            const approved = allDrivers.filter(d => d.status === 'approved').length;
+            const rejected = allDrivers.filter(d => d.status === 'rejected').length;
+            
+            document.getElementById('pendingCount').textContent = pending;
+            document.getElementById('approvedCount').textContent = approved;
+            document.getElementById('rejectedCount').textContent = rejected;
+            document.getElementById('totalCount').textContent = allDrivers.length;
+        }
+
+        // Filter and display drivers
+        function filterDrivers() {
+            const statusFilter = document.getElementById('statusFilter').value;
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            filteredDrivers = allDrivers.filter(driver => {
+                const matchesStatus = statusFilter === 'all' || driver.status === statusFilter;
+                const matchesSearch = !searchTerm || 
+                    (driver.name && driver.name.toLowerCase().includes(searchTerm)) ||
+                    (driver.phoneNumber && driver.phoneNumber.includes(searchTerm)) ||
+                    (driver.licenseNumber && driver.licenseNumber.toLowerCase().includes(searchTerm)) ||
+                    (driver.vehicleNumber && driver.vehicleNumber.toLowerCase().includes(searchTerm));
+                
+                return matchesStatus && matchesSearch;
+            });
+            
+            sortDrivers();
+        }
+
+        // Sort drivers
+        function sortDrivers() {
+            const sortBy = document.getElementById('sortBy').value;
+            
+            filteredDrivers.sort((a, b) => {
+                switch (sortBy) {
+                    case 'newest':
+                        return new Date(b.createdAt) - new Date(a.createdAt);
+                    case 'oldest':
+                        return new Date(a.createdAt) - new Date(b.createdAt);
+                    case 'name':
+                        return (a.name || '').localeCompare(b.name || '');
+                    default:
+                        return 0;
+                }
+            });
+            
+            displayDrivers();
+        }
+
+        // Display drivers
+        function displayDrivers() {
+            const container = document.getElementById('driversList');
+            
+            if (filteredDrivers.length === 0) {
+                container.innerHTML = '';
+                document.getElementById('emptyState').style.display = 'block';
+                return;
+            }
+            
+            document.getElementById('emptyState').style.display = 'none';
+            
+            container.innerHTML = filteredDrivers.map(driver => createDriverCard(driver)).join('');
+        }
+
+        // Create driver card HTML
+        function createDriverCard(driver) {
+            const statusClass = `status-${driver.status || 'pending'}`;
+            const statusText = (driver.status || 'pending').charAt(0).toUpperCase() + (driver.status || 'pending').slice(1);
+            
+            return `
+                <div class="driver-card">
+                    <div class="row align-items-start">
+                        <div class="col-md-2 text-center">
+                            <img src="${driver.driverImageUrl || '/api/placeholder/60/60'}" 
+                                 alt="${driver.name}" 
+                                 class="driver-avatar"
+                                 onerror="this.src='https://via.placeholder.com/60x60/e9ecef/6c757d?text=${(driver.name || 'Driver').charAt(0)}'">
+                            <div class="mt-2">
+                                <span class="status-badge ${statusClass}">${statusText}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <h5 class="mb-1">${driver.name || 'Unknown Driver'}</h5>
+                            <p class="text-muted mb-1">
+                                <i class="fas fa-phone me-1"></i> ${driver.phoneNumber || 'N/A'}
+                            </p>
+                            <p class="text-muted mb-1">
+                                <i class="fas fa-id-card me-1"></i> ${driver.licenseNumber || 'N/A'}
+                            </p>
+                            <p class="text-muted mb-0">
+                                <i class="fas fa-calendar me-1"></i> ${formatDate(driver.createdAt)}
+                            </p>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="vehicle-info">
+                                <h6 class="mb-1">Vehicle Information</h6>
+                                <p class="mb-1"><strong>Type:</strong> ${driver.vehicleType || 'N/A'}</p>
+                                <p class="mb-1"><strong>Model:</strong> ${driver.vehicleModel || 'N/A'}</p>
+                                <p class="mb-1"><strong>Number:</strong> ${driver.vehicleNumber || 'N/A'}</p>
+                                <p class="mb-0"><strong>Color:</strong> ${driver.vehicleColor || 'N/A'}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="action-buttons">
+                                <button class="btn btn-primary btn-sm w-100 mb-2" onclick="viewDriverDetails('${driver.id}')">
+                                    <i class="fas fa-eye me-1"></i> View Details
+                                </button>
+                                
+                                ${driver.status === 'pending' ? `
+                                    <button class="btn btn-success btn-sm w-100 mb-1" onclick="approveDriver('${driver.id}')">
+                                        <i class="fas fa-check me-1"></i> Approve All
+                                    </button>
+                                    <button class="btn btn-danger btn-sm w-100" onclick="rejectDriver('${driver.id}')">
+                                        <i class="fas fa-times me-1"></i> Reject
+                                    </button>
+                                ` : ''}
+                                
+                                ${driver.status === 'approved' ? `
+                                    <button class="btn btn-warning btn-sm w-100" onclick="revokeApproval('${driver.id}')">
+                                        <i class="fas fa-undo me-1"></i> Revoke Approval
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Documents Section -->
+                    <div class="mt-3">
+                        <h6>Documents:</h6>
+                        <div class="document-grid">
+                            ${createDocumentItem(driver, 'driverImage', 'Driver Photo', driver.driverImageUrl)}
+                            ${createDocumentItem(driver, 'licenseFront', 'License Front', driver.licenseFrontUrl)}
+                            ${createDocumentItem(driver, 'licenseBack', 'License Back', driver.licenseBackUrl)}
+                            ${createDocumentItem(driver, 'vehicleInsurance', 'Vehicle Insurance', driver.insuranceDocumentUrl)}
+                            ${createDocumentItem(driver, 'vehicleRegistration', 'Vehicle Registration', driver.vehicleRegistrationUrl)}
+                        </div>
+                        
+                        <!-- Vehicle Images -->
+                        ${driver.vehicleImageUrls && driver.vehicleImageUrls.length > 0 ? `
+                            <h6 class="mt-3">Vehicle Images:</h6>
+                            <div class="document-grid">
+                                ${driver.vehicleImageUrls.map((url, index) => 
+                                    createVehicleImageItem(driver, index, url)
+                                ).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Create document item
+        function createDocumentItem(driver, docType, docName, imageUrl) {
+            const docStatus = driver.documentVerification?.[docType]?.status || 'pending';
+            const statusClass = `status-${docStatus}`;
+            
+            return `
+                <div class="document-item">
+                    <div class="document-image-container" onclick="previewImage('${imageUrl}', '${docName}', '${driver.id}', '${docType}')">
+                        ${imageUrl ? `
+                            <img src="${imageUrl}" alt="${docName}" class="document-image">
+                        ` : `
+                            <div class="document-image d-flex align-items-center justify-content-center bg-light">
+                                <i class="fas fa-image fa-2x text-muted"></i>
+                            </div>
+                        `}
+                    </div>
+                    <div class="mt-2">
+                        <strong>${docName}</strong>
+                        <div class="document-status">
+                            <span class="status-badge ${statusClass}">${docStatus.charAt(0).toUpperCase() + docStatus.slice(1)}</span>
+                        </div>
+                        ${driver.status === 'pending' && imageUrl ? `
+                            <div class="mt-2">
+                                <button class="btn btn-success btn-sm me-1" onclick="approveDocument('${driver.id}', '${docType}')">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="rejectDocument('${driver.id}', '${docType}')">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Create vehicle image item
+        function createVehicleImageItem(driver, index, imageUrl) {
+            const verification = driver.vehicleImageVerification?.[index];
+            const status = verification?.status || 'pending';
+            const statusClass = `status-${status}`;
+            const imageType = verification?.imageType || 'additional';
+            
+            return `
+                <div class="document-item">
+                    <div class="document-image-container" onclick="previewImage('${imageUrl}', 'Vehicle Image ${index + 1}', '${driver.id}', 'vehicleImage_${index}')">
+                        <img src="${imageUrl}" alt="Vehicle Image ${index + 1}" class="document-image">
+                    </div>
+                    <div class="mt-2">
+                        <strong>Vehicle ${imageType === 'front_with_plate' ? '(Front)' : imageType === 'rear_with_plate' ? '(Rear)' : `${index + 1}`}</strong>
+                        <div class="document-status">
+                            <span class="status-badge ${statusClass}">${status.charAt(0).toUpperCase() + status.slice(1)}</span>
+                        </div>
+                        ${driver.status === 'pending' ? `
+                            <div class="mt-2">
+                                <button class="btn btn-success btn-sm me-1" onclick="approveVehicleImage('${driver.id}', ${index})">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="rejectVehicleImage('${driver.id}', ${index})">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Preview image in modal
+        function previewImage(imageUrl, title, driverId, docType) {
+            if (!imageUrl) return;
+            
+            currentDriverId = driverId;
+            currentDocumentType = docType;
+            
+            document.getElementById('previewImage').src = imageUrl;
+            document.getElementById('imageModalTitle').textContent = title;
+            
+            const modal = new bootstrap.Modal(document.getElementById('imageModal'));
+            modal.show();
+        }
+
+        // Quick approve document from image modal
+        function quickApproveDocument() {
+            if (currentDriverId && currentDocumentType) {
+                if (currentDocumentType.startsWith('vehicleImage_')) {
+                    const index = parseInt(currentDocumentType.split('_')[1]);
+                    approveVehicleImage(currentDriverId, index);
+                } else {
+                    approveDocument(currentDriverId, currentDocumentType);
+                }
+            }
+            bootstrap.Modal.getInstance(document.getElementById('imageModal')).hide();
+        }
+
+        // Quick reject document from image modal
+        function quickRejectDocument() {
+            if (currentDriverId && currentDocumentType) {
+                if (currentDocumentType.startsWith('vehicleImage_')) {
+                    const index = parseInt(currentDocumentType.split('_')[1]);
+                    rejectVehicleImage(currentDriverId, index);
+                } else {
+                    rejectDocument(currentDriverId, currentDocumentType);
+                }
+            }
+            bootstrap.Modal.getInstance(document.getElementById('imageModal')).hide();
+        }
+
+        // Approve individual document
+        async function approveDocument(driverId, docType) {
+            try {
+                await updateDocumentStatus(driverId, docType, 'approved');
+                showSuccess(`${docType} approved successfully!`);
+                await loadDriverVerifications();
+            } catch (error) {
+                console.error('Error approving document:', error);
+                showError('Failed to approve document: ' + error.message);
+            }
+        }
+
+        // Reject individual document
+        async function rejectDocument(driverId, docType) {
+            currentDriverId = driverId;
+            currentDocumentType = docType;
+            currentAction = 'reject_document';
+            
+            const modal = new bootstrap.Modal(document.getElementById('rejectionModal'));
+            modal.show();
+        }
+
+        // Approve vehicle image
+        async function approveVehicleImage(driverId, imageIndex) {
+            try {
+                const driverRef = db.collection('new_driver_verifications').doc(driverId);
+                await driverRef.update({
+                    [`vehicleImageVerification.${imageIndex}.status`]: 'approved',
+                    [`vehicleImageVerification.${imageIndex}.reviewedAt`]: firebase.firestore.Timestamp.now(),
+                    updatedAt: firebase.firestore.Timestamp.now()
+                });
+                
+                showSuccess(`Vehicle image ${imageIndex + 1} approved successfully!`);
+                await loadDriverVerifications();
+            } catch (error) {
+                console.error('Error approving vehicle image:', error);
+                showError('Failed to approve vehicle image: ' + error.message);
+            }
+        }
+
+        // Reject vehicle image
+        async function rejectVehicleImage(driverId, imageIndex) {
+            currentDriverId = driverId;
+            currentDocumentType = `vehicleImage_${imageIndex}`;
+            currentAction = 'reject_vehicle_image';
+            
+            const modal = new bootstrap.Modal(document.getElementById('rejectionModal'));
+            modal.show();
+        }
+
+        // Update document status
+        async function updateDocumentStatus(driverId, docType, status, reason = null) {
+            const driverRef = db.collection('new_driver_verifications').doc(driverId);
+            const updateData = {
+                [`documentVerification.${docType}.status`]: status,
+                [`documentVerification.${docType}.reviewedAt`]: firebase.firestore.Timestamp.now(),
+                updatedAt: firebase.firestore.Timestamp.now()
+            };
+            
+            if (reason) {
+                updateData[`documentVerification.${docType}.rejectionReason`] = reason;
+            }
+            
+            await driverRef.update(updateData);
+        }
+
+        // Approve entire driver
+        async function approveDriver(driverId) {
+            try {
+                const driverRef = db.collection('new_driver_verifications').doc(driverId);
+                const driver = allDrivers.find(d => d.id === driverId);
+                
+                // Approve all documents
+                const updateData = {
+                    status: 'approved',
+                    isVerified: true,
+                    reviewedAt: firebase.firestore.Timestamp.now(),
+                    updatedAt: firebase.firestore.Timestamp.now()
+                };
+
+                // Approve all document types
+                const docTypes = ['driverImage', 'licenseFront', 'licenseBack', 'vehicleInsurance', 'vehicleRegistration'];
+                docTypes.forEach(docType => {
+                    updateData[`documentVerification.${docType}.status`] = 'approved';
+                    updateData[`documentVerification.${docType}.reviewedAt`] = firebase.firestore.Timestamp.now();
+                });
+
+                // Approve all vehicle images
+                if (driver.vehicleImageUrls) {
+                    driver.vehicleImageUrls.forEach((_, index) => {
+                        updateData[`vehicleImageVerification.${index}.status`] = 'approved';
+                        updateData[`vehicleImageVerification.${index}.reviewedAt`] = firebase.firestore.Timestamp.now();
+                    });
+                }
+
+                await driverRef.update(updateData);
+                
+                // Also update the user's role data
+                await updateUserRole(driver.userId, 'driver', 'approved');
+                
+                showSuccess('Driver approved successfully!');
+                await loadDriverVerifications();
+            } catch (error) {
+                console.error('Error approving driver:', error);
+                showError('Failed to approve driver: ' + error.message);
+            }
+        }
+
+        // Reject driver
+        async function rejectDriver(driverId) {
+            currentDriverId = driverId;
+            currentAction = 'reject_driver';
+            
+            const modal = new bootstrap.Modal(document.getElementById('rejectionModal'));
+            modal.show();
+        }
+
+        // Update user role status
+        async function updateUserRole(userId, role, status) {
+            try {
+                const userRef = db.collection('users').doc(userId);
+                await userRef.update({
+                    [`roleData.${role}.verificationStatus`]: status,
+                    [`roleData.${role}.lastUpdated`]: firebase.firestore.Timestamp.now(),
+                    updatedAt: firebase.firestore.Timestamp.now()
+                });
+            } catch (error) {
+                console.error('Error updating user role:', error);
+            }
+        }
+
+        // Add rejection reason
+        function addRejectionReason(reason) {
+            const textarea = document.getElementById('rejectionReason');
+            const currentText = textarea.value.trim();
+            textarea.value = currentText ? `${currentText}\n• ${reason}` : `• ${reason}`;
+        }
+
+        // Confirm rejection
+        async function confirmRejection() {
+            const reason = document.getElementById('rejectionReason').value.trim();
+            if (!reason) {
+                showError('Please provide a reason for rejection.');
+                return;
+            }
+
+            try {
+                if (currentAction === 'reject_driver') {
+                    await rejectDriverWithReason(currentDriverId, reason);
+                } else if (currentAction === 'reject_document') {
+                    await updateDocumentStatus(currentDriverId, currentDocumentType, 'rejected', reason);
+                } else if (currentAction === 'reject_vehicle_image') {
+                    const imageIndex = parseInt(currentDocumentType.split('_')[1]);
+                    await rejectVehicleImageWithReason(currentDriverId, imageIndex, reason);
+                }
+
+                bootstrap.Modal.getInstance(document.getElementById('rejectionModal')).hide();
+                document.getElementById('rejectionReason').value = '';
+                showSuccess('Rejection completed successfully!');
+                await loadDriverVerifications();
+            } catch (error) {
+                console.error('Error processing rejection:', error);
+                showError('Failed to process rejection: ' + error.message);
+            }
+        }
+
+        // Reject driver with reason
+        async function rejectDriverWithReason(driverId, reason) {
+            const driverRef = db.collection('new_driver_verifications').doc(driverId);
+            const driver = allDrivers.find(d => d.id === driverId);
+            
+            await driverRef.update({
+                status: 'rejected',
+                isVerified: false,
+                rejectionReason: reason,
+                reviewedAt: firebase.firestore.Timestamp.now(),
+                updatedAt: firebase.firestore.Timestamp.now()
+            });
+            
+            // Also update the user's role data
+            await updateUserRole(driver.userId, 'driver', 'rejected');
+        }
+
+        // Reject vehicle image with reason
+        async function rejectVehicleImageWithReason(driverId, imageIndex, reason) {
+            const driverRef = db.collection('new_driver_verifications').doc(driverId);
+            await driverRef.update({
+                [`vehicleImageVerification.${imageIndex}.status`]: 'rejected',
+                [`vehicleImageVerification.${imageIndex}.rejectionReason`]: reason,
+                [`vehicleImageVerification.${imageIndex}.reviewedAt`]: firebase.firestore.Timestamp.now(),
+                updatedAt: firebase.firestore.Timestamp.now()
+            });
+        }
+
+        // View driver details
+        function viewDriverDetails(driverId) {
+            const driver = allDrivers.find(d => d.id === driverId);
+            if (!driver) return;
+
+            alert(`Driver Details:\n\nName: ${driver.name}\nPhone: ${driver.phoneNumber}\nLicense: ${driver.licenseNumber}\nVehicle: ${driver.vehicleType} - ${driver.vehicleModel}\nRegistered: ${formatDate(driver.createdAt)}\nStatus: ${driver.status}`);
+        }
+
+        // Utility functions
+        function showLoading(show) {
+            document.getElementById('loadingState').style.display = show ? 'block' : 'none';
+            document.getElementById('driversList').style.display = show ? 'none' : 'block';
+        }
+
+        function showSuccess(message) {
+            // Simple alert for now, could be replaced with toast notifications
+            alert('✅ ' + message);
+        }
+
+        function showError(message) {
+            alert('❌ ' + message);
+        }
+
+        function formatDate(date) {
+            return new Date(date).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function refreshData() {
+            loadDriverVerifications();
+        }
+
+        function clearFilters() {
+            document.getElementById('statusFilter').value = 'all';
+            document.getElementById('sortBy').value = 'newest';
+            document.getElementById('searchInput').value = '';
+            filterDrivers();
+        }
+    </script>
+</body>
+</html>

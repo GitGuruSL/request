@@ -61,16 +61,40 @@ class EnhancedUserService {
   // Get user document
   Future<UserModel?> getUserById(String userId) async {
     try {
+      print('🔍 Getting user by ID: $userId');
       final doc = await _firestore
           .collection(_usersCollection)
           .doc(userId)
           .get();
 
       if (doc.exists) {
+        print('✅ User document exists, processing data...');
         // Create user model with proper document ID
         final data = doc.data()!;
+        print('📄 Raw user data keys: ${data.keys.toList()}');
+        
+        // Log problematic fields
+        if (data.containsKey('roles')) {
+          print('📋 Roles field type: ${data['roles'].runtimeType}');
+          print('📋 Roles field value: ${data['roles']}');
+        }
+        
+        if (data.containsKey('roleData')) {
+          print('📋 RoleData field type: ${data['roleData'].runtimeType}');
+          print('📋 RoleData field value: ${data['roleData']}');
+        }
+        
         data['id'] = userId; // Ensure the ID is set correctly
-        UserModel userModel = UserModel.fromMap(data);
+        
+        UserModel userModel;
+        try {
+          userModel = UserModel.fromMap(data);
+          print('✅ Successfully created UserModel');
+        } catch (parseError) {
+          print('❌ Error parsing UserModel: $parseError');
+          print('📍 Parse error stack trace: ${StackTrace.current}');
+          throw parseError;
+        }
         
         // Auto-detect and sync roles from existing documents
         userModel = await _syncRolesFromDocuments(userModel);

@@ -51,6 +51,7 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
     'Electronics',
     'Clothing',
     'Hardware',
+    'Delivery Service',
     'Services',
     'Other',
   ];
@@ -503,9 +504,13 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
               icon: Icon(hasDocument ? Icons.refresh : Icons.upload),
               label: Text(hasDocument ? 'Replace Document' : 'Upload Document'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: hasDocument ? Colors.orange : AppTheme.primaryColor,
+                backgroundColor: AppTheme.primaryColor, // Consistent color
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 12),
+                elevation: 0, // Flat design
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
           ),
@@ -573,16 +578,20 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
             ),
             const SizedBox(height: 16),
           ],
-          SizedBox(
+            SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: _pickBusinessLogo,
               icon: Icon(hasLogo ? Icons.refresh : Icons.camera_alt),
               label: Text(hasLogo ? 'Change Logo' : 'Add Business Logo'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: hasLogo ? Colors.orange : Colors.blue,
+                backgroundColor: const Color(0xFF2196F3), // Consistent blue color
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 12),
+                elevation: 0, // Flat design
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
           ),

@@ -277,8 +277,28 @@ class _DriverDocumentsVerificationScreenState extends State<DriverDocumentsVerif
   Widget _buildVehiclePhotos() {
     final driverData = _currentUser?.getRoleInfo(UserRole.driver)?.data;
     final driverInfo = driverData is Map<String, dynamic> ? driverData : null;
-    final vehicleImageUrls = driverInfo?['vehicleImageUrls'] as List<dynamic>? ?? [];
-    final vehicleApprovals = driverInfo?['vehicleImageApprovals'] as List<dynamic>? ?? [];
+    
+    // Handle vehicleImageUrls safely
+    List<dynamic> vehicleImageUrls = [];
+    final imageUrlsData = driverInfo?['vehicleImageUrls'];
+    if (imageUrlsData != null) {
+      if (imageUrlsData is List) {
+        vehicleImageUrls = imageUrlsData;
+      } else if (imageUrlsData is Map) {
+        vehicleImageUrls = imageUrlsData.values.toList();
+      }
+    }
+    
+    // Handle vehicleApprovals safely
+    List<dynamic> vehicleApprovals = [];
+    final approvalsData = driverInfo?['vehicleImageApprovals'];
+    if (approvalsData != null) {
+      if (approvalsData is List) {
+        vehicleApprovals = approvalsData;
+      } else if (approvalsData is Map) {
+        vehicleApprovals = approvalsData.values.toList();
+      }
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

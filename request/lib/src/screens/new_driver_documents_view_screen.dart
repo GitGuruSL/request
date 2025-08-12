@@ -218,7 +218,7 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
             ),
           _buildDocumentItem(
             'Vehicle Insurance Document',
-            docVerification['vehicleInsurance'],
+            docVerification['insurance'],
             _driverData!['insuranceDocumentUrl'],
             'Vehicle insurance certificate (Expires: ${_formatDate(_driverData!['insuranceExpiry'])})',
             Icons.security,
@@ -822,293 +822,35 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
     _viewDocument(imageUrl, title);
   }
 
-  void _replaceDocument(String title) async {
-    try {
-      final ImagePicker picker = ImagePicker();
-      
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text('Replace $title'),
-          content: const Text('Choose how to upload your replacement document:'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _pickAndUploadReplacement(title, ImageSource.camera);
-              },
-              child: const Text('Take Photo'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _pickAndUploadReplacement(title, ImageSource.gallery);
-              },
-              child: const Text('Choose from Gallery'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-          ],
-        ),
-      );
-    } catch (e) {
-      print('Error replacing document: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
-    }
-  }
-
-  Future<void> _pickAndUploadReplacement(String title, ImageSource source) async {
-    try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(
-        source: source,
-        maxWidth: 1920,
-        maxHeight: 1920,
-        imageQuality: 85,
-      );
-
-      if (image != null) {
-        await _uploadReplacementDocument(title, File(image.path));
-      }
-    } catch (e) {
-      print('Error picking image: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error picking image: ${e.toString()}')),
-      );
-    }
-  }
-
-  Future<void> _uploadReplacementDocument(String title, File imageFile) async {
-    try {
-      // Show loading indicator
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Uploading replacement document...'),
-            ],
+  void _replaceDocument(String title) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Replace $title'),
+        content: const Text('This feature will allow you to upload a replacement document. Coming soon!'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
           ),
-        ),
-      );
-
-      final currentUser = await _userService.getCurrentUser();
-      if (currentUser == null) throw Exception('User not authenticated');
-
-      // Determine document type based on title
-      String documentType;
-      String urlField;
-      
-      switch (title) {
-        case 'Driver Photo':
-          documentType = 'driverImage';
-          urlField = 'driverImageUrl';
-          break;
-        case 'License Front Photo':
-          documentType = 'licenseFront';
-          urlField = 'licenseFrontUrl';
-          break;
-        case 'License Back Photo':
-          documentType = 'licenseBack';
-          urlField = 'licenseBackUrl';
-          break;
-        case 'Vehicle Insurance Document':
-          documentType = 'insurance';
-          urlField = 'insuranceDocumentUrl';
-          break;
-        default:
-          throw Exception('Unknown document type: $title');
-      }
-
-      // Upload image to Firebase Storage
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('driver_verifications')
-          .child(currentUser.uid)
-          .child('$documentType.jpg');
-
-      final uploadTask = await storageRef.putFile(imageFile);
-      final downloadUrl = await uploadTask.ref.getDownloadURL();
-
-      // Update Firestore with new document URL and reset status to pending
-      final driverRef = FirebaseFirestore.instance
-          .collection('new_driver_verifications')
-          .doc(currentUser.uid);
-
-      await driverRef.update({
-        urlField: downloadUrl,
-        'documentVerification.$documentType.status': 'pending',
-        'documentVerification.$documentType.rejectionReason': FieldValue.delete(),
-        'documentVerification.$documentType.uploadedAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      // Close loading dialog
-      Navigator.pop(context);
-
-      // Refresh data
-      await _loadDriverData();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$title replaced successfully! Status reset to pending review.'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      // Close loading dialog
-      Navigator.pop(context);
-      
-      print('Error uploading replacement document: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to upload replacement: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+        ],
+      ),
+    );
   }
 
-  void _replaceVehiclePhoto(String title) async {
-    try {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text('Replace $title'),
-          content: const Text('Choose how to upload your replacement photo:'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _pickAndUploadVehicleReplacement(title, ImageSource.camera);
-              },
-              child: const Text('Take Photo'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _pickAndUploadVehicleReplacement(title, ImageSource.gallery);
-              },
-              child: const Text('Choose from Gallery'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-          ],
-        ),
-      );
-    } catch (e) {
-      print('Error replacing vehicle photo: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
-    }
-  }
-
-  Future<void> _pickAndUploadVehicleReplacement(String title, ImageSource source) async {
-    try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(
-        source: source,
-        maxWidth: 1920,
-        maxHeight: 1920,
-        imageQuality: 85,
-      );
-
-      if (image != null) {
-        await _uploadVehicleReplacementPhoto(title, File(image.path));
-      }
-    } catch (e) {
-      print('Error picking vehicle image: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error picking image: ${e.toString()}')),
-      );
-    }
-  }
-
-  Future<void> _uploadVehicleReplacementPhoto(String title, File imageFile) async {
-    try {
-      // Show loading indicator
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Uploading replacement photo...'),
-            ],
+  void _replaceVehiclePhoto(String title) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Replace $title'),
+        content: const Text('This feature will allow you to upload a replacement photo. Coming soon!'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
           ),
-        ),
-      );
-
-      final currentUser = await _userService.getCurrentUser();
-      if (currentUser == null) throw Exception('User not authenticated');
-
-      // Extract image index from title (e.g., "Vehicle Photo 1" -> index 0)
-      final match = RegExp(r'Vehicle Photo (\d+)').firstMatch(title);
-      if (match == null) throw Exception('Invalid vehicle photo title: $title');
-      
-      final imageIndex = int.parse(match.group(1)!) - 1; // Convert to 0-based index
-
-      // Upload image to Firebase Storage
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('driver_verifications')
-          .child(currentUser.uid)
-          .child('vehicle_images')
-          .child('vehicle_$imageIndex.jpg');
-
-      final uploadTask = await storageRef.putFile(imageFile);
-      final downloadUrl = await uploadTask.ref.getDownloadURL();
-
-      // Update Firestore with new image URL and reset status to pending
-      final driverRef = FirebaseFirestore.instance
-          .collection('new_driver_verifications')
-          .doc(currentUser.uid);
-
-      await driverRef.update({
-        'vehicleImageUrls.$imageIndex': downloadUrl,
-        'vehicleImageVerification.$imageIndex.status': 'pending',
-        'vehicleImageVerification.$imageIndex.rejectionReason': FieldValue.delete(),
-        'vehicleImageVerification.$imageIndex.uploadedAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      // Close loading dialog
-      Navigator.pop(context);
-
-      // Refresh data
-      await _loadDriverData();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$title replaced successfully! Status reset to pending review.'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      // Close loading dialog
-      Navigator.pop(context);
-      
-      print('Error uploading replacement vehicle photo: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to upload replacement: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+        ],
+      ),
+    );
   }
 }
