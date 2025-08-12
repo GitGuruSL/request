@@ -212,9 +212,8 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
           _buildDropdownField(),
           _buildTextField(
             controller: _licenseNumberController,
-            label: 'Business License Number *',
-            hint: 'Enter business license number',
-            validator: (value) => value?.isEmpty ?? true ? 'License number is required' : null,
+            label: 'Business License Number',
+            hint: 'Enter business license number (optional)',
           ),
           _buildTextField(
             controller: _taxIdController,
@@ -272,12 +271,12 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
           ),
           const SizedBox(height: 16),
           _buildDocumentUpload(
-            title: 'Business License *',
-            description: 'Official business registration/license document',
+            title: 'Business License',
+            description: 'Official business license document (optional)',
             file: _businessLicenseFile,
             url: _businessLicenseUrl,
             onTap: () => _pickDocument('business_license'),
-            isRequired: true,
+            isRequired: false,
           ),
           _buildDocumentUpload(
             title: 'Tax Certificate',
@@ -705,13 +704,6 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
     if (_selectedCategory == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a business category')),
-      );
-      return;
-    }
-    
-    if (_businessLicenseFile == null && _businessLicenseUrl == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Business license document is required')),
       );
       return;
     }

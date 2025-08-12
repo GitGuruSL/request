@@ -10,6 +10,7 @@ import '../../../services/enhanced_request_service.dart';
 import '../../../services/enhanced_user_service.dart';
 import '../../../utils/currency_helper.dart';
 import 'edit_ride_request_screen.dart';
+import 'create_ride_response_screen.dart';
 
 class ViewRideRequestScreen extends StatefulWidget {
   final String requestId;
@@ -975,50 +976,12 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   }
 
   void _showResponseDialog() {
-    // TODO: Implement response creation dialog
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Offer Ride'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              decoration: InputDecoration(
-                labelText: 'Your offer price',
-                prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
-              ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 16),
-            const TextField(
-              decoration: InputDecoration(
-                labelText: 'Message to requester',
-                hintText: 'Tell them about your vehicle, experience, etc.',
-              ),
-              maxLines: 3,
-            ),
-          ],
+    // Navigate to the comprehensive ride response screen
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => CreateRideResponseScreen(
+          request: _request!,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              // TODO: Submit response
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Your offer has been submitted!'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
-            child: const Text('Send Offer'),
-          ),
-        ],
       ),
     );
   }

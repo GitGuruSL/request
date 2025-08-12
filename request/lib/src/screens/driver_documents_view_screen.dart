@@ -3,6 +3,9 @@ import '../services/enhanced_user_service.dart';
 import '../models/enhanced_user_model.dart';
 import '../theme/app_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class DriverDocumentsViewScreen extends StatefulWidget {
   const DriverDocumentsViewScreen({Key? key}) : super(key: key);
@@ -302,24 +305,52 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
     // Handle vehicleImageUrls safely
     List<dynamic> vehicleImageUrls = [];
     final imageUrlsData = _driverData!['vehicleImageUrls'];
-    if (imageUrlsData != null) {
-      if (imageUrlsData is List) {
-        vehicleImageUrls = imageUrlsData;
-      } else if (imageUrlsData is Map) {
-        vehicleImageUrls = imageUrlsData.values.toList();
-      }
-    }
     
     // Handle vehicleImageVerification safely - it could be List or Map
     List<dynamic> imageVerifications = [];
     final verificationData = _driverData!['vehicleImageVerification'];
+    
+    // Fill vehicleImageUrls from the data
+    if (imageUrlsData != null) {
+      if (imageUrlsData is List) {
+        vehicleImageUrls = imageUrlsData;
+      } else if (imageUrlsData is Map) {
+        // Convert Map to List maintaining index order
+        final keys = imageUrlsData.keys.map((k) => int.tryParse(k.toString()) ?? 0).toList()..sort();
+        for (var key in keys) {
+          final value = imageUrlsData[key.toString()];
+          if (value != null) {
+            vehicleImageUrls.add(value);
+          }
+        }
+      }
+    }
+    
+    // Fill imageVerifications from the data
     if (verificationData != null) {
       if (verificationData is List) {
         imageVerifications = verificationData;
       } else if (verificationData is Map) {
-        // Convert Map to List if necessary
-        imageVerifications = verificationData.values.toList();
+        // Convert Map to List maintaining index order
+        final keys = verificationData.keys.map((k) => int.tryParse(k.toString()) ?? 0).toList()..sort();
+        final maxIndex = keys.isNotEmpty ? keys.last : 0;
+        imageVerifications = List.filled(maxIndex + 1, null);
+        verificationData.forEach((key, value) {
+          final index = int.tryParse(key.toString());
+          if (index != null && index < imageVerifications.length) {
+            imageVerifications[index] = value;
+          }
+        });
       }
+    }
+    
+    // Ensure we have verification entries for all vehicle images
+    if (vehicleImageUrls.isNotEmpty && imageVerifications.length < vehicleImageUrls.length) {
+      print('🔍 DEBUG: Padding imageVerifications to match vehicleImageUrls length');
+      while (imageVerifications.length < vehicleImageUrls.length) {
+        imageVerifications.add(null);
+      }
+      print('🔍 DEBUG: Padded imageVerifications list: $imageVerifications');
     }
     
     return Container(
@@ -366,7 +397,60 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          ...vehicleImageUrls.asMap().entries.map((entry) {
+          // Show upload option if no photos uploaded
+          if (vehicleImageUrls.where((url) => url != null).isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: Column(
+                children: [
+                  Icon(Icons.add_a_photo, color: Colors.grey[600], size: 48),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'No Vehicle Photos Uploaded',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Upload at least 4 vehicle photos to complete your verification',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      // Navigate to driver verification screen to upload photos
+                      Navigator.pushNamed(context, '/driver-verification');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.upload, size: 18),
+                        SizedBox(width: 8),
+                        Text('Upload Vehicle Photos'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ...vehicleImageUrls.asMap().entries.where((entry) => entry.value != null).map((entry) {
             final index = entry.key;
             final imageUrl = entry.value as String;
             final verification = imageVerifications.length > index ? imageVerifications[index] : null;
@@ -921,8 +1005,12 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
           urlField = 'licenseBackUrl';
           break;
         case 'Vehicle Insurance Document':
-          documentType = 'insurance';
+          documentType = 'vehicleInsurance';
           urlField = 'insuranceDocumentUrl';
+          break;
+        case 'Vehicle Registration':
+          documentType = 'vehicleRegistration';
+          urlField = 'registrationDocumentUrl';
           break;
         default:
           throw Exception('Unknown document type: $title');
@@ -1056,8 +1144,8 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
       final currentUser = await _userService.getCurrentUser();
       if (currentUser == null) throw Exception('User not authenticated');
 
-      // Extract image index from title (e.g., "Vehicle Photo 1" -> index 0)
-      final match = RegExp(r'Vehicle Photo (\d+)').firstMatch(title);
+      // Extract image index from title (e.g., "1. Front View with Number Plate" -> index 0)
+      final match = RegExp(r'(\d+)\.').firstMatch(title);
       if (match == null) throw Exception('Invalid vehicle photo title: $title');
       
       final imageIndex = int.parse(match.group(1)!) - 1; // Convert to 0-based index
@@ -1078,11 +1166,52 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
           .collection('new_driver_verifications')
           .doc(currentUser.uid);
 
+      // First, get the current document to preserve the structure
+      final doc = await driverRef.get();
+      final data = doc.data() as Map<String, dynamic>? ?? {};
+      
+      // Get current vehicleImageUrls and vehicleImageVerification with proper type handling
+      Map<String, dynamic> currentUrls = {};
+      Map<String, dynamic> currentVerifications = {};
+      
+      // Handle vehicleImageUrls - could be List or Map
+      final urlsData = data['vehicleImageUrls'];
+      if (urlsData is Map) {
+        currentUrls = Map<String, dynamic>.from(urlsData);
+      } else if (urlsData is List) {
+        // Convert List to Map with string keys
+        for (int i = 0; i < urlsData.length; i++) {
+          if (urlsData[i] != null) {
+            currentUrls[i.toString()] = urlsData[i];
+          }
+        }
+      }
+      
+      // Handle vehicleImageVerification - could be List or Map
+      final verificationsData = data['vehicleImageVerification'];
+      if (verificationsData is Map) {
+        currentVerifications = Map<String, dynamic>.from(verificationsData);
+      } else if (verificationsData is List) {
+        // Convert List to Map with string keys
+        for (int i = 0; i < verificationsData.length; i++) {
+          if (verificationsData[i] != null) {
+            currentVerifications[i.toString()] = verificationsData[i];
+          }
+        }
+      }
+      
+      // Update the specific index - store as string key to match Firebase structure
+      currentUrls[imageIndex.toString()] = downloadUrl;
+      
+      // Update verification status for this image
+      currentVerifications[imageIndex.toString()] = {
+        'status': 'pending',
+        'uploadedAt': FieldValue.serverTimestamp(),
+      };
+
       await driverRef.update({
-        'vehicleImageUrls.$imageIndex': downloadUrl,
-        'vehicleImageVerification.$imageIndex.status': 'pending',
-        'vehicleImageVerification.$imageIndex.rejectionReason': FieldValue.delete(),
-        'vehicleImageVerification.$imageIndex.uploadedAt': FieldValue.serverTimestamp(),
+        'vehicleImageUrls': currentUrls,
+        'vehicleImageVerification': currentVerifications,
         'updatedAt': FieldValue.serverTimestamp(),
       });
 

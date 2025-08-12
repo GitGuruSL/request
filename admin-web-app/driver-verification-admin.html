@@ -379,6 +379,44 @@
             loadDriverVerifications();
         });
 
+        // Initialize missing vehicle image verification entries
+        async function initializeMissingVerificationEntries(driver) {
+            if (!driver.vehicleImageUrls) return;
+            
+            // Convert vehicleImageUrls to array if it's stored as an object/map
+            let imageUrlsArray = [];
+            if (Array.isArray(driver.vehicleImageUrls)) {
+                imageUrlsArray = driver.vehicleImageUrls;
+            } else if (typeof driver.vehicleImageUrls === 'object') {
+                // Convert object/map to array
+                const keys = Object.keys(driver.vehicleImageUrls).map(k => parseInt(k)).sort((a, b) => a - b);
+                for (const key of keys) {
+                    imageUrlsArray[key] = driver.vehicleImageUrls[key];
+                }
+            }
+            
+            if (imageUrlsArray.length === 0) return;
+            
+            const driverRef = db.collection('new_driver_verifications').doc(driver.id);
+            const updateData = {};
+            let hasUpdates = false;
+            
+            for (let i = 0; i < imageUrlsArray.length; i++) {
+                const imageUrl = imageUrlsArray[i];
+                if (imageUrl && !driver.vehicleImageVerification?.[i]) {
+                    updateData[`vehicleImageVerification.${i}.status`] = 'pending';
+                    updateData[`vehicleImageVerification.${i}.createdAt`] = firebase.firestore.Timestamp.now();
+                    hasUpdates = true;
+                }
+            }
+            
+            if (hasUpdates) {
+                updateData.updatedAt = firebase.firestore.Timestamp.now();
+                await driverRef.update(updateData);
+                console.log(`Initialized verification entries for driver ${driver.id}`);
+            }
+        }
+
         // Load driver verification requests
         async function loadDriverVerifications() {
             try {
@@ -387,15 +425,20 @@
                 const snapshot = await db.collection('new_driver_verifications').get();
                 allDrivers = [];
                 
-                snapshot.forEach(doc => {
+                for (const doc of snapshot.docs) {
                     const data = doc.data();
-                    allDrivers.push({
+                    const driver = {
                         id: doc.id,
                         ...data,
                         createdAt: data.createdAt?.toDate() || new Date(),
                         updatedAt: data.updatedAt?.toDate() || new Date()
-                    });
-                });
+                    };
+                    
+                    // Initialize missing verification entries
+                    await initializeMissingVerificationEntries(driver);
+                    
+                    allDrivers.push(driver);
+                }
 
                 console.log(`Loaded ${allDrivers.length} driver verification requests`);
                 
@@ -534,10 +577,14 @@
                                 ` : ''}
                                 
                                 ${driver.status === 'approved' ? `
-                                    <button class="btn btn-warning btn-sm w-100" onclick="revokeApproval('${driver.id}')">
+                                    <button class="btn btn-warning btn-sm w-100 mb-1" onclick="revokeApproval('${driver.id}')">
                                         <i class="fas fa-undo me-1"></i> Revoke Approval
                                     </button>
                                 ` : ''}
+                                
+                                <button class="btn btn-outline-danger btn-sm w-100" onclick="deleteDriverProfile('${driver.id}')">
+                                    <i class="fas fa-trash me-1"></i> Delete Profile
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -554,12 +601,25 @@
                         </div>
                         
                         <!-- Vehicle Images -->
-                        ${driver.vehicleImageUrls && driver.vehicleImageUrls.length > 0 ? `
+                        ${driver.vehicleImageUrls && (Array.isArray(driver.vehicleImageUrls) ? driver.vehicleImageUrls.length > 0 : Object.keys(driver.vehicleImageUrls).length > 0) ? `
                             <h6 class="mt-3">Vehicle Images:</h6>
                             <div class="document-grid">
-                                ${driver.vehicleImageUrls.map((url, index) => 
-                                    createVehicleImageItem(driver, index, url)
-                                ).join('')}
+                                ${(() => {
+                                    let imageItems = [];
+                                    if (Array.isArray(driver.vehicleImageUrls)) {
+                                        // Handle array format
+                                        imageItems = driver.vehicleImageUrls.map((url, index) => 
+                                            createVehicleImageItem(driver, index, url)
+                                        );
+                                    } else if (typeof driver.vehicleImageUrls === 'object') {
+                                        // Handle object/map format
+                                        const keys = Object.keys(driver.vehicleImageUrls).map(k => parseInt(k)).sort((a, b) => a - b);
+                                        imageItems = keys.map(index => 
+                                            createVehicleImageItem(driver, index, driver.vehicleImageUrls[index])
+                                        );
+                                    }
+                                    return imageItems.join('');
+                                })()}
                             </div>
                         ` : ''}
                     </div>
@@ -764,10 +824,19 @@
 
                 // Approve all vehicle images
                 if (driver.vehicleImageUrls) {
-                    driver.vehicleImageUrls.forEach((_, index) => {
-                        updateData[`vehicleImageVerification.${index}.status`] = 'approved';
-                        updateData[`vehicleImageVerification.${index}.reviewedAt`] = firebase.firestore.Timestamp.now();
-                    });
+                    if (Array.isArray(driver.vehicleImageUrls)) {
+                        // Handle array format
+                        driver.vehicleImageUrls.forEach((_, index) => {
+                            updateData[`vehicleImageVerification.${index}.status`] = 'approved';
+                            updateData[`vehicleImageVerification.${index}.reviewedAt`] = firebase.firestore.Timestamp.now();
+                        });
+                    } else if (typeof driver.vehicleImageUrls === 'object') {
+                        // Handle object/map format
+                        Object.keys(driver.vehicleImageUrls).forEach(index => {
+                            updateData[`vehicleImageVerification.${index}.status`] = 'approved';
+                            updateData[`vehicleImageVerification.${index}.reviewedAt`] = firebase.firestore.Timestamp.now();
+                        });
+                    }
                 }
 
                 await driverRef.update(updateData);
@@ -796,11 +865,31 @@
         async function updateUserRole(userId, role, status) {
             try {
                 const userRef = db.collection('users').doc(userId);
-                await userRef.update({
+                const userDoc = await userRef.get();
+                const userData = userDoc.data();
+                
+                const updateData = {
                     [`roleData.${role}.verificationStatus`]: status,
                     [`roleData.${role}.lastUpdated`]: firebase.firestore.Timestamp.now(),
                     updatedAt: firebase.firestore.Timestamp.now()
-                });
+                };
+                
+                // If approved, add the role to the roles array
+                if (status === 'approved') {
+                    const currentRoles = userData.roles || ['general'];
+                    if (!currentRoles.includes(role)) {
+                        currentRoles.push(role);
+                        updateData.roles = currentRoles;
+                    }
+                } else if (status === 'rejected') {
+                    // If rejected, remove the role from the roles array
+                    const currentRoles = userData.roles || ['general'];
+                    const updatedRoles = currentRoles.filter(r => r !== role);
+                    updateData.roles = updatedRoles;
+                }
+                
+                await userRef.update(updateData);
+                console.log(`Updated user ${userId} role ${role} to status ${status}`);
             } catch (error) {
                 console.error('Error updating user role:', error);
             }
@@ -911,6 +1000,54 @@
             document.getElementById('sortBy').value = 'newest';
             document.getElementById('searchInput').value = '';
             filterDrivers();
+        }
+
+        // Delete driver profile function
+        async function deleteDriverProfile(driverId) {
+            const driver = allDrivers.find(d => d.id === driverId);
+            if (!driver) {
+                alert('Driver not found');
+                return;
+            }
+
+            const confirmDelete = confirm(
+                `Are you sure you want to DELETE the entire profile for "${driver.name || 'Unknown Driver'}"?\n\n` +
+                `This will permanently remove:\n` +
+                `• All driver documents and photos\n` +
+                `• All vehicle images\n` +
+                `• All verification history\n` +
+                `• Complete profile data\n\n` +
+                `This action CANNOT be undone!`
+            );
+
+            if (!confirmDelete) return;
+
+            const secondConfirm = confirm(
+                `FINAL CONFIRMATION:\n\nYou are about to permanently delete "${driver.name || 'Unknown Driver'}'s" entire profile.\n\n` +
+                `Type "DELETE" in the next prompt to confirm this irreversible action.`
+            );
+
+            if (!secondConfirm) return;
+
+            const typeConfirm = prompt('Please type "DELETE" to confirm:');
+            if (typeConfirm !== 'DELETE') {
+                alert('Deletion cancelled. You must type "DELETE" exactly.');
+                return;
+            }
+
+            try {
+                // Delete the entire document
+                await db.collection('new_driver_verifications').doc(driverId).delete();
+                
+                alert(`Profile for "${driver.name || 'Unknown Driver'}" has been permanently deleted.`);
+                
+                // Refresh the data
+                loadDriverVerifications();
+                
+            } catch (error) {
+                console.error('Error deleting driver profile:', error);
+                alert('Error deleting profile: ' + error.message);
+            }
         }
     </script>
 </body>

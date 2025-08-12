@@ -131,32 +131,96 @@ class EnhancedUserService {
       List<UserRole> detectedRoles = [UserRole.general]; // Always include general
       Map<UserRole, RoleData> updatedRoleData = Map.from(userModel.roleData);
 
-      // Check for driver document
-      final driverDoc = await _firestore.collection('drivers').doc(userModel.id).get();
-      print('DEBUG: Driver doc exists: ${driverDoc.exists}');
-      if (driverDoc.exists) {
-        detectedRoles.add(UserRole.driver);
-        if (!updatedRoleData.containsKey(UserRole.driver)) {
+      // Check for driver document in new verification system
+      final newDriverDoc = await _firestore.collection('new_driver_verifications').doc(userModel.id).get();
+      print('DEBUG: New driver verification doc exists: ${newDriverDoc.exists}');
+      if (newDriverDoc.exists) {
+        final driverData = newDriverDoc.data();
+        final driverStatus = driverData?['status'] as String?;
+        final isVerified = driverData?['isVerified'] as bool? ?? false;
+        
+        print('DEBUG: Driver status: $driverStatus, isVerified: $isVerified');
+        
+        if (driverStatus == 'approved' && isVerified) {
+          detectedRoles.add(UserRole.driver);
           updatedRoleData[UserRole.driver] = RoleData(
-            verificationStatus: VerificationStatus.pending,
+            verificationStatus: VerificationStatus.approved,
             data: {},
           );
+          print('DEBUG: Added approved driver role from new verification system');
+        } else {
+          // Still add driver role but with pending/rejected status
+          detectedRoles.add(UserRole.driver);
+          VerificationStatus status = VerificationStatus.pending;
+          if (driverStatus == 'rejected') {
+            status = VerificationStatus.rejected;
+          }
+          updatedRoleData[UserRole.driver] = RoleData(
+            verificationStatus: status,
+            data: {},
+          );
+          print('DEBUG: Added driver role with status: $status');
         }
-        print('DEBUG: Added driver role');
+      } else {
+        // Fallback to old driver collection
+        final driverDoc = await _firestore.collection('drivers').doc(userModel.id).get();
+        print('DEBUG: Old driver doc exists: ${driverDoc.exists}');
+        if (driverDoc.exists) {
+          detectedRoles.add(UserRole.driver);
+          if (!updatedRoleData.containsKey(UserRole.driver)) {
+            updatedRoleData[UserRole.driver] = RoleData(
+              verificationStatus: VerificationStatus.pending,
+              data: {},
+            );
+          }
+          print('DEBUG: Added driver role from old collection');
+        }
       }
 
-      // Check for business document
-      final businessDoc = await _firestore.collection('businesses').doc(userModel.id).get();
-      print('DEBUG: Business doc exists: ${businessDoc.exists}');
-      if (businessDoc.exists) {
-        detectedRoles.add(UserRole.business);
-        if (!updatedRoleData.containsKey(UserRole.business)) {
+      // Check for business document in new verification system
+      final newBusinessDoc = await _firestore.collection('new_business_verifications').doc(userModel.id).get();
+      print('DEBUG: New business verification doc exists: ${newBusinessDoc.exists}');
+      if (newBusinessDoc.exists) {
+        final businessData = newBusinessDoc.data();
+        final businessStatus = businessData?['status'] as String?;
+        final isVerified = businessData?['isVerified'] as bool? ?? false;
+        
+        print('DEBUG: Business status: $businessStatus, isVerified: $isVerified');
+        
+        if (businessStatus == 'approved' && isVerified) {
+          detectedRoles.add(UserRole.business);
           updatedRoleData[UserRole.business] = RoleData(
-            verificationStatus: VerificationStatus.pending,
+            verificationStatus: VerificationStatus.approved,
             data: {},
           );
+          print('DEBUG: Added approved business role from new verification system');
+        } else {
+          // Still add business role but with pending/rejected status
+          detectedRoles.add(UserRole.business);
+          VerificationStatus status = VerificationStatus.pending;
+          if (businessStatus == 'rejected') {
+            status = VerificationStatus.rejected;
+          }
+          updatedRoleData[UserRole.business] = RoleData(
+            verificationStatus: status,
+            data: {},
+          );
+          print('DEBUG: Added business role with status: $status');
         }
-        print('DEBUG: Added business role');
+      } else {
+        // Fallback to old business collection
+        final businessDoc = await _firestore.collection('businesses').doc(userModel.id).get();
+        print('DEBUG: Old business doc exists: ${businessDoc.exists}');
+        if (businessDoc.exists) {
+          detectedRoles.add(UserRole.business);
+          if (!updatedRoleData.containsKey(UserRole.business)) {
+            updatedRoleData[UserRole.business] = RoleData(
+              verificationStatus: VerificationStatus.pending,
+              data: {},
+            );
+          }
+          print('DEBUG: Added business role from old collection');
+        }
       }
 
       print('DEBUG: Detected roles: ${detectedRoles.map((r) => r.name).toList()}');
