@@ -62,12 +62,281 @@ class EnhancedUserService {
           .get();
 
       if (doc.exists) {
-        return UserModel.fromMap(doc.data()!);
+        // Create user model with proper document ID
+        final data = doc.data()!;
+        data['id'] = userId; // Ensure the ID is set correctly
+        UserModel userModel = UserModel.fromMap(data);
+        
+        // Auto-detect and sync roles from existing documents
+        userModel = await _syncRolesFromDocuments(userModel);
+        
+        // Check driver verification from drivers collection
+        if (userModel.hasRole(UserRole.driver)) {
+          userModel = await _enrichWithDriverVerification(userModel);
+        }
+        
+        // Check business verification from businesses collection
+        if (userModel.hasRole(UserRole.business)) {
+          userModel = await _enrichWithBusinessVerification(userModel);
+        }
+        
+        return userModel;
       }
       return null;
     } catch (e) {
       throw Exception('Failed to get user: $e');
     }
+  }
+
+  // Auto-detect roles from existing documents and sync with user document
+  Future<UserModel> _syncRolesFromDocuments(UserModel userModel) async {
+    try {
+      print('DEBUG: Starting role sync for user ${userModel.id}');
+      print('DEBUG: Current roles: ${userModel.roles.map((r) => r.name).toList()}');
+      
+      if (userModel.id.isEmpty) {
+        print('DEBUG: User ID is empty, skipping role sync');
+        return userModel;
+      }
+
+      List<UserRole> detectedRoles = [UserRole.general]; // Always include general
+      Map<UserRole, RoleData> updatedRoleData = Map.from(userModel.roleData);
+
+      // Check for driver document
+      final driverDoc = await _firestore.collection('drivers').doc(userModel.id).get();
+      print('DEBUG: Driver doc exists: ${driverDoc.exists}');
+      if (driverDoc.exists) {
+        detectedRoles.add(UserRole.driver);
+        if (!updatedRoleData.containsKey(UserRole.driver)) {
+          updatedRoleData[UserRole.driver] = RoleData(
+            verificationStatus: VerificationStatus.pending,
+            data: {},
+          );
+        }
+        print('DEBUG: Added driver role');
+      }
+
+      // Check for business document
+      final businessDoc = await _firestore.collection('businesses').doc(userModel.id).get();
+      print('DEBUG: Business doc exists: ${businessDoc.exists}');
+      if (businessDoc.exists) {
+        detectedRoles.add(UserRole.business);
+        if (!updatedRoleData.containsKey(UserRole.business)) {
+          updatedRoleData[UserRole.business] = RoleData(
+            verificationStatus: VerificationStatus.pending,
+            data: {},
+          );
+        }
+        print('DEBUG: Added business role');
+      }
+
+      print('DEBUG: Detected roles: ${detectedRoles.map((r) => r.name).toList()}');
+
+      // If new roles detected, update the user document
+      bool rolesChanged = !_listsEqual(userModel.roles, detectedRoles);
+      print('DEBUG: Roles changed: $rolesChanged');
+      if (rolesChanged) {
+        print('DEBUG: Updating user document with new roles');
+        await _firestore.collection(_usersCollection).doc(userModel.id).update({
+          'roles': detectedRoles.map((r) => r.name).toList(),
+          'roleData': updatedRoleData.map((key, value) => MapEntry(key.name, value.toMap())),
+          'updatedAt': DateTime.now().toIso8601String(),
+        });
+
+        // Update active role if it's not in the detected roles
+        UserRole activeRole = userModel.activeRole;
+        if (!detectedRoles.contains(activeRole)) {
+          activeRole = detectedRoles.first;
+          await _firestore.collection(_usersCollection).doc(userModel.id).update({
+            'activeRole': activeRole.name,
+          });
+        }
+
+        return _createUpdatedUserModel(
+          userModel,
+          updatedRoleData,
+          roles: detectedRoles,
+          activeRole: activeRole,
+        );
+      }
+
+      return userModel;
+    } catch (e) {
+      print('Error syncing roles: $e');
+      return userModel;
+    }
+  }
+
+  // Helper method to compare lists
+  bool _listsEqual<T>(List<T> list1, List<T> list2) {
+    if (list1.length != list2.length) return false;
+    for (int i = 0; i < list1.length; i++) {
+      if (!list2.contains(list1[i])) return false;
+    }
+    return true;
+  }
+
+  // Enrich user model with driver verification status
+  Future<UserModel> _enrichWithDriverVerification(UserModel userModel) async {
+    try {
+      final driverDoc = await _firestore
+          .collection('drivers')
+          .doc(userModel.id)
+          .get();
+
+      if (driverDoc.exists) {
+        final driverData = driverDoc.data()!;
+        
+        // Check driver verification status - handle different possible field structures
+        bool isVerified = driverData['isVerified'] == true;
+        String? status = driverData['status'];
+        
+        // Determine verification status
+        VerificationStatus verificationStatus;
+        if (isVerified && status == 'approved') {
+          verificationStatus = VerificationStatus.approved;
+        } else if (status == 'rejected') {
+          verificationStatus = VerificationStatus.rejected;
+        } else {
+          verificationStatus = VerificationStatus.pending;
+        }
+        
+        // Update role data with correct verification status
+        Map<UserRole, RoleData> updatedRoleData = Map.from(userModel.roleData);
+        updatedRoleData[UserRole.driver] = RoleData(
+          verificationStatus: verificationStatus,
+          data: updatedRoleData[UserRole.driver]?.data ?? {},
+        );
+        
+        return _createUpdatedUserModel(userModel, updatedRoleData);
+      }
+      
+      return userModel;
+    } catch (e) {
+      print('Error enriching driver verification: $e');
+      return userModel; // Return original if error
+    }
+  }
+
+  // Enrich user model with delivery verification status
+  Future<UserModel> _enrichWithDeliveryVerification(UserModel userModel) async {
+    try {
+      final deliveryDoc = await _firestore
+          .collection('delivery')
+          .doc(userModel.id)
+          .get();
+
+      if (deliveryDoc.exists) {
+        final deliveryData = deliveryDoc.data()!;
+        
+        // Check delivery verification status - handle different possible field structures
+        bool isVerified = deliveryData['isVerified'] == true;
+        String? status = deliveryData['status'];
+        String? overallStatus = deliveryData['verification']?['overallStatus'];
+        
+        // Determine verification status
+        VerificationStatus verificationStatus;
+        if (isVerified && (status == 'approved' || overallStatus == 'approved' || overallStatus == 'VerificationStatus.approved')) {
+          verificationStatus = VerificationStatus.approved;
+        } else if (status == 'rejected' || overallStatus == 'rejected' || overallStatus == 'VerificationStatus.rejected') {
+          verificationStatus = VerificationStatus.rejected;
+        } else {
+          verificationStatus = VerificationStatus.pending;
+        }
+        
+        // Update role data with correct verification status
+        Map<UserRole, RoleData> updatedRoleData = Map.from(userModel.roleData);
+        updatedRoleData[UserRole.delivery] = RoleData(
+          verificationStatus: verificationStatus,
+          data: updatedRoleData[UserRole.delivery]?.data ?? {},
+        );
+        
+        return _createUpdatedUserModel(userModel, updatedRoleData);
+      }
+      
+      return userModel;
+    } catch (e) {
+      print('Error enriching delivery verification: $e');
+      return userModel; // Return original if error
+    }
+  }
+
+  // Enrich user model with business verification status
+  Future<UserModel> _enrichWithBusinessVerification(UserModel userModel) async {
+    try {
+      final businessDoc = await _firestore
+          .collection('businesses')
+          .doc(userModel.id)
+          .get();
+
+      if (businessDoc.exists) {
+        final businessData = businessDoc.data()!;
+        
+        // Check business verification status
+        String? overallStatus = businessData['verification']?['overallStatus'];
+        bool isActive = businessData['isActive'] == true;
+        
+        // Check email and phone verification - key for basic business operations
+        bool isEmailVerified = businessData['verification']?['isEmailVerified'] == true;
+        bool isPhoneVerified = businessData['verification']?['isPhoneVerified'] == true;
+        
+        // Determine verification status based on business rules
+        VerificationStatus verificationStatus;
+        
+        // If email and phone are verified, business can operate (add products, price requests)
+        if (isEmailVerified && isPhoneVerified && isActive) {
+          if (overallStatus == 'VerificationStatus.approved' || overallStatus == 'approved') {
+            verificationStatus = VerificationStatus.approved; // Fully verified
+          } else {
+            // Email + phone verified = can operate, but document review may be pending
+            verificationStatus = VerificationStatus.approved; // Allow business operations
+          }
+        } else if (overallStatus == 'VerificationStatus.rejected' || overallStatus == 'rejected') {
+          verificationStatus = VerificationStatus.rejected;
+        } else {
+          verificationStatus = VerificationStatus.pending; // Still need email/phone verification
+        }
+        
+        // Update role data with correct verification status
+        Map<UserRole, RoleData> updatedRoleData = Map.from(userModel.roleData);
+        updatedRoleData[UserRole.business] = RoleData(
+          verificationStatus: verificationStatus,
+          data: updatedRoleData[UserRole.business]?.data ?? {},
+        );
+        
+        return _createUpdatedUserModel(userModel, updatedRoleData);
+      }
+      
+      return userModel;
+    } catch (e) {
+      print('Error enriching business verification: $e');
+      return userModel; // Return original if error
+    }
+  }
+
+  // Helper method to create updated user model
+  UserModel _createUpdatedUserModel(
+    UserModel original, 
+    Map<UserRole, RoleData> updatedRoleData, {
+    List<UserRole>? roles,
+    UserRole? activeRole,
+  }) {
+    return UserModel(
+      id: original.id,
+      name: original.name,
+      email: original.email,
+      phoneNumber: original.phoneNumber,
+      roles: roles ?? original.roles,
+      activeRole: activeRole ?? original.activeRole,
+      roleData: updatedRoleData,
+      isEmailVerified: original.isEmailVerified,
+      isPhoneVerified: original.isPhoneVerified,
+      profileComplete: original.profileComplete,
+      countryCode: original.countryCode,
+      countryName: original.countryName,
+      createdAt: original.createdAt,
+      updatedAt: original.updatedAt,
+    );
   }
 
   // Get current user document

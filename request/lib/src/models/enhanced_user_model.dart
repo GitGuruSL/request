@@ -67,6 +67,9 @@ class UserModel {
   // Get role-specific data
   T? getRoleData<T>(UserRole role) => roleData[role]?.data as T?;
   
+  // Get role data object
+  RoleData? getRoleInfo(UserRole role) => roleData[role];
+  
   // Check if role is verified
   bool isRoleVerified(UserRole role) => 
       roleData[role]?.verificationStatus == VerificationStatus.approved;

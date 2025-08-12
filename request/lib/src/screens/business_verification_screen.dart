@@ -75,6 +75,8 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
     'Construction',
     'Real Estate',
     'Entertainment',
+    'Delivery Service (DPD, UPS, DHL, etc.)',
+    'Logistics & Transport',
     'Other',
   ];
 
@@ -92,209 +94,250 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Business Verification'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
         elevation: 0,
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Theme.of(context).colorScheme.primary.withOpacity(0.1),
-              Colors.white,
-            ],
-          ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
         ),
-        child: Form(
-          key: _formKey,
-          child: Stepper(
-            currentStep: _currentStep,
-            onStepTapped: (step) {
-              if (step <= _currentStep || _isValidStep(_currentStep)) {
-                setState(() => _currentStep = step);
-              }
-            },
-            controlsBuilder: (context, details) {
-              return Row(
+      ),
+      body: Form(
+        key: _formKey,
+        child: Stepper(
+          currentStep: _currentStep,
+          onStepTapped: (step) {
+            if (step <= _currentStep || _isValidStep(_currentStep)) {
+              setState(() => _currentStep = step);
+            }
+          },
+          controlsBuilder: (context, details) {
+            return Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Row(
                 children: [
                   if (details.stepIndex < 2)
                     ElevatedButton(
                       onPressed: details.onStepContinue,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: const RoundedRectangleBorder(),
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      ),
                       child: const Text('Continue'),
                     ),
                   if (details.stepIndex == 2)
                     ElevatedButton(
                       onPressed: _isLoading ? null : _submitVerification,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: const RoundedRectangleBorder(),
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      ),
                       child: _isLoading 
                           ? const SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
                             )
                           : const Text('Submit for Verification'),
                     ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 16),
                   if (details.stepIndex > 0)
                     TextButton(
                       onPressed: details.onStepCancel,
-                      child: const Text('Back'),
+                      child: const Text(
+                        'Back',
+                        style: TextStyle(color: Colors.grey),
+                      ),
                     ),
                 ],
-              );
-            },
-            steps: [
-              Step(
-                title: const Text('Business Information'),
-                content: _buildBusinessInfoStep(),
-                isActive: _currentStep >= 0,
-                state: _currentStep > 0 
-                    ? StepState.complete 
-                    : _currentStep == 0 
-                        ? StepState.indexed 
-                        : StepState.disabled,
               ),
-              Step(
-                title: const Text('Business Hours & Documents'),
-                content: _buildHoursDocumentsStep(),
-                isActive: _currentStep >= 1,
-                state: _currentStep > 1 
-                    ? StepState.complete 
-                    : _currentStep == 1 
-                        ? StepState.indexed 
-                        : StepState.disabled,
-              ),
-              Step(
-                title: const Text('Review & Submit'),
-                content: _buildReviewStep(),
-                isActive: _currentStep >= 2,
-                state: _currentStep == 2 
-                    ? StepState.indexed 
-                    : StepState.disabled,
-              ),
-            ],
-          ),
+            );
+          },
+          steps: [
+            Step(
+              title: const Text('Business Information'),
+              content: _buildBusinessInfoStep(),
+              isActive: _currentStep >= 0,
+              state: _currentStep > 0 
+                  ? StepState.complete 
+                  : _currentStep == 0 
+                      ? StepState.indexed 
+                      : StepState.disabled,
+            ),
+            Step(
+              title: const Text('Business Hours & Documents'),
+              content: _buildHoursDocumentsStep(),
+              isActive: _currentStep >= 1,
+              state: _currentStep > 1 
+                  ? StepState.complete 
+                  : _currentStep == 1 
+                      ? StepState.indexed 
+                      : StepState.disabled,
+            ),
+            Step(
+              title: const Text('Review & Submit'),
+              content: _buildReviewStep(),
+              isActive: _currentStep >= 2,
+              state: _currentStep == 2 
+                  ? StepState.indexed 
+                  : StepState.disabled,
+            ),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildBusinessInfoStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Tell us about your business',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Tell us about your business',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+            ),
           ),
-        ),
-        const SizedBox(height: 16),
-        
-        // Business Name
-        TextFormField(
-          controller: _businessNameController,
-          decoration: const InputDecoration(
-            labelText: 'Business Name *',
-            hintText: 'Enter your business name',
-            prefixIcon: Icon(Icons.business),
-            border: OutlineInputBorder(),
+          const SizedBox(height: 24),
+          
+          // Business Name
+          TextFormField(
+            controller: _businessNameController,
+            decoration: const InputDecoration(
+              labelText: 'Business Name *',
+              hintText: 'Enter your business name',
+              prefixIcon: Icon(Icons.business, color: Colors.grey),
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              filled: true,
+              fillColor: Colors.white,
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter your business name';
+              }
+              return null;
+            },
           ),
-          validator: (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'Please enter your business name';
-            }
-            return null;
-          },
-        ),
-        const SizedBox(height: 16),
-        
-        // Business Type
-        DropdownButtonFormField<String>(
-          value: _businessTypeController.text.isEmpty ? null : _businessTypeController.text,
-          decoration: const InputDecoration(
-            labelText: 'Business Type *',
-            prefixIcon: Icon(Icons.category),
-            border: OutlineInputBorder(),
+          const SizedBox(height: 16),
+          
+          // Business Type
+          DropdownButtonFormField<String>(
+            value: _businessTypeController.text.isEmpty ? null : _businessTypeController.text,
+            decoration: const InputDecoration(
+              labelText: 'Business Type *',
+              prefixIcon: Icon(Icons.category, color: Colors.grey),
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              filled: true,
+              fillColor: Colors.white,
+            ),
+            items: _businessTypes.map((type) => DropdownMenuItem(
+              value: type,
+              child: Text(type),
+            )).toList(),
+            onChanged: (value) {
+              setState(() => _businessTypeController.text = value ?? '');
+            },
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please select your business type';
+              }
+              return null;
+            },
           ),
-          items: _businessTypes.map((type) => DropdownMenuItem(
-            value: type,
-            child: Text(type),
-          )).toList(),
-          onChanged: (value) {
-            setState(() => _businessTypeController.text = value ?? '');
-          },
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Please select your business type';
-            }
-            return null;
-          },
-        ),
-        const SizedBox(height: 16),
-        
-        // Business Address
-        TextFormField(
-          controller: _businessAddressController,
-          decoration: const InputDecoration(
-            labelText: 'Business Address *',
-            hintText: 'Enter your business address',
-            prefixIcon: Icon(Icons.location_on),
-            border: OutlineInputBorder(),
+          const SizedBox(height: 16),
+          
+          // Business Address
+          TextFormField(
+            controller: _businessAddressController,
+            decoration: const InputDecoration(
+              labelText: 'Business Address *',
+              hintText: 'Enter your business address',
+              prefixIcon: Icon(Icons.location_on, color: Colors.grey),
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              filled: true,
+              fillColor: Colors.white,
+            ),
+            maxLines: 2,
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter your business address';
+              }
+              return null;
+            },
           ),
-          maxLines: 2,
-          validator: (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'Please enter your business address';
-            }
-            return null;
-          },
-        ),
-        const SizedBox(height: 16),
-        
-        // Business Phone
-        TextFormField(
-          controller: _businessPhoneController,
-          decoration: const InputDecoration(
-            labelText: 'Business Phone *',
-            hintText: 'Enter your business phone number',
-            prefixIcon: Icon(Icons.phone),
-            border: OutlineInputBorder(),
+          const SizedBox(height: 16),
+          
+          // Business Phone
+          TextFormField(
+            controller: _businessPhoneController,
+            decoration: const InputDecoration(
+              labelText: 'Business Phone *',
+              hintText: 'Enter your business phone number',
+              prefixIcon: Icon(Icons.phone, color: Colors.grey),
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              filled: true,
+              fillColor: Colors.white,
+            ),
+            keyboardType: TextInputType.phone,
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter your business phone number';
+              }
+              return null;
+            },
           ),
-          keyboardType: TextInputType.phone,
-          validator: (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'Please enter your business phone number';
-            }
-            return null;
-          },
-        ),
-        const SizedBox(height: 16),
-        
-        // Business Email
-        TextFormField(
-          controller: _businessEmailController,
-          decoration: const InputDecoration(
-            labelText: 'Business Email *',
-            hintText: 'Enter your business email',
-            prefixIcon: Icon(Icons.email),
-            border: OutlineInputBorder(),
+          const SizedBox(height: 16),
+          
+          // Business Email
+          TextFormField(
+            controller: _businessEmailController,
+            decoration: const InputDecoration(
+              labelText: 'Business Email *',
+              hintText: 'Enter your business email',
+              prefixIcon: Icon(Icons.email, color: Colors.grey),
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              filled: true,
+              fillColor: Colors.white,
+            ),
+            keyboardType: TextInputType.emailAddress,
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter your business email';
+              }
+              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                return 'Please enter a valid email address';
+              }
+              return null;
+            },
           ),
-          keyboardType: TextInputType.emailAddress,
-          validator: (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'Please enter your business email';
-            }
-            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-              return 'Please enter a valid email address';
-            }
-            return null;
-          },
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -342,7 +385,9 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
             labelText: 'Business License Number',
             hintText: 'Enter your business license number (optional)',
             prefixIcon: Icon(Icons.assignment),
-            border: OutlineInputBorder(),
+            border: InputBorder.none,
+            filled: true,
+            fillColor: Colors.white,
           ),
         ),
         const SizedBox(height: 16),
@@ -350,33 +395,38 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
         // Business License Image Upload
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey[300]!),
-            borderRadius: BorderRadius.circular(12),
+          padding: const EdgeInsets.all(24),
+          decoration: const BoxDecoration(
+            color: Colors.white,
           ),
           child: Column(
             children: [
               Icon(
                 Icons.camera_alt,
                 size: 48,
-                color: Colors.grey[400],
+                color: Colors.grey,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Text(
                 _businessLicenseImage == null
                     ? 'Upload Business License (Optional)'
                     : 'License Document Uploaded',
-                style: TextStyle(
-                  color: Colors.grey[600],
+                style: const TextStyle(
+                  color: Colors.black,
                   fontSize: 16,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-              const SizedBox(height: 8),
-              ElevatedButton.icon(
+              const SizedBox(height: 16),
+              ElevatedButton(
                 onPressed: _pickLicenseImage,
-                icon: const Icon(Icons.upload),
-                label: const Text('Choose File'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.black,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: const RoundedRectangleBorder(),
+                ),
+                child: const Text('Choose File'),
               ),
             ],
           ),
@@ -386,39 +436,44 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
         // Business Images Upload
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey[300]!),
-            borderRadius: BorderRadius.circular(12),
+          padding: const EdgeInsets.all(24),
+          decoration: const BoxDecoration(
+            color: Colors.white,
           ),
           child: Column(
             children: [
               Icon(
                 Icons.photo_library,
                 size: 48,
-                color: Colors.grey[400],
+                color: Colors.grey,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Upload Business Photos',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
-                'Upload Business Photos',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 16,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
                 '${_businessImages.length} photos selected',
-                style: TextStyle(
-                  color: Colors.grey[500],
+                style: const TextStyle(
+                  color: Colors.grey,
                   fontSize: 14,
                 ),
               ),
-              const SizedBox(height: 8),
-              ElevatedButton.icon(
+              const SizedBox(height: 16),
+              ElevatedButton(
                 onPressed: _pickBusinessImages,
-                icon: const Icon(Icons.add_photo_alternate),
-                label: const Text('Add Photos'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.black,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: const RoundedRectangleBorder(),
+                ),
+                child: const Text('Add Photos'),
               ),
             ],
           ),
@@ -477,54 +532,66 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
   Widget _buildDayHours(String day) {
     final dayName = day.substring(0, 1).toUpperCase() + day.substring(1);
     
-    return Card(
+    return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 80,
-              child: Text(
-                dayName,
-                style: const TextStyle(fontWeight: FontWeight.w500),
-              ),
-            ),
-            Checkbox(
-              value: _closedDays[day],
-              onChanged: (value) {
-                setState(() => _closedDays[day] = value ?? false);
-              },
-            ),
-            const Text('Closed'),
-            const Spacer(),
-            if (!_closedDays[day]!) ...[
-              GestureDetector(
-                onTap: () => _selectTime(day, true),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey[300]!),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(_formatTime(_openingHours[day]!)),
-                ),
-              ),
-              const Text(' - '),
-              GestureDetector(
-                onTap: () => _selectTime(day, false),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey[300]!),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(_formatTime(_closingHours[day]!)),
-                ),
-              ),
-            ],
-          ],
+      padding: const EdgeInsets.all(16),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(color: Colors.grey, width: 0.5),
         ),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              dayName,
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Colors.black,
+              ),
+            ),
+          ),
+          Checkbox(
+            value: _closedDays[day],
+            onChanged: (value) {
+              setState(() => _closedDays[day] = value ?? false);
+            },
+            activeColor: Colors.black,
+          ),
+          const Text('Closed'),
+          const Spacer(),
+          if (!_closedDays[day]!) ...[
+            GestureDetector(
+              onTap: () => _selectTime(day, true),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                ),
+                child: Text(
+                  _formatTime(_openingHours[day]!),
+                  style: const TextStyle(color: Colors.black),
+                ),
+              ),
+            ),
+            const Text(' - ', style: TextStyle(color: Colors.grey)),
+            GestureDetector(
+              onTap: () => _selectTime(day, false),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                ),
+                child: Text(
+                  _formatTime(_closingHours[day]!),
+                  style: const TextStyle(color: Colors.black),
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -588,37 +655,35 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
         
         // Terms and Conditions
         Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.orange[50],
-            border: Border.all(color: Colors.orange[200]!),
-            borderRadius: BorderRadius.circular(12),
+          padding: const EdgeInsets.all(20),
+          decoration: const BoxDecoration(
+            color: Colors.white,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
+              const Row(
                 children: [
                   Icon(
                     Icons.info_outline,
-                    color: Colors.orange[700],
+                    color: Colors.black,
                     size: 20,
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 12),
                   Text(
                     'Verification Process',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: Colors.orange[700],
+                      color: Colors.black,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              Text(
+              const SizedBox(height: 12),
+              const Text(
                 'Your business information will be reviewed by our team. This process typically takes 1-3 business days. You will be notified once verification is complete.',
                 style: TextStyle(
-                  color: Colors.orange[700],
+                  color: Colors.black87,
                   fontSize: 14,
                 ),
               ),
@@ -651,11 +716,9 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
   Widget _buildInfoCard(String title, List<String> items) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
+      padding: const EdgeInsets.all(20),
+      decoration: const BoxDecoration(
+        color: Colors.white,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -665,14 +728,18 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
+              color: Colors.black,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           ...items.map((item) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 2),
+            padding: const EdgeInsets.symmetric(vertical: 4),
             child: Text(
-              '• $item',
-              style: const TextStyle(fontSize: 14),
+              item,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.black87,
+              ),
             ),
           )),
         ],

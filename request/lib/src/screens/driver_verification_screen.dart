@@ -4,6 +4,7 @@ import 'dart:io';
 import '../services/enhanced_user_service.dart';
 import '../services/file_upload_service.dart';
 import '../models/enhanced_user_model.dart';
+import '../theme/app_theme.dart';
 
 class DriverVerificationScreen extends StatefulWidget {
   const DriverVerificationScreen({Key? key}) : super(key: key);
@@ -48,23 +49,19 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         title: const Text('Driver Verification'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Theme.of(context).colorScheme.primary.withOpacity(0.1),
-              Colors.white,
-            ],
-          ),
-        ),
+        color: AppTheme.backgroundColor,
         child: Form(
           key: _formKey,
           child: Stepper(
@@ -75,46 +72,53 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
               }
             },
             controlsBuilder: (context, details) {
-              return Row(
-                children: [
-                  if (details.stepIndex < 2)
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: details.onStepCancel,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).colorScheme.primary,
-                          foregroundColor: Colors.white,
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                child: Row(
+                  children: [
+                    if (details.stepIndex < 2)
+                      Expanded(
+                        child: Container(
+                          height: 48,
+                          child: ElevatedButton(
+                            onPressed: details.onStepContinue,
+                            style: AppTheme.primaryButtonStyle,
+                            child: Text(details.stepIndex == 2 ? 'Submit' : 'Continue'),
+                          ),
                         ),
-                        child: Text(details.stepIndex == 2 ? 'Submit' : 'Continue'),
                       ),
-                    ),
-                  if (details.stepIndex == 2)
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _submitVerification,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
+                    if (details.stepIndex == 2)
+                      Expanded(
+                        child: Container(
+                          height: 48,
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _submitVerification,
+                            style: AppTheme.primaryButtonStyle,
+                            child: _isLoading
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text('Submit for Verification'),
+                          ),
                         ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Text('Submit for Verification'),
                       ),
-                    ),
-                  const SizedBox(width: 8),
-                  if (details.stepIndex > 0)
-                    OutlinedButton(
-                      onPressed: details.onStepCancel,
-                      child: const Text('Back'),
-                    ),
-                ],
+                    if (details.stepIndex > 0) const SizedBox(width: 12),
+                    if (details.stepIndex > 0)
+                      Container(
+                        height: 48,
+                        child: OutlinedButton(
+                          onPressed: details.onStepCancel,
+                          style: AppTheme.secondaryButtonStyle,
+                          child: const Text('Back'),
+                        ),
+                      ),
+                  ],
+                ),
               );
             },
             onStepContinue: () {
@@ -168,8 +172,10 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
       children: [
         Text(
           'Driver\'s License Information',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          style: TextStyle(
+            fontSize: 18,
             fontWeight: FontWeight.w600,
+            color: Colors.black,
           ),
         ),
         const SizedBox(height: 16),
@@ -177,13 +183,9 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
         // License Number
         TextFormField(
           controller: _licenseNumberController,
-          decoration: InputDecoration(
+          decoration: const InputDecoration(
             labelText: 'License Number',
             hintText: 'Enter your license number',
-            prefixIcon: const Icon(Icons.credit_card),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
           ),
           validator: (value) {
             if (value == null || value.trim().isEmpty) {
@@ -196,18 +198,22 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
         const SizedBox(height: 16),
         
         // License Expiry Date
+        Text(
+          'License Expiry Date',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 8),
         InkWell(
           onTap: _selectLicenseExpiryDate,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(12),
-            ),
+            decoration: AppTheme.inputDecoration,
             child: Row(
               children: [
-                const Icon(Icons.calendar_today, color: Colors.grey),
-                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     _licenseExpiryDate == null
@@ -221,7 +227,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
                     ),
                   ),
                 ),
-                const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                Icon(Icons.calendar_today, size: 20, color: Colors.grey[600]),
               ],
             ),
           ),
@@ -230,22 +236,25 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
         const SizedBox(height: 16),
         
         // License Image Upload
+        Text(
+          'License Photo',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 8),
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: _licenseImage != null ? Colors.green : Colors.grey.shade300,
-              width: _licenseImage != null ? 2 : 1,
-            ),
-            borderRadius: BorderRadius.circular(12),
-          ),
+          decoration: AppTheme.cardDecoration,
           child: Column(
             children: [
               Icon(
-                _licenseImage != null ? Icons.check_circle : Icons.camera_alt,
+                _licenseImage != null ? Icons.check_circle_outline : Icons.camera_alt_outlined,
                 size: 48,
-                color: _licenseImage != null ? Colors.green : Colors.grey,
+                color: _licenseImage != null ? AppTheme.primaryColor : Colors.grey[600],
               ),
               const SizedBox(height: 8),
               Text(
@@ -253,23 +262,19 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
                     ? 'License image uploaded'
                     : 'Upload License Photo',
                 style: TextStyle(
-                  color: _licenseImage != null ? Colors.green : Colors.grey[600],
+                  color: _licenseImage != null ? AppTheme.primaryColor : Colors.grey[600],
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(height: 8),
-              ElevatedButton.icon(
-                onPressed: _pickLicenseImage,
-                icon: Icon(_licenseImage != null ? Icons.edit : Icons.camera_alt),
-                label: Text(_licenseImage != null ? 'Change Photo' : 'Take Photo'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _licenseImage != null 
-                      ? Colors.grey[300] 
-                      : Theme.of(context).colorScheme.primary,
-                  foregroundColor: _licenseImage != null 
-                      ? Colors.black87 
-                      : Colors.white,
+              Container(
+                height: 40,
+                child: ElevatedButton.icon(
+                  onPressed: _pickLicenseImage,
+                  icon: Icon(_licenseImage != null ? Icons.edit : Icons.camera_alt),
+                  label: Text(_licenseImage != null ? 'Change Photo' : 'Take Photo'),
+                  style: AppTheme.primaryButtonStyle,
                 ),
               ),
             ],
@@ -281,20 +286,16 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
         // Info box
         Container(
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.blue[50],
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.blue[200]!),
-          ),
+          decoration: AppTheme.cardDecoration,
           child: Row(
             children: [
-              Icon(Icons.info, color: Colors.blue[700], size: 20),
+              Icon(Icons.info_outline, color: AppTheme.primaryColor, size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'Please ensure your license is valid and clearly visible in the photo',
                   style: TextStyle(
-                    color: Colors.blue[700],
+                    color: AppTheme.textSecondary,
                     fontSize: 13,
                   ),
                 ),
@@ -312,8 +313,10 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
       children: [
         Text(
           'Vehicle Information',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          style: TextStyle(
+            fontSize: 18,
             fontWeight: FontWeight.w600,
+            color: Colors.black,
           ),
         ),
         const SizedBox(height: 16),
@@ -324,12 +327,9 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
             Expanded(
               child: TextFormField(
                 controller: _vehicleMakeController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Make',
                   hintText: 'e.g., Toyota',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -343,12 +343,9 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
             Expanded(
               child: TextFormField(
                 controller: _vehicleModelController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Model',
                   hintText: 'e.g., Camry',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -370,12 +367,9 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
               child: TextFormField(
                 controller: _vehicleYearController,
                 keyboardType: TextInputType.number,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Year',
                   hintText: '2020',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -394,12 +388,9 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
               child: TextFormField(
                 controller: _seatingCapacityController,
                 keyboardType: TextInputType.number,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Seats',
                   hintText: '4',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -424,12 +415,9 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
             Expanded(
               child: TextFormField(
                 controller: _plateNumberController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'License Plate',
                   hintText: 'ABC-1234',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -443,12 +431,9 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
             Expanded(
               child: TextFormField(
                 controller: _vehicleColorController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Color',
                   hintText: 'White',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -466,8 +451,10 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
         // Vehicle Images Upload
         Text(
           'Vehicle Photos',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w600,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Colors.black,
           ),
         ),
         const SizedBox(height: 8),
@@ -475,19 +462,13 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: _vehicleImages.isNotEmpty ? Colors.green : Colors.grey.shade300,
-              width: _vehicleImages.isNotEmpty ? 2 : 1,
-            ),
-            borderRadius: BorderRadius.circular(12),
-          ),
+          decoration: AppTheme.cardDecoration,
           child: Column(
             children: [
               Icon(
-                _vehicleImages.isNotEmpty ? Icons.check_circle : Icons.add_a_photo,
+                _vehicleImages.isNotEmpty ? Icons.check_circle_outline : Icons.add_a_photo_outlined,
                 size: 48,
-                color: _vehicleImages.isNotEmpty ? Colors.green : Colors.grey,
+                color: _vehicleImages.isNotEmpty ? AppTheme.primaryColor : Colors.grey[600],
               ),
               const SizedBox(height: 8),
               Text(
@@ -495,16 +476,20 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
                     ? 'Add Vehicle Photos'
                     : '${_vehicleImages.length} photo${_vehicleImages.length == 1 ? '' : 's'} added',
                 style: TextStyle(
-                  color: _vehicleImages.isNotEmpty ? Colors.green : Colors.grey[600],
+                  color: _vehicleImages.isNotEmpty ? AppTheme.primaryColor : Colors.grey[600],
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(height: 8),
-              ElevatedButton.icon(
-                onPressed: _pickVehicleImages,
-                icon: const Icon(Icons.add_a_photo),
-                label: Text(_vehicleImages.isEmpty ? 'Add Photos' : 'Add More Photos'),
+              Container(
+                height: 40,
+                child: ElevatedButton.icon(
+                  onPressed: _pickVehicleImages,
+                  icon: const Icon(Icons.add_a_photo),
+                  label: Text(_vehicleImages.isEmpty ? 'Add Photos' : 'Add More Photos'),
+                  style: AppTheme.primaryButtonStyle,
+                ),
               ),
             ],
           ),
@@ -523,7 +508,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
                   child: Stack(
                     children: [
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(0),
                         child: Image.file(
                           _vehicleImages[index],
                           width: 80,
@@ -539,7 +524,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(4),
                             decoration: const BoxDecoration(
-                              color: Colors.red,
+                              color: Colors.black,
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
@@ -567,8 +552,10 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
       children: [
         Text(
           'Review Your Information',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          style: TextStyle(
+            fontSize: 18,
             fontWeight: FontWeight.w600,
+            color: Colors.black,
           ),
         ),
         const SizedBox(height: 16),
@@ -604,21 +591,21 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.orange[50],
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.orange[200]!),
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(0),
+            border: Border.all(color: Colors.grey),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Icon(Icons.info, color: Colors.orange[700]),
+                  Icon(Icons.info_outline, color: Colors.grey[700]),
                   const SizedBox(width: 8),
                   Text(
                     'Verification Process',
                     style: TextStyle(
-                      color: Colors.orange[700],
+                      color: Colors.grey[700],
                       fontWeight: FontWeight.w600,
                       fontSize: 16,
                     ),
@@ -629,7 +616,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
               Text(
                 'Your information will be reviewed by our team. This process typically takes 1-2 business days. You\'ll receive a notification once your driver profile is approved.',
                 style: TextStyle(
-                  color: Colors.orange[700],
+                  color: Colors.grey[700],
                   fontSize: 14,
                 ),
               ),
@@ -644,16 +631,19 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.blue[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.blue[200]!),
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(0),
+              border: Border.all(color: Colors.grey),
             ),
             child: Row(
               children: [
                 const SizedBox(
                   width: 20,
                   height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 const Text('Uploading documents...'),
@@ -668,18 +658,16 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
+      decoration: AppTheme.cardDecoration,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            style: TextStyle(
+              fontSize: 16,
               fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
@@ -687,7 +675,10 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
             padding: const EdgeInsets.only(bottom: 4),
             child: Text(
               item,
-              style: const TextStyle(fontSize: 14),
+              style: TextStyle(
+                fontSize: 14,
+                color: AppTheme.textSecondary,
+              ),
             ),
           )),
         ],

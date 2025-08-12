@@ -44,13 +44,19 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Verification Status'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: _isLoading 
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: Colors.black))
           : _userModel == null
               ? const Center(child: Text('User data not found'))
               : _buildContent(),
@@ -66,38 +72,45 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
           // User Info Card
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
+            padding: const EdgeInsets.all(24),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(
+                left: BorderSide(color: Colors.black, width: 3),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   _userModel!.name,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  style: const TextStyle(
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
+                    color: Colors.black,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   _userModel!.email,
-                  style: TextStyle(color: Colors.grey[600]),
+                  style: const TextStyle(
+                    color: Colors.grey,
+                    fontSize: 16,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.person,
                       size: 16,
-                      color: Colors.grey[600],
+                      color: Colors.grey,
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 8),
                     Text(
                       'Active Role: ${_getRoleDisplayName(_userModel!.activeRole)}',
-                      style: TextStyle(
-                        color: Colors.grey[600],
+                      style: const TextStyle(
+                        color: Colors.black87,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -107,12 +120,14 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
             ),
           ),
           
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
           
-          Text(
+          const Text(
             'Your Roles',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            style: TextStyle(
+              fontSize: 20,
               fontWeight: FontWeight.bold,
+              color: Colors.black,
             ),
           ),
           
@@ -122,11 +137,13 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
           ..._userModel!.roles.map((role) => _buildRoleCard(role)).toList(),
           
           if (_userModel!.roles.length < UserRole.values.length) ...[
-            const SizedBox(height: 24),
-            Text(
+            const SizedBox(height: 32),
+            const Text(
               'Add New Role',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              style: TextStyle(
+                fontSize: 18,
                 fontWeight: FontWeight.w600,
+                color: Colors.black,
               ),
             ),
             const SizedBox(height: 16),
@@ -147,23 +164,11 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isActive 
-            ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-            : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
         border: Border.all(
-          color: isActive 
-              ? Theme.of(context).colorScheme.primary
-              : Colors.grey.shade300,
+          color: isActive ? Colors.black : Colors.grey,
           width: isActive ? 2 : 1,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -175,7 +180,6 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
                 height: 48,
                 decoration: BoxDecoration(
                   color: _getStatusColor(roleData?.verificationStatus),
-                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   _getRoleIcon(role),
@@ -194,23 +198,21 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
                       children: [
                         Text(
                           _getRoleDisplayName(role),
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          style: TextStyle(
+                            fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: isActive 
-                                ? Theme.of(context).colorScheme.primary
-                                : Colors.black87,
+                            color: isActive ? Colors.black : Colors.black87,
                           ),
                         ),
                         if (isActive) ...[
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 12),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8, 
                               vertical: 4
                             ),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primary,
-                              borderRadius: BorderRadius.circular(12),
+                            decoration: const BoxDecoration(
+                              color: Colors.black,
                             ),
                             child: const Text(
                               'Active',
@@ -225,13 +227,12 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
                       ],
                     ),
                     
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 8),
                     
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: _getStatusColor(roleData?.verificationStatus),
-                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         _getStatusText(roleData?.verificationStatus),
@@ -249,24 +250,26 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
               if (!isActive)
                 TextButton(
                   onPressed: () => _switchRole(role),
-                  child: const Text('Switch'),
+                  child: const Text(
+                    'Switch',
+                    style: TextStyle(color: Colors.black),
+                  ),
                 ),
             ],
           ),
           
           if (roleData?.verificationNotes != null) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+              decoration: const BoxDecoration(
+                color: Colors.grey,
               ),
               child: Row(
                 children: [
                   const Icon(
                     Icons.info_outline,
-                    color: Colors.orange,
+                    color: Colors.black,
                     size: 16,
                   ),
                   const SizedBox(width: 8),
@@ -275,7 +278,7 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
                       roleData!.verificationNotes!,
                       style: const TextStyle(
                         fontSize: 12,
-                        color: Colors.orange,
+                        color: Colors.black,
                       ),
                     ),
                   ),
@@ -290,27 +293,41 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
 
   Widget _buildAddRoleCard(UserRole role) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(color: Colors.grey, width: 0.5),
+        ),
+      ),
       child: ListTile(
         leading: Container(
           width: 48,
           height: 48,
-          decoration: BoxDecoration(
-            color: Colors.grey.shade200,
-            borderRadius: BorderRadius.circular(12),
+          decoration: const BoxDecoration(
+            color: Colors.grey,
           ),
           child: Icon(
             _getRoleIcon(role),
-            color: Colors.grey.shade600,
+            color: Colors.white,
             size: 24,
           ),
         ),
         title: Text(
           _getRoleDisplayName(role),
-          style: const TextStyle(fontWeight: FontWeight.w600),
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Colors.black,
+          ),
         ),
-        subtitle: const Text('Tap to add this role'),
-        trailing: const Icon(Icons.add),
+        subtitle: const Text(
+          'Tap to add this role',
+          style: TextStyle(color: Colors.grey),
+        ),
+        trailing: const Icon(
+          Icons.add,
+          color: Colors.black,
+        ),
         onTap: () => _navigateToRoleSetup(role),
       ),
     );

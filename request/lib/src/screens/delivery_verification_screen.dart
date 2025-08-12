@@ -134,101 +134,121 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Delivery Partner Verification'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
         elevation: 0,
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Theme.of(context).colorScheme.primary.withOpacity(0.1),
-              Colors.white,
-            ],
-          ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
         ),
-        child: Form(
-          key: _formKey,
-          child: Stepper(
-            currentStep: _currentStep,
-            onStepTapped: (step) {
-              if (step <= _currentStep || _isValidStep(_currentStep)) {
-                setState(() => _currentStep = step);
-              }
-            },
-            controlsBuilder: (context, details) {
-              return Row(
+      ),
+      body: Form(
+        key: _formKey,
+        child: Stepper(
+          currentStep: _currentStep,
+          onStepTapped: (step) {
+            if (step <= _currentStep || _isValidStep(_currentStep)) {
+              setState(() => _currentStep = step);
+            }
+          },
+          controlsBuilder: (context, details) {
+            return Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Row(
                 children: [
                   if (details.stepIndex < 3)
                     ElevatedButton(
                       onPressed: details.onStepContinue,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      ),
                       child: const Text('Continue'),
                     ),
                   if (details.stepIndex == 3)
                     ElevatedButton(
                       onPressed: _isLoading ? null : _submitVerification,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      ),
                       child: _isLoading 
                           ? const SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
                             )
                           : const Text('Submit for Verification'),
                     ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 16),
                   if (details.stepIndex > 0)
                     TextButton(
                       onPressed: details.onStepCancel,
-                      child: const Text('Back'),
+                      child: const Text(
+                        'Back',
+                        style: TextStyle(color: Colors.grey),
+                      ),
                     ),
                 ],
-              );
-            },
-            steps: [
-              Step(
-                title: const Text('Company Information'),
-                content: _buildCompanyInfoStep(),
-                isActive: _currentStep >= 0,
-                state: _currentStep > 0 
-                    ? StepState.complete 
-                    : _currentStep == 0 
-                        ? StepState.indexed 
-                        : StepState.disabled,
               ),
-              Step(
-                title: const Text('Service Capabilities'),
-                content: _buildCapabilitiesStep(),
-                isActive: _currentStep >= 1,
-                state: _currentStep > 1 
-                    ? StepState.complete 
-                    : _currentStep == 1 
-                        ? StepState.indexed 
-                        : StepState.disabled,
-              ),
-              Step(
-                title: const Text('Availability & Documents'),
-                content: _buildAvailabilityDocumentsStep(),
-                isActive: _currentStep >= 2,
-                state: _currentStep > 2 
-                    ? StepState.complete 
-                    : _currentStep == 2 
-                        ? StepState.indexed 
-                        : StepState.disabled,
-              ),
-              Step(
-                title: const Text('Review & Submit'),
-                content: _buildReviewStep(),
-                isActive: _currentStep >= 3,
-                state: _currentStep == 3 
-                    ? StepState.indexed 
-                    : StepState.disabled,
-              ),
-            ],
-          ),
+            );
+          },
+          steps: [
+            Step(
+              title: const Text('Company Information'),
+              content: _buildCompanyInfoStep(),
+              isActive: _currentStep >= 0,
+              state: _currentStep > 0 
+                  ? StepState.complete 
+                  : _currentStep == 0 
+                      ? StepState.indexed 
+                      : StepState.disabled,
+            ),
+            Step(
+              title: const Text('Service Capabilities'),
+              content: _buildCapabilitiesStep(),
+              isActive: _currentStep >= 1,
+              state: _currentStep > 1 
+                  ? StepState.complete 
+                  : _currentStep == 1 
+                      ? StepState.indexed 
+                      : StepState.disabled,
+            ),
+            Step(
+              title: const Text('Availability & Documents'),
+              content: _buildAvailabilityDocumentsStep(),
+              isActive: _currentStep >= 2,
+              state: _currentStep > 2 
+                  ? StepState.complete 
+                  : _currentStep == 2 
+                      ? StepState.indexed 
+                      : StepState.disabled,
+            ),
+            Step(
+              title: const Text('Review & Submit'),
+              content: _buildReviewStep(),
+              isActive: _currentStep >= 3,
+              state: _currentStep == 3 
+                  ? StepState.indexed 
+                  : StepState.disabled,
+            ),
+          ],
         ),
       ),
     );

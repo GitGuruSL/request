@@ -339,17 +339,10 @@ class _AccountScreenState extends State<AccountScreen> {
           ),
           _buildDivider(),
           _buildMenuItem(
-            icon: Icons.badge,
-            title: 'Role Management',
-            subtitle: 'Manage your roles and verification status',
-            onTap: () => Navigator.pushNamed(context, '/verification-status'),
-          ),
-          _buildDivider(),
-          _buildMenuItem(
             icon: Icons.person_add,
-            title: 'Add New Role',
-            subtitle: 'Become a driver, business owner, or delivery partner',
-            onTap: () => Navigator.pushNamed(context, '/role-selection'),
+            title: 'Role Management',
+            subtitle: 'Manage your roles, verification status, and add new roles',
+            onTap: () => Navigator.pushNamed(context, '/role-management'),
           ),
           _buildDivider(),
           _buildMenuItem(
