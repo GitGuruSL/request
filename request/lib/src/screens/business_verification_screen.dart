@@ -41,6 +41,14 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
   File? _businessLogoFile;
   String? _businessLogoUrl;
   
+  // Status variables
+  String? _businessLicenseStatus;
+  String? _taxCertificateStatus;
+  String? _insuranceDocumentStatus;
+  String? _businessLogoStatus;
+  String? _overallStatus;
+  String? _existingBusinessId;
+  
   // Business Category
   String? _selectedCategory;
   final List<String> _businessCategories = [
@@ -71,9 +79,58 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
         setState(() {
           _businessEmailController.text = currentUser.email ?? '';
         });
+        
+        // Load existing business verification data
+        await _loadBusinessVerificationData(currentUser.uid);
       }
     } catch (e) {
       print('Error loading user data: $e');
+    }
+  }
+
+  Future<void> _loadBusinessVerificationData(String userId) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('new_business_verifications')
+          .doc(userId)
+          .get();
+
+      if (doc.exists) {
+        final data = doc.data()!;
+        setState(() {
+          _existingBusinessId = doc.id;
+          _businessNameController.text = data['businessName'] ?? '';
+          _businessPhoneController.text = data['businessPhone'] ?? '';
+          _businessAddressController.text = data['businessAddress'] ?? '';
+          _businessDescriptionController.text = data['businessDescription'] ?? '';
+          _licenseNumberController.text = data['licenseNumber'] ?? '';
+          _taxIdController.text = data['taxId'] ?? '';
+          _selectedCategory = data['businessCategory'];
+
+          // Load document URLs
+          _businessLicenseUrl = data['businessLicenseUrl'];
+          _taxCertificateUrl = data['taxCertificateUrl'];
+          _insuranceDocumentUrl = data['insuranceDocumentUrl'];
+          _businessLogoUrl = data['businessLogoUrl'];
+
+          // Check both flat and nested status fields for each document
+          final docVer = data['documentVerification'] ?? {};
+          _businessLicenseStatus = data['businessLicenseStatus'] ?? (docVer['businessLicense'] != null ? docVer['businessLicense']['status'] ?? 'pending' : 'pending');
+          _taxCertificateStatus = data['taxCertificateStatus'] ?? (docVer['taxCertificate'] != null ? docVer['taxCertificate']['status'] ?? 'pending' : 'pending');
+          _insuranceDocumentStatus = data['insuranceDocumentStatus'] ?? (docVer['insurance'] != null ? docVer['insurance']['status'] ?? 'pending' : 'pending');
+          _businessLogoStatus = data['businessLogoStatus'] ?? (docVer['businessLogo'] != null ? docVer['businessLogo']['status'] ?? 'pending' : 'pending');
+          _overallStatus = data['status'] ?? 'pending';
+
+          print('Loaded business verification data:');
+          print('Business License Status: $_businessLicenseStatus');
+          print('Tax Certificate Status: $_taxCertificateStatus');
+          print('Insurance Document Status: $_insuranceDocumentStatus');
+          print('Business Logo Status: $_businessLogoStatus');
+          print('Overall Status: $_overallStatus');
+        });
+      }
+    } catch (e) {
+      print('Error loading business verification data: $e');
     }
   }
 
@@ -123,19 +180,29 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
             children: [
               Icon(Icons.business, color: AppTheme.primaryColor, size: 32),
               const SizedBox(width: 12),
-              const Text(
-                'Business Verification',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
+              Expanded(
+                child: Text(
+                  'Business Profile & Documents',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
+                  ),
                 ),
               ),
+              if (_overallStatus != null) ...[
+                const SizedBox(width: 8),
+                _buildStatusBadge(_overallStatus!),
+              ],
             ],
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Complete your business verification to start offering services on our platform.',
+          Text(
+            _overallStatus == 'approved' 
+                ? 'Your business has been verified and approved!'
+                : _overallStatus == 'rejected'
+                ? 'Please review and update your business information.'
+                : 'Complete your business verification to start offering services.',
             style: TextStyle(
               fontSize: 14,
               color: AppTheme.textSecondary,
@@ -225,6 +292,61 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
     );
   }
 
+  VerificationStatus _getStatusFromString(String? status) {
+    switch (status?.toLowerCase()) {
+      case 'approved':
+        return VerificationStatus.approved;
+      case 'rejected':
+        return VerificationStatus.rejected;
+      case 'pending':
+      default:
+        return VerificationStatus.pending;
+    }
+  }
+
+  Widget _buildStatusBadge(String? status) {
+    final verificationStatus = _getStatusFromString(status);
+    
+    Color backgroundColor;
+    Color textColor;
+    String displayText;
+
+    switch (verificationStatus) {
+      case VerificationStatus.approved:
+        backgroundColor = Colors.green.shade100;
+        textColor = Colors.green.shade800;
+        displayText = 'Approved';
+        break;
+      case VerificationStatus.rejected:
+        backgroundColor = Colors.red.shade100;
+        textColor = Colors.red.shade800;
+        displayText = 'Rejected';
+        break;
+      case VerificationStatus.pending:
+      default:
+        backgroundColor = Colors.orange.shade100;
+        textColor = Colors.orange.shade800;
+        displayText = 'Pending';
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        displayText,
+        style: TextStyle(
+          color: textColor,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
   Widget _buildBusinessDocumentsSection() {
     return Container(
       width: double.infinity,
@@ -277,6 +399,7 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
             url: _businessLicenseUrl,
             onTap: () => _pickDocument('business_license'),
             isRequired: false,
+            status: _businessLicenseStatus,
           ),
           _buildDocumentUpload(
             title: 'Tax Certificate',
@@ -285,6 +408,7 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
             url: _taxCertificateUrl,
             onTap: () => _pickDocument('tax_certificate'),
             isRequired: false,
+            status: _taxCertificateStatus,
           ),
           _buildDocumentUpload(
             title: 'Insurance Document',
@@ -293,6 +417,7 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
             url: _insuranceDocumentUrl,
             onTap: () => _pickDocument('insurance'),
             isRequired: false,
+            status: _insuranceDocumentStatus,
           ),
         ],
       ),
@@ -311,43 +436,53 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
             children: [
               Icon(Icons.image, color: AppTheme.primaryColor, size: 24),
               const SizedBox(width: 12),
-              const Text(
-                'Business Logo',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
+              Expanded(
+                child: Text(
+                  'Business Logo',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
+                  ),
                 ),
               ),
+              if (_businessLogoStatus != null) ...[
+                const SizedBox(width: 8),
+                _buildStatusBadge(_businessLogoStatus!),
+              ],
             ],
           ),
           const SizedBox(height: 16),
-          _buildLogoUpload(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    String? Function(String?)? validator,
-    TextInputType? keyboardType,
-    int? maxLines,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: AppTheme.textPrimary,
-            ),
+          // Debug prints for status
+          Text('DEBUG: License Status = $_businessLicenseStatus', style: TextStyle(color: Colors.red)),
+          _buildDocumentUpload(
+            title: 'Business License',
+            description: 'Official business license document (optional)',
+            file: _businessLicenseFile,
+            url: _businessLicenseUrl,
+            onTap: () => _pickDocument('business_license'),
+            isRequired: false,
+            status: _businessLicenseStatus,
+          ),
+          Text('DEBUG: Tax Status = $_taxCertificateStatus', style: TextStyle(color: Colors.red)),
+          _buildDocumentUpload(
+            title: 'Tax Certificate',
+            description: 'Tax registration certificate (if applicable)',
+            file: _taxCertificateFile,
+            url: _taxCertificateUrl,
+            onTap: () => _pickDocument('tax_certificate'),
+            isRequired: false,
+            status: _taxCertificateStatus,
+          ),
+          Text('DEBUG: Insurance Status = $_insuranceDocumentStatus', style: TextStyle(color: Colors.red)),
+          _buildDocumentUpload(
+            title: 'Insurance Document',
+            description: 'Business insurance certificate (if applicable)',
+            file: _insuranceDocumentFile,
+            url: _insuranceDocumentUrl,
+            onTap: () => _pickDocument('insurance'),
+            isRequired: false,
+            status: _insuranceDocumentStatus,
           ),
           const SizedBox(height: 8),
           TextFormField(
@@ -451,6 +586,7 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
     required String? url,
     required VoidCallback onTap,
     required bool isRequired,
+    String? status,
   }) {
     final hasDocument = file != null || url != null;
     
@@ -475,13 +611,23 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textPrimary,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                        ),
+                        if (status != null) ...[
+                          const SizedBox(width: 8),
+                          _buildStatusBadge(status),
+                        ],
+                      ],
                     ),
                     Text(
                       description,
