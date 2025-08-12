@@ -109,11 +109,6 @@ class EnhancedUserService {
           userModel = await _enrichWithBusinessVerification(userModel);
         }
         
-        // Check delivery verification (delivery businesses are also in business verification system)
-        if (userModel.hasRole(UserRole.delivery)) {
-          userModel = await _enrichWithDeliveryVerification(userModel);
-        }
-        
         return userModel;
       }
       return null;
@@ -189,49 +184,28 @@ class EnhancedUserService {
         final businessData = newBusinessDoc.data();
         final businessStatus = businessData?['status'] as String?;
         final isVerified = businessData?['isVerified'] as bool? ?? false;
-        final businessType = businessData?['businessType'] as String? ?? '';
         
-        print('DEBUG: Business status: $businessStatus, isVerified: $isVerified, businessType: $businessType');
+        print('DEBUG: Business status: $businessStatus, isVerified: $isVerified');
         
         if (businessStatus == 'approved' && isVerified) {
-          // Add role based on business type
-          if (businessType.toLowerCase() == 'delivery') {
-            detectedRoles.add(UserRole.delivery);
-            updatedRoleData[UserRole.delivery] = RoleData(
-              verificationStatus: VerificationStatus.approved,
-              data: {},
-            );
-            print('DEBUG: Added approved delivery role from new verification system');
-          } else {
-            detectedRoles.add(UserRole.business);
-            updatedRoleData[UserRole.business] = RoleData(
-              verificationStatus: VerificationStatus.approved,
-              data: {},
-            );
-            print('DEBUG: Added approved business role from new verification system');
-          }
+          detectedRoles.add(UserRole.business);
+          updatedRoleData[UserRole.business] = RoleData(
+            verificationStatus: VerificationStatus.approved,
+            data: {},
+          );
+          print('DEBUG: Added approved business role from new verification system');
         } else {
-          // Still add role but with pending/rejected status
+          // Still add business role but with pending/rejected status
+          detectedRoles.add(UserRole.business);
           VerificationStatus status = VerificationStatus.pending;
           if (businessStatus == 'rejected') {
             status = VerificationStatus.rejected;
           }
-          
-          if (businessType.toLowerCase() == 'delivery') {
-            detectedRoles.add(UserRole.delivery);
-            updatedRoleData[UserRole.delivery] = RoleData(
-              verificationStatus: status,
-              data: {},
-            );
-            print('DEBUG: Added delivery role with status: $status');
-          } else {
-            detectedRoles.add(UserRole.business);
-            updatedRoleData[UserRole.business] = RoleData(
-              verificationStatus: status,
-              data: {},
-            );
-            print('DEBUG: Added business role with status: $status');
-          }
+          updatedRoleData[UserRole.business] = RoleData(
+            verificationStatus: status,
+            data: {},
+          );
+          print('DEBUG: Added business role with status: $status');
         }
       } else {
         // Fallback to old business collection
@@ -340,56 +314,6 @@ class EnhancedUserService {
   // Enrich user model with delivery verification status
   Future<UserModel> _enrichWithDeliveryVerification(UserModel userModel) async {
     try {
-      // Check new business verification system for delivery businesses
-      final newBusinessDoc = await _firestore
-          .collection('new_business_verifications')
-          .doc(userModel.id)
-          .get();
-
-      if (newBusinessDoc.exists) {
-        final businessData = newBusinessDoc.data()!;
-        final businessType = businessData['businessType'] as String? ?? '';
-        
-        // Only process if this is a delivery business
-        if (businessType.toLowerCase() == 'delivery') {
-          final businessStatus = businessData['status'] as String?;
-          final isVerified = businessData['isVerified'] as bool? ?? false;
-          
-          // Check contact verification status
-          final userId = userModel.id;
-          final userDoc = await _firestore.collection('users').doc(userId).get();
-          bool isPhoneVerified = false;
-          bool isEmailVerified = false;
-          
-          if (userDoc.exists) {
-            final userData = userDoc.data();
-            final linkedCredentials = userData?['linkedCredentials'] as Map<String, dynamic>? ?? {};
-            isPhoneVerified = linkedCredentials['linkedPhoneVerified'] == true;
-            isEmailVerified = linkedCredentials['linkedEmailVerified'] == true;
-          }
-          
-          // Determine verification status
-          VerificationStatus verificationStatus;
-          if (businessStatus == 'approved' && isVerified && isPhoneVerified && isEmailVerified) {
-            verificationStatus = VerificationStatus.approved;
-          } else if (businessStatus == 'rejected') {
-            verificationStatus = VerificationStatus.rejected;
-          } else {
-            verificationStatus = VerificationStatus.pending;
-          }
-          
-          // Update role data with correct verification status
-          Map<UserRole, RoleData> updatedRoleData = Map.from(userModel.roleData);
-          updatedRoleData[UserRole.delivery] = RoleData(
-            verificationStatus: verificationStatus,
-            data: updatedRoleData[UserRole.delivery]?.data ?? {},
-          );
-          
-          return _createUpdatedUserModel(userModel, updatedRoleData);
-        }
-      }
-      
-      // Fallback to old delivery collection if needed
       final deliveryDoc = await _firestore
           .collection('delivery')
           .doc(userModel.id)

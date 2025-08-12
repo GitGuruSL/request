@@ -724,7 +724,7 @@ class _EnhancedMainDashboardState extends State<EnhancedMainDashboard> {
         Navigator.pushNamed(context, '/delivery-verification');
         break;
       case UserRole.business:
-        Navigator.pushNamed(context, '/business-verification');
+        Navigator.pushNamed(context, '/new-business-verification');
         break;
       default:
         break;

@@ -18,7 +18,10 @@ import 'src/screens/driver_verification_screen.dart';
 import 'src/screens/business_verification_screen.dart';
 import 'src/screens/delivery_verification_screen.dart';
 import 'src/screens/verification_status_screen.dart';
+import 'src/screens/documents_verification_screen.dart';
+import 'src/screens/driver_documents_verification_screen.dart';
 import 'src/screens/driver_documents_view_screen.dart';         // Driver documents view
+import 'src/screens/business_documents_view_screen.dart';       // Business documents view
 import 'src/screens/role_management_screen.dart';
 import 'src/services/country_service.dart';
 import 'src/theme/app_theme.dart';
@@ -90,8 +93,14 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (context) => const DeliveryVerificationScreen());
           case '/verification-status':
             return MaterialPageRoute(builder: (context) => const VerificationStatusScreen());
+          case '/documents-verification':
+            return MaterialPageRoute(builder: (context) => const DocumentsVerificationScreen());
+          case '/driver-documents-verification':
+            return MaterialPageRoute(builder: (context) => const DriverDocumentsVerificationScreen());
           case '/driver-documents-view':
             return MaterialPageRoute(builder: (context) => const DriverDocumentsViewScreen());
+          case '/business-documents-view':
+            return MaterialPageRoute(builder: (context) => const BusinessDocumentsViewScreen());
           case '/role-management':
             return MaterialPageRoute(builder: (context) => const RoleManagementScreen());
           case '/main-dashboard':

@@ -373,13 +373,20 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                       ),
                     ],
                     if (!_isOwner) ...[
-                      // Show edit response icon for drivers who have already responded
-                      if (_getUserResponse() != null)
-                        IconButton(
-                          onPressed: () => _showResponseDialog(),
-                          icon: const Icon(Icons.edit),
-                          tooltip: 'Edit Response',
-                        ),
+                      FutureBuilder<ResponseModel?>(
+                        future: _getUserExistingResponse(),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasData && snapshot.data != null) {
+                            // User has an existing response, show edit icon
+                            return IconButton(
+                              onPressed: () => _showResponseDialog(existingResponse: snapshot.data),
+                              icon: const Icon(Icons.edit),
+                              tooltip: 'Edit Response',
+                            );
+                          }
+                          return const SizedBox.shrink(); // Hide if no response
+                        },
+                      ),
                     ],
                     IconButton(
                       onPressed: () {}, // TODO: Add share functionality
@@ -445,7 +452,52 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
           ),
         ],
       ),
-      // Removed floatingActionButton since edit functionality is now in the top bar
+      floatingActionButton: (_request != null && 
+                              !_isOwner && 
+                              FirebaseAuth.instance.currentUser != null &&
+                              FirebaseAuth.instance.currentUser!.uid != _request!.requesterId)
+          ? (_canUserRespond()
+              ? FloatingActionButton.extended(
+                  onPressed: () {
+                    print('🔍 Ride ${_hasUserResponded() ? 'Edit' : 'Respond'} button pressed - IsOwner: $_isOwner');
+                    print('🔍 Ride ${_hasUserResponded() ? 'Edit' : 'Respond'} button pressed - Current User: ${FirebaseAuth.instance.currentUser?.uid}');
+                    print('🔍 Ride ${_hasUserResponded() ? 'Edit' : 'Respond'} button pressed - Request Owner: ${_request!.requesterId}');
+                    print('🔍 Ride ${_hasUserResponded() ? 'Edit' : 'Respond'} button pressed - Has User Responded: ${_hasUserResponded()}');
+                    _showResponseDialog();
+                  },
+                  icon: Icon(_hasUserResponded() ? Icons.edit : Icons.reply),
+                  label: Text(_hasUserResponded() ? 'Edit' : 'Respond'),
+                  backgroundColor: Colors.black,
+                  foregroundColor: Colors.white,
+                )
+              : FloatingActionButton.extended(
+                  onPressed: () {
+                    final reason = _getCannotRespondReason();
+                    if (reason != null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(reason),
+                          backgroundColor: Colors.orange,
+                          duration: const Duration(seconds: 4),
+                          action: reason.contains('register') 
+                            ? SnackBarAction(
+                                label: 'Register',
+                                textColor: Colors.white,
+                                onPressed: () {
+                                  Navigator.pushNamed(context, '/driver-registration');
+                                },
+                              )
+                            : null,
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.lock_outline),
+                  label: const Text('Driver Required'),
+                  backgroundColor: Colors.grey,
+                  foregroundColor: Colors.white,
+                ))
+          : null,
     );
   }
 
@@ -769,123 +821,31 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   }
 
   Widget _buildResponsesSection() {
-    // For responders (drivers): Show minimal count only
-    if (!_isOwner) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Text(
-                'Responses',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${_responses.length}',
-                  style: TextStyle(
-                    color: Colors.blue[700],
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          // Show simple message for non-owners
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.green[50],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.green[600], size: 24),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${_responses.length} Responses Received',
-                        style: TextStyle(
-                          color: Colors.green[800],
-                          fontWeight: FontWeight.w500,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Thank you for your interest in this ride request',
-                        style: TextStyle(
-                          color: Colors.green[600],
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      );
-    }
-
-    // For requesters (owners): Show full responses with "View All" option
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
-              children: [
-                const Text(
-                  'Responses',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.blue[50],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${_responses.length}',
-                    style: TextStyle(
-                      color: Colors.blue[700],
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
+            const Text(
+              'Offers',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            if (_responses.isNotEmpty)
-              Row(
-                children: [
-                  Icon(Icons.visibility, size: 16, color: Colors.blue[600]),
-                  const SizedBox(width: 4),
-                  Text(
-                    'View All',
-                    style: TextStyle(
-                      color: Colors.blue[600],
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(12),
               ),
+              child: Text(
+                '${_responses.length}',
+                style: TextStyle(
+                  color: Colors.blue[700],
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 16),
@@ -902,11 +862,11 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                   Icon(Icons.inbox, size: 48, color: Colors.grey),
                   SizedBox(height: 8),
                   Text(
-                    'No responses yet',
+                    'No offers yet',
                     style: TextStyle(color: Colors.grey, fontSize: 16),
                   ),
                   Text(
-                    'Drivers will respond to your ride request',
+                    'Be the first to offer a ride!',
                     style: TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ],
@@ -914,42 +874,15 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
             ),
           )
         else
-          // Show summary for requesters instead of full list
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.green[50],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.green[600], size: 24),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${_responses.length} Responses Received',
-                        style: TextStyle(
-                          color: Colors.green[800],
-                          fontWeight: FontWeight.w500,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Tap "View All" to see response details',
-                        style: TextStyle(
-                          color: Colors.green[600],
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _responses.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final response = _responses[index];
+              return _buildResponseCard(response);
+            },
           ),
       ],
     );
