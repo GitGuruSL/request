@@ -346,6 +346,13 @@ class _AccountScreenState extends State<AccountScreen> {
           ),
           _buildDivider(),
           _buildMenuItem(
+            icon: Icons.price_check,
+            title: 'Business Pricing',
+            subtitle: 'Manage your product prices and listings',
+            onTap: () => Navigator.pushNamed(context, '/business-pricing'),
+          ),
+          _buildDivider(),
+          _buildMenuItem(
             icon: Icons.history,
             title: 'Request History',
             onTap: () => _showComingSoon('Request History'),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../home/screens/home_screen.dart';
 import '../screens/browse_screen.dart';
+import '../screens/pricing/product_search_screen.dart';
 import '../screens/messaging/conversations_list_screen.dart';
 import '../screens/account_screen.dart';
 
@@ -17,6 +18,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   final List<Widget> _screens = [
     const HomeScreen(),
     const BrowseScreen(),
+    const ProductSearchScreen(),
     const ConversationsListScreen(),
     const AccountScreen(),
   ];
@@ -45,6 +47,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             icon: Icon(Icons.search_outlined),
             activeIcon: Icon(Icons.search),
             label: 'Browse',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.price_check_outlined),
+            activeIcon: Icon(Icons.price_check),
+            label: 'Prices',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.message_outlined),
