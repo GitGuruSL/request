@@ -123,7 +123,7 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(color: AppTheme.backgroundColor),
+      decoration: const BoxDecoration(color: Colors.white),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -158,7 +158,7 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(color: AppTheme.backgroundColor),
+      decoration: const BoxDecoration(color: Colors.white),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -225,10 +225,9 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
           _buildDropdownField(),
           _buildTextField(
             controller: _licenseNumberController,
-            label: 'Business License Number *',
-            hint: 'Enter business license number',
+            label: 'Business License Number',
+            hint: 'Enter business license number (optional)',
             prefixIcon: Icons.assignment,
-            validator: (value) => value?.isEmpty ?? true ? 'License number is required' : null,
           ),
           _buildTextField(
             controller: _taxIdController,
@@ -245,7 +244,7 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(color: AppTheme.backgroundColor),
+      decoration: const BoxDecoration(color: Colors.white),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -288,12 +287,12 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
           ),
           const SizedBox(height: 16),
           _buildDocumentUpload(
-            title: 'Business License *',
-            description: 'Official business registration/license document',
+            title: 'Business License',
+            description: 'Official business registration/license document (optional)',
             file: _businessLicenseFile,
             url: _businessLicenseUrl,
             onTap: () => _pickDocument('business_license'),
-            isRequired: true,
+            isRequired: false,
           ),
           _buildDocumentUpload(
             title: 'Tax Certificate',
@@ -320,7 +319,7 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(color: AppTheme.backgroundColor),
+      decoration: const BoxDecoration(color: Colors.white),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -392,15 +391,15 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
                 borderRadius: BorderRadius.circular(8),
               ),
               focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: AppTheme.primaryColor),
+                borderSide: BorderSide.none,
                 borderRadius: BorderRadius.circular(8),
               ),
               errorBorder: OutlineInputBorder(
-                borderSide: const BorderSide(color: Colors.red),
+                borderSide: BorderSide.none,
                 borderRadius: BorderRadius.circular(8),
               ),
               focusedErrorBorder: OutlineInputBorder(
-                borderSide: const BorderSide(color: Colors.red),
+                borderSide: BorderSide.none,
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
@@ -439,15 +438,15 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
                 borderRadius: BorderRadius.circular(8),
               ),
               focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: AppTheme.primaryColor),
+                borderSide: BorderSide.none,
                 borderRadius: BorderRadius.circular(8),
               ),
               errorBorder: OutlineInputBorder(
-                borderSide: const BorderSide(color: Colors.red),
+                borderSide: BorderSide.none,
                 borderRadius: BorderRadius.circular(8),
               ),
               focusedErrorBorder: OutlineInputBorder(
-                borderSide: const BorderSide(color: Colors.red),
+                borderSide: BorderSide.none,
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
@@ -482,7 +481,6 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -564,7 +562,8 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
               ),
               label: Text(file != null ? 'Change File' : 'Choose File'),
               style: OutlinedButton.styleFrom(
-                side: BorderSide(color: AppTheme.primaryColor),
+                side: BorderSide.none,
+                backgroundColor: Colors.white,
                 foregroundColor: AppTheme.primaryColor,
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),
@@ -581,7 +580,6 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
       ),
       child: Column(
         children: [
@@ -636,7 +634,8 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
               ),
               label: Text(_businessLogoFile != null ? 'Change Logo' : 'Choose Logo'),
               style: OutlinedButton.styleFrom(
-                side: BorderSide(color: AppTheme.primaryColor),
+                side: BorderSide.none,
+                backgroundColor: Colors.white,
                 foregroundColor: AppTheme.primaryColor,
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),
@@ -718,16 +717,6 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
 
   Future<void> _submitBusinessRegistration() async {
     if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    if (_businessLicenseFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Business License document is required'),
-          backgroundColor: Colors.red,
-        ),
-      );
       return;
     }
 
