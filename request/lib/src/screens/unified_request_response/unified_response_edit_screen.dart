@@ -204,6 +204,8 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
     _fareController.dispose();
     _routeDescriptionController.dispose();
     _driverNotesController.dispose();
+  _notesController.dispose();
+  _specialConsiderationsController.dispose();
     super.dispose();
   }
 
@@ -211,13 +213,16 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
   String? _validateUserRole(UserModel user) {
     switch (widget.request.type) {
       case RequestType.delivery:
-        // Check if user has delivery role
-        if (!user.hasRole(UserRole.delivery)) {
+        // Allow either delivery OR business role (both verified) to edit response
+        final hasDelivery = user.hasRole(UserRole.delivery) && user.isRoleVerified(UserRole.delivery);
+        final hasBusiness = user.hasRole(UserRole.business) && user.isRoleVerified(UserRole.business);
+        if (!hasDelivery && !hasBusiness) {
+          // Distinguish between unregistered and unverified if one role exists but unverified
+          final hasEitherRole = user.hasRole(UserRole.delivery) || user.hasRole(UserRole.business);
+            if (hasEitherRole) {
+              return 'delivery_business_verification_required';
+            }
           return 'delivery_business_required';
-        }
-        // Check if delivery role is approved
-        if (!user.isRoleVerified(UserRole.delivery)) {
-          return 'delivery_business_verification_required';
         }
         break;
         
@@ -237,6 +242,13 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
         return null;
     }
     return null;
+  }
+
+  double? _parsePriceInput(String text) {
+    if (text.trim().isEmpty) return null;
+    final sanitized = text.replaceAll(RegExp(r'[^0-9.]'), '');
+    if (sanitized.isEmpty) return null;
+    return double.tryParse(sanitized);
   }
 
   void _navigateToRegistration() {
@@ -1523,6 +1535,7 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
   }
 
   Future<void> _submitResponse() async {
+  if (_isLoading) return; // guard against double taps
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -1592,13 +1605,13 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
 
       switch (widget.request.type) {
         case RequestType.item:
-          price = double.tryParse(_offerPriceController.text.trim());
+          price = _parsePriceInput(_offerPriceController.text);
           additionalInfo = {
             'itemCondition': _itemConditionController.text.trim(),
             'offerDescription': _offerDescriptionController.text.trim(),
             'deliveryMethod': _selectedDeliveryMethod,
             'deliveryCost': _deliveryCostController.text.trim().isNotEmpty 
-                ? double.tryParse(_deliveryCostController.text.trim()) 
+                ? _parsePriceInput(_deliveryCostController.text.trim()) \
                 : null,
             'estimatedDelivery': _estimatedDeliveryController.text.trim().isNotEmpty 
                 ? int.tryParse(_estimatedDeliveryController.text.trim()) 
@@ -1610,8 +1623,8 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
           };
           break;
         case RequestType.service:
-          price = double.tryParse(_selectedPriceType == 'Fixed Price' 
-              ? _estimatedCostController.text.trim() 
+          price = _parsePriceInput(_selectedPriceType == 'Fixed Price' \
+              ? _estimatedCostController.text.trim() \
               : _hourlyRateController.text.trim());
           additionalInfo = {
             'priceType': _selectedPriceType,
@@ -1623,14 +1636,14 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
           };
           break;
         case RequestType.rental:
-          price = double.tryParse(_rentalPriceController.text.trim());
+          price = _parsePriceInput(_rentalPriceController.text.trim());
           additionalInfo = {
             'rentalPeriod': _selectedRentalPeriod,
             'itemCondition': _rentalItemConditionController.text.trim(),
             'itemDescription': _rentalDescriptionController.text.trim(),
             'pickupDeliveryOption': _selectedPickupDeliveryOption,
             'securityDeposit': _securityDepositController.text.trim().isNotEmpty 
-                ? double.tryParse(_securityDepositController.text.trim()) 
+                ? _parsePriceInput(_securityDepositController.text.trim()) \
                 : null,
             'availableFrom': _availableFrom?.millisecondsSinceEpoch,
             'availableUntil': _availableUntil?.millisecondsSinceEpoch,
@@ -1638,7 +1651,7 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
           };
           break;
         case RequestType.delivery:
-          price = double.tryParse(_deliveryFeeController.text.trim());
+          price = _parsePriceInput(_deliveryFeeController.text.trim());
           additionalInfo = {
             'vehicleType': _selectedVehicleType,
             'estimatedPickupTime': _estimatedPickupTimeController.text.trim(),
@@ -1648,6 +1661,20 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
           break;
         default:
           break;
+      }
+
+      // Basic price presence validation for types that require price
+      if (widget.request.type != RequestType.price && price == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please enter a valid numeric price/fare.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        setState(() { _isLoading = false; });
+        return;
       }
 
       // Update the response
