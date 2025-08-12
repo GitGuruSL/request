@@ -253,17 +253,7 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
           ),
         ],
       );
-    } else if (isResponder && !widget.response.isAccepted) {
-      // Responder can edit their pending response
-      return SizedBox(
-        width: double.infinity,
-        child: ElevatedButton.icon(
-          onPressed: _editResponse,
-          icon: const Icon(Icons.edit),
-          label: const Text('Edit Response'),
-        ),
-      );
-    }
+  }
 
     return const SizedBox.shrink();
   }
@@ -500,6 +490,14 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
         elevation: 0,
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         foregroundColor: Theme.of(context).textTheme.titleLarge?.color,
+        actions: [
+          if (_currentUser?.id == widget.response.responderId && !widget.response.isAccepted)
+            IconButton(
+              icon: const Icon(Icons.edit),
+              tooltip: 'Edit Your Response',
+              onPressed: _editResponse,
+            ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

@@ -99,17 +99,45 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
     super.dispose();
   }
 
+  String _formatDateTime(DateTime dt) {
+    final two = (int n) => n.toString().padLeft(2, '0');
+    final date = '${dt.year}-${two(dt.month)}-${two(dt.day)}';
+    final time = '${two(dt.hour)}:${two(dt.minute)}';
+    return '$date $time';
+  }
+
+  int? _parseDateTimeToMillis(String input) {
+    if (input.isEmpty) return null;
+    try {
+      final parts = input.split(' ');
+      if (parts.length != 2) return null;
+      final dateParts = parts[0].split('-');
+      final timeParts = parts[1].split(':');
+      if (dateParts.length != 3 || timeParts.length != 2) return null;
+      final year = int.parse(dateParts[0]);
+      final month = int.parse(dateParts[1]);
+      final day = int.parse(dateParts[2]);
+      final hour = int.parse(timeParts[0]);
+      final minute = int.parse(timeParts[1]);
+      return DateTime(year, month, day, hour, minute).millisecondsSinceEpoch;
+    } catch (_) {
+      return null;
+    }
+  }
+
   // Role validation to ensure only appropriate users can respond to specific requests
   String? _validateUserRole(UserModel user) {
     switch (widget.request.type) {
       case RequestType.delivery:
-        // Check if user has delivery role
-        if (!user.hasRole(UserRole.delivery)) {
+        // Allow either delivery OR business role (both verified) to create response
+        final hasDelivery = user.hasRole(UserRole.delivery) && user.isRoleVerified(UserRole.delivery);
+        final hasBusiness = user.hasRole(UserRole.business) && user.isRoleVerified(UserRole.business);
+        if (!hasDelivery && !hasBusiness) {
+          final hasEitherRole = user.hasRole(UserRole.delivery) || user.hasRole(UserRole.business);
+          if (hasEitherRole) {
+            return 'delivery_business_verification_required';
+          }
           return 'delivery_business_required';
-        }
-        // Check if delivery role is approved
-        if (!user.isRoleVerified(UserRole.delivery)) {
-          return 'delivery_business_verification_required';
         }
         break;
         
@@ -1324,28 +1352,64 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                   Expanded(
                     child: TextFormField(
                       controller: _estimatedPickupTimeController,
+                      readOnly: true,
                       decoration: const InputDecoration(
-                        labelText: 'Pickup Time',
-                        hintText: 'e.g., 10:00 AM',
+                        labelText: 'Pickup Date & Time',
+                        hintText: 'Select pickup',
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.all(16),
                         filled: true,
                         fillColor: Color(0xFFF8F9FA),
                       ),
+                      onTap: () async {
+                        final date = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                        );
+                        if (date == null) return;
+                        final time = await showTimePicker(
+                          context: context,
+                          initialTime: TimeOfDay.now(),
+                        );
+                        if (time == null) return;
+                        final dt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+                        _estimatedPickupTimeController.text = _formatDateTime(dt);
+                        setState(() {});
+                      },
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: TextFormField(
                       controller: _estimatedDropoffTimeController,
+                      readOnly: true,
                       decoration: const InputDecoration(
-                        labelText: 'Drop-off Time',
-                        hintText: 'e.g., 12:00 PM',
+                        labelText: 'Drop-off Date & Time',
+                        hintText: 'Select drop-off',
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.all(16),
                         filled: true,
                         fillColor: Color(0xFFF8F9FA),
                       ),
+                      onTap: () async {
+                        final date = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                        );
+                        if (date == null) return;
+                        final time = await showTimePicker(
+                          context: context,
+                          initialTime: TimeOfDay.now(),
+                        );
+                        if (time == null) return;
+                        final dt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+                        _estimatedDropoffTimeController.text = _formatDateTime(dt);
+                        setState(() {});
+                      },
                     ),
                   ),
                 ],
@@ -1527,8 +1591,9 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
           price = double.tryParse(_deliveryFeeController.text.trim());
           additionalInfo = {
             'vehicleType': _selectedVehicleType,
-            'estimatedPickupTime': _estimatedPickupTimeController.text.trim(),
-            'estimatedDropoffTime': _estimatedDropoffTimeController.text.trim(),
+            // Store as millisecondsSinceEpoch if parseable
+            'estimatedPickupTime': _parseDateTimeToMillis(_estimatedPickupTimeController.text.trim()),
+            'estimatedDropoffTime': _parseDateTimeToMillis(_estimatedDropoffTimeController.text.trim()),
             'specialInstructions': _specialInstructionsController.text.trim(),
           };
           break;

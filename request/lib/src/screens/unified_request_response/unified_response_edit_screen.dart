@@ -251,6 +251,32 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
     return double.tryParse(sanitized);
   }
 
+  String _formatDateTime(DateTime dt) {
+    final two = (int n) => n.toString().padLeft(2, '0');
+    final date = '${dt.year}-${two(dt.month)}-${two(dt.day)}';
+    final time = '${two(dt.hour)}:${two(dt.minute)}';
+    return '$date $time';
+  }
+
+  int? _parseDateTimeToMillis(String input) {
+    if (input.isEmpty) return null;
+    try {
+      final parts = input.split(' ');
+      if (parts.length != 2) return null;
+      final dateParts = parts[0].split('-');
+      final timeParts = parts[1].split(':');
+      if (dateParts.length != 3 || timeParts.length != 2) return null;
+      final year = int.parse(dateParts[0]);
+      final month = int.parse(dateParts[1]);
+      final day = int.parse(dateParts[2]);
+      final hour = int.parse(timeParts[0]);
+      final minute = int.parse(timeParts[1]);
+      return DateTime(year, month, day, hour, minute).millisecondsSinceEpoch;
+    } catch (_) {
+      return null;
+    }
+  }
+
   void _navigateToRegistration() {
     switch (widget.request.type) {
       case RequestType.delivery:
@@ -1450,28 +1476,64 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                   Expanded(
                     child: TextFormField(
                       controller: _estimatedPickupTimeController,
+                      readOnly: true,
                       decoration: const InputDecoration(
-                        labelText: 'Pickup Time',
-                        hintText: 'e.g., 10:00 AM',
+                        labelText: 'Pickup Date & Time',
+                        hintText: 'Select pickup',
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.all(16),
                         filled: true,
                         fillColor: Color(0xFFF8F9FA),
                       ),
+                      onTap: () async {
+                        final date = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime.now().subtract(const Duration(days: 1)),
+                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                        );
+                        if (date == null) return;
+                        final time = await showTimePicker(
+                          context: context,
+                          initialTime: TimeOfDay.now(),
+                        );
+                        if (time == null) return;
+                        final dt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+                        _estimatedPickupTimeController.text = _formatDateTime(dt);
+                        setState(() {});
+                      },
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: TextFormField(
                       controller: _estimatedDropoffTimeController,
+                      readOnly: true,
                       decoration: const InputDecoration(
-                        labelText: 'Drop-off Time',
-                        hintText: 'e.g., 12:00 PM',
+                        labelText: 'Drop-off Date & Time',
+                        hintText: 'Select drop-off',
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.all(16),
                         filled: true,
                         fillColor: Color(0xFFF8F9FA),
                       ),
+                      onTap: () async {
+                        final date = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime.now().subtract(const Duration(days: 1)),
+                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                        );
+                        if (date == null) return;
+                        final time = await showTimePicker(
+                          context: context,
+                          initialTime: TimeOfDay.now(),
+                        );
+                        if (time == null) return;
+                        final dt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+                        _estimatedDropoffTimeController.text = _formatDateTime(dt);
+                        setState(() {});
+                      },
                     ),
                   ),
                 ],
@@ -1610,9 +1672,9 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
             'itemCondition': _itemConditionController.text.trim(),
             'offerDescription': _offerDescriptionController.text.trim(),
             'deliveryMethod': _selectedDeliveryMethod,
-            'deliveryCost': _deliveryCostController.text.trim().isNotEmpty 
-                ? _parsePriceInput(_deliveryCostController.text.trim()) \
-                : null,
+      'deliveryCost': _deliveryCostController.text.trim().isNotEmpty 
+        ? _parsePriceInput(_deliveryCostController.text.trim()) 
+        : null,
             'estimatedDelivery': _estimatedDeliveryController.text.trim().isNotEmpty 
                 ? int.tryParse(_estimatedDeliveryController.text.trim()) 
                 : null,
@@ -1623,9 +1685,9 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
           };
           break;
         case RequestType.service:
-          price = _parsePriceInput(_selectedPriceType == 'Fixed Price' \
-              ? _estimatedCostController.text.trim() \
-              : _hourlyRateController.text.trim());
+      price = _parsePriceInput(_selectedPriceType == 'Fixed Price'
+        ? _estimatedCostController.text.trim()
+        : _hourlyRateController.text.trim());
           additionalInfo = {
             'priceType': _selectedPriceType,
             'timeframe': _timeframeController.text.trim(),
@@ -1642,9 +1704,9 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
             'itemCondition': _rentalItemConditionController.text.trim(),
             'itemDescription': _rentalDescriptionController.text.trim(),
             'pickupDeliveryOption': _selectedPickupDeliveryOption,
-            'securityDeposit': _securityDepositController.text.trim().isNotEmpty 
-                ? _parsePriceInput(_securityDepositController.text.trim()) \
-                : null,
+      'securityDeposit': _securityDepositController.text.trim().isNotEmpty 
+        ? _parsePriceInput(_securityDepositController.text.trim()) 
+        : null,
             'availableFrom': _availableFrom?.millisecondsSinceEpoch,
             'availableUntil': _availableUntil?.millisecondsSinceEpoch,
             'images': _uploadedImages,
@@ -1654,8 +1716,8 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
           price = _parsePriceInput(_deliveryFeeController.text.trim());
           additionalInfo = {
             'vehicleType': _selectedVehicleType,
-            'estimatedPickupTime': _estimatedPickupTimeController.text.trim(),
-            'estimatedDropoffTime': _estimatedDropoffTimeController.text.trim(),
+            'estimatedPickupTime': _parseDateTimeToMillis(_estimatedPickupTimeController.text.trim()),
+            'estimatedDropoffTime': _parseDateTimeToMillis(_estimatedDropoffTimeController.text.trim()),
             'specialInstructions': _specialInstructionsController.text.trim(),
           };
           break;

@@ -247,13 +247,24 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
-        actions: _isOwner ? [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: _navigateToEditRequest,
-            tooltip: 'Edit Request',
-          ),
-        ] : null,
+        actions: [
+          if (_isOwner)
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: _navigateToEditRequest,
+              tooltip: 'Edit Request',
+            ),
+          if (!_isOwner &&
+              _currentUserResponse != null &&
+              FirebaseAuth.instance.currentUser != null &&
+              FirebaseAuth.instance.currentUser!.uid != _request!.requesterId &&
+              _canUserRespond())
+            IconButton(
+              icon: const Icon(Icons.edit),
+              tooltip: 'Edit Your Response',
+              onPressed: _navigateToEditResponse,
+            ),
+        ],
       ),
       backgroundColor: Colors.grey[50],
       body: RefreshIndicator(
@@ -275,38 +286,32 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
           ),
         ),
       ),
-      floatingActionButton: (_request != null && 
-                              !_isOwner && 
-                              FirebaseAuth.instance.currentUser != null &&
-                              FirebaseAuth.instance.currentUser!.uid != _request!.requesterId &&
-                              _canUserRespond())
+      floatingActionButton: (_request != null &&
+              !_isOwner &&
+              _currentUserResponse == null &&
+              FirebaseAuth.instance.currentUser != null &&
+              FirebaseAuth.instance.currentUser!.uid != _request!.requesterId &&
+              _canUserRespond())
           ? FloatingActionButton.extended(
               onPressed: () {
-                if (_currentUserResponse != null) {
-                  // Navigate to edit response
-                  _navigateToEditResponse();
-                } else {
-                  // Navigate to create response
-                  print('🔍 Respond button pressed - IsOwner: $_isOwner');
-                  print('🔍 Respond button pressed - Current User: ${FirebaseAuth.instance.currentUser?.uid}');
-                  print('🔍 Respond button pressed - Request Owner: ${_request!.requesterId}');
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => UnifiedResponseCreateScreen(request: _request!),
-                    ),
-                  ).then((_) => _loadRequestData());
-                }
+                print('🔍 Respond button pressed - IsOwner: $_isOwner');
+                print('🔍 Respond button pressed - Current User: ${FirebaseAuth.instance.currentUser?.uid}');
+                print('🔍 Respond button pressed - Request Owner: ${_request!.requesterId}');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => UnifiedResponseCreateScreen(request: _request!),
+                  ),
+                ).then((_) => _loadRequestData());
               },
-              icon: Icon(_currentUserResponse != null ? Icons.edit : Icons.reply),
-              label: Text(_currentUserResponse != null ? 'Edit Response' : 'Respond'),
-              backgroundColor: _currentUserResponse != null ? Colors.orange : Colors.blue,
+              icon: const Icon(Icons.reply),
+              label: const Text('Respond'),
+              backgroundColor: Colors.blue,
               foregroundColor: Colors.white,
             )
           : (_request != null && !_canUserRespond())
               ? FloatingActionButton.extended(
                   onPressed: () {
-                    // Show why user cannot respond
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(_getCannotRespondReason()),
