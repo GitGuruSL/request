@@ -516,7 +516,8 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
         Navigator.pushNamed(context, '/driver-verification').then((_) => _loadUserData());
         break;
       case UserRole.business:
-        Navigator.pushNamed(context, '/business-verification').then((_) => _loadUserData());
+  // Navigate to business registration screen (for new registration)
+  Navigator.pushNamed(context, '/business-registration').then((_) => _loadUserData());
         break;
       default:
         break;
@@ -533,7 +534,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
         Navigator.pushNamed(context, '/driver-documents-view').then((_) => _loadUserData());
         break;
       case UserRole.business:
-        Navigator.pushNamed(context, '/business-verification').then((_) => _loadUserData());
+  Navigator.pushNamed(context, '/business-verification').then((_) => _loadUserData());
         break;
       case UserRole.delivery:
         Navigator.pushNamed(context, '/delivery-verification').then((_) => _loadUserData());

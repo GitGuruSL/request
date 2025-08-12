@@ -123,7 +123,13 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
         _rentalDescriptionController.text = additionalInfo['itemDescription']?.toString() ?? '';
         break;
       case RequestType.delivery:
-        _deliveryFeeController.text = _formatPrice(additionalInfo['deliveryFee']);
+        // Delivery fee historically stored as main response.price, fallback if additionalInfo key missing
+        final deliveryFeeRaw = additionalInfo['deliveryFee'];
+        if (deliveryFeeRaw != null) {
+          _deliveryFeeController.text = _formatPrice(deliveryFeeRaw);
+        } else {
+          _deliveryFeeController.text = _formatPrice(widget.response.price);
+        }
         _estimatedPickupTimeController.text = additionalInfo['estimatedPickupTime']?.toString() ?? '';
         _estimatedDropoffTimeController.text = additionalInfo['estimatedDropoffTime']?.toString() ?? '';
         _packageSizeController.text = additionalInfo['packageSize']?.toString() ?? '';

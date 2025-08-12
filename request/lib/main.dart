@@ -14,9 +14,9 @@ import 'src/screens/price_comparison_screen.dart';
 import 'src/screens/account_screen.dart';
 import 'src/screens/requests/ride/create_ride_request_screen.dart';
 import 'src/screens/unified_request_response/unified_response_edit_screen.dart';
-import 'src/screens/role_selection_screen.dart';
 import 'src/screens/driver_verification_screen.dart';
 import 'src/screens/business_verification_screen.dart';
+import 'src/screens/business_registration_screen.dart';
 import 'src/screens/delivery_verification_screen.dart';
 import 'src/screens/verification_status_screen.dart';
 import 'src/screens/driver_documents_view_screen.dart';         // Driver documents view
@@ -90,12 +90,12 @@ class MyApp extends StatelessWidget {
             );
           case '/profile':
             return MaterialPageRoute(builder: (context) => const ProfileCompletionScreen());
-          case '/role-selection':
-            return MaterialPageRoute(builder: (context) => const RoleSelectionScreen());
           case '/driver-verification':
             return MaterialPageRoute(builder: (context) => const DriverVerificationScreen());
           case '/business-verification':
             return MaterialPageRoute(builder: (context) => const BusinessVerificationScreen());
+          case '/business-registration':
+            return MaterialPageRoute(builder: (context) => const BusinessRegistrationScreen());
           case '/delivery-verification':
             return MaterialPageRoute(builder: (context) => const DeliveryVerificationScreen());
           case '/verification-status':

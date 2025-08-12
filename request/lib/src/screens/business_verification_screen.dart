@@ -107,7 +107,7 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _businessData == null
-              ? _buildNoDataView()
+              ? _buildNoDataView() // Revert to existing method
               : RefreshIndicator(
                   onRefresh: _loadBusinessData,
                   child: SingleChildScrollView(

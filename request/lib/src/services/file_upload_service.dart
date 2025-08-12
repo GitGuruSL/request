@@ -150,4 +150,19 @@ class FileUploadService {
       throw e;
     }
   }
+
+  /// Upload business document with specific type
+  Future<String> uploadBusinessDocument(String userId, File file, String documentType) async {
+    try {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = '${documentType}_$timestamp.jpg';
+      final ref = _storage.ref().child('business_documents/$userId/$fileName');
+      final uploadTask = await ref.putFile(file);
+      final downloadUrl = await uploadTask.ref.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      print('Error uploading business document: $e');
+      throw e;
+    }
+  }
 }
