@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/enhanced_user_service.dart';
+import '../services/contact_verification_service.dart';
 import '../models/enhanced_user_model.dart';
 import '../theme/app_theme.dart';
 
@@ -120,7 +121,39 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
           final data = businessDoc.data();
           if (data != null) {
             final status = data['status'] as String? ?? 'pending';
-            _verificationStatuses[UserRole.business] = _parseVerificationStatus(status);
+            final businessType = data['businessType'] as String? ?? '';
+            
+            // Also check contact verification status
+            final contactVerificationService = ContactVerificationService.instance;
+            final contactStatus = await contactVerificationService.getLinkedCredentialsStatus();
+            
+            // Business is fully approved only if:
+            // 1. Admin approved the business (status = 'approved')
+            // 2. Contact verification is complete (phone + email verified)
+            if (status == 'approved' && 
+                contactStatus.businessPhoneVerified && 
+                contactStatus.businessEmailVerified) {
+              
+              // Set status based on business type
+              if (businessType.toLowerCase() == 'delivery') {
+                _verificationStatuses[UserRole.delivery] = VerificationStatus.approved;
+              } else {
+                _verificationStatuses[UserRole.business] = VerificationStatus.approved;
+              }
+              
+            } else if (status == 'rejected') {
+              if (businessType.toLowerCase() == 'delivery') {
+                _verificationStatuses[UserRole.delivery] = VerificationStatus.rejected;
+              } else {
+                _verificationStatuses[UserRole.business] = VerificationStatus.rejected;
+              }
+            } else {
+              if (businessType.toLowerCase() == 'delivery') {
+                _verificationStatuses[UserRole.delivery] = VerificationStatus.pending;
+              } else {
+                _verificationStatuses[UserRole.business] = VerificationStatus.pending;
+              }
+            }
           }
         }
       } catch (e) {
@@ -346,20 +379,24 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
   }
 
   Widget _buildRoleActions(UserRole role, bool hasVerificationRequest, VerificationStatus? status) {
-    if (role == UserRole.driver) {
-      // Driver gets simplified single manage icon
+    if (role == UserRole.driver || role == UserRole.business || role == UserRole.delivery) {
+      // Driver, Business, and Delivery get simplified single manage icon
       return Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           IconButton(
-            onPressed: () => _manageDriverDetails(),
+            onPressed: () => role == UserRole.driver ? _manageDriverDetails() : _manageRole(role),
             icon: const Icon(Icons.settings, size: 24),
             style: IconButton.styleFrom(
               backgroundColor: _getVerificationStatusColor(status),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.all(12),
             ),
-            tooltip: 'Manage Driver Profile',
+            tooltip: role == UserRole.driver 
+                ? 'Manage Driver Profile' 
+                : role == UserRole.delivery 
+                    ? 'Manage Delivery Profile'
+                    : 'Manage Business Profile',
           ),
         ],
       );
@@ -385,7 +422,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
         Expanded(
           child: OutlinedButton.icon(
             onPressed: () => _manageRole(role),
-            icon: const Icon(Icons.edit, size: 18),
+            icon: const Icon(Icons.settings, size: 18),
             label: const Text('Manage'),
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: Colors.transparent),
@@ -493,10 +530,13 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
   void _manageRole(UserRole role) {
     switch (role) {
       case UserRole.driver:
-        Navigator.pushNamed(context, '/new-driver-documents-view').then((_) => _loadUserData());
+        Navigator.pushNamed(context, '/driver-documents-view').then((_) => _loadUserData());
         break;
       case UserRole.business:
-        Navigator.pushNamed(context, '/business-documents-view').then((_) => _loadUserData());
+        Navigator.pushNamed(context, '/business-verification').then((_) => _loadUserData());
+        break;
+      case UserRole.delivery:
+        Navigator.pushNamed(context, '/delivery-verification').then((_) => _loadUserData());
         break;
       default:
         break;
@@ -521,9 +561,16 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
       case UserRole.business:
         return [
           _RoleRequirement('Business Registration', isVerified, Icons.business),
-          _RoleRequirement('Business Information', isVerified, Icons.info),
-          _RoleRequirement('Contact Details', isVerified, Icons.contact_phone),
-          _RoleRequirement('Service Categories', isVerified, Icons.category),
+          _RoleRequirement('Contact Verification', isVerified, Icons.verified_user),
+          _RoleRequirement('Business Documents', isVerified, Icons.description),
+          _RoleRequirement('Business Profile', isVerified, Icons.store),
+        ];
+      case UserRole.delivery:
+        return [
+          _RoleRequirement('Company Registration', isVerified, Icons.local_shipping),
+          _RoleRequirement('Contact Verification', isVerified, Icons.verified_user),
+          _RoleRequirement('Service Capabilities', isVerified, Icons.settings),
+          _RoleRequirement('Vehicle Documentation', isVerified, Icons.description),
         ];
       default:
         return [];
@@ -569,6 +616,8 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
         return 'As a driver, you can accept ride requests, delivery jobs, and earn money with flexible working hours. Complete verification to start earning.';
       case UserRole.business:
         return 'As a business owner, you can post service requests, manage your business profile, and connect with customers. Choose between service business or delivery business.';
+      case UserRole.delivery:
+        return 'As a delivery partner, you can accept delivery requests, manage your service capabilities, and earn money with flexible delivery jobs. Complete verification to start accepting delivery orders.';
       default:
         return '';
     }
