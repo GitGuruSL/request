@@ -4,7 +4,7 @@ import '../models/enhanced_user_model.dart';
 import '../theme/app_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
-import '../services/file_upload_service.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
 
 class BusinessVerificationScreen extends StatefulWidget {
@@ -70,27 +70,6 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
         backgroundColor: AppTheme.backgroundColor,
         foregroundColor: AppTheme.textPrimary,
         elevation: 0,
-        actions: [
-          Container(
-            margin: EdgeInsets.all(8),
-            child: ElevatedButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('✅ CORRECT PAGE: Business Verification Screen Loaded!'),
-                    backgroundColor: Colors.green,
-                    duration: Duration(seconds: 3),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
-              child: Text('DEBUG: Click Me!'),
-            ),
-          ),
-        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -195,8 +174,6 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
   }
 
   Widget _buildDocumentsSection() {
-    final docVerification = _businessData!['documentVerification'] as Map<String, dynamic>? ?? {};
-    
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -219,26 +196,29 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
             ],
           ),
           const SizedBox(height: 16),
-          _buildDocumentItem(
+          _buildDocumentCard(
             'Business License',
             _getDocumentStatus('businessLicense'),
             _businessData!['businessLicenseUrl'],
             'Official business license document',
             Icons.badge,
+            'businessLicense',
           ),
-          _buildDocumentItem(
+          _buildDocumentCard(
             'Tax Certificate',
             _getDocumentStatus('taxCertificate'),
             _businessData!['taxCertificateUrl'],
             'Tax registration certificate',
             Icons.receipt_long,
+            'taxCertificate',
           ),
-          _buildDocumentItem(
+          _buildDocumentCard(
             'Insurance Document',
             _getDocumentStatus('insuranceDocument'),
             _businessData!['insuranceDocumentUrl'],
             'Business insurance certificate',
             Icons.security,
+            'insuranceDocument',
           ),
         ],
       ),
@@ -268,12 +248,13 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
             ],
           ),
           const SizedBox(height: 16),
-          _buildDocumentItem(
+          _buildDocumentCard(
             'Business Logo',
             _getDocumentStatus('businessLogo'),
             _businessData!['businessLogoUrl'],
             'Business logo/branding image',
             Icons.photo,
+            'businessLogo',
           ),
         ],
       ),
@@ -353,22 +334,29 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
     );
   }
 
-  Widget _buildDocumentItem(String title, String? status, String? imageUrl, String description, IconData icon) {
+  Widget _buildDocumentCard(String title, String? status, String? documentUrl, String description, IconData icon, String documentType) {
+    final rejectionReason = null; // You can add rejection reason from Firebase if needed
+    
+    Color statusColor = _getStatusColor(status ?? 'pending');
+    String statusText = _getStatusText(status ?? 'pending');
+    
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        color: statusColor.withOpacity(0.05),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, color: AppTheme.primaryColor, size: 20),
-              const SizedBox(width: 8),
+              Icon(
+                _getStatusIcon(status ?? 'pending'),
+                color: statusColor,
+                size: 20,
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   title,
@@ -379,105 +367,83 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
                   ),
                 ),
               ),
-              _buildDocumentStatusChip(status),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor,
+                ),
+                child: Text(
+                  statusText,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
             description,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 14,
               color: AppTheme.textSecondary,
             ),
           ),
-          if (imageUrl != null && imageUrl.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                imageUrl,
-                height: 120,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    height: 120,
-                    color: Colors.grey.shade200,
-                    child: const Center(
-                      child: Icon(Icons.error, color: Colors.grey),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ] else ...[
+          if (rejectionReason != null) ...[
             const SizedBox(height: 12),
             Container(
-              height: 120,
-              width: double.infinity,
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
+                color: Colors.red.withOpacity(0.1),
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Row(
                 children: [
-                  Icon(icon, size: 40, color: Colors.grey.shade400),
-                  const SizedBox(height: 8),
-                  Text(
-                    'No document uploaded',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
+                  Icon(Icons.warning, color: Colors.red, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Rejection reason: $rejectionReason',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.red,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
           ],
+          if (documentUrl != null && documentUrl.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                TextButton.icon(
+                  onPressed: () => _viewDocument(documentUrl, title),
+                  icon: const Icon(Icons.visibility, size: 18),
+                  label: const Text('View Document'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.blue,
+                    padding: EdgeInsets.zero,
+                  ),
+                ),
+                if (status?.toLowerCase() == 'rejected') ...[
+                  const SizedBox(width: 16),
+                  TextButton.icon(
+                    onPressed: () => _replaceDocument(documentType),
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: const Text('Replace'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.orange,
+                      padding: EdgeInsets.zero,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
         ],
-      ),
-    );
-  }
-
-  Widget _buildDocumentStatusChip(String? status) {
-    Color backgroundColor;
-    Color textColor;
-    String displayText;
-
-    switch (status?.toLowerCase()) {
-      case 'approved':
-        backgroundColor = Colors.green.shade100;
-        textColor = Colors.green.shade800;
-        displayText = 'Approved';
-        break;
-      case 'rejected':
-        backgroundColor = Colors.red.shade100;
-        textColor = Colors.red.shade800;
-        displayText = 'Rejected';
-        break;
-      case 'pending':
-      default:
-        backgroundColor = Colors.orange.shade100;
-        textColor = Colors.orange.shade800;
-        displayText = 'Pending';
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        displayText,
-        style: TextStyle(
-          color: textColor,
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-        ),
       ),
     );
   }
@@ -541,5 +507,255 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
     }
     
     return 'N/A';
+  }
+
+  Color _getStatusColor(String? status) {
+    switch (status?.toLowerCase()) {
+      case 'approved':
+        return Colors.green;
+      case 'rejected':
+        return Colors.red;
+      default:
+        return Colors.orange;
+    }
+  }
+
+  String _getStatusText(String? status) {
+    switch (status?.toLowerCase()) {
+      case 'approved':
+        return 'Approved';
+      case 'rejected':
+        return 'Rejected';
+      default:
+        return 'Pending';
+    }
+  }
+
+  IconData _getStatusIcon(String? status) {
+    switch (status?.toLowerCase()) {
+      case 'approved':
+        return Icons.check_circle;
+      case 'rejected':
+        return Icons.error;
+      default:
+        return Icons.schedule;
+    }
+  }
+
+  void _viewDocument(String documentUrl, String title) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('View $title'),
+        content: SizedBox(
+          width: 300,
+          height: 400,
+          child: Image.network(
+            documentUrl,
+            fit: BoxFit.contain,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Center(
+                child: CircularProgressIndicator(
+                  value: loadingProgress.expectedTotalBytes != null
+                      ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                      : null,
+                ),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) {
+              return const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error, size: 64, color: Colors.grey),
+                    SizedBox(height: 8),
+                    Text('Unable to load document'),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _replaceDocument(String documentType) async {
+    try {
+      final String title = _getDocumentTypeName(documentType);
+      
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Replace $title'),
+          content: const Text('Choose how to upload your replacement document:'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _pickAndUploadReplacement(documentType, ImageSource.camera);
+              },
+              child: const Text('Take Photo'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _pickAndUploadReplacement(documentType, ImageSource.gallery);
+              },
+              child: const Text('Choose from Gallery'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      print('Error replacing document: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    }
+  }
+
+  Future<void> _pickAndUploadReplacement(String documentType, ImageSource source) async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        await _uploadReplacementDocument(documentType, File(image.path));
+      }
+    } catch (e) {
+      print('Error picking image: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error picking image: ${e.toString()}')),
+      );
+    }
+  }
+
+  Future<void> _uploadReplacementDocument(String documentType, File imageFile) async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Uploading replacement document...'),
+            ],
+          ),
+        ),
+      );
+
+      final currentUser = await _userService.getCurrentUser();
+      if (currentUser == null) throw Exception('User not authenticated');
+
+      // Determine URL field based on document type
+      String urlField;
+      String storagePath;
+      
+      switch (documentType) {
+        case 'businessLicense':
+          urlField = 'businessLicenseUrl';
+          storagePath = 'business_license.jpg';
+          break;
+        case 'taxCertificate':
+          urlField = 'taxCertificateUrl';
+          storagePath = 'tax_certificate.jpg';
+          break;
+        case 'insuranceDocument':
+          urlField = 'insuranceDocumentUrl';
+          storagePath = 'insurance_document.jpg';
+          break;
+        case 'businessLogo':
+          urlField = 'businessLogoUrl';
+          storagePath = 'business_logo.jpg';
+          break;
+        default:
+          throw Exception('Unknown document type: $documentType');
+      }
+
+      // Upload image to Firebase Storage
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('business_verifications')
+          .child(currentUser.uid)
+          .child(storagePath);
+
+      final uploadTask = await storageRef.putFile(imageFile);
+      final downloadUrl = await uploadTask.ref.getDownloadURL();
+
+      // Update Firestore with new document URL and reset status to pending
+      final businessRef = FirebaseFirestore.instance
+          .collection('new_business_verifications')
+          .doc(currentUser.uid);
+
+      await businessRef.update({
+        urlField: downloadUrl,
+        'documentVerification.$documentType.status': 'pending',
+        'documentVerification.$documentType.rejectionReason': FieldValue.delete(),
+        'documentVerification.$documentType.uploadedAt': FieldValue.serverTimestamp(),
+        '${documentType}Status': 'pending', // Also update flat status field
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Close loading dialog
+      Navigator.pop(context);
+
+      // Refresh data
+      await _loadBusinessData();
+
+      final docName = _getDocumentTypeName(documentType);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$docName replaced successfully! Status reset to pending review.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      // Close loading dialog
+      Navigator.pop(context);
+      
+      print('Error uploading replacement document: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to upload replacement: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  String _getDocumentTypeName(String documentType) {
+    switch (documentType) {
+      case 'businessLicense':
+        return 'Business License';
+      case 'taxCertificate':
+        return 'Tax Certificate';
+      case 'insuranceDocument':
+        return 'Insurance Document';
+      case 'businessLogo':
+        return 'Business Logo';
+      default:
+        return 'Document';
+    }
   }
 }

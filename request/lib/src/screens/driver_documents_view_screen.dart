@@ -59,27 +59,6 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
         backgroundColor: AppTheme.backgroundColor,
         foregroundColor: AppTheme.textPrimary,
         elevation: 0,
-        actions: [
-          Container(
-            margin: EdgeInsets.all(8),
-            child: ElevatedButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('✅ DRIVER PAGE: Driver Documents View Screen'),
-                    backgroundColor: Colors.blue,
-                    duration: Duration(seconds: 3),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-              ),
-              child: Text('DEBUG: Driver Page'),
-            ),
-          ),
-        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
