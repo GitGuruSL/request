@@ -94,6 +94,19 @@
             color: #721c24;
         }
         
+        .verification-item {
+            padding: 1rem;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+            margin-bottom: 0.5rem;
+        }
+        
+        .verification-item .status-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+        }
+        
         .btn-approve {
             background: linear-gradient(45deg, #28a745, #20c997);
             border: none;
@@ -200,6 +213,53 @@
                 </div>
             </div>
 
+            <!-- Contact Verification Status -->
+            <div class="verification-card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-shield-check me-2"></i>Contact Verification Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="verification-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-phone me-2"></i>
+                                        <strong>Business Phone Verification</strong>
+                                        <br>
+                                        <small class="text-muted">Phone: <span id="linkedPhone">-</span></small>
+                                    </div>
+                                    <span id="phoneVerificationStatus" class="status-badge status-pending">Not Verified</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="verification-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-envelope me-2"></i>
+                                        <strong>Business Email Verification</strong>
+                                        <br>
+                                        <small class="text-muted">Email: <span id="linkedEmail">-</span></small>
+                                    </div>
+                                    <span id="emailVerificationStatus" class="status-badge status-pending">Not Verified</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Contact verification must be completed by the business owner in the mobile app before final approval.</strong>
+                                <br>
+                                <small>The business owner needs to verify their business phone and email in the app's business verification section.</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Documents -->
             <div class="verification-card">
                 <div class="card-header">
@@ -247,9 +307,14 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-8">
-                            <p>Review all documents and information above before making a final decision on this business application.</p>
-                            <div class="alert alert-info">
-                                <small><i class="fas fa-info-circle me-1"></i> All individual documents should be approved before approving the overall business.</small>
+                            <p>Review all documents and contact verification above before making a final decision on this business application.</p>
+                            <div class="alert alert-warning">
+                                <small><i class="fas fa-exclamation-triangle me-1"></i> <strong>Required before approval:</strong></small>
+                                <ul class="mb-0 mt-1">
+                                    <li>All documents must be approved</li>
+                                    <li><strong>Business phone must be verified by owner in mobile app</strong></li>
+                                    <li><strong>Business email must be verified by owner in mobile app</strong></li>
+                                </ul>
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -414,7 +479,66 @@
             // Load Documents
             loadDocuments(business);
 
+            // Load Contact Verification Status
+            loadContactVerificationStatus(business.userId);
+
             document.getElementById('businessDetails').style.display = 'block';
+        }
+
+        // Load contact verification status
+        async function loadContactVerificationStatus(userId) {
+            try {
+                // Check for linked credentials in the users collection
+                const userDoc = await db.collection('users').doc(userId).get();
+                
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    const linkedCredentials = userData.linkedCredentials || {};
+                    
+                    // Phone verification status
+                    const phoneVerified = linkedCredentials.linkedPhoneVerified || false;
+                    const linkedPhone = linkedCredentials.businessPhone || 'Not linked';
+                    
+                    document.getElementById('linkedPhone').textContent = linkedPhone;
+                    const phoneStatusElement = document.getElementById('phoneVerificationStatus');
+                    phoneStatusElement.textContent = phoneVerified ? 'Verified' : 'Not Verified';
+                    phoneStatusElement.className = `status-badge ${phoneVerified ? 'status-approved' : 'status-pending'}`;
+                    
+                    // Email verification status
+                    const emailVerified = linkedCredentials.linkedEmailVerified || false;
+                    const linkedEmail = linkedCredentials.businessEmail || 'Not linked';
+                    
+                    document.getElementById('linkedEmail').textContent = linkedEmail;
+                    const emailStatusElement = document.getElementById('emailVerificationStatus');
+                    emailStatusElement.textContent = emailVerified ? 'Verified' : 'Not Verified';
+                    emailStatusElement.className = `status-badge ${emailVerified ? 'status-approved' : 'status-pending'}`;
+                } else {
+                    // No user data found
+                    document.getElementById('linkedPhone').textContent = 'User not found';
+                    document.getElementById('linkedEmail').textContent = 'User not found';
+                    
+                    const phoneStatusElement = document.getElementById('phoneVerificationStatus');
+                    phoneStatusElement.textContent = 'Not Started';
+                    phoneStatusElement.className = 'status-badge status-pending';
+                    
+                    const emailStatusElement = document.getElementById('emailVerificationStatus');
+                    emailStatusElement.textContent = 'Not Started';
+                    emailStatusElement.className = 'status-badge status-pending';
+                }
+            } catch (error) {
+                console.error('Error loading contact verification status:', error);
+                // Set default values on error
+                document.getElementById('linkedPhone').textContent = 'Error loading';
+                document.getElementById('linkedEmail').textContent = 'Error loading';
+                
+                const phoneStatusElement = document.getElementById('phoneVerificationStatus');
+                phoneStatusElement.textContent = 'Error';
+                phoneStatusElement.className = 'status-badge status-pending';
+                
+                const emailStatusElement = document.getElementById('emailVerificationStatus');
+                emailStatusElement.textContent = 'Error';
+                emailStatusElement.className = 'status-badge status-pending';
+            }
         }
 
         // Load documents
@@ -530,6 +654,36 @@
 
         // Approve entire business
         async function approveBusiness() {
+            // Check contact verification status first
+            try {
+                const userDoc = await db.collection('users').doc(currentBusiness.userId).get();
+                
+                let phoneVerified = false;
+                let emailVerified = false;
+                
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    const linkedCredentials = userData.linkedCredentials || {};
+                    phoneVerified = linkedCredentials.linkedPhoneVerified || false;
+                    emailVerified = linkedCredentials.linkedEmailVerified || false;
+                }
+                
+                if (!phoneVerified || !emailVerified) {
+                    const missingVerifications = [];
+                    if (!phoneVerified) missingVerifications.push('Business Phone');
+                    if (!emailVerified) missingVerifications.push('Business Email');
+                    
+                    alert(`Cannot approve business yet. The business owner must complete contact verification for: ${missingVerifications.join(', ')}\n\nThe business owner needs to verify these contacts in the mobile app before final approval.`);
+                    return;
+                }
+                
+            } catch (error) {
+                console.error('Error checking contact verification:', error);
+                if (!confirm('Unable to verify contact verification status. Proceed with approval anyway?')) {
+                    return;
+                }
+            }
+            
             if (confirm('Are you sure you want to approve this business? This action cannot be undone.')) {
                 try {
                     await db.collection('new_business_verifications').doc(businessId).update({

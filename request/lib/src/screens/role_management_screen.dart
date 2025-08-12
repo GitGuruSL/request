@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/enhanced_user_service.dart';
+import '../services/contact_verification_service.dart';
 import '../models/enhanced_user_model.dart';
 import '../theme/app_theme.dart';
 
@@ -120,7 +121,23 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
           final data = businessDoc.data();
           if (data != null) {
             final status = data['status'] as String? ?? 'pending';
-            _verificationStatuses[UserRole.business] = _parseVerificationStatus(status);
+            
+            // Also check contact verification status
+            final contactVerificationService = ContactVerificationService.instance;
+            final contactStatus = await contactVerificationService.getLinkedCredentialsStatus();
+            
+            // Business is fully approved only if:
+            // 1. Admin approved the business (status = 'approved')
+            // 2. Contact verification is complete (phone + email verified)
+            if (status == 'approved' && 
+                contactStatus.businessPhoneVerified && 
+                contactStatus.businessEmailVerified) {
+              _verificationStatuses[UserRole.business] = VerificationStatus.approved;
+            } else if (status == 'rejected') {
+              _verificationStatuses[UserRole.business] = VerificationStatus.rejected;
+            } else {
+              _verificationStatuses[UserRole.business] = VerificationStatus.pending;
+            }
           }
         }
       } catch (e) {
