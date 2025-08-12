@@ -144,12 +144,21 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
   // Check if current user can respond to this request type
   bool _canUserRespond() {
     if (_currentUser == null || _request == null) return false;
+  // If user already responded, allow editing even if roles changed later
+  if (_currentUserResponse != null) return true;
     
     switch (_request!.type) {
       case RequestType.delivery:
-        // Must be registered and approved delivery business
-        return _currentUser!.hasRole(UserRole.delivery) && 
-               _currentUser!.isRoleVerified(UserRole.delivery);
+    // Accept either approved delivery role OR (legacy) approved business role
+    final hasDelivery = _currentUser!.hasRole(UserRole.delivery) &&
+      _currentUser!.isRoleVerified(UserRole.delivery);
+    final hasLegacyBusiness = _currentUser!.hasRole(UserRole.business) &&
+      _currentUser!.isRoleVerified(UserRole.business);
+    final can = hasDelivery || hasLegacyBusiness;
+    // Debug
+    // ignore: avoid_print
+    print('🔍 Delivery can respond? delivery=$hasDelivery business=$hasLegacyBusiness => $can');
+    return can;
       case RequestType.ride:
         // Must be registered and approved driver
         return _currentUser!.hasRole(UserRole.driver) && 
@@ -169,11 +178,16 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
     
     switch (_request!.type) {
       case RequestType.delivery:
-        if (!_currentUser!.hasRole(UserRole.delivery)) {
-          return 'Register as delivery business to respond';
+        if (_currentUserResponse != null) return 'You already responded';
+        final hasDeliveryRole = _currentUser!.hasRole(UserRole.delivery);
+        final deliveryVerified = _currentUser!.isRoleVerified(UserRole.delivery);
+        final hasBusinessRole = _currentUser!.hasRole(UserRole.business);
+        final businessVerified = _currentUser!.isRoleVerified(UserRole.business);
+        if (!(hasDeliveryRole || hasBusinessRole)) {
+          return 'Register as delivery or business to respond';
         }
-        if (!_currentUser!.isRoleVerified(UserRole.delivery)) {
-          return 'Waiting for delivery business approval';
+        if (!(deliveryVerified || businessVerified)) {
+          return 'Awaiting role approval';
         }
         break;
       case RequestType.ride:
