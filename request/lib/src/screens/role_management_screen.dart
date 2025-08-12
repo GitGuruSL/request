@@ -346,20 +346,20 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
   }
 
   Widget _buildRoleActions(UserRole role, bool hasVerificationRequest, VerificationStatus? status) {
-    if (role == UserRole.driver) {
-      // Driver gets simplified single manage icon
+    if (role == UserRole.driver || role == UserRole.business) {
+      // Driver and Business get simplified single manage icon
       return Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           IconButton(
-            onPressed: () => _manageDriverDetails(),
+            onPressed: () => role == UserRole.driver ? _manageDriverDetails() : _manageRole(role),
             icon: const Icon(Icons.settings, size: 24),
             style: IconButton.styleFrom(
               backgroundColor: _getVerificationStatusColor(status),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.all(12),
             ),
-            tooltip: 'Manage Driver Profile',
+            tooltip: role == UserRole.driver ? 'Manage Driver Profile' : 'Manage Business Profile',
           ),
         ],
       );
@@ -385,7 +385,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
         Expanded(
           child: OutlinedButton.icon(
             onPressed: () => _manageRole(role),
-            icon: const Icon(Icons.edit, size: 18),
+            icon: const Icon(Icons.settings, size: 18),
             label: const Text('Manage'),
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: Colors.transparent),

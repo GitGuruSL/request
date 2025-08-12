@@ -191,7 +191,7 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
           _buildTextField(
             controller: _businessPhoneController,
             label: 'Business Phone *',
-            hint: 'Enter business phone number',
+            hint: 'Enter phone number with country code (e.g., +94771234567)',
             keyboardType: TextInputType.phone,
             validator: (value) => value?.isEmpty ?? true ? 'Business phone is required' : null,
           ),

@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Approval Admin Portal</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .business-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border: none;
+            transition: all 0.2s;
+        }
+        
+        .business-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .business-logo {
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 2px solid #e9ecef;
+        }
+        
+        .status-badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+        }
+        
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-approved {
+            background-color: #d1e7dd;
+            color: #0f5132;
+        }
+        
+        .status-rejected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .document-status {
+            font-size: 0.85rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 8px;
+            margin: 0.2rem;
+            display: inline-block;
+        }
+        
+        .doc-pending { background: #fff3cd; color: #856404; }
+        .doc-approved { background: #d1e7dd; color: #0f5132; }
+        .doc-rejected { background: #f8d7da; color: #721c24; }
+        
+        .stats-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            text-align: center;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 0.5rem;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .pending-stat { background: #fff3cd; color: #856404; }
+        .approved-stat { background: #d1e7dd; color: #0f5132; }
+        .rejected-stat { background: #f8d7da; color: #721c24; }
+        .total-stat { background: #e7f3ff; color: #0066cc; }
+
+        .document-viewer {
+            max-width: 100%;
+            border-radius: 8px;
+        }
+        
+        .action-buttons .btn {
+            margin: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h1 class="mb-0">
+                        <i class="fas fa-building me-3"></i>
+                        Business Approval Admin Portal
+                    </h1>
+                    <p class="mb-0 mt-2 opacity-75">Review and approve business verification requests</p>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-light" onclick="refreshData()">
+                        <i class="fas fa-sync-alt me-2"></i>
+                        Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Statistics -->
+        <div class="stats-container">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="stat-card pending-stat">
+                        <div class="stat-number" id="pendingCount">0</div>
+                        <div>Pending Approval</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card approved-stat">
+                        <div class="stat-number" id="approvedCount">0</div>
+                        <div>Approved</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card rejected-stat">
+                        <div class="stat-number" id="rejectedCount">0</div>
+                        <div>Rejected</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card total-stat">
+                        <div class="stat-number" id="totalCount">0</div>
+                        <div>Total Applications</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label">Status Filter:</label>
+                        <select id="statusFilter" class="form-select" onchange="filterBusinesses()">
+                            <option value="all" selected>All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="approved">Approved</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Category Filter:</label>
+                        <select id="categoryFilter" class="form-select" onchange="filterBusinesses()">
+                            <option value="all">All Categories</option>
+                            <option value="Delivery Service">Delivery Service</option>
+                            <option value="Restaurant">Restaurant</option>
+                            <option value="Retail Store">Retail Store</option>
+                            <option value="Services">Services</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Search:</label>
+                        <input type="text" id="searchInput" class="form-control" placeholder="Search by business name, email, or phone..." onkeyup="filterBusinesses()">
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">
+                            <i class="fas fa-times me-1"></i>Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading/Empty States -->
+        <div id="loadingState" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3 text-muted">Loading business verification requests...</p>
+        </div>
+
+        <div id="noDataState" class="text-center py-5" style="display: none;">
+            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted">No Business Applications Found</h4>
+            <p class="text-muted">There are no business verification requests matching your filters.</p>
+        </div>
+
+        <!-- Businesses List -->
+        <div id="businessesList"></div>
+    </div>
+
+    <!-- Business Details Modal -->
+    <div class="modal fade" id="businessDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Business Verification Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="businessDetailsContent">
+                    <!-- Content will be populated dynamically -->
+                </div>
+                <div class="modal-footer" id="businessDetailsActions">
+                    <!-- Actions will be populated dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Approval/Rejection Modal -->
+    <div class="modal fade" id="actionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="actionModalTitle">Confirm Action</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="approvalContent" style="display: none;">
+                        <p>Are you sure you want to approve this business application?</p>
+                        <p class="text-success"><i class="fas fa-check-circle"></i> This will grant the business access to the platform.</p>
+                    </div>
+                    <div id="rejectionContent" style="display: none;">
+                        <p>Please provide a reason for rejection:</p>
+                        <textarea id="rejectionReason" class="form-control" rows="4" placeholder="Enter detailed reason for rejection..."></textarea>
+                        <div class="mt-3">
+                            <small class="text-muted">Common reasons:</small><br>
+                            <button type="button" class="btn btn-outline-secondary btn-sm me-1 mt-1" onclick="addRejectionReason('Business registration document is invalid or expired')">Invalid Registration</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm me-1 mt-1" onclick="addRejectionReason('Tax document is missing or expired')">Tax Issues</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm me-1 mt-1" onclick="addRejectionReason('Business information does not match documents')">Info Mismatch</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" id="confirmApprovalBtn" onclick="confirmApproval()" style="display: none;">
+                        <i class="fas fa-check"></i> Approve Business
+                    </button>
+                    <button type="button" class="btn btn-danger" id="confirmRejectionBtn" onclick="confirmRejection()" style="display: none;">
+                        <i class="fas fa-times"></i> Reject Business
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCvTuM-6A7dHlA-kUyXeFmNglL6EHFVoWU",
+            authDomain: "request-marketplace.firebaseapp.com",
+            projectId: "request-marketplace",
+            storageBucket: "request-marketplace.firebasestorage.app",
+            messagingSenderId: "551503664846",
+            appId: "1:551503664846:web:bf89f23b9ff0c3e5d30bQ8"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        let allBusinesses = [];
+        let filteredBusinesses = [];
+        let currentBusinessData = null;
+        let currentAction = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadBusinessApprovals();
+        });
+
+        async function loadBusinessApprovals() {
+            try {
+                showLoading(true);
+                console.log('Starting to load business approvals...');
+                
+                // First try businessApprovals collection
+                let snapshot = await db.collection('businessApprovals').get();
+                console.log(`Found ${snapshot.size} business approval requests in businessApprovals collection`);
+                
+                if (snapshot.empty) {
+                    // If empty, try users collection with business role and pending status
+                    console.log('Checking users collection for business approvals...');
+                    snapshot = await db.collection('users')
+                        .where('roles', 'array-contains', 'business')
+                        .get();
+                    console.log(`Found ${snapshot.size} users with business role`);
+                }
+                
+                if (snapshot.empty) {
+                    // If still empty, get all users and filter
+                    console.log('Getting all users to check for business data...');
+                    snapshot = await db.collection('users').get();
+                    console.log(`Found ${snapshot.size} total users`);
+                }
+                
+                allBusinesses = [];
+                
+                snapshot.forEach(doc => {
+                    const businessData = doc.data();
+                    console.log('Processing data:', doc.id, businessData);
+                    
+                    // Check if user has business data
+                    if (businessData.businessInfo || businessData.roles?.includes('business') || businessData.businessData) {
+                        console.log('Added business:', doc.id);
+                        
+                        // Safe date conversion
+                        const safeToDate = (dateValue) => {
+                            if (!dateValue) return new Date();
+                            if (typeof dateValue.toDate === 'function') return dateValue.toDate();
+                            if (dateValue instanceof Date) return dateValue;
+                            if (typeof dateValue === 'string' || typeof dateValue === 'number') return new Date(dateValue);
+                            return new Date();
+                        };
+                        
+                        allBusinesses.push({
+                            id: doc.id,
+                            ...businessData,
+                            submittedAt: safeToDate(businessData.submittedAt),
+                            updatedAt: safeToDate(businessData.updatedAt)
+                        });
+                    }
+                });
+
+                console.log(`Loaded ${allBusinesses.length} business approval requests`);
+                
+                filteredBusinesses = [...allBusinesses];
+                updateStatistics();
+                filterBusinesses();
+                showLoading(false);
+                
+            } catch (error) {
+                console.error('Error loading business approvals:', error);
+                showLoading(false);
+                showError('Failed to load verification requests: ' + error.message);
+            }
+        }
+
+        function updateStatistics() {
+            const pending = allBusinesses.filter(b => b.status === 'pending').length;
+            const approved = allBusinesses.filter(b => b.status === 'approved').length;
+            const rejected = allBusinesses.filter(b => b.status === 'rejected').length;
+            
+            document.getElementById('pendingCount').textContent = pending;
+            document.getElementById('approvedCount').textContent = approved;
+            document.getElementById('rejectedCount').textContent = rejected;
+            document.getElementById('totalCount').textContent = allBusinesses.length;
+        }
+
+        function filterBusinesses() {
+            const statusFilter = document.getElementById('statusFilter').value;
+            const categoryFilter = document.getElementById('categoryFilter').value;
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            console.log('Filtering with:', { statusFilter, categoryFilter, searchTerm });
+            console.log('All businesses before filtering:', allBusinesses);
+            
+            filteredBusinesses = allBusinesses.filter(business => {
+                console.log('Checking business:', business.id, 'status:', business.status);
+                
+                // Status matching - treat missing status as 'pending'
+                const businessStatus = business.status || 'pending';
+                const matchesStatus = statusFilter === 'all' || businessStatus === statusFilter;
+                
+                // Category matching
+                const businessCategory = business.businessCategory || business.category || 'Other';
+                const matchesCategory = categoryFilter === 'all' || businessCategory === categoryFilter;
+                
+                // Search matching
+                const matchesSearch = !searchTerm || 
+                    (business.businessName && business.businessName.toLowerCase().includes(searchTerm)) ||
+                    (business.businessEmail && business.businessEmail.toLowerCase().includes(searchTerm)) ||
+                    (business.businessPhone && business.businessPhone.toLowerCase().includes(searchTerm));
+                
+                console.log('Match results:', { matchesStatus, matchesCategory, matchesSearch });
+                return matchesStatus && matchesCategory && matchesSearch;
+            });
+            
+            console.log('Filtered businesses:', filteredBusinesses);
+            renderBusinesses();
+        }
+
+        function clearFilters() {
+            document.getElementById('statusFilter').value = 'all';
+            document.getElementById('categoryFilter').value = 'all';
+            document.getElementById('searchInput').value = '';
+            filterBusinesses();
+        }
+
+        function renderBusinesses() {
+            const container = document.getElementById('businessesList');
+            
+            if (filteredBusinesses.length === 0) {
+                container.innerHTML = '';
+                document.getElementById('noDataState').style.display = 'block';
+                return;
+            }
+            
+            document.getElementById('noDataState').style.display = 'none';
+            
+            const businessesHtml = filteredBusinesses.map(business => {
+                const statusClass = `status-${business.status}`;
+                const statusText = business.status ? business.status.charAt(0).toUpperCase() + business.status.slice(1) : 'Unknown';
+                
+                return `
+                    <div class="business-card">
+                        <div class="row align-items-center">
+                            <div class="col-md-2">
+                                <div class="text-center">
+                                    <img src="${business.businessLogoUrl || 'https://via.placeholder.com/80x80/e9ecef/6c757d?text=Logo'}" 
+                                         alt="Business Logo" 
+                                         class="business-logo"
+                                         onerror="this.src='https://via.placeholder.com/80x80/e9ecef/6c757d?text=${(business.businessName || 'Business').charAt(0)}'">
+                                    <div class="mt-2">
+                                        <span class="status-badge ${statusClass}">${statusText}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h5 class="mb-1">${business.businessName || 'Unknown Business'}</h5>
+                                <p class="text-muted mb-1">
+                                    <i class="fas fa-envelope me-1"></i> ${business.businessEmail || 'N/A'}
+                                </p>
+                                <p class="text-muted mb-1">
+                                    <i class="fas fa-phone me-1"></i> ${business.businessPhone || 'N/A'}
+                                </p>
+                                <p class="text-muted mb-1">
+                                    <i class="fas fa-building me-1"></i> ${business.businessCategory || 'N/A'}
+                                </p>
+                                <p class="text-muted mb-1">
+                                    <i class="fas fa-calendar me-1"></i> ${formatDate(business.submittedAt)}
+                                </p>
+                                <p class="text-muted mb-0">
+                                    <i class="fas fa-map-marker-alt me-1"></i> ${business.businessAddress || 'N/A'}
+                                </p>
+                            </div>
+                            
+                            <div class="col-md-2">
+                                <div class="text-center">
+                                    <h6 class="mb-1">Document Status</h6>
+                                    ${renderDocumentStatus(business.documentVerification)}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-2">
+                                <div class="action-buttons text-center">
+                                    <button class="btn btn-primary btn-sm w-100 mb-2" onclick="viewBusinessDetails('${business.id}')">
+                                        <i class="fas fa-eye me-1"></i> View Details
+                                    </button>
+                                    
+                                    ${business.status === 'pending' ? `
+                                        <button class="btn btn-success btn-sm w-100 mb-1" onclick="approveBusiness('${business.id}')">
+                                            <i class="fas fa-check me-1"></i> Approve
+                                        </button>
+                                        <button class="btn btn-danger btn-sm w-100" onclick="rejectBusiness('${business.id}')">
+                                            <i class="fas fa-times me-1"></i> Reject
+                                        </button>
+                                    ` : business.status === 'approved' ? `
+                                        <button class="btn btn-warning btn-sm w-100" onclick="rejectBusiness('${business.userId}')">
+                                            <i class="fas fa-ban me-1"></i> Revoke
+                                        </button>
+                                    ` : `
+                                        <button class="btn btn-success btn-sm w-100" onclick="approveBusiness('${business.userId}')">
+                                            <i class="fas fa-redo me-1"></i> Re-approve
+                                        </button>
+                                    `}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = businessesHtml;
+        }
+
+        function renderDocumentStatus(documentVerification) {
+            if (!documentVerification) {
+                return '<span class="document-status doc-pending">No Documents</span>';
+            }
+            
+            const docs = ['businessLicense', 'taxCertificate', 'insurance'];
+            const statusHtml = docs.map(docType => {
+                const doc = documentVerification[docType];
+                if (!doc) return '';
+                
+                const statusClass = `doc-${doc.status || 'pending'}`;
+                const docName = docType.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                return `<span class="document-status ${statusClass}">${docName}</span>`;
+            }).join('');
+            
+            return statusHtml || '<span class="document-status doc-pending">No Documents</span>';
+        }
+
+        function viewBusinessDetails(businessId) {
+            console.log('Viewing business details for ID:', businessId);
+            console.log('Available businesses:', allBusinesses);
+            
+            const business = allBusinesses.find(b => b.id === businessId);
+            if (!business) {
+                console.error('Business not found with ID:', businessId);
+                alert('Business not found!');
+                return;
+            }
+            
+            console.log('Found business:', business);
+            currentBusinessData = business;
+            
+            const modalContent = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-primary mb-3">Business Information</h6>
+                        <table class="table table-sm">
+                            <tr><td><strong>Name:</strong></td><td>${business.businessName || 'N/A'}</td></tr>
+                            <tr><td><strong>Email:</strong></td><td>${business.businessEmail || 'N/A'}</td></tr>
+                            <tr><td><strong>Phone:</strong></td><td>${business.businessPhone || 'N/A'}</td></tr>
+                            <tr><td><strong>Address:</strong></td><td>${business.businessAddress || 'N/A'}</td></tr>
+                            <tr><td><strong>Category:</strong></td><td>${business.businessCategory || 'N/A'}</td></tr>
+                            <tr><td><strong>Description:</strong></td><td>${business.businessDescription || 'N/A'}</td></tr>
+                            <tr><td><strong>License Number:</strong></td><td>${business.licenseNumber || 'N/A'}</td></tr>
+                            <tr><td><strong>Tax ID:</strong></td><td>${business.taxId || 'N/A'}</td></tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-primary mb-3">Documents</h6>
+                        ${renderDocumentDetails(business)}
+                    </div>
+                </div>
+                ${business.businessLogoUrl ? `
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">Business Logo</h6>
+                            <img src="${business.businessLogoUrl}" alt="Business Logo" class="document-viewer" style="max-height: 200px;">
+                        </div>
+                    </div>
+                ` : ''}
+            `;
+            
+            document.getElementById('businessDetailsContent').innerHTML = modalContent;
+            
+            const actionsHtml = business.status === 'pending' ? `
+                <button type="button" class="btn btn-success" onclick="approveBusiness('${business.userId}')">
+                    <i class="fas fa-check me-1"></i> Approve Business
+                </button>
+                <button type="button" class="btn btn-danger" onclick="rejectBusiness('${business.userId}')">
+                    <i class="fas fa-times me-1"></i> Reject Business
+                </button>
+            ` : `
+                <span class="text-muted">Status: ${business.status.charAt(0).toUpperCase() + business.status.slice(1)}</span>
+            `;
+            
+            document.getElementById('businessDetailsActions').innerHTML = actionsHtml;
+            
+            const modal = new bootstrap.Modal(document.getElementById('businessDetailsModal'));
+            modal.show();
+        }
+
+        function renderDocumentDetails(business) {
+            if (!business.businessLicenseUrl && !business.taxCertificateUrl && !business.insuranceDocumentUrl) {
+                return '<p class="text-muted">No documents uploaded</p>';
+            }
+            
+            let html = '';
+            
+            if (business.businessLicenseUrl) {
+                html += `
+                    <div class="mb-3">
+                        <strong>Business License:</strong><br>
+                        <a href="${business.businessLicenseUrl}" target="_blank" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-external-link-alt me-1"></i> View Document
+                        </a>
+                    </div>
+                `;
+            }
+            
+            if (business.taxCertificateUrl) {
+                html += `
+                    <div class="mb-3">
+                        <strong>Tax Certificate:</strong><br>
+                        <a href="${business.taxCertificateUrl}" target="_blank" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-external-link-alt me-1"></i> View Document
+                        </a>
+                    </div>
+                `;
+            }
+            
+            if (business.insuranceDocumentUrl) {
+                html += `
+                    <div class="mb-3">
+                        <strong>Insurance Document:</strong><br>
+                        <a href="${business.insuranceDocumentUrl}" target="_blank" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-external-link-alt me-1"></i> View Document
+                        </a>
+                    </div>
+                `;
+            }
+            
+            return html;
+        }
+
+        async function approveBusiness(businessId) {
+            currentBusinessData = allBusinesses.find(b => b.id === businessId);
+            currentAction = 'approve';
+            
+            document.getElementById('approvalContent').style.display = 'block';
+            document.getElementById('rejectionContent').style.display = 'none';
+            document.getElementById('confirmApprovalBtn').style.display = 'inline-block';
+            document.getElementById('confirmRejectionBtn').style.display = 'none';
+            document.getElementById('actionModalTitle').textContent = 'Approve Business';
+            
+            const modal = new bootstrap.Modal(document.getElementById('actionModal'));
+            modal.show();
+        }
+
+        async function rejectBusiness(businessId) {
+            currentBusinessData = allBusinesses.find(b => b.id === businessId);
+            currentAction = 'reject';
+            
+            document.getElementById('approvalContent').style.display = 'none';
+            document.getElementById('rejectionContent').style.display = 'block';
+            document.getElementById('confirmApprovalBtn').style.display = 'none';
+            document.getElementById('confirmRejectionBtn').style.display = 'inline-block';
+            document.getElementById('actionModalTitle').textContent = 'Reject Business';
+            
+            const modal = new bootstrap.Modal(document.getElementById('actionModal'));
+            modal.show();
+        }
+
+        async function confirmApproval() {
+            if (!currentBusinessData) return;
+            
+            try {
+                const updateData = {
+                    status: 'approved',
+                    approvedAt: firebase.firestore.Timestamp.now(),
+                    updatedAt: firebase.firestore.Timestamp.now()
+                };
+                
+                // Approve all documents
+                if (currentBusinessData.documentVerification) {
+                    const docs = ['businessLicense', 'taxCertificate', 'insurance'];
+                    docs.forEach(docType => {
+                        if (currentBusinessData.documentVerification[docType]) {
+                            updateData[`documentVerification.${docType}.status`] = 'approved';
+                            updateData[`documentVerification.${docType}.approvedAt`] = firebase.firestore.Timestamp.now();
+                        }
+                    });
+                }
+                
+                await db.collection('users').doc(currentBusinessData.userId).update(updateData);
+                
+                // Close modals
+                bootstrap.Modal.getInstance(document.getElementById('actionModal')).hide();
+                if (document.getElementById('businessDetailsModal').classList.contains('show')) {
+                    bootstrap.Modal.getInstance(document.getElementById('businessDetailsModal')).hide();
+                }
+                
+                showSuccess('Business approved successfully!');
+                await loadBusinessVerifications();
+                
+            } catch (error) {
+                console.error('Error approving business:', error);
+                showError('Failed to approve business: ' + error.message);
+            }
+        }
+
+        async function confirmRejection() {
+            if (!currentBusinessData) return;
+            
+            const reason = document.getElementById('rejectionReason').value.trim();
+            if (!reason) {
+                showError('Please provide a reason for rejection.');
+                return;
+            }
+            
+            try {
+                const updateData = {
+                    status: 'rejected',
+                    rejectedAt: firebase.firestore.Timestamp.now(),
+                    rejectionReason: reason,
+                    updatedAt: firebase.firestore.Timestamp.now()
+                };
+                
+                // Reject all documents
+                if (currentBusinessData.documentVerification) {
+                    const docs = ['businessLicense', 'taxCertificate', 'insurance'];
+                    docs.forEach(docType => {
+                        if (currentBusinessData.documentVerification[docType]) {
+                            updateData[`documentVerification.${docType}.status`] = 'rejected';
+                            updateData[`documentVerification.${docType}.rejectedAt`] = firebase.firestore.Timestamp.now();
+                        }
+                    });
+                }
+                
+                await db.collection('users').doc(currentBusinessData.userId).update(updateData);
+                
+                // Close modals
+                bootstrap.Modal.getInstance(document.getElementById('actionModal')).hide();
+                if (document.getElementById('businessDetailsModal').classList.contains('show')) {
+                    bootstrap.Modal.getInstance(document.getElementById('businessDetailsModal')).hide();
+                }
+                
+                showSuccess('Business rejected successfully!');
+                await loadBusinessVerifications();
+                
+            } catch (error) {
+                console.error('Error rejecting business:', error);
+                showError('Failed to reject business: ' + error.message);
+            }
+        }
+
+        function addRejectionReason(reason) {
+            const textarea = document.getElementById('rejectionReason');
+            if (textarea.value.trim()) {
+                textarea.value += '\n\n' + reason;
+            } else {
+                textarea.value = reason;
+            }
+        }
+
+        function refreshData() {
+            loadBusinessVerifications();
+        }
+
+        function formatDate(date) {
+            if (!date) return 'N/A';
+            return new Date(date).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function showLoading(show) {
+            document.getElementById('loadingState').style.display = show ? 'block' : 'none';
+            document.getElementById('businessesList').style.display = show ? 'none' : 'block';
+        }
+
+        function showSuccess(message) {
+            alert('✅ ' + message);
+        }
+
+        function showError(message) {
+            alert('❌ ' + message);
+        }
+    </script>
+</body>
+</html>

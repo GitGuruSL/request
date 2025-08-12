@@ -123,6 +123,8 @@ flutter_launcher_icons:
   image_path: "assets/icons/Logo.png"
   min_sdk_android: 21
   remove_alpha_ios: true
+  adaptive_icon_background: "#ffffff"
+  adaptive_icon_foreground: "assets/icons/Logo.png"
   # web:
   #   generate: true
   #   image_path: "assets/icons/app_icon.png"
@@ -136,9 +138,14 @@ flutter_launcher_icons:
   #   generate: true
   #   image_path: "assets/icons/app_icon.png"
 
-# Flutter Native Splash Configuration - Disabled to use custom splash only
+# Flutter Native Splash Configuration - Completely disabled
 flutter_native_splash:
-  # Completely disable native splash
+  # Completely disable all platform splash screens
+  color: "#ffffff"
   android: false
   ios: false
   web: false
+  android_12: false
+  # Remove any existing splash configurations
+  image_path: null
+  background_image: null
