@@ -94,7 +94,12 @@ const Categories = () => {
       snapshot.forEach(doc => {
         categoriesData.push({ id: doc.id, ...doc.data() });
       });
-      setCategories(categoriesData.sort((a, b) => a.name.localeCompare(b.name)));
+      console.log('Raw categories data:', categoriesData);
+      setCategories(categoriesData.sort((a, b) => {
+        const aName = a.name || a.category || a.title || '';
+        const bName = b.name || b.category || b.title || '';
+        return aName.localeCompare(bName);
+      }));
     } catch (error) {
       console.error('Error loading categories:', error);
     }
@@ -107,7 +112,14 @@ const Categories = () => {
       snapshot.forEach(doc => {
         subcategoriesData.push({ id: doc.id, ...doc.data() });
       });
-      setSubcategories(subcategoriesData.sort((a, b) => a.name.localeCompare(b.name)));
+      console.log('Raw subcategories data:', subcategoriesData);
+      console.log('Sample subcategory:', subcategoriesData[0]);
+      console.log('Available categories:', categories.map(c => ({id: c.id, name: c.name || c.category})));
+      setSubcategories(subcategoriesData.sort((a, b) => {
+        const aName = a.name || a.subcategory || a.title || '';
+        const bName = b.name || b.subcategory || b.title || '';
+        return aName.localeCompare(bName);
+      }));
     } catch (error) {
       console.error('Error loading subcategories:', error);
     }
@@ -117,9 +129,9 @@ const Categories = () => {
     if (category) {
       setEditingCategory(category.id);
       setCategoryFormData({
-        name: category.name || '',
+        name: category.name || category.category || category.title || '',
         description: category.description || '',
-        applicableFor: category.applicableFor || 'Item',
+        applicableFor: category.applicableFor || category.type || 'Item',
         isActive: category.isActive !== false
       });
     } else {
@@ -134,13 +146,13 @@ const Categories = () => {
     setOpenDialog(true);
   };
 
-  const handleOpenSubcategoryDialog = (subcategory = null) => {
+  const handleOpenSubcategoryDialog = (subcategory = null, parentCategoryId = null) => {
     if (subcategory) {
       setEditingSubcategory(subcategory.id);
       setSubcategoryFormData({
-        name: subcategory.name || '',
+        name: subcategory.name || subcategory.subcategory || subcategory.title || '',
         description: subcategory.description || '',
-        categoryId: subcategory.categoryId || '',
+        categoryId: subcategory.categoryId || subcategory.category_id || subcategory.parentCategoryId || subcategory.parentId || '',
         isActive: subcategory.isActive !== false
       });
     } else {
@@ -148,7 +160,7 @@ const Categories = () => {
       setSubcategoryFormData({
         name: '',
         description: '',
-        categoryId: '',
+        categoryId: parentCategoryId || '',
         isActive: true
       });
     }
@@ -218,12 +230,29 @@ const Categories = () => {
   };
 
   const getCategoryName = (categoryId) => {
+    if (!categoryId) return 'No Category';
     const category = categories.find(cat => cat.id === categoryId);
-    return category ? category.name : categoryId;
+    if (!category) {
+      console.log('Category not found for ID:', categoryId);
+      console.log('Available category IDs:', categories.map(c => c.id));
+      return `Unknown (${categoryId})`;
+    }
+    return category.name || category.category || category.title || 'Unknown';
   };
 
   const getSubcategoriesForCategory = (categoryId) => {
-    return subcategories.filter(sub => sub.categoryId === categoryId);
+    const filtered = subcategories.filter(sub => {
+      // Check multiple possible field names for categoryId
+      return sub.categoryId === categoryId || 
+             sub.category_id === categoryId || 
+             sub.parentCategoryId === categoryId ||
+             sub.parentId === categoryId;
+    });
+    if (categoryId && filtered.length === 0) {
+      console.log('No subcategories found for category:', categoryId);
+      console.log('Available subcategory categoryIds:', subcategories.map(s => s.categoryId || s.category_id || s.parentCategoryId));
+    }
+    return filtered;
   };
 
   return (
@@ -234,7 +263,16 @@ const Categories = () => {
       
       <Alert severity="info" sx={{ mb: 3 }}>
         <strong>Category Management:</strong> Categories are used globally. 
-        "Item" categories are for products, "Service" categories are for service requests.
+        <br />
+        • <strong>Item Categories</strong> (🛒): Used for physical products in the marketplace
+        <br />
+        • <strong>Service Categories</strong> (🔧): Used for service requests and bookings
+        <br />
+        • <strong>Rent Categories</strong> (🏠): Used for rental items and properties
+        <br />
+        • <strong>Delivery Categories</strong> (🚚): Used for delivery and logistics services
+        <br />
+        • <strong>Transport Categories</strong> (🚗): Used for transportation services
       </Alert>
 
       {loading && <LinearProgress sx={{ mb: 2 }} />}
@@ -265,6 +303,7 @@ const Categories = () => {
                       <TableCell>Name</TableCell>
                       <TableCell>Type</TableCell>
                       <TableCell>Subcategories</TableCell>
+                      <TableCell>Status</TableCell>
                       <TableCell>Actions</TableCell>
                     </TableRow>
                   </TableHead>
@@ -273,19 +312,36 @@ const Categories = () => {
                       <TableRow key={category.id}>
                         <TableCell>
                           <Box>
-                            <Typography variant="subtitle2">{category.name}</Typography>
+                            <Typography variant="subtitle2">
+                              {category.name || category.category || category.title || 'Unnamed Category'}
+                            </Typography>
                             <Typography variant="caption" color="text.secondary">
                               {category.description}
                             </Typography>
                           </Box>
                         </TableCell>
                         <TableCell>
-                          <Chip 
-                            icon={category.applicableFor === 'Item' ? <ShoppingCart /> : <Build />}
-                            label={category.applicableFor}
-                            size="small"
-                            color={category.applicableFor === 'Item' ? 'primary' : 'secondary'}
-                          />
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Chip 
+                              icon={category.applicableFor === 'Item' ? <ShoppingCart /> : <Build />}
+                              label={category.applicableFor || category.type || 'Unknown'}
+                              size="small"
+                              color={category.applicableFor === 'Item' || category.type === 'item' ? 'primary' : 'secondary'}
+                            />
+                            <Typography variant="caption" color="text.secondary">
+                              {(() => {
+                                const type = category.applicableFor || category.type || '';
+                                switch(type.toLowerCase()) {
+                                  case 'item': return 'For Products';
+                                  case 'service': return 'For Services';
+                                  case 'rent': return 'For Rentals';
+                                  case 'delivery': return 'For Delivery';
+                                  case 'transport': return 'For Transport';
+                                  default: return 'Unknown Type';
+                                }
+                              })()}
+                            </Typography>
+                          </Box>
                         </TableCell>
                         <TableCell>
                           <Chip 
@@ -295,12 +351,28 @@ const Categories = () => {
                           />
                         </TableCell>
                         <TableCell>
+                          <Chip 
+                            label={category.isActive !== false ? 'Active' : 'Inactive'}
+                            size="small"
+                            color={category.isActive !== false ? 'success' : 'default'}
+                            variant={category.isActive !== false ? 'filled' : 'outlined'}
+                          />
+                        </TableCell>
+                        <TableCell>
                           <IconButton 
                             size="small" 
                             onClick={() => handleOpenCategoryDialog(category)}
                             color="primary"
                           >
                             <Edit />
+                          </IconButton>
+                          <IconButton 
+                            size="small" 
+                            onClick={() => handleOpenSubcategoryDialog(null, category.id)}
+                            color="success"
+                            title="Add Subcategory"
+                          >
+                            <Add />
                           </IconButton>
                           <IconButton 
                             size="small" 
@@ -355,6 +427,7 @@ const Categories = () => {
                     <TableRow>
                       <TableCell>Name</TableCell>
                       <TableCell>Category</TableCell>
+                      <TableCell>Status</TableCell>
                       <TableCell>Actions</TableCell>
                     </TableRow>
                   </TableHead>
@@ -363,18 +436,45 @@ const Categories = () => {
                       <TableRow key={subcategory.id}>
                         <TableCell>
                           <Box>
-                            <Typography variant="subtitle2">{subcategory.name}</Typography>
+                            <Typography variant="subtitle2">
+                              {subcategory.name || subcategory.subcategory || subcategory.title || 'Unnamed Subcategory'}
+                            </Typography>
                             <Typography variant="caption" color="text.secondary">
                               {subcategory.description}
                             </Typography>
                           </Box>
                         </TableCell>
                         <TableCell>
+                          <Box>
+                            <Chip 
+                              label={getCategoryName(
+                                subcategory.categoryId || 
+                                subcategory.category_id || 
+                                subcategory.parentCategoryId || 
+                                subcategory.parentId
+                              )}
+                              size="small"
+                              color="primary"
+                              variant="outlined"
+                            />
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                              {(() => {
+                                const parentCategory = categories.find(cat => 
+                                  cat.id === (subcategory.categoryId || subcategory.category_id || subcategory.parentCategoryId || subcategory.parentId)
+                                );
+                                return parentCategory 
+                                  ? `${parentCategory.applicableFor || parentCategory.type || 'Unknown'} Category`
+                                  : 'Unknown Category';
+                              })()}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell>
                           <Chip 
-                            label={getCategoryName(subcategory.categoryId)}
+                            label={subcategory.isActive !== false ? 'Active' : 'Inactive'}
                             size="small"
-                            color="primary"
-                            variant="outlined"
+                            color={subcategory.isActive !== false ? 'success' : 'default'}
+                            variant={subcategory.isActive !== false ? 'filled' : 'outlined'}
                           />
                         </TableCell>
                         <TableCell>
@@ -451,6 +551,9 @@ const Categories = () => {
               >
                 <MenuItem value="Item">Item (Products)</MenuItem>
                 <MenuItem value="Service">Service (Requests)</MenuItem>
+                <MenuItem value="Rent">Rent (Rental Items)</MenuItem>
+                <MenuItem value="Delivery">Delivery (Services)</MenuItem>
+                <MenuItem value="Transport">Transport (Services)</MenuItem>
               </Select>
             </FormControl>
 
@@ -493,7 +596,7 @@ const Categories = () => {
               >
                 {categories.map(category => (
                   <MenuItem key={category.id} value={category.id}>
-                    {category.name} ({category.applicableFor})
+                    {category.name || category.category || category.title || 'Unnamed'} ({category.applicableFor || category.type || 'Unknown'})
                   </MenuItem>
                 ))}
               </Select>

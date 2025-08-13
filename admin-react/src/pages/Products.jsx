@@ -28,7 +28,9 @@ import {
   Paper,
   Avatar,
   Switch,
-  FormControlLabel
+  FormControlLabel,
+  ImageList,
+  ImageListItem
 } from '@mui/material';
 import { 
   Add, 
@@ -37,7 +39,9 @@ import {
   Search,
   FilterList,
   Visibility,
-  VisibilityOff
+  VisibilityOff,
+  PhotoCamera,
+  Close
 } from '@mui/icons-material';
 import { 
   collection, 
@@ -66,7 +70,9 @@ const Products = () => {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [brandFilter, setBrandFilter] = useState('');
   const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
   const [brands, setBrands] = useState([]);
+  const [uploadedImages, setUploadedImages] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
     brand: '',
@@ -82,11 +88,21 @@ const Products = () => {
   useEffect(() => {
     loadProducts();
     loadCategories();
+    loadBrands();
   }, []);
 
   useEffect(() => {
     filterProducts();
   }, [products, searchTerm, categoryFilter, brandFilter]);
+
+  // Load subcategories when category changes
+  useEffect(() => {
+    if (formData.categoryId) {
+      loadSubcategories(formData.categoryId);
+    } else {
+      setSubcategories([]);
+    }
+  }, [formData.categoryId]);
 
   const loadProducts = async () => {
     try {
@@ -101,10 +117,6 @@ const Products = () => {
         productsData.push({ id: doc.id, ...doc.data() });
       });
       setProducts(productsData);
-      
-      // Extract unique brands
-      const uniqueBrands = [...new Set(productsData.map(p => p.brand).filter(Boolean))];
-      setBrands(uniqueBrands);
     } catch (error) {
       console.error('Error loading products:', error);
     } finally {
@@ -119,9 +131,12 @@ const Products = () => {
       const categoriesData = [];
       snapshot.forEach(doc => {
         const categoryData = { id: doc.id, ...doc.data() };
-        categoriesData.push(categoryData);
+        // Only include item categories (filter out service categories)
+        if (categoryData.type === 'item' || !categoryData.type) {
+          categoriesData.push(categoryData);
+        }
       });
-      console.log('Loaded categories:', categoriesData);
+      console.log('Loaded item categories:', categoriesData);
       setCategories(categoriesData.sort((a, b) => {
         const aName = a.name || a.category || '';
         const bName = b.name || b.category || '';
@@ -134,21 +149,74 @@ const Products = () => {
 
   // Load subcategories for selected category
   const loadSubcategories = async (categoryId) => {
-    if (!categoryId) return [];
+    if (!categoryId) {
+      setSubcategories([]);
+      return;
+    }
     
     try {
-      const snapshot = await getDocs(
-        query(collection(db, 'subcategories'), where('categoryId', '==', categoryId))
-      );
-      const subcategoriesData = [];
-      snapshot.forEach(doc => {
-        subcategoriesData.push({ id: doc.id, ...doc.data() });
-      });
-      console.log('Loaded subcategories for', categoryId, ':', subcategoriesData);
-      return subcategoriesData;
+      // Try different possible field names for the category relationship
+      const queries = [
+        query(collection(db, 'subcategories'), where('categoryId', '==', categoryId)),
+        query(collection(db, 'subcategories'), where('category_id', '==', categoryId)),
+        query(collection(db, 'subcategories'), where('parentCategoryId', '==', categoryId)),
+        query(collection(db, 'subcategories'), where('parentId', '==', categoryId))
+      ];
+      
+      let subcategoriesData = [];
+      
+      // Try each query until we find subcategories
+      for (const q of queries) {
+        try {
+          const snapshot = await getDocs(q);
+          if (!snapshot.empty) {
+            snapshot.forEach(doc => {
+              const data = { id: doc.id, ...doc.data() };
+              // Avoid duplicates
+              if (!subcategoriesData.find(sub => sub.id === data.id)) {
+                subcategoriesData.push(data);
+              }
+            });
+            if (subcategoriesData.length > 0) break; // Found some, stop trying
+          }
+        } catch (err) {
+          console.log('Query failed, trying next:', err.message);
+        }
+      }
+      
+      console.log('Loaded subcategories for category', categoryId, ':', subcategoriesData);
+      setSubcategories(subcategoriesData.sort((a, b) => {
+        const aName = a.name || a.subcategory || '';
+        const bName = b.name || b.subcategory || '';
+        return aName.localeCompare(bName);
+      }));
     } catch (error) {
       console.error('Error loading subcategories:', error);
-      return [];
+      setSubcategories([]);
+    }
+  };
+
+  const loadBrands = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, 'brands'));
+      const brandsData = [];
+      snapshot.forEach(doc => {
+        const brandData = { id: doc.id, ...doc.data() };
+        if (brandData.isActive !== false) { // Include active brands
+          brandsData.push(brandData);
+        }
+      });
+      
+      // Sort brands by name
+      brandsData.sort((a, b) => {
+        const aName = a.name || a.brandName || '';
+        const bName = b.name || b.brandName || '';
+        return aName.localeCompare(bName);
+      });
+      
+      setBrands(brandsData);
+    } catch (error) {
+      console.error('Error loading brands:', error);
     }
   };
 
@@ -188,6 +256,10 @@ const Products = () => {
         availableVariables: product.availableVariables || {},
         isActive: product.isActive !== false
       });
+      // Load subcategories for existing product
+      if (product.categoryId) {
+        loadSubcategories(product.categoryId);
+      }
     } else {
       setEditingProduct(null);
       setFormData({
@@ -201,13 +273,16 @@ const Products = () => {
         availableVariables: {},
         isActive: true
       });
+      setSubcategories([]);
     }
+    setUploadedImages([]);
     setOpenDialog(true);
   };
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setEditingProduct(null);
+    setUploadedImages([]);
   };
 
   const handleImageUpload = async (event) => {
@@ -227,37 +302,64 @@ const Products = () => {
         uploadedUrls.push(downloadURL);
       }
       
-      // Add uploaded URLs to existing images
+      // Store uploaded URLs in state
+      setUploadedImages(prev => [...prev, ...uploadedUrls]);
+      
+      // Also add to form data
       setFormData(prev => ({
         ...prev,
         images: [...(prev.images || []), ...uploadedUrls]
       }));
+
+      console.log('Images uploaded successfully:', uploadedUrls);
     } catch (error) {
       console.error('Error uploading images:', error);
       alert('Error uploading images: ' + error.message);
     }
   };
 
+  const removeImage = (indexToRemove) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, index) => index !== indexToRemove)
+    }));
+  };
+
+  const handleCategoryChange = (categoryId) => {
+    setFormData(prev => ({
+      ...prev,
+      categoryId,
+      subcategoryId: '' // Reset subcategory when category changes
+    }));
+  };
+
   const handleSave = async () => {
     try {
+      // Ensure images from uploads are included
       const productData = {
         ...formData,
+        images: formData.images || [],
         updatedAt: serverTimestamp(),
         updatedBy: adminData.email
       };
 
+      console.log('Saving product with data:', productData);
+
       if (editingProduct) {
         await updateDoc(doc(db, 'master_products', editingProduct), productData);
+        console.log('Product updated successfully');
       } else {
         productData.createdAt = serverTimestamp();
         productData.createdBy = adminData.email;
         await addDoc(collection(db, 'master_products'), productData);
+        console.log('Product created successfully');
       }
 
       handleCloseDialog();
       loadProducts();
     } catch (error) {
       console.error('Error saving product:', error);
+      alert('Error saving product: ' + error.message);
     }
   };
 
@@ -306,6 +408,7 @@ const Products = () => {
       <Alert severity="info" sx={{ mb: 3 }}>
         Master products are managed centrally and available to all countries. 
         Businesses worldwide can create price listings based on these products.
+        Only item categories are available for products.
       </Alert>
 
       {/* Filters */}
@@ -348,8 +451,8 @@ const Products = () => {
                 >
                   <MenuItem value="">All Brands</MenuItem>
                   {brands.map(brand => (
-                    <MenuItem key={brand} value={brand}>
-                      {brand}
+                    <MenuItem key={brand.id} value={brand.name || brand.brandName}>
+                      {brand.name || brand.brandName}
                     </MenuItem>
                   ))}
                 </Select>
@@ -493,26 +596,56 @@ const Products = () => {
               required
             />
             
-            <TextField
-              fullWidth
-              label="Brand"
-              value={formData.brand}
-              onChange={(e) => setFormData(prev => ({ ...prev, brand: e.target.value }))}
-            />
-
             <FormControl fullWidth>
-              <InputLabel>Category</InputLabel>
+              <InputLabel>Brand</InputLabel>
               <Select
-                value={formData.categoryId}
-                onChange={(e) => setFormData(prev => ({ ...prev, categoryId: e.target.value }))}
+                value={formData.brand}
+                onChange={(e) => setFormData(prev => ({ ...prev, brand: e.target.value }))}
               >
-                {categories.map(category => (
-                  <MenuItem key={category.id} value={category.id}>
-                    {category.name || category.category}
+                <MenuItem value="">
+                  <em>Select Brand (Optional)</em>
+                </MenuItem>
+                {brands.map(brand => (
+                  <MenuItem key={brand.id} value={brand.name || brand.brandName}>
+                    {brand.name || brand.brandName}
                   </MenuItem>
                 ))}
               </Select>
             </FormControl>
+
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth required>
+                  <InputLabel>Category</InputLabel>
+                  <Select
+                    value={formData.categoryId}
+                    onChange={(e) => handleCategoryChange(e.target.value)}
+                  >
+                    {categories.map(category => (
+                      <MenuItem key={category.id} value={category.id}>
+                        {category.name || category.category}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth disabled={!formData.categoryId}>
+                  <InputLabel>Subcategory</InputLabel>
+                  <Select
+                    value={formData.subcategoryId}
+                    onChange={(e) => setFormData(prev => ({ ...prev, subcategoryId: e.target.value }))}
+                  >
+                    <MenuItem value="">No subcategory</MenuItem>
+                    {subcategories.map(subcategory => (
+                      <MenuItem key={subcategory.id} value={subcategory.id}>
+                        {subcategory.name || subcategory.subcategory}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
 
             <TextField
               fullWidth
@@ -535,37 +668,56 @@ const Products = () => {
             />
 
             <Box>
-              <Typography variant="subtitle2" gutterBottom>
+              <Typography variant="subtitle1" gutterBottom>
                 Product Images
               </Typography>
-              <Button
-                variant="outlined"
-                component="label"
-                startIcon={<Add />}
-                sx={{ mb: 2 }}
-              >
-                Upload Images
-                <input
-                  type="file"
-                  hidden
-                  multiple
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                />
-              </Button>
-              <TextField
-                fullWidth
-                multiline
-                rows={2}
-                label="Or paste Image URLs (one per line)"
-                value={Array.isArray(formData.images) ? formData.images.join('\n') : ''}
-                onChange={(e) => setFormData(prev => ({ 
-                  ...prev, 
-                  images: e.target.value.split('\n').map(url => url.trim()).filter(url => url)
-                }))}
-                placeholder="https://example.com/image1.jpg"
-                helperText="You can either upload images or provide URLs"
+              <input
+                accept="image/*"
+                style={{ display: 'none' }}
+                id="image-upload"
+                multiple
+                type="file"
+                onChange={handleImageUpload}
               />
+              <label htmlFor="image-upload">
+                <Button
+                  variant="outlined"
+                  component="span"
+                  startIcon={<PhotoCamera />}
+                  sx={{ mb: 2 }}
+                >
+                  Upload Images
+                </Button>
+              </label>
+              
+              {/* Display uploaded images */}
+              {formData.images && formData.images.length > 0 && (
+                <ImageList sx={{ width: '100%', height: 200 }} cols={4} rowHeight={160}>
+                  {formData.images.map((image, index) => (
+                    <ImageListItem key={index}>
+                      <img
+                        src={image}
+                        alt={`Product ${index + 1}`}
+                        loading="lazy"
+                        style={{ objectFit: 'cover' }}
+                      />
+                      <IconButton
+                        sx={{
+                          position: 'absolute',
+                          top: 5,
+                          right: 5,
+                          bgcolor: 'rgba(255,255,255,0.8)',
+                          '&:hover': { bgcolor: 'rgba(255,255,255,0.9)' }
+                        }}
+                        size="small"
+                        onClick={() => removeImage(index)}
+                      >
+                        <Close fontSize="small" />
+                      </IconButton>
+                    </ImageListItem>
+                  ))}
+                </ImageList>
+              )}
             </Box>
 
             <TextField
@@ -595,7 +747,7 @@ const Products = () => {
           <Button 
             onClick={handleSave} 
             variant="contained"
-            disabled={!formData.name}
+            disabled={!formData.name || !formData.categoryId}
           >
             {editingProduct ? 'Update' : 'Create'}
           </Button>

@@ -9,6 +9,8 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
 import Categories from './pages/Categories';
+import Brands from './pages/Brands';
+import Variables from './pages/Variables';
 import PrivacyTerms from './pages/PrivacyTerms';
 
 const theme = createTheme({
@@ -38,9 +40,11 @@ function App() {
                 </ProtectedRoute>
               }
             >
-                            <Route index element={<Dashboard />} />
+              <Route index element={<Dashboard />} />
               <Route path="products" element={<Products />} />
               <Route path="categories" element={<Categories />} />
+              <Route path="brands" element={<Brands />} />
+              <Route path="variables" element={<Variables />} />
               <Route path="privacy-terms" element={<PrivacyTerms />} />
               {/* Add more protected routes here */}
             </Route>

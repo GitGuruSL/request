@@ -25,6 +25,8 @@ import {
   Business,
   DirectionsCar,
   Category,
+  BrandingWatermark,
+  Tune,
   Person,
   Gavel,
   PrivacyTip,
@@ -102,6 +104,20 @@ const Layout = () => {
       path: '/categories',
       access: 'all',
       description: 'Product categories & subcategories'
+    },
+    { 
+      text: 'Brands', 
+      icon: <BrandingWatermark />, 
+      path: '/brands',
+      access: 'all',
+      description: 'Product brands and manufacturers'
+    },
+    { 
+      text: 'Product Variables', 
+      icon: <Tune />, 
+      path: '/variables',
+      access: 'all',
+      description: 'Custom product fields and attributes'
     },
     { 
       text: 'Admin Users', 
