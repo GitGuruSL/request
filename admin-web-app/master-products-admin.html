@@ -78,19 +78,19 @@
             <h4><i class="fas fa-store me-2"></i>Product Admin</h4>
         </div>
         <nav class="nav flex-column mt-3">
-            <a class="nav-link active" href="#" onclick="showSection('products')">
+            <a class="nav-link active" href="javascript:void(0)" onclick="showSection('products')">
                 <i class="fas fa-box me-2"></i>Master Products
             </a>
-            <a class="nav-link" href="#" onclick="showSection('business-listings')">
+            <a class="nav-link" href="javascript:void(0)" onclick="showSection('business-listings')">
                 <i class="fas fa-store me-2"></i>Business Listings
             </a>
-            <a class="nav-link" href="#" onclick="showSection('categories')">
+            <a class="nav-link" href="javascript:void(0)" onclick="showSection('categories')">
                 <i class="fas fa-tags me-2"></i>Categories
             </a>
-            <a class="nav-link" href="#" onclick="showSection('brands')">
+            <a class="nav-link" href="javascript:void(0)" onclick="showSection('brands')">
                 <i class="fas fa-trademark me-2"></i>Brands
             </a>
-            <a class="nav-link" href="#" onclick="showSection('variables')">
+            <a class="nav-link" href="javascript:void(0)" onclick="showSection('variables')">
                 <i class="fas fa-sliders-h me-2"></i>Product Variables
             </a>
             <hr class="border-light">
@@ -477,7 +477,6 @@
                                         <!-- Dynamic variable fields will be added here -->
                                     </div>
                                 </div>
-                                <textarea id="productVariables" class="form-control d-none" rows="4" placeholder='{"color": ["Red", "Blue", "Green"], "size": ["Small", "Medium", "Large"]}'></textarea>
                             </div>
                             <div class="col-12">
                                 <div class="form-check">
@@ -763,45 +762,60 @@
         }
 
         // Populate category dropdowns in modals
-        function populateCategoryDropdowns() {
-            const productCategory = document.getElementById('productCategory');
-            if (productCategory) {
-                productCategory.innerHTML = '<option value="">Select Category</option>';
-                categories.forEach(category => {
-                    const option = document.createElement('option');
-                    option.value = category.category;
-                    option.textContent = category.category;
-                    productCategory.appendChild(option);
+        async function populateCategoryDropdowns() {
+            try {
+                const categoriesSnapshot = await getDocs(collection(db, 'categories'));
+                const itemCategories = [];
+                
+                categoriesSnapshot.forEach(doc => {
+                    const categoryData = { id: doc.id, ...doc.data() };
+                    // Only include categories applicable for "Item" (not Service)
+                    if (categoryData.applicableFor === 'Item') {
+                        itemCategories.push(categoryData);
+                    }
                 });
+
+                const productCategory = document.getElementById('productCategory');
+                if (productCategory) {
+                    productCategory.innerHTML = '<option value="">Select Category</option>';
+                    itemCategories.forEach(category => {
+                        const option = document.createElement('option');
+                        option.value = category.id;
+                        option.textContent = category.name;
+                        productCategory.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading categories for dropdown:', error);
             }
         }
 
         // Load subcategories for selected category
-        window.loadSubcategories = async function(categoryName) {
+        window.loadSubcategories = async function(categoryId) {
             const subcategorySelect = document.getElementById('productSubcategory');
             subcategorySelect.innerHTML = '<option value="">Loading subcategories...</option>';
             
-            if (!categoryName) {
+            if (!categoryId) {
                 subcategorySelect.innerHTML = '<option value="">Select Subcategory (Optional)</option>';
                 return;
             }
 
             try {
-                // Get unique subcategories from existing products in this category
-                const subcategories = [...new Set(
-                    masterProducts
-                        .filter(p => p.category === categoryName && p.subcategory)
-                        .map(p => p.subcategory)
-                        .filter(s => s && s.trim())
-                )].sort();
+                // Get subcategories from the subcategories collection for this category
+                const subcategoriesSnapshot = await getDocs(
+                    query(collection(db, 'subcategories'), where('categoryId', '==', categoryId))
+                );
 
                 subcategorySelect.innerHTML = '<option value="">Select Subcategory (Optional)</option>';
                 
-                subcategories.forEach(subcategory => {
-                    const option = document.createElement('option');
-                    option.value = subcategory;
-                    option.textContent = subcategory;
-                    subcategorySelect.appendChild(option);
+                subcategoriesSnapshot.forEach(doc => {
+                    const subcategoryData = { id: doc.id, ...doc.data() };
+                    if (subcategoryData.isActive !== false) {
+                        const option = document.createElement('option');
+                        option.value = subcategoryData.id;
+                        option.textContent = subcategoryData.name;
+                        subcategorySelect.appendChild(option);
+                    }
                 });
 
                 // Add option to create new subcategory
@@ -990,11 +1004,14 @@
         }
 
         // Show add product modal
-        window.showAddProductModal = function() {
+        window.showAddProductModal = async function() {
             currentEditingProduct = null;
             document.getElementById('productModalTitle').textContent = 'Add Master Product';
             document.getElementById('productForm').reset();
             document.getElementById('productActive').checked = true;
+            
+            // Load categories dropdown
+            await populateCategoryDropdowns();
             
             // Clear and initialize variables section
             loadVariablesFromJSON({});
@@ -1110,18 +1127,8 @@
                 updatedAt: serverTimestamp()
             };
 
-            // Parse variables JSON
-            const variablesText = document.getElementById('productVariables').value.trim();
-            if (variablesText) {
-                try {
-                    productData.availableVariables = JSON.parse(variablesText);
-                } catch (error) {
-                    showToast('Invalid JSON format in variables field', 'error');
-                    return;
-                }
-            } else {
-                productData.availableVariables = {};
-            }
+            // Get variables from the new UI
+            productData.availableVariables = getCurrentVariables();
 
             try {
                 if (currentEditingProduct) {
@@ -1213,20 +1220,31 @@
                 event.target.classList.add('active');
             }
             
-            // Load data for the specific section
-            switch(sectionName) {
-                case 'business-listings':
-                    loadBusinessListings();
-                    break;
-                case 'categories':
-                    loadCategoriesData();
-                    break;
-                case 'brands':
-                    loadBrandsData();
-                    break;
-                case 'variables':
-                    loadVariablesData();
-                    break;
+            // Load data for the specific section (only if masterProducts are loaded)
+            if (masterProducts && masterProducts.length > 0) {
+                switch(sectionName) {
+                    case 'business-listings':
+                        loadBusinessListings();
+                        break;
+                    case 'categories':
+                        loadCategoriesData();
+                        break;
+                    case 'brands':
+                        loadBrandsData();
+                        break;
+                    case 'variables':
+                        loadVariablesData();
+                        break;
+                }
+            } else if (sectionName !== 'products') {
+                // Show message that master products need to be loaded first
+                setTimeout(() => {
+                    if (masterProducts && masterProducts.length > 0) {
+                        showSection(sectionName); // Retry after products are loaded
+                    } else {
+                        showToast('Please wait for master products to load first', 'info');
+                    }
+                }, 1000);
             }
         }
 
@@ -1296,19 +1314,21 @@
             showToast(message, type === 'danger' ? 'error' : type);
         }
 
-        // Load categories data
+        // Load categories data - only show item categories
         async function loadCategoriesData() {
             try {
-                // Get unique categories from existing master products
-                const uniqueCategories = [...new Set(masterProducts.map(p => p.category).filter(c => c))];
+                const categoriesSnapshot = await getDocs(collection(db, 'categories'));
+                const categoriesData = [];
                 
-                const categoriesData = uniqueCategories.map(categoryName => ({
-                    id: categoryName.toLowerCase().replace(/\s+/g, '_'),
-                    name: categoryName,
-                    description: `Category for ${categoryName} products`,
-                    isActive: true
-                }));
+                categoriesSnapshot.forEach(doc => {
+                    const categoryData = { id: doc.id, ...doc.data() };
+                    // Only include categories applicable for "Item" (not Service)
+                    if (categoryData.applicableFor === 'Item') {
+                        categoriesData.push(categoryData);
+                    }
+                });
 
+                console.log('Loaded item categories:', categoriesData);
                 displayCategories(categoriesData);
             } catch (error) {
                 console.error('Error loading categories:', error);
@@ -1339,7 +1359,7 @@
             }
 
             tbody.innerHTML = categoriesData.map(category => {
-                const productsInCategory = masterProducts.filter(p => p.category === category.name).length;
+                const productsInCategory = masterProducts.filter(p => p.categoryId === category.id).length;
                 return `
                     <tr>
                         <td><strong>${category.name || 'Unnamed'}</strong></td>
@@ -1553,31 +1573,31 @@
             }
 
             tbody.innerHTML = listingsData.map(listing => {
-                const createdDate = listing.created_at ? new Date(listing.created_at.seconds * 1000).toLocaleDateString() : 'N/A';
+                const createdDate = listing.createdAt ? new Date(listing.createdAt.seconds * 1000).toLocaleDateString() : 'N/A';
                 const price = listing.price ? `$${parseFloat(listing.price).toFixed(2)}` : 'N/A';
                 
                 // Get variables display
                 let variablesDisplay = 'N/A';
-                if (listing.selected_variables && Object.keys(listing.selected_variables).length > 0) {
-                    const variables = Object.entries(listing.selected_variables)
+                if (listing.selectedVariables && Object.keys(listing.selectedVariables).length > 0) {
+                    const variables = Object.entries(listing.selectedVariables)
                         .map(([key, value]) => `${key}: ${value}`)
                         .slice(0, 2)
                         .join(', ');
-                    variablesDisplay = variables + (Object.keys(listing.selected_variables).length > 2 ? '...' : '');
+                    variablesDisplay = variables + (Object.keys(listing.selectedVariables).length > 2 ? '...' : '');
                 }
 
                 return `
                     <tr>
                         <td>
                             <div>
-                                <strong>${listing.business_name || 'Unknown Business'}</strong>
-                                <br><small class="text-muted">${listing.business_id || 'No ID'}</small>
+                                <strong>${listing.businessName || 'Unknown Business'}</strong>
+                                <br><small class="text-muted">${listing.businessId || 'No ID'}</small>
                             </div>
                         </td>
                         <td>
                             <div>
-                                <strong>${listing.product_name || 'Unknown Product'}</strong>
-                                <br><small class="text-muted">${listing.master_product_id || 'No ID'}</small>
+                                <strong>${listing.productName || 'Unknown Product'}</strong>
+                                <br><small class="text-muted">${listing.masterProductId || 'No ID'}</small>
                             </div>
                         </td>
                         <td><span class="badge bg-secondary">${listing.category || 'N/A'}</span></td>
@@ -1586,8 +1606,8 @@
                             <small class="text-muted">${variablesDisplay}</small>
                         </td>
                         <td>
-                            <span class="badge ${(listing.is_active !== false) ? 'bg-success' : 'bg-secondary'}">
-                                ${(listing.is_active !== false) ? 'Active' : 'Inactive'}
+                            <span class="badge ${(listing.isAvailable !== false) ? 'bg-success' : 'bg-secondary'}">
+                                ${(listing.isAvailable !== false) ? 'Active' : 'Inactive'}
                             </span>
                         </td>
                         <td><small>${createdDate}</small></td>
@@ -1597,7 +1617,7 @@
                                     <i class="fas fa-eye"></i>
                                 </button>
                                 <button class="btn btn-sm btn-outline-warning" onclick="toggleBusinessListingStatus('${listing.id}')" title="Toggle Status">
-                                    <i class="fas fa-toggle-${(listing.is_active !== false) ? 'on' : 'off'}"></i>
+                                    <i class="fas fa-toggle-${(listing.isAvailable !== false) ? 'on' : 'off'}"></i>
                                 </button>
                                 <button class="btn btn-sm btn-outline-danger" onclick="deleteBusinessListing('${listing.id}')" title="Delete">
                                     <i class="fas fa-trash"></i>

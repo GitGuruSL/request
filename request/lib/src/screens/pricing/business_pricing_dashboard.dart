@@ -505,7 +505,7 @@ class _BusinessPricingDashboardState extends State<BusinessPricingDashboard> {
     );
   }
 
-  // Method to handle editing price listing by fetching actual master product
+    // Method to handle editing price listing by fetching actual master product
   Future<void> _editPriceListing(PriceListing listing) async {
     try {
       // Show loading indicator
@@ -520,15 +520,35 @@ class _BusinessPricingDashboardState extends State<BusinessPricingDashboard> {
       // Fetch the actual master product to get variables and other details
       final masterProductsStream = _pricingService.getMasterProducts(
         searchQuery: '',
-        brand: '',
-        category: '',
+        selectedBrand: '',
+        selectedCategory: '',
       );
       
       await for (final products in masterProductsStream.take(1)) {
-        final masterProduct = products.firstWhere(
-          (product) => product.id == listing.masterProductId,
-          orElse: () => _createMasterProductFromListing(listing),
-        );
+        MasterProduct? masterProduct;
+        
+        // Try to find the actual master product
+        try {
+          masterProduct = products.firstWhere(
+            (product) => product.id == listing.masterProductId,
+          );
+        } catch (e) {
+          // If not found, create a fallback with basic info but empty variables
+          print('Master product not found, creating fallback: $e');
+          masterProduct = MasterProduct(
+            id: listing.masterProductId,
+            name: listing.productName,
+            brand: listing.brand,
+            category: listing.category,
+            subcategory: listing.subcategory,
+            description: '',
+            images: [],
+            availableVariables: {}, // Empty - user won't see variables section
+            isActive: true,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          );
+        }
         
         // Close loading dialog
         if (mounted) Navigator.pop(context);
@@ -539,7 +559,7 @@ class _BusinessPricingDashboardState extends State<BusinessPricingDashboard> {
             context,
             MaterialPageRoute(
               builder: (context) => AddPriceListingScreen(
-                masterProduct: masterProduct,
+                masterProduct: masterProduct!,
                 existingListing: listing,
               ),
             ),
@@ -556,15 +576,12 @@ class _BusinessPricingDashboardState extends State<BusinessPricingDashboard> {
       // Close loading dialog
       if (mounted) Navigator.pop(context);
       
-      // Fall back to simplified master product
+      // Show error message
       if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => AddPriceListingScreen(
-              masterProduct: _createMasterProductFromListing(listing),
-              existingListing: listing,
-            ),
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading product details: $error'),
+            backgroundColor: Colors.red,
           ),
         );
       }
