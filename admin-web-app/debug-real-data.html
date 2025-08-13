@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Debug - Real Data Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .loading { color: #007bff; }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .data-list { max-height: 300px; overflow-y: auto; }
+        .doc-item { padding: 8px; margin: 4px 0; background: #f8f9fa; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1><i class="fas fa-bug"></i> Admin Panel Debug - Real Data Test</h1>
+        <p class="text-muted">Testing connection to your Firebase collections with real data</p>
+        
+        <div id="firebase-status" class="debug-section">
+            <h3>🔥 Firebase Connection</h3>
+            <div id="firebase-result">Initializing...</div>
+        </div>
+        
+        <div id="collections-test" class="debug-section">
+            <h3>📊 Collection Data</h3>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-users"></i> Users</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="users-result" class="loading">Loading...</div>
+                            <div id="users-data" class="data-list mt-2"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-clipboard-list"></i> Requests</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="requests-result" class="loading">Loading...</div>
+                            <div id="requests-data" class="data-list mt-2"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-building"></i> Businesses</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="businesses-result" class="loading">Loading...</div>
+                            <div id="businesses-data" class="data-list mt-2"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-box"></i> Products</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="products-result" class="loading">Loading...</div>
+                            <div id="products-data" class="data-list mt-2"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="debug-section">
+            <button class="btn btn-primary" onclick="testAllCollections()">
+                <i class="fas fa-sync-alt"></i> Refresh All Data
+            </button>
+            <a href="working-admin.html" class="btn btn-success ms-2">
+                <i class="fas fa-arrow-right"></i> Go to Full Admin Panel
+            </a>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js';
+        import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js';
+        
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCtuD42SzwxKmSY5p-x5olFex2U_S9YrMk",
+            authDomain: "request-marketplace.firebaseapp.com",
+            projectId: "request-marketplace",
+            storageBucket: "request-marketplace.appspot.com",
+            messagingSenderId: "355474518888",
+            appId: "1:355474518888:web:7b3a7f6f7d7a8b0d8e8f9f"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        document.getElementById('firebase-result').innerHTML = '<span class="success">✅ Firebase initialized successfully!</span>';
+        
+        async function testCollection(collectionName, displayName, resultElementId, dataElementId) {
+            const resultEl = document.getElementById(resultElementId);
+            const dataEl = document.getElementById(dataElementId);
+            
+            try {
+                resultEl.innerHTML = '<span class="loading">🔄 Loading...</span>';
+                
+                const snapshot = await getDocs(collection(db, collectionName));
+                
+                if (snapshot.size > 0) {
+                    resultEl.innerHTML = `<span class="success">✅ Found ${snapshot.size} ${displayName.toLowerCase()}</span>`;
+                    
+                    let dataHtml = '';
+                    snapshot.forEach((doc, index) => {
+                        if (index < 5) { // Show first 5 documents
+                            const data = doc.data();
+                            const preview = JSON.stringify(data).substring(0, 100) + '...';
+                            dataHtml += `
+                                <div class="doc-item">
+                                    <strong>ID:</strong> ${doc.id}<br>
+                                    <small class="text-muted">${preview}</small>
+                                </div>
+                            `;
+                        }
+                    });
+                    dataEl.innerHTML = dataHtml;
+                } else {
+                    resultEl.innerHTML = `<span class="text-warning">⚠️ No ${displayName.toLowerCase()} found</span>`;
+                    dataEl.innerHTML = '<small class="text-muted">Collection exists but is empty</small>';
+                }
+                
+            } catch (error) {
+                resultEl.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+                dataEl.innerHTML = `<small class="text-danger">Error details: ${error.toString()}</small>`;
+            }
+        }
+        
+        async function testProducts() {
+            const productCollections = ['master_products', 'business_products', 'product_categories'];
+            const resultEl = document.getElementById('products-result');
+            const dataEl = document.getElementById('products-data');
+            
+            try {
+                resultEl.innerHTML = '<span class="loading">🔄 Checking product collections...</span>';
+                
+                let totalProducts = 0;
+                let dataHtml = '';
+                
+                for (const collectionName of productCollections) {
+                    try {
+                        const snapshot = await getDocs(collection(db, collectionName));
+                        if (snapshot.size > 0) {
+                            totalProducts += snapshot.size;
+                            dataHtml += `<div class="doc-item"><strong>${collectionName}:</strong> ${snapshot.size} items</div>`;
+                            
+                            // Show sample data from first collection with data
+                            if (dataHtml.includes('sample data') === false) {
+                                snapshot.forEach((doc, index) => {
+                                    if (index < 2) {
+                                        const data = doc.data();
+                                        const preview = JSON.stringify(data).substring(0, 80) + '...';
+                                        dataHtml += `<div class="doc-item"><small>Sample: ${doc.id} - ${preview}</small></div>`;
+                                    }
+                                });
+                            }
+                        }
+                    } catch (error) {
+                        dataHtml += `<div class="doc-item text-danger">${collectionName}: Error - ${error.message}</div>`;
+                    }
+                }
+                
+                if (totalProducts > 0) {
+                    resultEl.innerHTML = `<span class="success">✅ Found ${totalProducts} products across collections</span>`;
+                } else {
+                    resultEl.innerHTML = `<span class="text-warning">⚠️ No products found in any collection</span>`;
+                }
+                
+                dataEl.innerHTML = dataHtml;
+                
+            } catch (error) {
+                resultEl.innerHTML = `<span class="error">❌ Error testing products: ${error.message}</span>`;
+            }
+        }
+        
+        window.testAllCollections = async function() {
+            await Promise.all([
+                testCollection('users', 'Users', 'users-result', 'users-data'),
+                testCollection('requests', 'Requests', 'requests-result', 'requests-data'),
+                testCollection('businesses', 'Businesses', 'businesses-result', 'businesses-data'),
+                testProducts()
+            ]);
+        };
+        
+        // Auto-test on load
+        setTimeout(() => {
+            testAllCollections();
+        }, 1000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+# Node modules
+node_modules/
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Build outputs
+request/build/
+
+# Flutter specific
+request/.dart_tool/
+request/.packages
+request/pubspec.lock
+
+# Firebase local config
+.firebase/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Admin server logs
+admin-web-app/server.log

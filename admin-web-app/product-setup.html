@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Setup - Admin Panel</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .section h2 {
+            color: #2196F3;
+            margin-top: 0;
+        }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #1976D2;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .success {
+            background: #4CAF50;
+        }
+        .danger {
+            background: #f44336;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .data-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛍️ Product Setup - Admin Panel</h1>
+        
+        <div class="section">
+            <h2>📋 Product Categories</h2>
+            <div class="status" id="categoryStatus"></div>
+            <button onclick="checkCategories()">Check Categories</button>
+            <button onclick="createCategories()" class="success">Create Default Categories</button>
+            <button onclick="clearCategories()" class="danger">Clear All Categories</button>
+            <div id="categoriesData" class="data-display" style="display: none;"></div>
+        </div>
+
+        <div class="section">
+            <h2>🛍️ Master Products</h2>
+            <div class="status" id="productStatus"></div>
+            <button onclick="checkProducts()">Check Products</button>
+            <button onclick="createProducts()" class="success">Create Sample Products</button>
+            <button onclick="clearProducts()" class="danger">Clear All Products</button>
+            <div id="productsData" class="data-display" style="display: none;"></div>
+        </div>
+
+        <div class="section">
+            <h2>🔧 Quick Actions</h2>
+            <button onclick="setupCompleteData()" class="success">Setup Complete Data (Categories + Products)</button>
+            <button onclick="checkAllData()">Check All Data</button>
+            <button onclick="clearAllData()" class="danger">Clear All Data</button>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.21.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.21.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAw8cUNGYTBpQR6CaMZ-oWR15-_2tMqWYE",
+            authDomain: "requestmarketplace-49dab.firebaseapp.com",
+            projectId: "requestmarketplace-49dab",
+            storageBucket: "requestmarketplace-49dab.firebasestorage.app",
+            messagingSenderId: "809795033872",
+            appId: "1:809795033872:web:c5e97b9a6f2c44b21be5c7"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        function showStatus(elementId, message, isError = false) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `status ${isError ? 'error' : 'success'}`;
+            element.style.display = 'block';
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 5000);
+        }
+
+        function showData(elementId, data) {
+            const element = document.getElementById(elementId);
+            element.textContent = JSON.stringify(data, null, 2);
+            element.style.display = 'block';
+        }
+
+        async function checkCategories() {
+            try {
+                const snapshot = await db.collection('product_categories').get();
+                const categories = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                
+                showStatus('categoryStatus', `Found ${categories.length} categories`);
+                showData('categoriesData', categories);
+            } catch (error) {
+                showStatus('categoryStatus', `Error: ${error.message}`, true);
+            }
+        }
+
+        async function createCategories() {
+            try {
+                const defaultCategories = [
+                    {
+                        id: 'electronics',
+                        name: 'Electronics',
+                        description: 'Electronic devices, smartphones, computers, and accessories',
+                        icon: '📱'
+                    },
+                    {
+                        id: 'fashion',
+                        name: 'Fashion',
+                        description: 'Clothing, shoes, accessories, and fashion items',
+                        icon: '👕'
+                    },
+                    {
+                        id: 'home-garden',
+                        name: 'Home & Garden',
+                        description: 'Home improvement and gardening supplies',
+                        icon: '🏠'
+                    },
+                    {
+                        id: 'automotive',
+                        name: 'Automotive',
+                        description: 'Car parts, accessories, and automotive supplies',
+                        icon: '🚗'
+                    },
+                    {
+                        id: 'sports',
+                        name: 'Sports & Recreation',
+                        description: 'Sports equipment and recreational items',
+                        icon: '⚽'
+                    },
+                    {
+                        id: 'food',
+                        name: 'Food & Beverages',
+                        description: 'Food items, beverages, and grocery products',
+                        icon: '🍎'
+                    },
+                ];
+
+                const batch = db.batch();
+                
+                for (const categoryData of defaultCategories) {
+                    const docRef = db.collection('product_categories').doc(categoryData.id);
+                    batch.set(docRef, {
+                        name: categoryData.name,
+                        description: categoryData.description,
+                        icon: categoryData.icon,
+                        isActive: true,
+                        productCount: 0,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    });
+                }
+
+                await batch.commit();
+                showStatus('categoryStatus', `Created ${defaultCategories.length} categories successfully!`);
+                checkCategories(); // Refresh the display
+            } catch (error) {
+                showStatus('categoryStatus', `Error: ${error.message}`, true);
+            }
+        }
+
+        async function clearCategories() {
+            if (!confirm('Are you sure you want to delete all categories?')) return;
+            
+            try {
+                const snapshot = await db.collection('product_categories').get();
+                const batch = db.batch();
+                
+                snapshot.docs.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                
+                await batch.commit();
+                showStatus('categoryStatus', `Deleted ${snapshot.docs.length} categories`);
+                checkCategories(); // Refresh the display
+            } catch (error) {
+                showStatus('categoryStatus', `Error: ${error.message}`, true);
+            }
+        }
+
+        async function checkProducts() {
+            try {
+                const snapshot = await db.collection('master_products').get();
+                const products = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                
+                showStatus('productStatus', `Found ${products.length} products`);
+                showData('productsData', products);
+            } catch (error) {
+                showStatus('productStatus', `Error: ${error.message}`, true);
+            }
+        }
+
+        async function createProducts() {
+            try {
+                const sampleProducts = [
+                    {
+                        name: 'iPhone 15 Pro',
+                        description: 'Latest Apple smartphone with advanced features',
+                        categoryId: 'electronics',
+                        basePrice: 999.99,
+                        unit: 'piece',
+                        brand: 'Apple'
+                    },
+                    {
+                        name: 'Samsung Galaxy S24',
+                        description: 'Premium Android smartphone',
+                        categoryId: 'electronics',
+                        basePrice: 899.99,
+                        unit: 'piece',
+                        brand: 'Samsung'
+                    },
+                    {
+                        name: 'Nike Air Max',
+                        description: 'Comfortable running shoes',
+                        categoryId: 'fashion',
+                        basePrice: 129.99,
+                        unit: 'pair',
+                        brand: 'Nike'
+                    },
+                    {
+                        name: 'Office Chair',
+                        description: 'Ergonomic office chair for work',
+                        categoryId: 'home-garden',
+                        basePrice: 199.99,
+                        unit: 'piece',
+                        brand: 'Generic'
+                    },
+                    {
+                        name: 'Soccer Ball',
+                        description: 'Official size soccer ball',
+                        categoryId: 'sports',
+                        basePrice: 29.99,
+                        unit: 'piece',
+                        brand: 'Adidas'
+                    },
+                    {
+                        name: 'Organic Apples',
+                        description: 'Fresh organic apples',
+                        categoryId: 'food',
+                        basePrice: 4.99,
+                        unit: 'lb',
+                        brand: 'Local Farm'
+                    },
+                ];
+
+                const batch = db.batch();
+                
+                for (const productData of sampleProducts) {
+                    const docRef = db.collection('master_products').doc();
+                    batch.set(docRef, {
+                        ...productData,
+                        isActive: true,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    });
+                }
+
+                await batch.commit();
+                showStatus('productStatus', `Created ${sampleProducts.length} products successfully!`);
+                checkProducts(); // Refresh the display
+            } catch (error) {
+                showStatus('productStatus', `Error: ${error.message}`, true);
+            }
+        }
+
+        async function clearProducts() {
+            if (!confirm('Are you sure you want to delete all products?')) return;
+            
+            try {
+                const snapshot = await db.collection('master_products').get();
+                const batch = db.batch();
+                
+                snapshot.docs.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                
+                await batch.commit();
+                showStatus('productStatus', `Deleted ${snapshot.docs.length} products`);
+                checkProducts(); // Refresh the display
+            } catch (error) {
+                showStatus('productStatus', `Error: ${error.message}`, true);
+            }
+        }
+
+        async function setupCompleteData() {
+            try {
+                showStatus('categoryStatus', 'Creating categories...');
+                await createCategories();
+                
+                showStatus('productStatus', 'Creating products...');
+                await createProducts();
+                
+                showStatus('categoryStatus', 'Complete setup finished successfully!');
+                showStatus('productStatus', 'Complete setup finished successfully!');
+            } catch (error) {
+                showStatus('categoryStatus', `Setup failed: ${error.message}`, true);
+                showStatus('productStatus', `Setup failed: ${error.message}`, true);
+            }
+        }
+
+        async function checkAllData() {
+            await checkCategories();
+            await checkProducts();
+        }
+
+        async function clearAllData() {
+            if (!confirm('Are you sure you want to delete ALL categories and products?')) return;
+            
+            await clearCategories();
+            await clearProducts();
+        }
+
+        // Load data on page load
+        window.addEventListener('load', () => {
+            checkAllData();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Request Marketplace - Admin Dashboard</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem 0;
+            margin-bottom: 3rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .admin-card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border: none;
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+        
+        .admin-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+        }
+        
+        .admin-card .card-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin: 0 auto 1.5rem;
+            color: white;
+        }
+        
+        .driver-card .card-icon {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .business-card .card-icon {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .stats-card .card-icon {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        .settings-card .card-icon {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #333 !important;
+        }
+        
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #333;
+        }
+        
+        .card-description {
+            color: #666;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+        
+        .stat-value {
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        
+        .quick-actions {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .recent-activity {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .activity-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+        
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .activity-new {
+            background-color: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .activity-approved {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+        }
+        
+        .activity-rejected {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        
+        .loading-spinner {
+            text-align: center;
+            padding: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <div class="text-center">
+                <h1 class="mb-3">
+                    <i class="fas fa-tachometer-alt me-3"></i>
+                    Admin Dashboard
+                </h1>
+                <p class="mb-0 opacity-75 fs-5">Request Marketplace Management Center</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <h3 class="mb-3">
+                <i class="fas fa-bolt me-2 text-warning"></i>
+                Quick Actions
+            </h3>
+            <div class="row">
+                <div class="col-md-3 mb-2">
+                    <button class="btn btn-outline-primary w-100" onclick="refreshAllData()">
+                        <i class="fas fa-sync-alt me-2"></i>Refresh Data
+                    </button>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <button class="btn btn-outline-success w-100" onclick="exportReport()">
+                        <i class="fas fa-download me-2"></i>Export Report
+                    </button>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <button class="btn btn-outline-info w-100" onclick="viewAnalytics()">
+                        <i class="fas fa-chart-line me-2"></i>Analytics
+                    </button>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <button class="btn btn-outline-secondary w-100" onclick="viewLogs()">
+                        <i class="fas fa-list-alt me-2"></i>System Logs
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Admin Cards -->
+        <div class="row mb-4">
+            <div class="col-lg-6 mb-4">
+                <div class="admin-card driver-card">
+                    <div class="card-icon">
+                        <i class="fas fa-car"></i>
+                    </div>
+                    <h3 class="card-title text-center">Driver Verification</h3>
+                    <p class="card-description text-center">
+                        Review and approve driver verification requests. Manage driver documents, licenses, and vehicle information.
+                    </p>
+                    <div id="driverStats" class="mb-3">
+                        <div class="loading-spinner">
+                            <div class="spinner-border spinner-border-sm" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <a href="driver-verification-admin.html" class="btn btn-primary">
+                            <i class="fas fa-arrow-right me-2"></i>Manage Drivers
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-6 mb-4">
+                <div class="admin-card business-card">
+                    <div class="card-icon">
+                        <i class="fas fa-building"></i>
+                    </div>
+                    <h3 class="card-title text-center">Business Verification</h3>
+                    <p class="card-description text-center">
+                        Review and approve business verification requests. Manage business registrations, tax documents, and licenses.
+                    </p>
+                    <div id="businessStats" class="mb-3">
+                        <div class="loading-spinner">
+                            <div class="spinner-border spinner-border-sm" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <a href="business-verification-admin.html" class="btn btn-primary">
+                            <i class="fas fa-arrow-right me-2"></i>Manage Businesses
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-lg-6 mb-4">
+                <div class="admin-card stats-card">
+                    <div class="card-icon">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <h3 class="card-title text-center">Platform Statistics</h3>
+                    <p class="card-description text-center">
+                        View overall platform metrics, user activity, and system performance data.
+                    </p>
+                    <div id="platformStats" class="mb-3">
+                        <div class="loading-spinner">
+                            <div class="spinner-border spinner-border-sm" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <button class="btn btn-primary" onclick="viewDetailedStats()">
+                            <i class="fas fa-eye me-2"></i>View Details
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-6 mb-4">
+                <div class="admin-card settings-card">
+                    <div class="card-icon">
+                        <i class="fas fa-cogs"></i>
+                    </div>
+                    <h3 class="card-title text-center">System Management</h3>
+                    <p class="card-description text-center">
+                        Access system settings, manage categories, configure Firebase rules, and system maintenance.
+                    </p>
+                    <div class="mb-3">
+                        <div class="stat-item">
+                            <span>Database Status:</span>
+                            <span class="stat-value text-success" id="dbStatus">Online</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>Storage Status:</span>
+                            <span class="stat-value text-success" id="storageStatus">Online</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>Last Backup:</span>
+                            <span class="stat-value" id="lastBackup">Loading...</span>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-tools me-2"></i>System Tools
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="ultimate-categories-fix.html"><i class="fas fa-tags me-2"></i>Manage Categories</a></li>
+                            <li><a class="dropdown-item" href="complete-database-reset.html"><i class="fas fa-database me-2"></i>Database Tools</a></li>
+                            <li><a class="dropdown-item" href="firestore-diagnostic.html"><i class="fas fa-stethoscope me-2"></i>Diagnostics</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="enhanced-product-admin.html"><i class="fas fa-box me-2"></i>Product Management</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="recent-activity">
+            <h3 class="mb-3">
+                <i class="fas fa-clock me-2 text-info"></i>
+                Recent Activity
+            </h3>
+            <div id="recentActivity">
+                <div class="loading-spinner">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading recent activity...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCtuD42SzwxKmSY5p-x5olFex2U_S9YrMk",
+            authDomain: "request-marketplace.firebaseapp.com",
+            projectId: "request-marketplace",
+            storageBucket: "request-marketplace.firebasestorage.app",
+            messagingSenderId: "355474518888",
+            appId: "1:355474518888:android:27570ce58b7a8346b91cdd"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        let driverStats = { pending: 0, approved: 0, rejected: 0, total: 0 };
+        let businessStats = { pending: 0, approved: 0, rejected: 0, total: 0 };
+        let platformStats = { users: 0, requests: 0, responses: 0 };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboardData();
+            loadRecentActivity();
+            
+            // Update system status
+            document.getElementById('lastBackup').textContent = 'Never';
+        });
+
+        async function loadDashboardData() {
+            try {
+                // Load driver verification stats
+                const driverSnapshot = await db.collection('new_driver_verifications').get();
+                driverStats.total = driverSnapshot.size;
+                driverStats.pending = 0;
+                driverStats.approved = 0;
+                driverStats.rejected = 0;
+
+                driverSnapshot.forEach(doc => {
+                    const status = doc.data().status || 'pending';
+                    driverStats[status]++;
+                });
+
+                updateDriverStatsDisplay();
+
+                // Load business verification stats
+                const businessSnapshot = await db.collection('new_business_verifications').get();
+                businessStats.total = businessSnapshot.size;
+                businessStats.pending = 0;
+                businessStats.approved = 0;
+                businessStats.rejected = 0;
+
+                businessSnapshot.forEach(doc => {
+                    const status = doc.data().status || 'pending';
+                    businessStats[status]++;
+                });
+
+                updateBusinessStatsDisplay();
+
+                // Load platform stats
+                const usersSnapshot = await db.collection('users').get();
+                platformStats.users = usersSnapshot.size;
+
+                try {
+                    const requestsSnapshot = await db.collection('requests').get();
+                    platformStats.requests = requestsSnapshot.size;
+                } catch (e) {
+                    platformStats.requests = 0;
+                }
+
+                try {
+                    const responsesSnapshot = await db.collection('responses').get();
+                    platformStats.responses = responsesSnapshot.size;
+                } catch (e) {
+                    platformStats.responses = 0;
+                }
+
+                updatePlatformStatsDisplay();
+
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+            }
+        }
+
+        function updateDriverStatsDisplay() {
+            document.getElementById('driverStats').innerHTML = `
+                <div class="stat-item">
+                    <span>Pending Review:</span>
+                    <span class="stat-value text-warning">${driverStats.pending}</span>
+                </div>
+                <div class="stat-item">
+                    <span>Approved:</span>
+                    <span class="stat-value text-success">${driverStats.approved}</span>
+                </div>
+                <div class="stat-item">
+                    <span>Rejected:</span>
+                    <span class="stat-value text-danger">${driverStats.rejected}</span>
+                </div>
+                <div class="stat-item">
+                    <span>Total Requests:</span>
+                    <span class="stat-value text-info">${driverStats.total}</span>
+                </div>
+            `;
+        }
+
+        function updateBusinessStatsDisplay() {
+            document.getElementById('businessStats').innerHTML = `
+                <div class="stat-item">
+                    <span>Pending Review:</span>
+                    <span class="stat-value text-warning">${businessStats.pending}</span>
+                </div>
+                <div class="stat-item">
+                    <span>Approved:</span>
+                    <span class="stat-value text-success">${businessStats.approved}</span>
+                </div>
+                <div class="stat-item">
+                    <span>Rejected:</span>
+                    <span class="stat-value text-danger">${businessStats.rejected}</span>
+                </div>
+                <div class="stat-item">
+                    <span>Total Requests:</span>
+                    <span class="stat-value text-info">${businessStats.total}</span>
+                </div>
+            `;
+        }
+
+        function updatePlatformStatsDisplay() {
+            document.getElementById('platformStats').innerHTML = `
+                <div class="stat-item">
+                    <span>Total Users:</span>
+                    <span class="stat-value text-primary">${platformStats.users}</span>
+                </div>
+                <div class="stat-item">
+                    <span>Active Requests:</span>
+                    <span class="stat-value text-info">${platformStats.requests}</span>
+                </div>
+                <div class="stat-item">
+                    <span>Total Responses:</span>
+                    <span class="stat-value text-success">${platformStats.responses}</span>
+                </div>
+                <div class="stat-item">
+                    <span>Verification Rate:</span>
+                    <span class="stat-value text-warning">${calculateVerificationRate()}%</span>
+                </div>
+            `;
+        }
+
+        function calculateVerificationRate() {
+            const totalVerificationRequests = driverStats.total + businessStats.total;
+            const totalApproved = driverStats.approved + businessStats.approved;
+            
+            if (totalVerificationRequests === 0) return 0;
+            return Math.round((totalApproved / totalVerificationRequests) * 100);
+        }
+
+        async function loadRecentActivity() {
+            try {
+                const activities = [];
+                
+                // Get recent driver verifications
+                const driverSnapshot = await db.collection('new_driver_verifications')
+                    .orderBy('updatedAt', 'desc')
+                    .limit(5)
+                    .get();
+                
+                driverSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    activities.push({
+                        type: 'driver',
+                        action: data.status || 'pending',
+                        name: data.name || 'Unknown Driver',
+                        timestamp: data.updatedAt?.toDate() || new Date(),
+                        description: `Driver verification ${data.status || 'submitted'}`
+                    });
+                });
+
+                // Get recent business verifications
+                const businessSnapshot = await db.collection('new_business_verifications')
+                    .orderBy('updatedAt', 'desc')
+                    .limit(5)
+                    .get();
+                
+                businessSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    activities.push({
+                        type: 'business',
+                        action: data.status || 'pending',
+                        name: data.businessName || 'Unknown Business',
+                        timestamp: data.updatedAt?.toDate() || new Date(),
+                        description: `Business verification ${data.status || 'submitted'}`
+                    });
+                });
+
+                // Sort by timestamp
+                activities.sort((a, b) => b.timestamp - a.timestamp);
+
+                displayRecentActivity(activities.slice(0, 8));
+
+            } catch (error) {
+                console.error('Error loading recent activity:', error);
+                document.getElementById('recentActivity').innerHTML = `
+                    <div class="text-center text-muted">
+                        <i class="fas fa-exclamation-triangle mb-2"></i>
+                        <p>Unable to load recent activity</p>
+                    </div>
+                `;
+            }
+        }
+
+        function displayRecentActivity(activities) {
+            if (activities.length === 0) {
+                document.getElementById('recentActivity').innerHTML = `
+                    <div class="text-center text-muted">
+                        <i class="fas fa-inbox mb-2"></i>
+                        <p>No recent activity found</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const html = activities.map(activity => {
+                const iconClass = activity.type === 'driver' ? 'fas fa-car' : 'fas fa-building';
+                const statusClass = `activity-${activity.action}`;
+                
+                return `
+                    <div class="activity-item">
+                        <div class="activity-icon ${statusClass}">
+                            <i class="${iconClass}"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">${activity.name}</h6>
+                            <p class="mb-1 text-muted">${activity.description}</p>
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i>
+                                ${formatTimestamp(activity.timestamp)}
+                            </small>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('recentActivity').innerHTML = html;
+        }
+
+        function formatTimestamp(timestamp) {
+            const now = new Date();
+            const diff = now - timestamp;
+            
+            if (diff < 60000) { // Less than 1 minute
+                return 'Just now';
+            } else if (diff < 3600000) { // Less than 1 hour
+                return `${Math.floor(diff / 60000)} minutes ago`;
+            } else if (diff < 86400000) { // Less than 1 day
+                return `${Math.floor(diff / 3600000)} hours ago`;
+            } else {
+                return timestamp.toLocaleDateString();
+            }
+        }
+
+        // Action functions
+        function refreshAllData() {
+            loadDashboardData();
+            loadRecentActivity();
+        }
+
+        function exportReport() {
+            const report = {
+                generatedAt: new Date().toISOString(),
+                driverStats: driverStats,
+                businessStats: businessStats,
+                platformStats: platformStats
+            };
+            
+            const dataStr = JSON.stringify(report, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = `admin-report-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+        }
+
+        function viewAnalytics() {
+            alert('Analytics feature coming soon! This will show detailed charts and metrics.');
+        }
+
+        function viewLogs() {
+            alert('System logs feature coming soon! This will show system activity and error logs.');
+        }
+
+        function viewDetailedStats() {
+            alert(`Platform Statistics:
+            
+Total Users: ${platformStats.users}
+Active Requests: ${platformStats.requests}
+Total Responses: ${platformStats.responses}
+
+Driver Verifications:
+- Pending: ${driverStats.pending}
+- Approved: ${driverStats.approved}
+- Rejected: ${driverStats.rejected}
+
+Business Verifications:
+- Pending: ${businessStats.pending}
+- Approved: ${businessStats.approved}
+- Rejected: ${businessStats.rejected}`);
+        }
+    </script>
+</body>
+</html>

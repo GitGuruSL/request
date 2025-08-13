@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimal Function Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="card">
+            <div class="card-header">
+                <h3>🧪 Minimal Function Test</h3>
+            </div>
+            <div class="card-body">
+                <h5>Test Navigation:</h5>
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <button class="btn btn-primary w-100" onclick="showSection('dashboard')">
+                            Dashboard
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-secondary w-100" onclick="showSection('users')">
+                            Users
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-success w-100" onclick="approveDocument('test', 'photo', 'drivers')">
+                            Test Approve
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-warning w-100" onclick="viewDriver('test123')">
+                            Test View Driver
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="output" class="alert alert-info">
+                    Click buttons above to test functions...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simple, clean function definitions
+        window.showSection = function(sectionName) {
+            document.getElementById('output').innerHTML = 
+                `✅ showSection called with: ${sectionName} at ${new Date().toLocaleTimeString()}`;
+            console.log('showSection called:', sectionName);
+        };
+        
+        window.approveDocument = function(driverId, documentType, collectionName) {
+            document.getElementById('output').innerHTML = 
+                `✅ approveDocument called with: driver=${driverId}, doc=${documentType}, collection=${collectionName} at ${new Date().toLocaleTimeString()}`;
+            console.log('approveDocument called:', driverId, documentType, collectionName);
+        };
+        
+        window.rejectDocument = function(driverId, documentType, collectionName) {
+            document.getElementById('output').innerHTML = 
+                `✅ rejectDocument called with: driver=${driverId}, doc=${documentType}, collection=${collectionName} at ${new Date().toLocaleTimeString()}`;
+            console.log('rejectDocument called:', driverId, documentType, collectionName);
+        };
+        
+        window.viewDriver = function(driverId) {
+            document.getElementById('output').innerHTML = 
+                `✅ viewDriver called with: ${driverId} at ${new Date().toLocaleTimeString()}`;
+            console.log('viewDriver called:', driverId);
+        };
+        
+        // Test on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('output').innerHTML = '🚀 Functions loaded successfully! Try clicking the buttons.';
+            console.log('✅ All functions defined successfully');
+            console.log('showSection type:', typeof window.showSection);
+            console.log('approveDocument type:', typeof window.approveDocument);
+            console.log('rejectDocument type:', typeof window.rejectDocument);
+            console.log('viewDriver type:', typeof window.viewDriver);
+        });
+    </script>
+</body>
+</html>

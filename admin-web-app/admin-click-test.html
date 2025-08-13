@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel Click Test</title>
+    <script>
+        function testAdminPanelFunctions() {
+            // Test if functions are available in the admin panel
+            if (window.parent && window.parent.showSection) {
+                console.log('✅ Parent window showSection available');
+                return true;
+            }
+            
+            // Try to load the admin panel and test functions
+            const adminWindow = window.open('complete-admin.html', 'adminPanel');
+            
+            setTimeout(() => {
+                try {
+                    if (adminWindow.showSection) {
+                        console.log('✅ Admin panel showSection is working');
+                        adminWindow.showSection('drivers');
+                    } else {
+                        console.log('❌ Admin panel showSection not found');
+                    }
+                    
+                    if (adminWindow.approveDocument) {
+                        console.log('✅ Admin panel approveDocument is working');
+                    } else {
+                        console.log('❌ Admin panel approveDocument not found');
+                    }
+                    
+                    if (adminWindow.rejectDocument) {
+                        console.log('✅ Admin panel rejectDocument is working');  
+                    } else {
+                        console.log('❌ Admin panel rejectDocument not found');
+                    }
+                } catch (e) {
+                    console.log('❌ Error accessing admin panel functions:', e.message);
+                }
+            }, 2000);
+        }
+    </script>
+</head>
+<body>
+    <h1>Admin Panel Click Test</h1>
+    <button onclick="testAdminPanelFunctions()">Test Admin Panel Functions</button>
+    <p><a href="complete-admin.html" target="_blank">Open Admin Panel Directly</a></p>
+    
+    <div>
+        <h3>Quick Click Test Buttons</h3>
+        <p>These buttons should work if the functions are global:</p>
+        <button onclick="if(window.showSection) { window.showSection('drivers'); alert('showSection called!'); } else { alert('showSection not found'); }">
+            Test showSection
+        </button>
+        
+        <button onclick="if(window.approveDocument) { alert('approveDocument function found!'); } else { alert('approveDocument not found'); }">
+            Test approveDocument
+        </button>
+        
+        <button onclick="if(window.rejectDocument) { alert('rejectDocument function found!'); } else { alert('rejectDocument not found'); }">
+            Test rejectDocument
+        </button>
+    </div>
+
+    <script>
+        // Check if functions exist on page load
+        window.onload = function() {
+            console.log('🔍 Checking for global functions...');
+            console.log('showSection:', typeof window.showSection);
+            console.log('approveDocument:', typeof window.approveDocument);  
+            console.log('rejectDocument:', typeof window.rejectDocument);
+        };
+    </script>
+</body>
+</html>

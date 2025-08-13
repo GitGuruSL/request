@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Product Variables - Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .loading {
+            display: none;
+        }
+        .result {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>🔧 Add Sample Product Variables</h3>
+                        <p class="mb-0">This will create sample product variables for the business product pricing system.</p>
+                    </div>
+                    <div class="card-body">
+                        <button id="addVariablesBtn" class="btn btn-primary btn-lg w-100">
+                            <i class="fas fa-plus"></i> Add Sample Product Variables
+                        </button>
+                        
+                        <div id="loading" class="loading text-center">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <p class="mt-2">Adding product variables...</p>
+                        </div>
+                        
+                        <div id="result" class="result"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+        import { getFirestore, collection, addDoc, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC2gGhKvK3zH2DhUZTYGsGE46LfvlU_jq4",
+            authDomain: "request-marketplace.firebaseapp.com",
+            databaseURL: "https://request-marketplace-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "request-marketplace",
+            storageBucket: "request-marketplace.firebasestorage.app",
+            messagingSenderId: "1029460788094",
+            appId: "1:1029460788094:web:8c92e70ab3b3b4a2ba6c2e",
+            measurementId: "G-0C3MQT2YNJ"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const sampleVariables = [
+            {
+                name: 'Color',
+                type: 'dropdown',
+                options: ['Red', 'Blue', 'Green', 'Black', 'White', 'Yellow', 'Purple', 'Orange'],
+                required: false,
+                description: 'Product color selection',
+                isActive: true
+            },
+            {
+                name: 'Size',
+                type: 'dropdown',
+                options: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+                required: false,
+                description: 'Product size selection',
+                isActive: true
+            },
+            {
+                name: 'Material',
+                type: 'dropdown',
+                options: ['Cotton', 'Polyester', 'Leather', 'Plastic', 'Metal', 'Wood', 'Glass'],
+                required: false,
+                description: 'Product material type',
+                isActive: true
+            },
+            {
+                name: 'Brand',
+                type: 'text',
+                required: false,
+                description: 'Product brand name',
+                isActive: true
+            },
+            {
+                name: 'Model',
+                type: 'text',
+                required: false,
+                description: 'Product model number or name',
+                isActive: true
+            },
+            {
+                name: 'Capacity',
+                type: 'dropdown',
+                options: ['1GB', '2GB', '4GB', '8GB', '16GB', '32GB', '64GB', '128GB', '256GB', '512GB', '1TB'],
+                required: false,
+                description: 'Storage or memory capacity',
+                isActive: true
+            },
+            {
+                name: 'Weight',
+                type: 'text',
+                required: false,
+                description: 'Product weight (e.g., 2.5kg)',
+                isActive: true
+            },
+            {
+                name: 'Condition',
+                type: 'dropdown',
+                options: ['Brand New', 'Like New', 'Good', 'Fair', 'Used'],
+                required: true,
+                description: 'Product condition status',
+                isActive: true
+            }
+        ];
+
+        async function addSampleVariables() {
+            const addVariablesBtn = document.getElementById('addVariablesBtn');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+
+            addVariablesBtn.style.display = 'none';
+            loading.style.display = 'block';
+            result.innerHTML = '';
+
+            try {
+                let added = 0;
+                let skipped = 0;
+
+                for (const variable of sampleVariables) {
+                    // Check if variable already exists
+                    const existingQuery = query(
+                        collection(db, 'productVariables'),
+                        where('name', '==', variable.name)
+                    );
+                    const existingDocs = await getDocs(existingQuery);
+
+                    if (existingDocs.empty) {
+                        await addDoc(collection(db, 'productVariables'), variable);
+                        added++;
+                        console.log(`✅ Added variable: ${variable.name}`);
+                    } else {
+                        skipped++;
+                        console.log(`⚠️ Skipped existing variable: ${variable.name}`);
+                    }
+                }
+
+                loading.style.display = 'none';
+                result.innerHTML = `
+                    <div class="alert alert-success">
+                        <h5>✅ Product Variables Added Successfully!</h5>
+                        <p><strong>Added:</strong> ${added} new variables</p>
+                        <p><strong>Skipped:</strong> ${skipped} existing variables</p>
+                        <hr>
+                        <p class="mb-0">The variables system is now ready for use in the mobile app!</p>
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error('Error adding variables:', error);
+                loading.style.display = 'none';
+                result.innerHTML = `
+                    <div class="alert alert-danger">
+                        <h5>❌ Error Adding Variables</h5>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+
+            addVariablesBtn.style.display = 'block';
+        }
+
+        document.getElementById('addVariablesBtn').addEventListener('click', addSampleVariables);
+    </script>
+</body>
+</html>

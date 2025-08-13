@@ -1,0 +1,591 @@
+import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../models/master_product.dart';
+import '../../models/price_listing.dart';
+import '../../services/pricing_service.dart';
+import '../../services/enhanced_user_service.dart';
+import '../../theme/app_theme.dart';
+import 'add_price_listing_screen.dart';
+import 'business_profile_modal.dart';
+
+class PriceComparisonScreen extends StatefulWidget {
+  final MasterProduct product;
+
+  const PriceComparisonScreen({
+    super.key,
+    required this.product,
+  });
+
+  @override
+  State<PriceComparisonScreen> createState() => _PriceComparisonScreenState();
+}
+
+class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
+  final PricingService _pricingService = PricingService();
+  final EnhancedUserService _userService = EnhancedUserService();
+  
+  List<PriceListing> _priceListings = [];
+  bool _isLoading = true;
+  bool _canAddListing = false;
+  String? _currentUserId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    print('DEBUG: Loading price comparison data for product: ${widget.product.name}');
+    try {
+      final userId = _userService.currentUser?.uid;
+      if (userId != null) {
+        _currentUserId = userId;
+        print('DEBUG: Checking if user can add listing...');
+        final canAdd = await _pricingService.isBusinessEligibleForPricing(userId);
+        print('DEBUG: User can add listing: $canAdd');
+        setState(() => _canAddListing = canAdd);
+      }
+
+      print('DEBUG: Starting to listen for price listings...');
+      _pricingService.getPriceListingsForProduct(widget.product.id).listen((listings) {
+        print('DEBUG: Received ${listings.length} price listings');
+        if (mounted) {
+          setState(() {
+            _priceListings = listings;
+            _isLoading = false;
+          });
+        }
+      }, onError: (error) {
+        print('DEBUG: Error in price listings stream: $error');
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error loading price listings: $error')),
+          );
+        }
+      });
+
+      // Add timeout to prevent infinite loading
+      Future.delayed(const Duration(seconds: 10), () {
+        if (mounted && _isLoading) {
+          print('DEBUG: Timeout reached, stopping loading');
+          setState(() => _isLoading = false);
+        }
+      });
+    } catch (e) {
+      print('DEBUG: Exception in _loadData: $e');
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading data: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _trackAndLaunchUrl(String url, PriceListing listing) async {
+    if (_currentUserId != null) {
+      await _pricingService.trackProductClick(
+        listingId: listing.id,
+        businessId: listing.businessId,
+        masterProductId: listing.masterProductId,
+        userId: _currentUserId!,
+      );
+    }
+
+    final uri = Uri.parse(url.startsWith('http') ? url : 'https://$url');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open the link')),
+        );
+      }
+    }
+  }
+
+  Future<void> _launchWhatsApp(String number, String productName) async {
+    final message = Uri.encodeComponent('Hi! I\'m interested in $productName');
+    final whatsappUrl = 'https://wa.me/$number?text=$message';
+    
+    final uri = Uri.parse(whatsappUrl);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open WhatsApp')),
+        );
+      }
+    }
+  }
+
+  void _showBusinessProfile(String businessId) {
+    showDialog(
+      context: context,
+      builder: (context) => BusinessProfileModal(businessId: businessId),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      appBar: AppBar(
+        backgroundColor: AppTheme.primaryColor,
+        foregroundColor: Colors.white,
+        title: Text(widget.product.name),
+        elevation: 0,
+        actions: [
+          if (_canAddListing)
+            IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: () => _navigateToAddListing(),
+            ),
+        ],
+      ),
+      body: Column(
+        children: [
+          _buildProductHeader(),
+          Expanded(child: _buildPriceListings()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductHeader() {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              // Product image
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.grey[100],
+                ),
+                child: widget.product.images.isNotEmpty
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          widget.product.images.first,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              Icon(Icons.image, color: Colors.grey[400]),
+                        ),
+                      )
+                    : Icon(Icons.image, color: Colors.grey[400]),
+              ),
+              
+              const SizedBox(width: 16),
+              
+              // Product info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.product.name,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.product.brand,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${widget.product.category} • ${widget.product.subcategory}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          
+          if (widget.product.description.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              widget.product.description,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[700],
+              ),
+            ),
+          ],
+          
+          const SizedBox(height: 16),
+          
+          // Stats
+          Row(
+            children: [
+              _buildStatChip(
+                icon: Icons.store,
+                label: '${_priceListings.length} sellers',
+                color: AppTheme.primaryColor,
+              ),
+              const SizedBox(width: 8),
+              if (_priceListings.isNotEmpty)
+                _buildStatChip(
+                  icon: Icons.trending_down,
+                  label: 'From LKR ${_getMinPrice().toStringAsFixed(2)}',
+                  color: Colors.green,
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatChip({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: color,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPriceListings() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_priceListings.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.price_check_outlined,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No prices listed yet',
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Be the first to list your price for this product',
+              style: TextStyle(color: Colors.grey[500]),
+            ),
+            if (_canAddListing) ...[
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () => _navigateToAddListing(),
+                icon: const Icon(Icons.add),
+                label: const Text('Add Price'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _priceListings.length,
+      itemBuilder: (context, index) {
+        return _buildPriceListingCard(_priceListings[index], index);
+      },
+    );
+  }
+
+  Widget _buildPriceListingCard(PriceListing listing, int index) {
+    final isLowest = index == 0;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: isLowest ? 4 : 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: isLowest 
+            ? const BorderSide(color: Colors.green, width: 1)
+            : BorderSide.none,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header with business info and price
+            Row(
+              children: [
+                // Business logo
+                GestureDetector(
+                  onTap: () => _showBusinessProfile(listing.businessId),
+                  child: CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Colors.grey[100],
+                    child: listing.businessLogo.isNotEmpty
+                        ? ClipOval(
+                            child: Image.network(
+                              listing.businessLogo,
+                              width: 40,
+                              height: 40,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Text(listing.businessName[0].toUpperCase()),
+                            ),
+                          )
+                        : Text(listing.businessName[0].toUpperCase()),
+                  ),
+                ),
+                
+                const SizedBox(width: 12),
+                
+                // Business name
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      GestureDetector(
+                        onTap: () => _showBusinessProfile(listing.businessId),
+                        child: Text(
+                          listing.businessName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      if (listing.rating > 0)
+                        Row(
+                          children: [
+                            Icon(Icons.star, size: 14, color: Colors.orange[600]),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${listing.rating.toStringAsFixed(1)} (${listing.reviewCount})',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
+                
+                // Price and badge
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '${listing.currency} ${listing.price.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryColor,
+                      ),
+                    ),
+                    if (isLowest)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Text(
+                          'BEST PRICE',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+            
+            // Product variables
+            if (listing.selectedVariables.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: listing.selectedVariables.entries
+                    .map((entry) => Chip(
+                          label: Text('${entry.key}: ${entry.value}'),
+                          backgroundColor: Colors.grey[100],
+                          labelStyle: const TextStyle(fontSize: 12),
+                        ))
+                    .toList(),
+              ),
+            ],
+            
+            // Product images
+            if (listing.productImages.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 60,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: listing.productImages.length,
+                  itemBuilder: (context, imageIndex) {
+                    return Container(
+                      width: 60,
+                      height: 60,
+                      margin: const EdgeInsets.only(right: 8),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.grey[100],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          listing.productImages[imageIndex],
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              Icon(Icons.image, color: Colors.grey[400]),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+            
+            // Stock info
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(
+                  listing.stockQuantity > 0 ? Icons.check_circle : Icons.info,
+                  size: 16,
+                  color: listing.stockQuantity > 0 ? Colors.green : Colors.orange,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  listing.stockQuantity > 0
+                      ? 'Stock: ${listing.stockQuantity}'
+                      : 'Contact for availability',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const Spacer(),
+                if (listing.clickCount > 0)
+                  Text(
+                    '${listing.clickCount} clicks',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+              ],
+            ),
+            
+            // Action buttons
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                // Contact WhatsApp
+                if (listing.whatsappNumber?.isNotEmpty == true)
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _launchWhatsApp(
+                        listing.whatsappNumber!,
+                        listing.productName,
+                      ),
+                      icon: const Icon(Icons.message, size: 16),
+                      label: const Text('WhatsApp'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.green,
+                        side: const BorderSide(color: Colors.green),
+                      ),
+                    ),
+                  ),
+                
+                if (listing.whatsappNumber?.isNotEmpty == true && 
+                    listing.productLink?.isNotEmpty == true)
+                  const SizedBox(width: 8),
+                
+                // Visit store
+                if (listing.productLink?.isNotEmpty == true)
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _trackAndLaunchUrl(listing.productLink!, listing),
+                      icon: const Icon(Icons.open_in_new, size: 16),
+                      label: const Text('Visit Store'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  double _getMinPrice() {
+    if (_priceListings.isEmpty) return 0.0;
+    return _priceListings.map((l) => l.price).reduce((a, b) => a < b ? a : b);
+  }
+
+  void _navigateToAddListing() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => AddPriceListingScreen(
+          masterProduct: widget.product,
+        ),
+      ),
+    );
+  }
+}

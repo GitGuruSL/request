@@ -1,0 +1,30 @@
+rules_version = '2';
+
+// Enhanced storage rules for admin panel access
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow public read access to driver documents and vehicle images
+    // This enables the admin panel to display images without authentication issues
+    match /drivers/{userId}/{allPaths=**} {
+      allow read: if true; // Public read access for admin panel
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow public read access to driver documents
+    match /driver_documents/{userId}/{allPaths=**} {
+      allow read: if true; // Public read access for admin panel
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow admin access to product images
+    match /products/{allPaths=**} {
+      allow read: if true; // Public read access for product images
+      allow write: if true; // Allow admin panel to upload product images
+    }
+    
+    // Default rule for other paths
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

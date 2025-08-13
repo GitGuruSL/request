@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel Click Events Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+        .error { color: red; font-weight: bold; }
+        .success { color: green; font-weight: bold; }
+        .info { color: blue; }
+        button { margin: 5px; padding: 8px 12px; }
+        .btn-success { background: green; color: white; border: none; }
+        .btn-danger { background: red; color: white; border: none; }
+        .btn-info { background: blue; color: white; border: none; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Admin Panel Click Events Debugging</h1>
+
+    <div class="debug-section">
+        <h3>🔍 Issue Analysis</h3>
+        <p>The click events in the admin panel are not working. Let's debug this step by step:</p>
+        <ol>
+            <li><strong>Check if functions exist</strong> - Are approveDocument/rejectDocument defined?</li>
+            <li><strong>Check for JavaScript errors</strong> - Any console errors preventing execution?</li>
+            <li><strong>Check event binding</strong> - Are onclick events properly attached?</li>
+            <li><strong>Check Firebase connection</strong> - Is the database connection working?</li>
+        </ol>
+    </div>
+
+    <div class="debug-section">
+        <h3>🧪 Test Click Events</h3>
+        <p>These buttons simulate the admin panel buttons:</p>
+        
+        <button class="btn-success" onclick="testApproveDocument()">
+            <i class="fas fa-check"></i> Test Approve Document
+        </button>
+        
+        <button class="btn-danger" onclick="testRejectDocument()">
+            <i class="fas fa-times"></i> Test Reject Document
+        </button>
+        
+        <button class="btn-info" onclick="testViewImage()">
+            <i class="fas fa-eye"></i> Test View Image
+        </button>
+        
+        <div id="testResults" style="margin-top: 10px;"></div>
+    </div>
+
+    <div class="debug-section">
+        <h3>📋 JavaScript Console Commands</h3>
+        <p>Open the browser console (F12) and run these commands in the admin panel:</p>
+        
+        <pre style="background: #f5f5f5; padding: 10px; border-radius: 4px;">
+// 1. Check if functions are defined
+console.log('approveDocument function:', typeof approveDocument);
+console.log('rejectDocument function:', typeof rejectDocument);
+
+// 2. Check Firebase connection
+console.log('Firebase db:', typeof db);
+console.log('Firebase auth:', typeof auth);
+
+// 3. Test function calls directly
+if (typeof approveDocument === 'function') {
+    console.log('✅ approveDocument function is available');
+} else {
+    console.error('❌ approveDocument function is NOT available');
+}
+
+// 4. Check for any JavaScript errors
+console.log('Current errors in console?');
+        </pre>
+    </div>
+
+    <div class="debug-section">
+        <h3>🔧 Potential Fixes</h3>
+        <ol>
+            <li><strong>Function Scope Issue:</strong> Functions might not be in global scope</li>
+            <li><strong>Template Literal Issue:</strong> JavaScript template strings might have syntax errors</li>
+            <li><strong>Firebase Not Loaded:</strong> Firebase SDK might not be properly initialized</li>
+            <li><strong>Event Propagation:</strong> Events might be getting blocked by parent elements</li>
+        </ol>
+    </div>
+
+    <script>
+        function testApproveDocument() {
+            const results = document.getElementById('testResults');
+            results.innerHTML += '<div class="success">✅ Approve Document test clicked successfully!</div>';
+            
+            // Simulate what the real function should do
+            console.log('Test: approveDocument would be called with:', {
+                driverId: 'test-driver-id',
+                documentType: 'driverPhoto',
+                collection: 'drivers'
+            });
+        }
+
+        function testRejectDocument() {
+            const results = document.getElementById('testResults');
+            results.innerHTML += '<div class="error">❌ Reject Document test clicked successfully!</div>';
+            
+            // Simulate what the real function should do
+            console.log('Test: rejectDocument would be called with:', {
+                driverId: 'test-driver-id',
+                documentType: 'driverPhoto', 
+                collection: 'drivers'
+            });
+        }
+
+        function testViewImage() {
+            const results = document.getElementById('testResults');
+            results.innerHTML += '<div class="info">👁️ View Image test clicked successfully!</div>';
+            
+            // Simulate opening image
+            console.log('Test: Image would be opened in new tab');
+        }
+
+        // Check if we're on the admin panel page
+        if (window.location.href.includes('complete-admin.html')) {
+            console.log('🔧 Debug script loaded on admin panel');
+            
+            // Wait a bit then check function availability
+            setTimeout(() => {
+                if (typeof window.approveDocument === 'function') {
+                    console.log('✅ approveDocument is available globally');
+                } else {
+                    console.error('❌ approveDocument is NOT available globally');
+                }
+            }, 2000);
+        }
+    </script>
+
+</body>
+</html>

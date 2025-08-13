@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Verification Details</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .verification-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+        
+        .card-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+        }
+        
+        .card-body {
+            padding: 1.5rem;
+        }
+        
+        .business-logo {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 3px solid #ddd;
+        }
+        
+        .document-item {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: #fafafa;
+        }
+        
+        .document-image {
+            max-width: 200px;
+            max-height: 150px;
+            object-fit: cover;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .document-image:hover {
+            transform: scale(1.05);
+        }
+        
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-approved {
+            background-color: #d1edff;
+            color: #0c5460;
+        }
+        
+        .status-rejected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .verification-item {
+            padding: 1rem;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+            margin-bottom: 0.5rem;
+        }
+        
+        .verification-item .status-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+        }
+        
+        .btn-approve {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            border: none;
+            color: white;
+        }
+        
+        .btn-reject {
+            background: linear-gradient(45deg, #dc3545, #fd7e14);
+            border: none;
+            color: white;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .loading-spinner {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h1 class="mb-0">
+                        <i class="fas fa-building me-2"></i>
+                        Business Verification Details
+                    </h1>
+                </div>
+                <div class="col-auto">
+                    <a href="business-verification-admin.html" class="btn btn-light">
+                        <i class="fas fa-arrow-left me-1"></i> Back to List
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Loading State -->
+        <div id="loadingState" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <div class="mt-3">Loading business details...</div>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" class="alert alert-danger d-none">
+            <h4>Error</h4>
+            <p id="errorMessage">Failed to load business details.</p>
+        </div>
+
+        <!-- Business Details -->
+        <div id="businessDetails" style="display: none;">
+            <!-- Business Information -->
+            <div class="verification-card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Business Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-2">
+                            <img id="businessLogo" src="" alt="Business Logo" class="business-logo" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNS4wMDAyIDY1VjM1SDY1LjAwMDJWNjVIMzUuMDAwMloiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+'">
+                        </div>
+                        <div class="col-md-5">
+                            <h4 id="businessName" class="mb-2">-</h4>
+                            <p class="mb-1"><strong>Type:</strong> <span id="businessType">-</span></p>
+                            <p class="mb-1"><strong>Category:</strong> <span id="businessCategory">-</span></p>
+                            <p class="mb-1"><strong>Description:</strong> <span id="businessDescription">-</span></p>
+                        </div>
+                        <div class="col-md-5">
+                            <p class="mb-1"><strong>Address:</strong> <span id="businessAddress">-</span></p>
+                            <p class="mb-1"><strong>City:</strong> <span id="businessCity">-</span></p>
+                            <p class="mb-1"><strong>Website:</strong> <span id="businessWebsite">-</span></p>
+                            <p class="mb-1"><strong>Status:</strong> <span id="businessStatus" class="status-badge">-</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Information -->
+            <div class="verification-card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-address-book me-2"></i>Contact Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-2"><strong>Owner Name:</strong> <span id="ownerName">-</span></p>
+                            <p class="mb-2"><strong>Email:</strong> <span id="businessEmail">-</span></p>
+                            <p class="mb-2"><strong>Phone:</strong> <span id="businessPhone">-</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-2"><strong>Tax Number:</strong> <span id="taxNumber">-</span></p>
+                            <p class="mb-2"><strong>Registration Number:</strong> <span id="registrationNumber">-</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Verification Status -->
+            <div class="verification-card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-shield-check me-2"></i>Contact Verification Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="verification-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-phone me-2"></i>
+                                        <strong>Business Phone Verification</strong>
+                                        <br>
+                                        <small class="text-muted">Phone: <span id="linkedPhone">-</span></small>
+                                    </div>
+                                    <span id="phoneVerificationStatus" class="status-badge status-pending">Not Verified</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="verification-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-envelope me-2"></i>
+                                        <strong>Business Email Verification</strong>
+                                        <br>
+                                        <small class="text-muted">Email: <span id="linkedEmail">-</span></small>
+                                    </div>
+                                    <span id="emailVerificationStatus" class="status-badge status-pending">Not Verified</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Contact verification must be completed by the business owner in the mobile app before final approval.</strong>
+                                <br>
+                                <small>The business owner needs to verify their business phone and email in the app's business verification section.</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documents -->
+            <div class="verification-card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Documents</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row" id="documentsContainer">
+                        <!-- Documents will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Business Logo Verification -->
+            <div class="verification-card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-image me-2"></i>Business Logo</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <img id="logoPreview" src="" alt="Business Logo" class="document-image" style="max-width: 300px; max-height: 200px;">
+                        </div>
+                        <div class="col-md-4">
+                            <div class="action-buttons">
+                                <button class="btn btn-approve btn-sm" onclick="approveBusinessLogo()">
+                                    <i class="fas fa-check me-1"></i> Approve Logo
+                                </button>
+                                <button class="btn btn-reject btn-sm" onclick="rejectBusinessLogo()">
+                                    <i class="fas fa-times me-1"></i> Reject Logo
+                                </button>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted">Logo Status: <span id="logoStatus" class="status-badge">-</span></small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Overall Actions -->
+            <div class="verification-card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-gavel me-2"></i>Overall Business Approval</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <p>Review all documents and contact verification above before making a final decision on this business application.</p>
+                            <div class="alert alert-warning">
+                                <small><i class="fas fa-exclamation-triangle me-1"></i> <strong>Required before approval:</strong></small>
+                                <ul class="mb-0 mt-1">
+                                    <li>All documents must be approved</li>
+                                    <li><strong>Business phone must be verified by owner in mobile app</strong></li>
+                                    <li><strong>Business email must be verified by owner in mobile app</strong></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-success btn-lg" onclick="approveBusiness()">
+                                    <i class="fas fa-check me-2"></i> Approve Business
+                                </button>
+                                <button class="btn btn-danger btn-lg" onclick="rejectBusiness()">
+                                    <i class="fas fa-times me-2"></i> Reject Business
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rejection Reason Modal -->
+    <div class="modal fade" id="rejectionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Rejection Reason</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <textarea class="form-control" id="rejectionReason" rows="4" placeholder="Please provide a reason for rejection..."></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmRejection()">Confirm Rejection</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Preview Modal -->
+    <div class="modal fade" id="imageModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="imageModalTitle">Document Preview</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <img id="imageModalImg" src="" alt="Document" class="img-fluid">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCtuD42SzwxKmSY5p-x5olFex2U_S9YrMk",
+            authDomain: "request-marketplace.firebaseapp.com",
+            projectId: "request-marketplace",
+            storageBucket: "request-marketplace.firebasestorage.app",
+            messagingSenderId: "355474518888",
+            appId: "1:355474518888:android:27570ce58b7a8346b91cdd"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Get business ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const businessId = urlParams.get('id');
+        
+        console.log('URL Parameters:', window.location.search);
+        console.log('Business ID from URL:', businessId);
+
+        if (!businessId) {
+            document.getElementById('errorState').classList.remove('d-none');
+            document.getElementById('errorMessage').textContent = 'No business ID provided in URL';
+            document.getElementById('loadingState').style.display = 'none';
+        }
+
+        let currentBusiness = null;
+        let currentRejectionTarget = null;
+
+        // Load business details
+        async function loadBusinessDetails() {
+            try {
+                document.getElementById('loadingState').style.display = 'block';
+                document.getElementById('businessDetails').style.display = 'none';
+                document.getElementById('errorState').classList.add('d-none');
+
+                console.log('Loading business details for ID:', businessId);
+                
+                const doc = await db.collection('new_business_verifications').doc(businessId).get();
+                
+                if (!doc.exists) {
+                    throw new Error('Business not found');
+                }
+
+                currentBusiness = { id: doc.id, ...doc.data() };
+                console.log('Business data loaded:', currentBusiness);
+
+                displayBusinessDetails(currentBusiness);
+
+            } catch (error) {
+                console.error('Error loading business details:', error);
+                document.getElementById('errorState').classList.remove('d-none');
+                document.getElementById('errorMessage').textContent = `Error loading business details: ${error.message}`;
+            } finally {
+                document.getElementById('loadingState').style.display = 'none';
+            }
+        }
+
+        // Display business details
+        function displayBusinessDetails(business) {
+            // Basic Information
+            document.getElementById('businessName').textContent = business.businessName || 'N/A';
+            document.getElementById('businessType').textContent = business.businessType || business.businessCategory || 'N/A';
+            document.getElementById('businessCategory').textContent = business.businessCategory || 'N/A';
+            document.getElementById('businessDescription').textContent = business.businessDescription || 'N/A';
+            document.getElementById('businessAddress').textContent = business.businessAddress || 'N/A';
+            document.getElementById('businessCity').textContent = business.businessCity || 'N/A';
+            document.getElementById('businessWebsite').textContent = business.businessWebsite || 'N/A';
+            
+            // Contact Information
+            document.getElementById('ownerName').textContent = business.businessOwner || 'N/A';
+            document.getElementById('businessEmail').textContent = business.businessEmail || 'N/A';
+            document.getElementById('businessPhone').textContent = business.businessPhone || 'N/A';
+            document.getElementById('taxNumber').textContent = business.taxId || 'N/A';
+            document.getElementById('registrationNumber').textContent = business.licenseNumber || 'N/A';
+
+            // Status
+            const statusElement = document.getElementById('businessStatus');
+            statusElement.textContent = business.status || 'pending';
+            statusElement.className = `status-badge status-${business.status || 'pending'}`;
+
+            // Business Logo - Use the correct field name
+            const businessLogoElement = document.getElementById('businessLogo');
+            const logoPreviewElement = document.getElementById('logoPreview');
+            
+            if (business.businessLogoUrl) {
+                businessLogoElement.src = business.businessLogoUrl;
+                if (logoPreviewElement) {
+                    logoPreviewElement.src = business.businessLogoUrl;
+                }
+            } else {
+                // Use the default SVG placeholder that's already in the onerror
+                businessLogoElement.src = '';
+            }
+
+            // Logo Status
+            const logoStatusElement = document.getElementById('logoStatus');
+            const logoStatus = business.businessLogoStatus || 'pending';
+            logoStatusElement.textContent = logoStatus;
+            logoStatusElement.className = `status-badge status-${logoStatus}`;
+
+            // Load Documents
+            loadDocuments(business);
+
+            // Load Contact Verification Status
+            loadContactVerificationStatus(business.userId);
+
+            document.getElementById('businessDetails').style.display = 'block';
+        }
+
+        // Load contact verification status
+        async function loadContactVerificationStatus(userId) {
+            try {
+                // Check for linked credentials in the users collection
+                const userDoc = await db.collection('users').doc(userId).get();
+                
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    const linkedCredentials = userData.linkedCredentials || {};
+                    
+                    // Phone verification status
+                    const phoneVerified = linkedCredentials.linkedPhoneVerified || false;
+                    const linkedPhone = linkedCredentials.businessPhone || 'Not linked';
+                    
+                    document.getElementById('linkedPhone').textContent = linkedPhone;
+                    const phoneStatusElement = document.getElementById('phoneVerificationStatus');
+                    phoneStatusElement.textContent = phoneVerified ? 'Verified' : 'Not Verified';
+                    phoneStatusElement.className = `status-badge ${phoneVerified ? 'status-approved' : 'status-pending'}`;
+                    
+                    // Email verification status
+                    const emailVerified = linkedCredentials.linkedEmailVerified || false;
+                    const linkedEmail = linkedCredentials.businessEmail || 'Not linked';
+                    
+                    document.getElementById('linkedEmail').textContent = linkedEmail;
+                    const emailStatusElement = document.getElementById('emailVerificationStatus');
+                    emailStatusElement.textContent = emailVerified ? 'Verified' : 'Not Verified';
+                    emailStatusElement.className = `status-badge ${emailVerified ? 'status-approved' : 'status-pending'}`;
+                } else {
+                    // No user data found
+                    document.getElementById('linkedPhone').textContent = 'User not found';
+                    document.getElementById('linkedEmail').textContent = 'User not found';
+                    
+                    const phoneStatusElement = document.getElementById('phoneVerificationStatus');
+                    phoneStatusElement.textContent = 'Not Started';
+                    phoneStatusElement.className = 'status-badge status-pending';
+                    
+                    const emailStatusElement = document.getElementById('emailVerificationStatus');
+                    emailStatusElement.textContent = 'Not Started';
+                    emailStatusElement.className = 'status-badge status-pending';
+                }
+            } catch (error) {
+                console.error('Error loading contact verification status:', error);
+                // Set default values on error
+                document.getElementById('linkedPhone').textContent = 'Error loading';
+                document.getElementById('linkedEmail').textContent = 'Error loading';
+                
+                const phoneStatusElement = document.getElementById('phoneVerificationStatus');
+                phoneStatusElement.textContent = 'Error';
+                phoneStatusElement.className = 'status-badge status-pending';
+                
+                const emailStatusElement = document.getElementById('emailVerificationStatus');
+                emailStatusElement.textContent = 'Error';
+                emailStatusElement.className = 'status-badge status-pending';
+            }
+        }
+
+        // Load documents
+        function loadDocuments(business) {
+            const documentsContainer = document.getElementById('documentsContainer');
+            documentsContainer.innerHTML = '';
+
+            const documents = [
+                {
+                    name: 'Business Registration Certificate',
+                    url: business.businessLicenseUrl,
+                    status: business.businessLicenseStatus || (business.documentVerification?.businessLicense?.status) || 'pending',
+                    field: 'businessLicenseStatus'
+                },
+                {
+                    name: 'Tax Registration Certificate', 
+                    url: business.taxCertificateUrl,
+                    status: business.taxCertificateStatus || (business.documentVerification?.taxCertificate?.status) || 'pending',
+                    field: 'taxCertificateStatus'
+                },
+                {
+                    name: 'Insurance Document',
+                    url: business.insuranceDocumentUrl,
+                    status: business.insuranceDocumentStatus || (business.documentVerification?.insurance?.status) || 'pending',
+                    field: 'insuranceDocumentStatus'
+                }
+            ];
+
+            documents.forEach((doc, index) => {
+                if (doc.url) {
+                    const docHtml = `
+                        <div class="col-md-4 mb-3">
+                            <div class="document-item">
+                                <h6>${doc.name}</h6>
+                                <div class="mb-2">
+                                    <img src="${doc.url}" alt="${doc.name}" class="document-image" 
+                                         onclick="showImagePreview('${doc.url}', '${doc.name}')">
+                                </div>
+                                <div class="mb-2">
+                                    <span class="status-badge status-${doc.status}">${doc.status}</span>
+                                </div>
+                                <div class="action-buttons">
+                                    <button class="btn btn-approve btn-sm" onclick="approveDocument('${doc.field}')">
+                                        <i class="fas fa-check me-1"></i> Approve
+                                    </button>
+                                    <button class="btn btn-reject btn-sm" onclick="rejectDocument('${doc.field}')">
+                                        <i class="fas fa-times me-1"></i> Reject
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    documentsContainer.innerHTML += docHtml;
+                }
+            });
+        }
+
+        // Show image preview
+        function showImagePreview(imageUrl, title) {
+            document.getElementById('imageModalTitle').textContent = title;
+            document.getElementById('imageModalImg').src = imageUrl;
+            new bootstrap.Modal(document.getElementById('imageModal')).show();
+        }
+
+        // Approve document
+        async function approveDocument(field) {
+            try {
+                await db.collection('new_business_verifications').doc(businessId).update({
+                    [field]: 'approved',
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                // Update local data and refresh display
+                currentBusiness[field] = 'approved';
+                displayBusinessDetails(currentBusiness);
+                
+                showToast('Document approved successfully', 'success');
+            } catch (error) {
+                console.error('Error approving document:', error);
+                showToast('Error approving document: ' + error.message, 'error');
+            }
+        }
+
+        // Reject document
+        function rejectDocument(field) {
+            currentRejectionTarget = { type: 'document', field: field };
+            new bootstrap.Modal(document.getElementById('rejectionModal')).show();
+        }
+
+        // Approve business logo
+        async function approveBusinessLogo() {
+            try {
+                await db.collection('new_business_verifications').doc(businessId).update({
+                    businessLogoStatus: 'approved',
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                currentBusiness.businessLogoStatus = 'approved';
+                displayBusinessDetails(currentBusiness);
+                
+                showToast('Business logo approved successfully', 'success');
+            } catch (error) {
+                console.error('Error approving business logo:', error);
+                showToast('Error approving business logo: ' + error.message, 'error');
+            }
+        }
+
+        // Reject business logo
+        function rejectBusinessLogo() {
+            currentRejectionTarget = { type: 'logo' };
+            new bootstrap.Modal(document.getElementById('rejectionModal')).show();
+        }
+
+        // Approve entire business
+        async function approveBusiness() {
+            // Check contact verification status first
+            try {
+                const userDoc = await db.collection('users').doc(currentBusiness.userId).get();
+                
+                let phoneVerified = false;
+                let emailVerified = false;
+                
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    const linkedCredentials = userData.linkedCredentials || {};
+                    phoneVerified = linkedCredentials.linkedPhoneVerified || false;
+                    emailVerified = linkedCredentials.linkedEmailVerified || false;
+                }
+                
+                if (!phoneVerified || !emailVerified) {
+                    const missingVerifications = [];
+                    if (!phoneVerified) missingVerifications.push('Business Phone');
+                    if (!emailVerified) missingVerifications.push('Business Email');
+                    
+                    alert(`Cannot approve business yet. The business owner must complete contact verification for: ${missingVerifications.join(', ')}\n\nThe business owner needs to verify these contacts in the mobile app before final approval.`);
+                    return;
+                }
+                
+            } catch (error) {
+                console.error('Error checking contact verification:', error);
+                if (!confirm('Unable to verify contact verification status. Proceed with approval anyway?')) {
+                    return;
+                }
+            }
+            
+            if (confirm('Are you sure you want to approve this business? This action cannot be undone.')) {
+                try {
+                    await db.collection('new_business_verifications').doc(businessId).update({
+                        status: 'approved',
+                        approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    currentBusiness.status = 'approved';
+                    displayBusinessDetails(currentBusiness);
+                    
+                    showToast('Business approved successfully', 'success');
+                } catch (error) {
+                    console.error('Error approving business:', error);
+                    showToast('Error approving business: ' + error.message, 'error');
+                }
+            }
+        }
+
+        // Reject entire business
+        function rejectBusiness() {
+            currentRejectionTarget = { type: 'business' };
+            new bootstrap.Modal(document.getElementById('rejectionModal')).show();
+        }
+
+        // Confirm rejection
+        async function confirmRejection() {
+            const reason = document.getElementById('rejectionReason').value.trim();
+            
+            if (!reason) {
+                alert('Please provide a reason for rejection.');
+                return;
+            }
+
+            try {
+                let updateData = {
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                };
+
+                if (currentRejectionTarget.type === 'document') {
+                    updateData[currentRejectionTarget.field] = 'rejected';
+                    updateData[currentRejectionTarget.field + 'RejectionReason'] = reason;
+                    currentBusiness[currentRejectionTarget.field] = 'rejected';
+                } else if (currentRejectionTarget.type === 'logo') {
+                    updateData.businessLogoStatus = 'rejected';
+                    updateData.businessLogoRejectionReason = reason;
+                    currentBusiness.businessLogoStatus = 'rejected';
+                } else if (currentRejectionTarget.type === 'business') {
+                    updateData.status = 'rejected';
+                    updateData.rejectionReason = reason;
+                    updateData.rejectedAt = firebase.firestore.FieldValue.serverTimestamp();
+                    currentBusiness.status = 'rejected';
+                }
+
+                await db.collection('new_business_verifications').doc(businessId).update(updateData);
+                
+                displayBusinessDetails(currentBusiness);
+                bootstrap.Modal.getInstance(document.getElementById('rejectionModal')).hide();
+                document.getElementById('rejectionReason').value = '';
+                
+                showToast('Rejection applied successfully', 'success');
+            } catch (error) {
+                console.error('Error applying rejection:', error);
+                showToast('Error applying rejection: ' + error.message, 'error');
+            }
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            // Create toast element
+            const toastHtml = `
+                <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'} border-0" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body">${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            
+            // Add to page and show
+            let toastContainer = document.getElementById('toastContainer');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.id = 'toastContainer';
+                toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+                toastContainer.style.zIndex = '9999';
+                document.body.appendChild(toastContainer);
+            }
+            
+            toastContainer.innerHTML = toastHtml;
+            const toastElement = toastContainer.querySelector('.toast');
+            const toast = new bootstrap.Toast(toastElement);
+            toast.show();
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            if (businessId) {
+                loadBusinessDetails();
+            }
+        });
+    </script>
+</body>
+</html>

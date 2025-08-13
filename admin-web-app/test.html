@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        .test-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body>
+    <div class="test-card">
+        <h1>🎉 Server is Working!</h1>
+        <p>The local HTTP server is running correctly on port 8080</p>
+        <hr>
+        <p><strong>Test URLs:</strong></p>
+        <ul style="list-style: none;">
+            <li>✅ <a href="test.html" style="color: white;">This test page</a></li>
+            <li>🔐 <a href="index.html" style="color: white;">Login page</a></li>
+            <li>📊 <a href="simple-admin.html" style="color: white;">Admin panel</a></li>
+        </ul>
+        <hr>
+        <p><small>If you can see this page, the local web server is working properly!</small></p>
+    </div>
+
+    <script>
+        console.log('✅ Test page loaded successfully');
+        console.log('🌍 Current URL:', window.location.href);
+        console.log('📡 Server status: WORKING');
+    </script>
+</body>
+</html>

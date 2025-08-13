@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Data Test</title>
+    <script type="module">
+        // Import Firebase SDK
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js';
+        import { getFirestore, collection, getDocs, doc, getDoc } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js';
+
+        // Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyBOu8ePo-6BLQMS8KE-WYmrfEDhq8YwSNI",
+            authDomain: "request-marketplace.firebaseapp.com",
+            projectId: "request-marketplace",
+            storageBucket: "request-marketplace.firebasestorage.app",
+            messagingSenderId: "551503664846",
+            appId: "1:551503664846:web:a4f4ae7f7abc76b5a7b481"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        async function testBusinessData() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<h3>Loading business data...</h3>';
+            
+            try {
+                // Test the specific user
+                const userId = 'G68WKHAnd8WuIlYlx8iHBO6urDy2';
+                const userDoc = await getDoc(doc(db, 'users', userId));
+                
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    const businessProfile = userData.businessProfile;
+                    
+                    resultsDiv.innerHTML = `
+                        <h3>✅ Business Data Found</h3>
+                        <div style="background: #f0f8ff; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                            <h4>User Information:</h4>
+                            <p><strong>User ID:</strong> ${userId}</p>
+                            <p><strong>User Name:</strong> ${userData.name || 'N/A'}</p>
+                            <p><strong>User Email:</strong> ${userData.email || 'N/A'}</p>
+                            <p><strong>Phone Number:</strong> ${userData.phoneNumber || 'N/A'}</p>
+                        </div>
+                        
+                        ${businessProfile ? `
+                        <div style="background: #f0fff0; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                            <h4>✅ Business Profile Found:</h4>
+                            <p><strong>Business Name:</strong> ${businessProfile.businessName || 'N/A'}</p>
+                            <p><strong>Business Email:</strong> <span style="color: green; font-weight: bold;">${businessProfile.email || 'N/A'}</span></p>
+                            <p><strong>Business Type:</strong> ${businessProfile.businessType || 'N/A'}</p>
+                            <p><strong>Business Address:</strong> ${businessProfile.businessAddress || 'N/A'}</p>
+                            <p><strong>Business Categories:</strong> ${(businessProfile.businessCategories || []).join(', ') || 'N/A'}</p>
+                            <p><strong>Verification Status:</strong> ${businessProfile.verificationStatus || 'N/A'}</p>
+                            <p><strong>Is Active:</strong> ${businessProfile.isActive ? 'Yes' : 'No'}</p>
+                        </div>
+                        ` : `
+                        <div style="background: #fff0f0; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                            <h4>❌ No Business Profile Found</h4>
+                            <p>This user doesn't have a business profile yet.</p>
+                        </div>
+                        `}
+                        
+                        <div style="background: #fffacd; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                            <h4>🔍 Data Structure Analysis:</h4>
+                            <p><strong>Has businessProfile:</strong> ${!!businessProfile}</p>
+                            <p><strong>Email location:</strong> ${businessProfile?.email ? 'businessProfile.email ✅' : userData.email ? 'userData.email (wrong location)' : 'No email found ❌'}</p>
+                        </div>
+                    `;
+                } else {
+                    resultsDiv.innerHTML = '<h3>❌ User not found</h3>';
+                }
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<h3>❌ Error: ${error.message}</h3>`;
+                console.error('Error:', error);
+            }
+        }
+
+        window.testBusinessData = testBusinessData;
+    </script>
+</head>
+<body>
+    <h1>Business Data Test</h1>
+    <p>This page tests if the business registration data is properly saved and accessible.</p>
+    
+    <button onclick="testBusinessData()" style="background: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">
+        Test Business Data
+    </button>
+    
+    <div id="results" style="margin-top: 20px;">
+        <p>Click the button above to test the business data.</p>
+    </div>
+</body>
+</html>

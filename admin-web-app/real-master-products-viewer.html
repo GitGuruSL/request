@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Master Products Viewer</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .product-card {
+            border: 1px solid #ddd;
+            margin: 15px 0;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        .product-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .product-image {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            margin-right: 15px;
+            border-radius: 4px;
+        }
+        .product-info h3 {
+            margin: 0 0 5px 0;
+            color: #333;
+        }
+        .product-brand {
+            background-color: #007bff;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            display: inline-block;
+        }
+        .product-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .detail-item {
+            background-color: white;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eee;
+        }
+        .detail-label {
+            font-weight: bold;
+            color: #666;
+            font-size: 12px;
+        }
+        .detail-value {
+            color: #333;
+            font-size: 14px;
+        }
+        button {
+            background-color: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+        .stats {
+            background-color: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Real Master Products in Firebase</h1>
+    <p>This displays all the actual master products you have in your Firebase database.</p>
+    
+    <button onclick="loadMasterProducts()">Load Real Master Products</button>
+    <button onclick="updateProductSearchScreen()">Fix Product Search Screen</button>
+    
+    <div id="results"></div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js';
+        import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAgTVL1zGdXkuE1Cb6Oc9uo99qkh6VKiJM",
+            authDomain: "requestmarketplace-f6ac3.firebaseapp.com",
+            projectId: "requestmarketplace-f6ac3",
+            storageBucket: "requestmarketplace-f6ac3.firebasestorage.app",
+            messagingSenderId: "690324344664",
+            appId: "1:690324344664:web:7a57c6de7c37e4e5c9b02b",
+            measurementId: "G-5KVCQHH8Y7"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.loadMasterProducts = async function() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="loading">Loading real master products from Firebase...</div>';
+
+            try {
+                // Get all master products
+                const masterProductsSnapshot = await getDocs(collection(db, 'master_products'));
+                const masterProducts = masterProductsSnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+
+                console.log('Loaded master products:', masterProducts);
+
+                if (masterProducts.length === 0) {
+                    resultsDiv.innerHTML = `
+                        <div class="error">
+                            <h3>No Master Products Found</h3>
+                            <p>Your master_products collection is empty. You need to add some master products first.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Display statistics
+                let html = `
+                    <div class="stats">
+                        <h3>📊 Statistics</h3>
+                        <p><strong>Total Master Products:</strong> ${masterProducts.length}</p>
+                        <p><strong>Active Products:</strong> ${masterProducts.filter(p => p.isActive !== false).length}</p>
+                        <p><strong>Brands:</strong> ${[...new Set(masterProducts.map(p => p.brand).filter(Boolean))].join(', ')}</p>
+                    </div>
+                `;
+
+                // Display each product
+                masterProducts.forEach(product => {
+                    const imageUrl = product.imageUrls && product.imageUrls.length > 0 
+                        ? product.imageUrls[0] 
+                        : 'https://via.placeholder.com/80x80?text=No+Image';
+
+                    html += `
+                        <div class="product-card">
+                            <div class="product-header">
+                                <img src="${imageUrl}" alt="${product.name}" class="product-image" 
+                                     onerror="this.src='https://via.placeholder.com/80x80?text=No+Image'">
+                                <div class="product-info">
+                                    <h3>${product.name || 'Unnamed Product'}</h3>
+                                    <span class="product-brand">${product.brand || 'No Brand'}</span>
+                                    <p style="margin: 5px 0; color: #666; font-size: 14px;">
+                                        ${product.description || 'No description available'}
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div class="product-details">
+                                <div class="detail-item">
+                                    <div class="detail-label">Product ID</div>
+                                    <div class="detail-value">${product.id}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Category</div>
+                                    <div class="detail-value">${product.category || product.categoryId || 'N/A'}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Status</div>
+                                    <div class="detail-value">${product.isActive !== false ? '✅ Active' : '❌ Inactive'}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Keywords</div>
+                                    <div class="detail-value">${product.keywords ? product.keywords.join(', ') : 'None'}</div>
+                                </div>
+                            </div>
+
+                            ${product.specifications ? `
+                                <div style="margin-top: 15px;">
+                                    <div class="detail-label">Specifications:</div>
+                                    <pre style="background-color: white; padding: 10px; border-radius: 4px; font-size: 12px;">${JSON.stringify(product.specifications, null, 2)}</pre>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+
+                html += `
+                    <div class="success">
+                        <h3>✅ Found ${masterProducts.length} Real Master Products!</h3>
+                        <p>These are the actual products in your Firebase database. The product search screen should show these instead of the hardcoded fallback data.</p>
+                        <p><strong>Next step:</strong> Click "Fix Product Search Screen" to make your app use these real products.</p>
+                    </div>
+                `;
+
+                resultsDiv.innerHTML = html;
+
+            } catch (error) {
+                console.error('Error loading master products:', error);
+                resultsDiv.innerHTML = `
+                    <div class="error">
+                        <h3>Error Loading Master Products</h3>
+                        <p>${error.message}</p>
+                        <p>This might be due to Firebase permissions or connection issues.</p>
+                    </div>
+                `;
+            }
+        }
+
+        window.updateProductSearchScreen = function() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML += `
+                <div class="success">
+                    <h3>🔧 Product Search Screen Fix</h3>
+                    <p>To fix the product search screen to use real master products instead of hardcoded data:</p>
+                    <ol>
+                        <li><strong>Remove the fallback to hardcoded data</strong> - The screen should only show real Firebase products</li>
+                        <li><strong>Improve error handling</strong> - Better Firebase connection error messages</li>
+                        <li><strong>Add retry mechanism</strong> - Allow users to retry loading real products</li>
+                    </ol>
+                    <p>I can help you implement these changes in the Flutter code.</p>
+                </div>
+            `;
+        }
+
+        // Auto-load products when page loads
+        window.addEventListener('load', function() {
+            setTimeout(loadMasterProducts, 1000);
+        });
+    </script>
+</body>
+</html>
