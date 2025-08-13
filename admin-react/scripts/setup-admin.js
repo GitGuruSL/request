@@ -7,7 +7,7 @@ async function createSuperAdmin() {
   try {
     console.log('🚀 Setting up Super Admin for Request Marketplace...');
     
-    const email = 'superadmin@requestmarketplace.com';
+    const email = 'superadmin@request.lk';
     const password = 'SuperAdmin123!'; // Change this in production!
     const name = 'Super Administrator';
 
@@ -46,7 +46,7 @@ async function createSuperAdmin() {
     if (error.code === 'auth/email-already-in-use') {
       console.log('');
       console.log('🔍 The super admin user already exists.');
-      console.log('📧 Email: superadmin@requestmarketplace.com');
+      console.log('📧 Email: superadmin@request.lk');
       console.log('🔑 Try logging in with the existing credentials.');
     }
     
@@ -57,7 +57,7 @@ async function createSuperAdmin() {
 // Create example country admin
 async function createCountryAdmin() {
   try {
-    const email = 'admin.usa@requestmarketplace.com';
+    const email = 'admin.usa@request.lk';
     const password = 'CountryAdmin123!'; // Change this in production!
     const name = 'USA Administrator';
     const country = 'United States';
@@ -90,9 +90,46 @@ async function createCountryAdmin() {
   }
 }
 
+// Create Sri Lanka admin
+async function createSriLankaAdmin() {
+  try {
+    const email = 'admin.lk@request.lk';
+    const password = 'CountryAdmin123!'; // Change this in production!
+    const name = 'Sri Lanka Administrator';
+    const country = 'Sri Lanka';
+
+    console.log('🇱🇰 Creating Country Admin for', country);
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+
+    await setDoc(doc(db, 'admin_users', user.uid), {
+      name: name,
+      email: email,
+      role: 'country_admin',
+      country: country,
+      isActive: true,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+
+    await signOut(auth);
+
+    console.log('✅ Sri Lanka Admin created successfully!');
+    console.log('📧 Email:', email);
+    console.log('🔑 Password:', password);
+    console.log('🌍 Country:', country);
+
+  } catch (error) {
+    if (error.code !== 'auth/email-already-in-use') {
+      console.error('❌ Error creating Sri Lanka admin:', error);
+    }
+  }
+}
+
 async function setupAdmins() {
   await createSuperAdmin();
   await createCountryAdmin();
+  await createSriLankaAdmin();
 }
 
 setupAdmins();

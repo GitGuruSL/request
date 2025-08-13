@@ -7,6 +7,9 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import Products from './pages/Products';
+import Categories from './pages/Categories';
+import PrivacyTerms from './pages/PrivacyTerms';
 
 const theme = createTheme({
   palette: {
@@ -35,7 +38,10 @@ function App() {
                 </ProtectedRoute>
               }
             >
-              <Route index element={<Dashboard />} />
+                            <Route index element={<Dashboard />} />
+              <Route path="products" element={<Products />} />
+              <Route path="categories" element={<Categories />} />
+              <Route path="privacy-terms" element={<PrivacyTerms />} />
               {/* Add more protected routes here */}
             </Route>
           </Routes>
