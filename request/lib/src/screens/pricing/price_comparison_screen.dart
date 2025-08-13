@@ -170,8 +170,8 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: Colors.white,
+        backgroundColor: AppTheme.backgroundColor,
+        foregroundColor: AppTheme.textPrimary,
         title: Text(widget.product.name),
         elevation: 0,
         actions: [

@@ -135,8 +135,8 @@ class _BusinessPricingDashboardState extends State<BusinessPricingDashboard> {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: Colors.white,
+        backgroundColor: AppTheme.backgroundColor,
+        foregroundColor: AppTheme.textPrimary,
         title: const Text('My Price Listings'),
         elevation: 0,
         actions: [
@@ -361,7 +361,8 @@ class _BusinessPricingDashboardState extends State<BusinessPricingDashboard> {
   Widget _buildListingCard(PriceListing listing) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
+      elevation: 0,
+      color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),

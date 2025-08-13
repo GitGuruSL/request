@@ -61,15 +61,15 @@ class _BusinessProfileModalState extends State<BusinessProfileModal> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              decoration: const BoxDecoration(
+                color: AppTheme.backgroundColor,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
               ),
               child: Row(
                 children: [
                   const Icon(
                     Icons.business,
-                    color: Colors.white,
+                    color: AppTheme.textPrimary,
                     size: 24,
                   ),
                   const SizedBox(width: 12),
@@ -77,7 +77,7 @@ class _BusinessProfileModalState extends State<BusinessProfileModal> {
                     child: Text(
                       'Business Profile',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: AppTheme.textPrimary,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -85,7 +85,7 @@ class _BusinessProfileModalState extends State<BusinessProfileModal> {
                   ),
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close, color: Colors.white),
+                    icon: const Icon(Icons.close, color: AppTheme.textPrimary),
                   ),
                 ],
               ),

@@ -261,8 +261,8 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: Colors.white,
+        backgroundColor: AppTheme.backgroundColor,
+        foregroundColor: AppTheme.textPrimary,
         title: Text(
           widget.existingListing == null ? 'Add Price' : 'Edit Price'
         ),
@@ -500,25 +500,24 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.blue[50],
+              color: Colors.white,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.blue[200]!),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Icon(Icons.check_circle_outline, 
-                         color: Colors.blue[600], 
+                    const Icon(Icons.check_circle_outline, 
+                         color: AppTheme.textSecondary, 
                          size: 18),
                     const SizedBox(width: 8),
-                    Text(
+                    const Text(
                       'Step 1: Choose Relevant Attributes',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Colors.blue[800],
+                        color: AppTheme.textPrimary,
                       ),
                     ),
                   ],
@@ -545,8 +544,12 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
                           }
                         });
                       },
-                      selectedColor: Colors.blue[100],
-                      checkmarkColor: Colors.blue[800],
+                      selectedColor: AppTheme.backgroundColor,
+                      backgroundColor: Colors.white,
+                      side: BorderSide.none,
+                      checkmarkColor: AppTheme.textPrimary,
+                      elevation: 0,
+                      pressElevation: 0,
                     );
                   }).toList(),
                 ),
@@ -560,25 +563,24 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.green[50],
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.green[200]!),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.edit_outlined, 
-                           color: Colors.green[600], 
+                      const Icon(Icons.edit_outlined, 
+                           color: AppTheme.textSecondary, 
                            size: 18),
                       const SizedBox(width: 8),
-                      Text(
+                      const Text(
                         'Step 2: Fill in the Details',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Colors.green[800],
+                          color: AppTheme.textPrimary,
                         ),
                       ),
                     ],

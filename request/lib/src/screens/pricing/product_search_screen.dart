@@ -105,8 +105,8 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: Colors.white,
+        backgroundColor: AppTheme.backgroundColor,
+        foregroundColor: AppTheme.textPrimary,
         title: const Text('Search Products'),
         elevation: 0,
       ),
