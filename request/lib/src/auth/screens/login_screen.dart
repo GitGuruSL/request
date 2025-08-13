@@ -383,28 +383,43 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                             AnimatedSwitcher(
                               duration: const Duration(milliseconds: 300),
                               child: _isPhoneLogin
-                                ? IntlPhoneField(
-                                    key: const ValueKey('phone'),
-                                    controller: _phoneController,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Phone Number',
-                                      prefixIcon: Icon(Icons.phone),
-                                    ),
-                                    initialCountryCode: widget.countryCode.isNotEmpty 
-                                        ? widget.countryCode 
-                                        : 'US',
-                                    onCountryChanged: (country) {
-                                      phoneCode = '+${country.dialCode}';
-                                    },
-                                    onChanged: (phone) {
-                                      completePhoneNumber = phone.completeNumber;
-                                    },
-                                    validator: (phone) {
-                                      if (phone == null || phone.number.isEmpty) {
-                                        return 'Please enter a valid phone number';
-                                      }
-                                      return null;
-                                    },
+                                ? Stack(
+                                    children: [
+                                      IntlPhoneField(
+                                        key: const ValueKey('phone'),
+                                        controller: _phoneController,
+                                        decoration: const InputDecoration(
+                                          labelText: 'Phone Number',
+                                          prefixIcon: Icon(Icons.phone),
+                                        ),
+                                        initialCountryCode: widget.countryCode.isNotEmpty 
+                                            ? widget.countryCode 
+                                            : 'US',
+                                        enabled: true,
+                                        showCountryFlag: true,
+                                        showDropdownIcon: false,
+                                        disableLengthCheck: false,
+                                        onChanged: (phone) {
+                                          completePhoneNumber = phone.completeNumber;
+                                        },
+                                        validator: (phone) {
+                                          if (phone == null || phone.number.isEmpty) {
+                                            return 'Please enter a valid phone number';
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                      // Overlay to block country selector taps
+                                      Positioned(
+                                        left: 0,
+                                        top: 0,
+                                        bottom: 0,
+                                        width: 80, // Cover the country flag and code area
+                                        child: Container(
+                                          color: Colors.transparent,
+                                        ),
+                                      ),
+                                    ],
                                   )
                                 : TextFormField(
                                     key: const ValueKey('email'),
