@@ -121,7 +121,7 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
 
   Widget _buildSearchAndFilters() {
     return Container(
-      color: Colors.white,
+  color: AppTheme.backgroundColor,
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
@@ -197,13 +197,22 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
   }
 
   Widget _buildFilterChip(String label, String? value, VoidCallback onTap) {
+    final selected = value != null;
     return FilterChip(
-      label: Text(value != null ? '$label: $value' : label),
-      selected: value != null,
+      label: Text(
+        selected ? '$label: $value' : label,
+        style: TextStyle(
+          color: selected ? AppTheme.textPrimary : AppTheme.textSecondary,
+          fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+        ),
+      ),
+      selected: selected,
       onSelected: (_) => onTap(),
-      backgroundColor: Colors.grey[100],
-      selectedColor: AppTheme.primaryColor.withValues(alpha: 0.1),
-      checkmarkColor: AppTheme.primaryColor,
+      backgroundColor: Colors.transparent,
+      selectedColor: Colors.transparent,
+      showCheckmark: false,
+      side: BorderSide.none,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 

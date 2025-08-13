@@ -9,7 +9,9 @@ import 'src/auth/screens/password_screen.dart';
 import 'src/auth/screens/profile_completion_screen.dart';
 import 'src/navigation/main_navigation_screen.dart';
 import 'src/screens/browse_screen.dart';
-import 'src/screens/price_comparison_screen.dart' as legacy_price;
+import 'src/screens/pricing/price_comparison_screen.dart';
+import 'src/screens/pricing/product_search_screen.dart';
+import 'src/screens/pricing/business_pricing_dashboard.dart';
 import 'src/screens/account_screen.dart';
 import 'src/screens/requests/ride/create_ride_request_screen.dart';
 import 'src/screens/unified_request_response/unified_response_edit_screen.dart';
@@ -20,9 +22,6 @@ import 'src/screens/delivery_verification_screen.dart';
 import 'src/screens/verification_status_screen.dart';
 import 'src/screens/driver_documents_view_screen.dart';         // Driver documents view
 import 'src/screens/role_management_screen.dart';
-import 'src/screens/pricing/product_search_screen.dart';
-import 'src/screens/pricing/price_comparison_screen.dart';
-import 'src/screens/pricing/business_pricing_dashboard.dart';
 import 'src/models/master_product.dart';
 import 'src/services/country_service.dart';
 import 'src/theme/app_theme.dart';
@@ -113,7 +112,8 @@ class MyApp extends StatelessWidget {
           case '/browse':
             return MaterialPageRoute(builder: (context) => const BrowseScreen());
           case '/price':
-            return MaterialPageRoute(builder: (context) => const legacy_price.PriceComparisonScreen());
+            // Redirect to product search since price comparison needs a specific product
+            return MaterialPageRoute(builder: (context) => const ProductSearchScreen());
           case '/pricing-search':
             return MaterialPageRoute(builder: (context) => const ProductSearchScreen());
           case '/pricing-comparison':

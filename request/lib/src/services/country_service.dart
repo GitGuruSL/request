@@ -2,6 +2,58 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+class Country {
+  final String id;
+  final String code;
+  final String name;
+  final String flag;
+  final String phoneCode;
+  final bool isEnabled;
+  final String comingSoonMessage;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+
+  Country({
+    required this.id,
+    required this.code,
+    required this.name,
+    required this.flag,
+    required this.phoneCode,
+    required this.isEnabled,
+    required this.comingSoonMessage,
+    this.createdAt,
+    this.updatedAt,
+  });
+
+  factory Country.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return Country(
+      id: doc.id,
+      code: data['code'] ?? '',
+      name: data['name'] ?? '',
+      flag: data['flag'] ?? '',
+      phoneCode: data['phoneCode'] ?? '',
+      isEnabled: data['isEnabled'] ?? false,
+      comingSoonMessage: data['comingSoonMessage'] ?? '',
+      createdAt: data['createdAt']?.toDate(),
+      updatedAt: data['updatedAt']?.toDate(),
+    );
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'code': code,
+      'name': name,
+      'flag': flag,
+      'phoneCode': phoneCode,
+      'isEnabled': isEnabled,
+      'comingSoonMessage': comingSoonMessage,
+      'createdAt': createdAt,
+      'updatedAt': updatedAt,
+    };
+  }
+}
+
 class CountryService {
   static const String _countryCodeKey = 'user_country_code';
   static const String _countryNameKey = 'user_country_name';
@@ -221,5 +273,104 @@ class CountryService {
     await prefs.remove(_countryNameKey);
     await prefs.remove(_phoneCodeKey);
     await prefs.remove(_currencyKey);
+  }
+
+  // === NEW COUNTRY MANAGEMENT METHODS ===
+
+  final CollectionReference _countriesCollection = 
+      FirebaseFirestore.instance.collection('app_countries');
+
+  // Get all countries (enabled and disabled)
+  Future<List<Country>> getAllCountries() async {
+    try {
+      final QuerySnapshot snapshot = await _countriesCollection
+          .orderBy('name')
+          .get();
+
+      return snapshot.docs
+          .map((doc) => Country.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      print('Error fetching countries: $e');
+      return [];
+    }
+  }
+
+  // Get only enabled countries
+  Future<List<Country>> getEnabledCountries() async {
+    try {
+      final QuerySnapshot snapshot = await _countriesCollection
+          .where('isEnabled', isEqualTo: true)
+          .orderBy('name')
+          .get();
+
+      return snapshot.docs
+          .map((doc) => Country.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      print('Error fetching enabled countries: $e');
+      return [];
+    }
+  }
+
+  // Get country by code
+  Future<Country?> getCountryByCode(String countryCode) async {
+    try {
+      final QuerySnapshot snapshot = await _countriesCollection
+          .where('code', isEqualTo: countryCode)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isNotEmpty) {
+        return Country.fromFirestore(snapshot.docs.first);
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching country by code: $e');
+      return null;
+    }
+  }
+
+  // Stream of enabled countries for real-time updates
+  Stream<List<Country>> streamEnabledCountries() {
+    return _countriesCollection
+        .where('isEnabled', isEqualTo: true)
+        .orderBy('name')
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => Country.fromFirestore(doc))
+            .toList());
+  }
+
+  // Check if app is available in country
+  Future<bool> isCountrySupported(String countryCode) async {
+    try {
+      final country = await getCountryByCode(countryCode);
+      return country?.isEnabled ?? false;
+    } catch (e) {
+      print('Error checking country support: $e');
+      return false;
+    }
+  }
+
+  // Get coming soon message for disabled country
+  Future<String> getComingSoonMessage(String countryCode) async {
+    try {
+      final country = await getCountryByCode(countryCode);
+      return country?.comingSoonMessage ?? 
+          'Coming soon to your country! Stay tuned for updates.';
+    } catch (e) {
+      print('Error getting coming soon message: $e');
+      return 'Coming soon to your country! Stay tuned for updates.';
+    }
+  }
+
+  // Set country from Country object (for welcome screen)
+  Future<void> setCountryFromObject(Country country) async {
+    await setUserCountry(
+      countryCode: country.code,
+      countryName: country.name,
+      phoneCode: country.phoneCode,
+    );
   }
 }

@@ -370,7 +370,7 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Currency',
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: AppTheme.backgroundColor,
                     border: OutlineInputBorder(borderSide: BorderSide.none),
                   ),
                   items: ['LKR', 'USD', 'EUR'].map((currency) {
@@ -391,7 +391,7 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Price *',
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: AppTheme.backgroundColor,
                     border: OutlineInputBorder(borderSide: BorderSide.none),
                   ),
                   keyboardType: TextInputType.number,
@@ -532,7 +532,13 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
                     final isSelected = _selectedAttributeIds.contains(attributeId);
                     
                     return FilterChip(
-                      label: Text(attributeName),
+                      label: Text(
+                        attributeName,
+                        style: TextStyle(
+                          color: isSelected ? AppTheme.textPrimary : AppTheme.textSecondary,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                        ),
+                      ),
                       selected: isSelected,
                       onSelected: (selected) {
                         setState(() {
@@ -544,12 +550,16 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
                           }
                         });
                       },
-                      selectedColor: AppTheme.backgroundColor,
-                      backgroundColor: Colors.white,
+                      selectedColor: Colors.transparent,
+                      backgroundColor: Colors.transparent,
                       side: BorderSide.none,
-                      checkmarkColor: AppTheme.textPrimary,
+                      checkmarkColor: Colors.transparent,
                       elevation: 0,
                       pressElevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     );
                   }).toList(),
                 ),
@@ -623,9 +633,8 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
                           if (attributeType == 'select' || attributeType == 'dropdown') ...[
                             Container(
                               decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey[300]!),
+                                color: AppTheme.backgroundColor, // flat background contrast
                                 borderRadius: BorderRadius.circular(8),
-                                color: Colors.white,
                               ),
                               child: DropdownButtonFormField<String>(
                                 value: _selectedVariables[attributeId],
@@ -690,8 +699,7 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: Colors.white,
-                                border: Border.all(color: Colors.grey[300]!),
+                                color: AppTheme.backgroundColor,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Row(
@@ -762,9 +770,8 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
               height: 100,
               width: double.infinity,
               decoration: BoxDecoration(
-                color: Colors.grey[100],
+                color: AppTheme.backgroundColor,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey[300]!, style: BorderStyle.solid),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,

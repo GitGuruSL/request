@@ -120,6 +120,13 @@ const Layout = () => {
       description: 'Custom product fields and attributes'
     },
     { 
+      text: 'Countries', 
+      icon: <Public />, 
+      path: '/countries',
+      access: 'super_admin',
+      description: 'Manage supported countries'
+    },
+    { 
       text: 'Admin Users', 
       icon: <Person />, 
       path: '/admin-users',
