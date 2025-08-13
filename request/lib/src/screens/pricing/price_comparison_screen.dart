@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/master_product.dart';
 import '../../models/price_listing.dart';
 import '../../services/pricing_service.dart';
@@ -28,6 +29,7 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
   bool _isLoading = true;
   bool _canAddListing = false;
   String? _currentUserId;
+  Map<String, String> _availableAttributes = {};
 
   @override
   void initState() {
@@ -46,6 +48,9 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
         print('DEBUG: User can add listing: $canAdd');
         setState(() => _canAddListing = canAdd);
       }
+
+      // Load available attributes for display
+      await _loadAvailableAttributes();
 
       print('DEBUG: Starting to listen for price listings...');
       _pricingService.getPriceListingsForProduct(widget.product.id).listen((listings) {
@@ -82,6 +87,37 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
         );
       }
     }
+  }
+
+  Future<void> _loadAvailableAttributes() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('custom_product_variables')
+          .get();
+
+      final attributes = <String, String>{};
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        attributes[doc.id] = data['name'] ?? doc.id;
+      }
+
+      if (mounted) {
+        setState(() {
+          _availableAttributes = attributes;
+        });
+      }
+    } catch (e) {
+      print('DEBUG: Error loading attributes: $e');
+    }
+  }
+
+  String _formatAttributes(Map<String, String> selectedVariables) {
+    final formattedAttributes = <String>[];
+    for (final entry in selectedVariables.entries) {
+      final attributeName = _availableAttributes[entry.key] ?? entry.key;
+      formattedAttributes.add('$attributeName: ${entry.value}');
+    }
+    return formattedAttributes.join(' • ');
   }
 
   Future<void> _trackAndLaunchUrl(String url, PriceListing listing) async {
@@ -451,17 +487,13 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
             
             // Product variables
             if (listing.selectedVariables.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                children: listing.selectedVariables.entries
-                    .map((entry) => Chip(
-                          label: Text('${entry.key}: ${entry.value}'),
-                          backgroundColor: Colors.grey[100],
-                          labelStyle: const TextStyle(fontSize: 12),
-                        ))
-                    .toList(),
+              const SizedBox(height: 8),
+              Text(
+                _formatAttributes(listing.selectedVariables),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                ),
               ),
             ],
             

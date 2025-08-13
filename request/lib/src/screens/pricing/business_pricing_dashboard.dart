@@ -520,8 +520,8 @@ class _BusinessPricingDashboardState extends State<BusinessPricingDashboard> {
       // Fetch the actual master product to get variables and other details
       final masterProductsStream = _pricingService.getMasterProducts(
         searchQuery: '',
-        selectedBrand: '',
-        selectedCategory: '',
+        brand: '',
+        category: '',
       );
       
       await for (final products in masterProductsStream.take(1)) {

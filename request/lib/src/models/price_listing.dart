@@ -12,6 +12,7 @@ class PriceListing {
   final String subcategory;
   final double price;
   final String currency;
+  final String? modelNumber;
   final Map<String, String> selectedVariables;
   final List<String> productImages;
   final String? productLink;
@@ -36,6 +37,7 @@ class PriceListing {
     required this.subcategory,
     required this.price,
     required this.currency,
+    this.modelNumber,
     required this.selectedVariables,
     required this.productImages,
     this.productLink,
@@ -63,6 +65,7 @@ class PriceListing {
       subcategory: data['subcategory'] ?? '',
       price: (data['price'] ?? 0.0).toDouble(),
       currency: data['currency'] ?? 'LKR',
+      modelNumber: data['modelNumber'],
       selectedVariables: Map<String, String>.from(data['selectedVariables'] ?? {}),
       productImages: List<String>.from(data['productImages'] ?? []),
       productLink: data['productLink'],
@@ -89,6 +92,7 @@ class PriceListing {
       'subcategory': subcategory,
       'price': price,
       'currency': currency,
+      'modelNumber': modelNumber,
       'selectedVariables': selectedVariables,
       'productImages': productImages,
       'productLink': productLink,
@@ -115,6 +119,7 @@ class PriceListing {
     String? subcategory,
     double? price,
     String? currency,
+    String? modelNumber,
     Map<String, String>? selectedVariables,
     List<String>? productImages,
     String? productLink,
@@ -139,6 +144,7 @@ class PriceListing {
       subcategory: subcategory ?? this.subcategory,
       price: price ?? this.price,
       currency: currency ?? this.currency,
+      modelNumber: modelNumber ?? this.modelNumber,
       selectedVariables: selectedVariables ?? this.selectedVariables,
       productImages: productImages ?? this.productImages,
       productLink: productLink ?? this.productLink,

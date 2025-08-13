@@ -58,7 +58,6 @@ const Variables = () => {
   const { adminData } = useAuth();
   const [variables, setVariables] = useState([]);
   const [filteredVariables, setFilteredVariables] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingVariable, setEditingVariable] = useState(null);
@@ -70,7 +69,6 @@ const Variables = () => {
     type: 'text',
     unit: '',
     possibleValues: [],
-    categoryIds: [],
     isRequired: false,
     isActive: true
   });
@@ -109,22 +107,9 @@ const Variables = () => {
         variablesData.push({ id: doc.id, ...doc.data() });
       });
       
-      // Load categories
-      const categoriesSnapshot = await getDocs(collection(db, 'categories'));
-      const categoriesData = [];
-      categoriesSnapshot.forEach(doc => {
-        const categoryData = { id: doc.id, ...doc.data() };
-        // Only include item categories
-        if (categoryData.type === 'item' || categoryData.applicableFor === 'Item' || !categoryData.type) {
-          categoriesData.push(categoryData);
-        }
-      });
-      
       console.log('Loaded variables:', variablesData);
-      console.log('Loaded categories:', categoriesData);
       
       setVariables(variablesData);
-      setCategories(categoriesData);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -142,12 +127,6 @@ const Variables = () => {
       );
     }
 
-    if (categoryFilter) {
-      filtered = filtered.filter(variable => 
-        variable.categoryIds?.includes(categoryFilter)
-      );
-    }
-
     setFilteredVariables(filtered);
   };
 
@@ -159,7 +138,6 @@ const Variables = () => {
         type: variable.type || 'text',
         possibleValues: variable.possibleValues || variable.options || [],
         unit: variable.unit || '',
-        categoryIds: variable.categoryIds || [],
         isRequired: variable.isRequired || false,
         isActive: variable.isActive !== false
       });
@@ -170,7 +148,6 @@ const Variables = () => {
         type: 'text',
         possibleValues: [],
         unit: '',
-        categoryIds: [],
         isRequired: false,
         isActive: true
       });
@@ -253,11 +230,6 @@ const Variables = () => {
     }
   };
 
-  const getCategoryName = (categoryId) => {
-    const category = categories.find(cat => cat.id === categoryId);
-    return category ? (category.name || category.category || category.title) : 'Unknown';
-  };
-
   if (loading) {
     return (
       <Box sx={{ p: 3 }}>
@@ -290,7 +262,7 @@ const Variables = () => {
         <br />
         • <strong>Types:</strong> Dropdown (multiple options), Text (free input), Number (numeric values), Boolean (yes/no)
         <br />
-        • Each attribute can be assigned to specific categories and marked as required or optional
+        • Product attributes are available for all categories and can be used by any product type
       </Alert>
 
       {/* Filters */}
@@ -308,23 +280,7 @@ const Variables = () => {
                 }}
               />
             </Grid>
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth>
-                <InputLabel>Category Filter</InputLabel>
-                <Select
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                >
-                  <MenuItem value="">All Categories</MenuItem>
-                  {categories.map(category => (
-                    <MenuItem key={category.id} value={category.id}>
-                      {category.name || category.category || category.title}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={8}>
               <Typography variant="body2" color="text.secondary">
                 {filteredVariables.length} attributes found
               </Typography>
@@ -341,7 +297,6 @@ const Variables = () => {
               <TableRow>
                 <TableCell>Attribute</TableCell>
                 <TableCell>Type</TableCell>
-                <TableCell>Categories</TableCell>
                 <TableCell>Required</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell>Actions</TableCell>
@@ -373,24 +328,6 @@ const Variables = () => {
                       color="primary"
                       variant="outlined"
                     />
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {variable.categoryIds && variable.categoryIds.length > 0 ? (
-                        variable.categoryIds.map(categoryId => (
-                          <Chip
-                            key={categoryId}
-                            label={getCategoryName(categoryId)}
-                            size="small"
-                            variant="outlined"
-                          />
-                        ))
-                      ) : (
-                        <Typography variant="caption" color="text.secondary">
-                          All categories
-                        </Typography>
-                      )}
-                    </Box>
                   </TableCell>
                   <TableCell>
                     <Chip
@@ -492,29 +429,6 @@ const Variables = () => {
               onChange={(e) => setFormData(prev => ({ ...prev, unit: e.target.value }))}
               placeholder="kg, cm, inches, etc."
             />
-
-            {/* Categories */}
-            <FormControl fullWidth>
-              <InputLabel>Applicable Categories</InputLabel>
-              <Select
-                multiple
-                value={formData.categoryIds}
-                onChange={(e) => setFormData(prev => ({ ...prev, categoryIds: e.target.value }))}
-                renderValue={(selected) => (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {selected.map((value) => (
-                      <Chip key={value} label={getCategoryName(value)} size="small" />
-                    ))}
-                  </Box>
-                )}
-              >
-                {categories.map(category => (
-                  <MenuItem key={category.id} value={category.id}>
-                    {category.name || category.category || category.title}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
 
             {/* Options for select types */}
             {(formData.type === 'select' || formData.type === 'multiselect') && (

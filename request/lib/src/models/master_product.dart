@@ -1,5 +1,37 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+class ProductVariable {
+  final String name;
+  final String type;
+  final bool required;
+  final List<String> values;
+
+  ProductVariable({
+    required this.name,
+    required this.type,
+    required this.required,
+    required this.values,
+  });
+
+  factory ProductVariable.fromMap(Map<String, dynamic> data) {
+    return ProductVariable(
+      name: data['name'] ?? '',
+      type: data['type'] ?? 'select',
+      required: data['required'] ?? false,
+      values: List<String>.from(data['values'] ?? []),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+      'type': type,
+      'required': required,
+      'values': values,
+    };
+  }
+}
+
 class MasterProduct {
   final String id;
   final String name;
@@ -8,7 +40,7 @@ class MasterProduct {
   final String subcategory;
   final String description;
   final List<String> images;
-  final Map<String, List<String>> availableVariables;
+  final Map<String, ProductVariable> availableVariables;
   final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -39,16 +71,37 @@ class MasterProduct {
       subcategory: data['subcategory'] ?? '',
       description: data['description'] ?? '',
       images: List<String>.from(data['images'] ?? []),
-      availableVariables: Map<String, List<String>>.from(
-        (data['availableVariables'] ?? {}).map(
-          (key, value) => MapEntry(key, List<String>.from(value)),
-        ),
-      ),
+      availableVariables: _parseAvailableVariables(data['availableVariables']),
       isActive: data['isActive'] ?? true,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       businessListingsCount: data['businessListingsCount'] ?? 0,
     );
+  }
+
+  static Map<String, ProductVariable> _parseAvailableVariables(dynamic data) {
+    if (data == null) return {};
+    
+    final Map<String, ProductVariable> variables = {};
+    
+    if (data is Map<String, dynamic>) {
+      data.forEach((key, value) {
+        if (value is Map<String, dynamic>) {
+          // New format with ProductVariable objects
+          variables[key] = ProductVariable.fromMap(value);
+        } else if (value is List) {
+          // Legacy format with simple string lists
+          variables[key] = ProductVariable(
+            name: key,
+            type: 'select',
+            required: false,
+            values: List<String>.from(value),
+          );
+        }
+      });
+    }
+    
+    return variables;
   }
 
   Map<String, dynamic> toFirestore() {
@@ -59,7 +112,9 @@ class MasterProduct {
       'subcategory': subcategory,
       'description': description,
       'images': images,
-      'availableVariables': availableVariables,
+      'availableVariables': availableVariables.map(
+        (key, variable) => MapEntry(key, variable.toMap()),
+      ),
       'isActive': isActive,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),

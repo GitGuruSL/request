@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/master_product.dart';
 import '../../models/price_listing.dart';
 import '../../services/pricing_service.dart';
@@ -32,6 +33,7 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
   // Form controllers
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _stockController = TextEditingController();
+  final TextEditingController _modelNumberController = TextEditingController();
   final TextEditingController _productLinkController = TextEditingController();
   final TextEditingController _whatsappController = TextEditingController();
 
@@ -41,6 +43,8 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
   Map<String, String> _selectedVariables = {};
   List<File> _productImages = [];
   List<String> _existingImageUrls = [];
+  List<dynamic> _availableAttributes = []; // All attributes from database
+  Set<String> _selectedAttributeIds = {}; // Which attributes user wants to use
   bool _isSaving = false;
 
   Map<String, dynamic>? _businessProfile;
@@ -49,7 +53,44 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
   void initState() {
     super.initState();
     _loadBusinessProfile();
+    _loadAvailableAttributes();
     _initializeForm();
+    
+    // Debug: Print available variables
+    print('DEBUG: Master Product ID: ${widget.masterProduct.id}');
+    print('DEBUG: Master Product Name: ${widget.masterProduct.name}');
+    print('DEBUG: Available Variables: ${widget.masterProduct.availableVariables}');
+    print('DEBUG: Available Variables Length: ${widget.masterProduct.availableVariables.length}');
+  }
+
+  Future<void> _loadAvailableAttributes() async {
+    try {
+      final attributesSnapshot = await FirebaseFirestore.instance
+          .collection('custom_product_variables')
+          .where('isActive', isEqualTo: true)
+          .get();
+      
+      setState(() {
+        _availableAttributes = attributesSnapshot.docs.map((doc) {
+          final data = doc.data();
+          return {
+            'id': doc.id,
+            'name': data['name'] ?? '',
+            'type': data['type'] ?? 'select',
+            'required': data['required'] ?? false,
+            'possibleValues': List<String>.from(data['possibleValues'] ?? []),
+            'description': data['description'] ?? '',
+          };
+        }).toList();
+      });
+      
+      print('DEBUG: Loaded ${_availableAttributes.length} attributes from database');
+      for (var attr in _availableAttributes) {
+        print('DEBUG: Attribute: ${attr['name']} - Type: ${attr['type']} - Values: ${attr['possibleValues']}');
+      }
+    } catch (e) {
+      print('Error loading attributes: $e');
+    }
   }
 
   Future<void> _loadBusinessProfile() async {
@@ -65,11 +106,16 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
       final listing = widget.existingListing!;
       _priceController.text = listing.price.toString();
       _stockController.text = listing.stockQuantity.toString();
+      _modelNumberController.text = listing.modelNumber ?? '';
       _productLinkController.text = listing.productLink ?? '';
       _whatsappController.text = listing.whatsappNumber ?? '';
       _currency = listing.currency;
       _isAvailable = listing.isAvailable;
       _selectedVariables = Map.from(listing.selectedVariables);
+      
+      // Initialize selected attribute IDs based on existing variables
+      _selectedAttributeIds = _selectedVariables.keys.toSet();
+      
       _existingImageUrls = List.from(listing.productImages);
     } else {
       // Set default WhatsApp from business profile
@@ -112,6 +158,32 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
 
   Future<void> _saveListing() async {
     if (!_formKey.currentState!.validate()) return;
+    
+    // Validate required variables
+    final missingVariables = <String>[];
+    for (final attribute in _availableAttributes) {
+      final attributeId = attribute['id'];
+      final attributeName = attribute['name'] ?? '';
+      final isRequired = attribute['required'] ?? false;
+      
+      if (isRequired && 
+          (!_selectedVariables.containsKey(attributeId) || 
+           _selectedVariables[attributeId]?.isEmpty == true)) {
+        missingVariables.add(attributeName);
+      }
+    }
+    
+    if (missingVariables.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Please select: ${missingVariables.join(', ')}',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     setState(() => _isSaving = true);
 
@@ -143,6 +215,7 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
         subcategory: widget.masterProduct.subcategory,
         price: double.parse(_priceController.text),
         currency: _currency,
+        modelNumber: _modelNumberController.text.isEmpty ? null : _modelNumberController.text,
         selectedVariables: _selectedVariables,
         productImages: imageUrls,
         productLink: _productLinkController.text.isEmpty ? null : _productLinkController.text,
@@ -349,6 +422,20 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
           
           const SizedBox(height: 16),
           
+          // Model number
+          TextFormField(
+            controller: _modelNumberController,
+            decoration: const InputDecoration(
+              labelText: 'Model Number (Optional)',
+              helperText: 'e.g., XPS-13-9315, iPhone-14-Pro',
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(borderSide: BorderSide.none),
+            ),
+          ),
+          
+          const SizedBox(height: 16),
+          
           // Availability switch
           Row(
             children: [
@@ -367,7 +454,7 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
   }
 
   Widget _buildVariablesSection() {
-    if (widget.masterProduct.availableVariables.isEmpty) {
+    if (_availableAttributes.isEmpty) {
       return const SizedBox();
     }
 
@@ -381,57 +468,258 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            children: [
+              Icon(
+                Icons.tune,
+                color: Colors.grey[600],
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Product Specifications',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
           const Text(
-            'Product Specifications',
+            'Select which specifications apply to your product',
             style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+              fontSize: 13,
+              color: Colors.grey,
             ),
           ),
           const SizedBox(height: 16),
           
-          ...widget.masterProduct.availableVariables.entries.map((entry) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 16),
+          // Step 1: Select which attributes to use
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue[200]!),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.check_circle_outline, 
+                         color: Colors.blue[600], 
+                         size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Step 1: Choose Relevant Attributes',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.blue[800],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _availableAttributes.map((attribute) {
+                    final attributeId = attribute['id'];
+                    final attributeName = attribute['name'] ?? '';
+                    final isSelected = _selectedAttributeIds.contains(attributeId);
+                    
+                    return FilterChip(
+                      label: Text(attributeName),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        setState(() {
+                          if (selected) {
+                            _selectedAttributeIds.add(attributeId);
+                          } else {
+                            _selectedAttributeIds.remove(attributeId);
+                            _selectedVariables.remove(attributeId);
+                          }
+                        });
+                      },
+                      selectedColor: Colors.blue[100],
+                      checkmarkColor: Colors.blue[800],
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+          
+          // Step 2: Fill in values for selected attributes
+          if (_selectedAttributeIds.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.green[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green[200]!),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    entry.key,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  Row(
+                    children: [
+                      Icon(Icons.edit_outlined, 
+                           color: Colors.green[600], 
+                           size: 18),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Step 2: Fill in the Details',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.green[800],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _selectedVariables[entry.key],
-                    hint: Text('Select ${entry.key}'),
-                    decoration: const InputDecoration(
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(borderSide: BorderSide.none),
-                    ),
-                    items: entry.value.map((option) {
-                      return DropdownMenuItem(
-                        value: option,
-                        child: Text(option),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        if (value != null) {
-                          _selectedVariables[entry.key] = value;
-                        } else {
-                          _selectedVariables.remove(entry.key);
-                        }
-                      });
-                    },
-                  ),
+                  const SizedBox(height: 16),
+                  
+                  ..._availableAttributes
+                      .where((attr) => _selectedAttributeIds.contains(attr['id']))
+                      .map((attribute) {
+                    final attributeId = attribute['id'];
+                    final attributeName = attribute['name'] ?? '';
+                    final attributeType = attribute['type'] ?? 'select';
+                    final possibleValues = List<String>.from(attribute['possibleValues'] ?? []);
+                    final description = attribute['description'] ?? '';
+                    
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            attributeName,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          if (description.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              description,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 8),
+                          
+                          if (attributeType == 'select' || attributeType == 'dropdown') ...[
+                            Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey[300]!),
+                                borderRadius: BorderRadius.circular(8),
+                                color: Colors.white,
+                              ),
+                              child: DropdownButtonFormField<String>(
+                                value: _selectedVariables[attributeId],
+                                hint: Text(
+                                  'Select $attributeName',
+                                  style: TextStyle(color: Colors.grey[600]),
+                                ),
+                                decoration: const InputDecoration(
+                                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  border: InputBorder.none,
+                                ),
+                                items: possibleValues.map((option) {
+                                  return DropdownMenuItem(
+                                    value: option,
+                                    child: Text(
+                                      option,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    if (value != null) {
+                                      _selectedVariables[attributeId] = value;
+                                    } else {
+                                      _selectedVariables.remove(attributeId);
+                                    }
+                                  });
+                                },
+                              ),
+                            ),
+                          ] else if (attributeType == 'text') ...[
+                            TextFormField(
+                              initialValue: _selectedVariables[attributeId],
+                              decoration: InputDecoration(
+                                hintText: 'Enter $attributeName',
+                                filled: true,
+                                fillColor: Colors.white,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(color: Colors.grey[300]!),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(color: Colors.grey[300]!),
+                                ),
+                              ),
+                              onChanged: (value) {
+                                setState(() {
+                                  if (value.isNotEmpty) {
+                                    _selectedVariables[attributeId] = value;
+                                  } else {
+                                    _selectedVariables.remove(attributeId);
+                                  }
+                                });
+                              },
+                            ),
+                          ] else if (attributeType == 'boolean') ...[
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                border: Border.all(color: Colors.grey[300]!),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                children: [
+                                  Switch(
+                                    value: _selectedVariables[attributeId] == 'true',
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _selectedVariables[attributeId] = value.toString();
+                                      });
+                                    },
+                                    activeColor: Theme.of(context).primaryColor,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    _selectedVariables[attributeId] == 'true' ? 'Yes' : 'No',
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  }).toList(),
                 ],
               ),
-            );
-          }).toList(),
+            ),
+          ],
         ],
       ),
     );
