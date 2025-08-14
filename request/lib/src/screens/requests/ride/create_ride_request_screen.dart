@@ -2,10 +2,14 @@ import 'package:flutter/services.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../models/request_model.dart';
 import '../../../models/enhanced_user_model.dart';
+import '../../../models/vehicle_type_model.dart';
 import '../../../services/enhanced_request_service.dart';
 import '../../../services/enhanced_user_service.dart';
+import '../../../services/country_service.dart';
+import '../../../services/vehicle_service.dart';
 import '../../../widgets/image_upload_widget.dart';
 import '../../../widgets/accurate_location_picker_widget.dart';
 import '../../../utils/currency_helper.dart';
@@ -23,6 +27,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
   final _formKey = GlobalKey<FormState>();
   final EnhancedRequestService _requestService = EnhancedRequestService();
   final EnhancedUserService _userService = EnhancedUserService();
+  final VehicleService _vehicleService = VehicleService();
 
   // Form Controllers
   final _titleController = TextEditingController();
@@ -32,7 +37,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
   final _budgetController = TextEditingController();
   
   // Ride-specific fields
-  String _selectedVehicleType = 'bike';
+  String _selectedVehicleType = '';
   DateTime? _departureTime;
   int _passengerCount = 1;
   bool _scheduleForLater = false;
@@ -59,48 +64,38 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
 
   bool _isLoading = false;
 
-  final List<Map<String, dynamic>> _vehicleTypes = [
-    {
-      'id': 'bike',
-      'name': 'Bike',
-      'description': 'Quick & affordable',
-      'icon': Icons.two_wheeler,
-      'passengers': '1',
-      'capacity': '1 passenger + small bag',
-    },
-    {
-      'id': 'threewheeler',
-      'name': 'Three Wheeler',
-      'description': 'Local transport',
-      'icon': Icons.local_taxi,
-      'passengers': '1-3',
-      'capacity': '3 passengers + luggage',
-    },
-    {
-      'id': 'car',
-      'name': 'Car',
-      'description': 'Comfortable ride',
-      'icon': Icons.directions_car,
-      'passengers': '1-4',
-      'capacity': '4 passengers + luggage',
-    },
-    {
-      'id': 'van',
-      'name': 'Van',
-      'description': 'Extra space',
-      'icon': Icons.airport_shuttle,
-      'passengers': '1-8',
-      'capacity': '8 passengers + luggage',
-    },
-    {
-      'id': 'bus',
-      'name': 'Bus',
-      'description': 'Group transport',
-      'icon': Icons.directions_bus,
-      'passengers': '15+',
-      'capacity': '15+ passengers',
-    },
-  ];
+  // Dynamic vehicle types from database
+  List<VehicleTypeModel> _vehicleTypes = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVehicleTypes();
+  }
+
+  Future<void> _loadVehicleTypes() async {
+    try {
+      setState(() => _isLoading = true);
+      final vehicles = await _vehicleService.getAvailableVehicles();
+      setState(() {
+        _vehicleTypes = vehicles;
+        // Set first vehicle as default selection if available
+        if (vehicles.isNotEmpty && _selectedVehicleType.isEmpty) {
+          _selectedVehicleType = vehicles.first.id;
+        }
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading vehicle types: $e');
+      setState(() => _isLoading = false);
+      // Show error snackbar if needed
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to load vehicle types')),
+        );
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -111,6 +106,31 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
     _budgetController.dispose();
     _specialRequestsController.dispose();
     super.dispose();
+  }
+
+  /// Get icon from string name
+  IconData _getVehicleIcon(String iconName) {
+    switch (iconName.toLowerCase()) {
+      case 'two_wheeler':
+      case 'twowheeler':
+        return Icons.two_wheeler;
+      case 'local_taxi':
+      case 'localtaxi':
+        return Icons.local_taxi;
+      case 'directions_car':
+      case 'directionscar':
+        return Icons.directions_car;
+      case 'airport_shuttle':
+      case 'airportshuttle':
+        return Icons.airport_shuttle;
+      case 'directions_bus':
+      case 'directionsbus':
+        return Icons.directions_bus;
+      case 'people':
+        return Icons.people;
+      default:
+        return Icons.directions_car;
+    }
   }
 
   void _calculateDistance() async {
@@ -600,6 +620,33 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
   }
 
   Widget _buildVehicleSelection() {
+    if (_vehicleTypes.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Choose a ride',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            height: 80,
+            child: _isLoading 
+              ? const Center(child: CircularProgressIndicator())
+              : const Center(
+                  child: Text(
+                    'No vehicles available in your area',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+          ),
+        ],
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -618,12 +665,12 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
             itemCount: _vehicleTypes.length,
             itemBuilder: (context, index) {
               final vehicle = _vehicleTypes[index];
-              final isSelected = _selectedVehicleType == vehicle['id'];
+              final isSelected = _selectedVehicleType == vehicle.id;
               
               return GestureDetector(
                 onTap: () {
                   setState(() {
-                    _selectedVehicleType = vehicle['id'];
+                    _selectedVehicleType = vehicle.id;
                   });
                   // Recalculate estimated time for new vehicle type
                   if (_distance != null) {
@@ -648,13 +695,13 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                       Row(
                         children: [
                           Icon(
-                            vehicle['icon'],
+                            _getVehicleIcon(vehicle.icon),
                             size: 24,
                             color: isSelected ? Theme.of(context).primaryColor : Colors.grey[600],
                           ),
                           const Spacer(),
                           Text(
-                            vehicle['passengers'],
+                            '${vehicle.passengerCapacity}',
                             style: TextStyle(
                               fontSize: 10,
                               color: Colors.grey[600],
@@ -665,7 +712,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        vehicle['name'],
+                        vehicle.name,
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -988,7 +1035,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
 
       // Get selected vehicle details
       final selectedVehicle = _vehicleTypes.firstWhere(
-        (vehicle) => vehicle['id'] == _selectedVehicleType,
+        (vehicle) => vehicle.id == _selectedVehicleType,
       );
 
       // Create the ride-specific data
@@ -996,7 +1043,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
         passengers: _passengerCount,
         preferredTime: _scheduleForLater ? _departureTime! : DateTime.now().add(const Duration(minutes: 10)),
         isFlexibleTime: !_scheduleForLater,
-        vehicleType: selectedVehicle['name'],
+        vehicleType: selectedVehicle.name,
         allowSmoking: false,
         petsAllowed: _allowSharing,
         specialRequests: _specialRequestsController.text.trim().isEmpty 
@@ -1009,7 +1056,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
 
       final requestId = await _requestService.createRequest(
         title: title,
-        description: 'Ride request for $_passengerCount passenger(s) using ${selectedVehicle['name']}',
+        description: 'Ride request for $_passengerCount passenger(s) using ${selectedVehicle.name}',
         type: RequestType.ride,
         budget: double.tryParse(_budgetController.text),
         currency: CurrencyHelper.instance.getCurrency(),

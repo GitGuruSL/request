@@ -73,12 +73,14 @@ const Vehicles = () => {
     );
   }
 
-  // Form state
+    // Form state
   const [formData, setFormData] = useState({
     name: '',
     icon: 'DirectionsCar',
     isActive: true,
-    displayOrder: 1
+    displayOrder: 1,
+    passengerCapacity: 1,
+    description: ''
   });
 
   const vehicleIcons = {
@@ -179,7 +181,9 @@ const Vehicles = () => {
       name: vehicle.name || '',
       icon: vehicle.icon || 'DirectionsCar',
       isActive: vehicle.isActive !== false,
-      displayOrder: vehicle.displayOrder || 1
+      displayOrder: vehicle.displayOrder || 1,
+      passengerCapacity: vehicle.passengerCapacity || 1,
+      description: vehicle.description || ''
     });
     setOpenDialog(true);
   };
@@ -258,18 +262,50 @@ const Vehicles = () => {
       name: '',
       icon: 'DirectionsCar',
       isActive: true,
-      displayOrder: vehicles.length + 1
+      displayOrder: vehicles.length + 1,
+      passengerCapacity: 1,
+      description: ''
     });
     setOpenDialog(true);
   };
 
   const addDefaultVehicleTypes = async () => {
     const defaultVehicles = [
-      { name: 'Bike', icon: 'TwoWheeler', displayOrder: 1 },
-      { name: 'Three Wheeler', icon: 'LocalTaxi', displayOrder: 2 },
-      { name: 'Car', icon: 'DirectionsCar', displayOrder: 3 },
-      { name: 'Van', icon: 'AirportShuttle', displayOrder: 4 },
-      { name: 'Shared Ride', icon: 'People', displayOrder: 5 }
+      { 
+        name: 'Bike', 
+        icon: 'TwoWheeler', 
+        displayOrder: 1, 
+        passengerCapacity: 1, 
+        description: 'Motorcycle or scooter for single passenger' 
+      },
+      { 
+        name: 'Three Wheeler', 
+        icon: 'LocalTaxi', 
+        displayOrder: 2, 
+        passengerCapacity: 3, 
+        description: 'Tuk-tuk or auto-rickshaw for up to 3 passengers' 
+      },
+      { 
+        name: 'Car', 
+        icon: 'DirectionsCar', 
+        displayOrder: 3, 
+        passengerCapacity: 4, 
+        description: 'Standard car for up to 4 passengers' 
+      },
+      { 
+        name: 'Van', 
+        icon: 'AirportShuttle', 
+        displayOrder: 4, 
+        passengerCapacity: 8, 
+        description: 'Van or minibus for up to 8 passengers' 
+      },
+      { 
+        name: 'Shared Ride', 
+        icon: 'People', 
+        displayOrder: 5, 
+        passengerCapacity: 4, 
+        description: 'Shared car ride with other passengers' 
+      }
     ];
 
     // Check which default vehicles are missing
@@ -354,12 +390,13 @@ const Vehicles = () => {
         <Paper sx={{ width: '100%', overflow: 'hidden' }}>
           <TableContainer>
             <Table>
-              <TableHead>
+                            <TableHead>
                 <TableRow>
                   <TableCell>Icon</TableCell>
                   <TableCell>Name</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell>Order</TableCell>
+                  <TableCell>Passengers</TableCell>
                   <TableCell>Actions</TableCell>
                 </TableRow>
               </TableHead>
@@ -382,6 +419,16 @@ const Vehicles = () => {
                       />
                     </TableCell>
                     <TableCell>{vehicle.displayOrder}</TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {vehicle.passengerCapacity || 1} {vehicle.passengerCapacity === 1 ? 'passenger' : 'passengers'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {vehicle.passengerCapacity || 1} {vehicle.passengerCapacity === 1 ? 'passenger' : 'passengers'}
+                      </Typography>
+                    </TableCell>
                     <TableCell>
                       <IconButton onClick={() => handleEdit(vehicle)} size="small">
                         <EditIcon />
@@ -435,6 +482,14 @@ const Vehicles = () => {
                         </Avatar>
                         <Box sx={{ flexGrow: 1 }}>
                           <Typography variant="h6">{vehicle.name}</Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {vehicle.passengerCapacity || 1} {vehicle.passengerCapacity === 1 ? 'passenger' : 'passengers'}
+                          </Typography>
+                          {vehicle.description && (
+                            <Typography variant="caption" color="text.secondary">
+                              {vehicle.description}
+                            </Typography>
+                          )}
                         </Box>
                         <FormControlLabel
                           control={
@@ -486,6 +541,27 @@ const Vehicles = () => {
                 type="number"
                 value={formData.displayOrder}
                 onChange={(e) => setFormData({ ...formData, displayOrder: parseInt(e.target.value) || 1 })}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Passenger Capacity"
+                type="number"
+                value={formData.passengerCapacity}
+                onChange={(e) => setFormData({ ...formData, passengerCapacity: parseInt(e.target.value) || 1 })}
+                inputProps={{ min: 1, max: 50 }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Description"
+                multiline
+                rows={2}
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Brief description of the vehicle type"
               />
             </Grid>
             <Grid item xs={12} sm={6}>

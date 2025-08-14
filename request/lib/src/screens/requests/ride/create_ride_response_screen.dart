@@ -6,8 +6,10 @@ import 'package:url_launcher/url_launcher.dart';
 import 'dart:math' as math;
 import '../../../models/request_model.dart';
 import '../../../models/enhanced_user_model.dart';
+import '../../../models/vehicle_type_model.dart';
 import '../../../services/enhanced_request_service.dart';
 import '../../../services/enhanced_user_service.dart';
+import '../../../services/vehicle_service.dart';
 import '../../../widgets/image_upload_widget.dart';
 import '../../../widgets/accurate_location_picker_widget.dart';
 import '../../../utils/currency_helper.dart';
@@ -30,6 +32,7 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
   final _formKey = GlobalKey<FormState>();
   final EnhancedRequestService _requestService = EnhancedRequestService();
   final EnhancedUserService _userService = EnhancedUserService();
+  final VehicleService _vehicleService = VehicleService();
 
   // Google Maps Controller
   GoogleMapController? _mapController;
@@ -38,7 +41,7 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
   final _priceController = TextEditingController();
   final _messageController = TextEditingController();
   
-  String _vehicleType = 'Sedan';
+  String _vehicleType = '';
   bool _smokingAllowed = false;
   bool _petsAllowed = true;
   DateTime? _departureTime;
@@ -57,15 +60,31 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
   // Map markers
   Set<Marker> _markers = {};
   
-  // Vehicle types
-  final List<String> _vehicleTypes = ['Sedan', 'SUV', 'Hatchback', 'MPV', 'Pickup', 'Van'];
+  // Dynamic vehicle types from database
+  List<VehicleTypeModel> _vehicleTypes = [];
 
   @override
   void initState() {
     super.initState();
+    _loadVehicleTypes();
     _requestLocationPermission();
     _loadRequesterData();
     _checkExistingResponse();
+  }
+
+  Future<void> _loadVehicleTypes() async {
+    try {
+      final vehicles = await _vehicleService.getAvailableVehicles();
+      setState(() {
+        _vehicleTypes = vehicles;
+        // Set first vehicle as default if available and not already set
+        if (vehicles.isNotEmpty && _vehicleType.isEmpty) {
+          _vehicleType = vehicles.first.name;
+        }
+      });
+    } catch (e) {
+      print('Error loading vehicle types: $e');
+    }
   }
 
   @override
@@ -152,7 +171,7 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
           _messageController.text = existingResponse.message;
           // Load other fields if they exist in additionalInfo
           if (existingResponse.additionalInfo.isNotEmpty) {
-            _vehicleType = existingResponse.additionalInfo['vehicleType'] ?? 'Sedan';
+            _vehicleType = existingResponse.additionalInfo['vehicleType'] ?? (_vehicleTypes.isNotEmpty ? _vehicleTypes.first.name : '');
             _availableSeats = existingResponse.additionalInfo['availableSeats'] ?? 3;
             _smokingAllowed = existingResponse.additionalInfo['smokingAllowed'] ?? false;
             _petsAllowed = existingResponse.additionalInfo['petsAllowed'] ?? true;

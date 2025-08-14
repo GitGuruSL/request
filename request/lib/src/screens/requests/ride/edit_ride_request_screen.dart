@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../models/request_model.dart';
 import '../../../models/enhanced_user_model.dart';
+import '../../../models/vehicle_type_model.dart';
 import '../../../services/enhanced_request_service.dart';
 import '../../../services/enhanced_user_service.dart';
+import '../../../services/vehicle_service.dart';
 import '../../../widgets/image_upload_widget.dart';
 import '../../../widgets/accurate_location_picker_widget.dart';
 import '../../../utils/currency_helper.dart';
@@ -27,6 +29,7 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
   final _formKey = GlobalKey<FormState>();
   final EnhancedRequestService _requestService = EnhancedRequestService();
   final EnhancedUserService _userService = EnhancedUserService();
+  final VehicleService _vehicleService = VehicleService();
 
   // Form Controllers
   final _titleController = TextEditingController();
@@ -61,42 +64,25 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
 
   bool _isLoading = false;
 
-  final List<Map<String, dynamic>> _vehicleTypes = [
-    {
-      'id': 'economy',
-      'name': 'Economy',
-      'description': 'Affordable rides',
-      'icon': Icons.directions_car,
-      'passengers': '1-4',
-    },
-    {
-      'id': 'premium',
-      'name': 'Premium',
-      'description': 'Comfortable rides',
-      'icon': Icons.local_taxi,
-      'passengers': '1-4', 
-    },
-    {
-      'id': 'suv',
-      'name': 'SUV',
-      'description': 'Extra space',
-      'icon': Icons.airport_shuttle,
-      'passengers': '1-6',
-    },
-    {
-      'id': 'shared',
-      'name': 'Shared',
-      'description': 'Share & save',
-      'icon': Icons.people,
-      'passengers': '1-2',
-      'price': '${CurrencyHelper.instance.getCurrencySymbol()}100-150',
-    },
-  ];
+  // Dynamic vehicle types from database
+  List<VehicleTypeModel> _vehicleTypes = [];
 
   @override
   void initState() {
     super.initState();
+    _loadVehicleTypes();
     _initializeFromRequest();
+  }
+
+  Future<void> _loadVehicleTypes() async {
+    try {
+      final vehicles = await _vehicleService.getAvailableVehicles();
+      setState(() {
+        _vehicleTypes = vehicles;
+      });
+    } catch (e) {
+      print('Error loading vehicle types: $e');
+    }
   }
 
   void _initializeFromRequest() {
@@ -179,6 +165,31 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
     _budgetController.dispose();
     _specialRequestsController.dispose();
     super.dispose();
+  }
+
+  /// Get icon from string name
+  IconData _getVehicleIcon(String iconName) {
+    switch (iconName.toLowerCase()) {
+      case 'two_wheeler':
+      case 'twowheeler':
+        return Icons.two_wheeler;
+      case 'local_taxi':
+      case 'localtaxi':
+        return Icons.local_taxi;
+      case 'directions_car':
+      case 'directionscar':
+        return Icons.directions_car;
+      case 'airport_shuttle':
+      case 'airportshuttle':
+        return Icons.airport_shuttle;
+      case 'directions_bus':
+      case 'directionsbus':
+        return Icons.directions_bus;
+      case 'people':
+        return Icons.people;
+      default:
+        return Icons.directions_car;
+    }
   }
 
   @override
@@ -445,6 +456,33 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
   }
 
   Widget _buildVehicleSelection() {
+    if (_vehicleTypes.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Choose a ride',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            height: 80,
+            child: _isLoading 
+              ? const Center(child: CircularProgressIndicator())
+              : const Center(
+                  child: Text(
+                    'No vehicles available in your area',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+          ),
+        ],
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -463,12 +501,12 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
             itemCount: _vehicleTypes.length,
             itemBuilder: (context, index) {
               final vehicle = _vehicleTypes[index];
-              final isSelected = _selectedVehicleType == vehicle['id'];
+              final isSelected = _selectedVehicleType == vehicle.id;
               
               return GestureDetector(
                 onTap: () {
                   setState(() {
-                    _selectedVehicleType = vehicle['id'];
+                    _selectedVehicleType = vehicle.id;
                   });
                 },
                 child: Container(
@@ -485,13 +523,13 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
                       Row(
                         children: [
                           Icon(
-                            vehicle['icon'],
+                            _getVehicleIcon(vehicle.icon),
                             size: 24,
                             color: isSelected ? Theme.of(context).primaryColor : Colors.grey[600],
                           ),
                           const Spacer(),
                           Text(
-                            vehicle['passengers'],
+                            '${vehicle.passengerCapacity}',
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey[600],
@@ -501,7 +539,7 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        vehicle['name'],
+                        vehicle.name,
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -909,7 +947,7 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
 
       // Get selected vehicle details
       final selectedVehicle = _vehicleTypes.firstWhere(
-        (vehicle) => vehicle['id'] == _selectedVehicleType,
+        (vehicle) => vehicle.id == _selectedVehicleType,
       );
 
       // Create the ride-specific data
@@ -917,7 +955,7 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
         passengers: _passengerCount,
         preferredTime: _scheduleForLater ? _departureTime! : DateTime.now().add(const Duration(minutes: 10)),
         isFlexibleTime: !_scheduleForLater,
-        vehicleType: selectedVehicle['name'],
+        vehicleType: selectedVehicle.name,
         allowSmoking: false,
         petsAllowed: _allowSharing,
         specialRequests: _specialRequestsController.text.trim().isEmpty 
@@ -943,7 +981,7 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
       await _requestService.updateRequest(
         requestId: widget.request.id,
         title: title,
-        description: 'Ride request for $_passengerCount passenger(s) using ${selectedVehicle['name']}',
+        description: 'Ride request for $_passengerCount passenger(s) using ${selectedVehicle.name}',
         budget: double.tryParse(_budgetController.text),
         location: locationInfo,
         destinationLocation: destinationInfo,

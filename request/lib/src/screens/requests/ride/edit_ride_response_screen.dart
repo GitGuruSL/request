@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../../models/request_model.dart';
 import '../../../models/enhanced_user_model.dart';
+import '../../../models/vehicle_type_model.dart';
 import '../../../services/enhanced_request_service.dart';
 import '../../../services/enhanced_user_service.dart';
+import '../../../services/vehicle_service.dart';
 import '../../../widgets/image_upload_widget.dart';
 import '../../../widgets/accurate_location_picker_widget.dart';
 import '../../../utils/currency_helper.dart';
@@ -25,6 +27,7 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
   final _formKey = GlobalKey<FormState>();
   final EnhancedRequestService _requestService = EnhancedRequestService();
   final EnhancedUserService _userService = EnhancedUserService();
+  final VehicleService _vehicleService = VehicleService();
 
   // Form Controllers
   final _descriptionController = TextEditingController();
@@ -33,7 +36,7 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
   final _vehicleDetailsController = TextEditingController();
   final _drivingExperienceController = TextEditingController();
   
-  String _vehicleType = 'Sedan';
+  String _vehicleType = '';
   bool _smokingAllowed = false;
   bool _petsAllowed = true;
   DateTime? _departureTime;
@@ -42,20 +45,25 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
 
   bool _isLoading = false;
 
-  final List<String> _vehicleTypes = [
-    'Sedan',
-    'SUV',
-    'Hatchback',
-    'Van',
-    'Truck',
-    'Coupe',
-    'Convertible',
-  ];
+  // Dynamic vehicle types from database
+  List<VehicleTypeModel> _vehicleTypes = [];
 
   @override
   void initState() {
     super.initState();
+    _loadVehicleTypes();
     _initializeFromResponse();
+  }
+
+  Future<void> _loadVehicleTypes() async {
+    try {
+      final vehicles = await _vehicleService.getAvailableVehicles();
+      setState(() {
+        _vehicleTypes = vehicles;
+      });
+    } catch (e) {
+      print('Error loading vehicle types: $e');
+    }
   }
 
   void _initializeFromResponse() {
@@ -68,7 +76,7 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
     final additionalInfo = widget.response.additionalInfo;
     _vehicleDetailsController.text = additionalInfo['vehicleDetails'] ?? '';
     _drivingExperienceController.text = additionalInfo['drivingExperience'] ?? '';
-    _vehicleType = additionalInfo['vehicleType'] ?? 'Sedan';
+    _vehicleType = additionalInfo['vehicleType'] ?? (_vehicleTypes.isNotEmpty ? _vehicleTypes.first.name : '');
     _availableSeats = additionalInfo['availableSeats'] ?? 3;
     _smokingAllowed = additionalInfo['smokingAllowed'] ?? false;
     _petsAllowed = additionalInfo['petsAllowed'] ?? true;
@@ -324,10 +332,10 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
                       fillColor: Colors.white,
                       border: InputBorder.none,
                     ),
-                    items: _vehicleTypes.map((type) {
+                    items: _vehicleTypes.map((vehicle) {
                       return DropdownMenuItem(
-                        value: type,
-                        child: Text(type),
+                        value: vehicle.name,
+                        child: Text('${vehicle.name} (${vehicle.passengerCapacity} passengers)'),
                       );
                     }).toList(),
                     onChanged: (value) {
