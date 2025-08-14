@@ -15,6 +15,7 @@ import Countries from './pages/Countries';
 import PrivacyTerms from './pages/PrivacyTerms';
 import PaymentMethods from './pages/PaymentMethods';
 import AdminUsers from './pages/AdminUsers';
+import ModuleManagement from './pages/ModuleManagement';
 import DebugAuth from './components/DebugAuth';
 
 const theme = createTheme({
@@ -46,6 +47,7 @@ function App() {
             >
               <Route index element={<Dashboard />} />
               <Route path="debug" element={<DebugAuth />} />
+              <Route path="modules" element={<ModuleManagement />} />
               <Route path="products" element={<Products />} />
               <Route path="categories" element={<Categories />} />
               <Route path="brands" element={<Brands />} />

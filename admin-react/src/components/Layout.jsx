@@ -100,6 +100,13 @@ const Layout = () => {
       description: isSuperAdmin ? 'All drivers' : `${adminData?.country} drivers`
     },
     { 
+      text: 'Module Management', 
+      icon: <Tune />, 
+      path: '/modules',
+      access: 'all',
+      description: isSuperAdmin ? 'Configure modules for all countries' : `Configure ${adminData?.country} modules`
+    },
+    { 
       text: 'Categories', 
       icon: <Category />, 
       path: '/categories',
