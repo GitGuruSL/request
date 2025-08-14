@@ -16,6 +16,8 @@ import PrivacyTerms from './pages/PrivacyTerms';
 import PaymentMethods from './pages/PaymentMethods';
 import AdminUsers from './pages/AdminUsers';
 import ModuleManagement from './pages/ModuleManagement';
+import BusinessVerificationEnhanced from './pages/BusinessVerificationEnhanced';
+import DriverVerificationEnhanced from './pages/DriverVerificationEnhanced';
 import DebugAuth from './components/DebugAuth';
 
 const theme = createTheme({
@@ -55,6 +57,8 @@ function App() {
               <Route path="countries" element={<Countries />} />
               <Route path="payment-methods" element={<PaymentMethods />} />
               <Route path="admin-users" element={<AdminUsers />} />
+              <Route path="businesses" element={<BusinessVerificationEnhanced />} />
+              <Route path="drivers" element={<DriverVerificationEnhanced />} />
               <Route path="privacy-terms" element={<PrivacyTerms />} />
               {/* Add more protected routes here */}
             </Route>

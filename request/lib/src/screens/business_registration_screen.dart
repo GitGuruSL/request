@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/enhanced_user_service.dart';
+import '../services/country_service.dart';
 import '../theme/app_theme.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/file_upload_service.dart';
@@ -726,6 +727,14 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
       final currentUser = await _userService.getCurrentUser();
       if (currentUser == null) throw Exception('User not authenticated');
 
+      // Get user's country information
+      final countryCode = CountryService.instance.countryCode;
+      final countryName = CountryService.instance.countryName;
+      
+      if (countryCode == null || countryName == null) {
+        throw Exception('Country information not available. Please restart the app and select your country.');
+      }
+
       // Upload documents if selected
       String? businessLicenseUrl;
       String? taxCertificateUrl;
@@ -767,6 +776,8 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
       // Prepare business registration data
       final businessData = {
         'userId': currentUser.uid,
+        'country': countryCode,  // Add country code (e.g., "LK")
+        'countryName': countryName,  // Add country name (e.g., "Sri Lanka")
         'businessName': _businessNameController.text.trim(),
         'businessEmail': _businessEmailController.text.trim(),
         'businessPhone': _businessPhoneController.text.trim(),

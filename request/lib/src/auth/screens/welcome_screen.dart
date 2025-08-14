@@ -211,10 +211,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
                       // Search bar
                       Container(
                         margin: const EdgeInsets.symmetric(horizontal: 16),
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(12),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
                         ),
                         child: TextField(
                           controller: _searchController,
@@ -222,6 +220,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
                             hintText: 'Search country',
                             border: InputBorder.none,
                             prefixIcon: Icon(Icons.search, color: Colors.grey),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                           ),
                           onChanged: (query) {
                             setModalState(() {

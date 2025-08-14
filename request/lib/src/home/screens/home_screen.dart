@@ -220,79 +220,37 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 
-                // Requests List
+                // Clean Home Content - Removed Requests List
                 Expanded(
-                  child: _requests.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.inbox_outlined,
-                                size: 64,
-                                color: Colors.grey[400],
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No requests found',
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                _selectedCountry != null
-                                    ? 'No requests available in ${CountryService.instance.countryName ?? _selectedCountry} yet'
-                                    : 'Please select a country first',
-                                style: Theme.of(context).textTheme.bodyMedium,
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: _requests.length,
-                          itemBuilder: (context, index) {
-                            final request = _requests[index];
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              child: ListTile(
-                                leading: CircleAvatar(
-                                  child: Icon(_getRequestIcon(request.type.name)),
-                                ),
-                                title: Text(request.title),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(request.description),
-                                    const SizedBox(height: 4),
-                                    if (request.budget != null)
-                                      Text(
-                                        'Budget: ${CountryService.instance.formatPrice(request.budget!)}',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.green,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                                trailing: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.location_on, size: 16),
-                                    Text(
-                                      request.location?.city ?? 'Location not set',
-                                      style: Theme.of(context).textTheme.bodySmall,
-                                    ),
-                                  ],
-                                ),
-                                onTap: () {
-                                  // Navigate to request detail
-                                  _showRequestDetail(request);
-                                },
-                              ),
-                            );
-                          },
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.home_outlined,
+                          size: 80,
+                          color: Colors.grey[300],
                         ),
+                        const SizedBox(height: 24),
+                        Text(
+                          'Welcome to ${CountryService.instance.countryName ?? 'Request Marketplace'}',
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Tap the + button to create your first request',
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: Colors.grey[500],
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
