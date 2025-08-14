@@ -10,6 +10,7 @@ import '../../../models/vehicle_type_model.dart';
 import '../../../services/enhanced_request_service.dart';
 import '../../../services/enhanced_user_service.dart';
 import '../../../services/vehicle_service.dart';
+import '../../../utils/address_utils.dart';
 import '../../../widgets/image_upload_widget.dart';
 import '../../../widgets/accurate_location_picker_widget.dart';
 import '../../../utils/currency_helper.dart';
@@ -210,7 +211,7 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
           position: LatLng(widget.request.location!.latitude, widget.request.location!.longitude),
           infoWindow: InfoWindow(
             title: 'Pickup Location', 
-            snippet: widget.request.location!.address
+            snippet: AddressUtils.cleanAddress(widget.request.location!.address)
           ),
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
         ),
@@ -225,7 +226,7 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
           position: LatLng(widget.request.destinationLocation!.latitude, widget.request.destinationLocation!.longitude),
           infoWindow: InfoWindow(
             title: 'Drop-off Location', 
-            snippet: widget.request.destinationLocation!.address
+            snippet: AddressUtils.cleanAddress(widget.request.destinationLocation!.address)
           ),
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
         ),
@@ -522,7 +523,7 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              widget.request.location?.address ?? 'Location not specified',
+                              AddressUtils.cleanAddress(widget.request.location?.address ?? 'Location not specified'),
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -560,7 +561,7 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              widget.request.destinationLocation?.address ?? 'Location not specified',
+                              AddressUtils.cleanAddress(widget.request.destinationLocation?.address ?? 'Location not specified'),
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,

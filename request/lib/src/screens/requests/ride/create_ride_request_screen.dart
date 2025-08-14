@@ -10,6 +10,7 @@ import '../../../services/enhanced_request_service.dart';
 import '../../../services/enhanced_user_service.dart';
 import '../../../services/country_service.dart';
 import '../../../services/vehicle_service.dart';
+import '../../../utils/address_utils.dart';
 import '../../../widgets/image_upload_widget.dart';
 import '../../../widgets/accurate_location_picker_widget.dart';
 import '../../../utils/currency_helper.dart';
@@ -235,13 +236,13 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
         Marker(
           markerId: const MarkerId('pickup'),
           position: LatLng(_pickupLat!, _pickupLng!),
-          infoWindow: InfoWindow(title: 'Pickup', snippet: _pickupLocationController.text),
+          infoWindow: InfoWindow(title: 'Pickup', snippet: AddressUtils.cleanAddress(_pickupLocationController.text)),
           icon: humanIcon,
         ),
         Marker(
           markerId: const MarkerId('destination'),
           position: LatLng(_destinationLat!, _destinationLng!),
-          infoWindow: InfoWindow(title: 'Destination', snippet: _destinationController.text),
+          infoWindow: InfoWindow(title: 'Destination', snippet: AddressUtils.cleanAddress(_destinationController.text)),
           icon: destinationIcon,
         ),
       };
@@ -862,7 +863,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
             position: LatLng(_pickupLat!, _pickupLng!),
             infoWindow: InfoWindow(
               title: 'Pickup',
-              snippet: _pickupLocationController.text,
+              snippet: AddressUtils.cleanAddress(_pickupLocationController.text),
             ),
             icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
           ),
@@ -877,7 +878,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
             position: LatLng(_destinationLat!, _destinationLng!),
             infoWindow: InfoWindow(
               title: 'Drop',
-              snippet: _destinationController.text,
+              snippet: AddressUtils.cleanAddress(_destinationController.text),
             ),
             icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
           ),

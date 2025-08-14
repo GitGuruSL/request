@@ -9,6 +9,7 @@ import '../../../models/enhanced_user_model.dart';
 import '../../../services/enhanced_request_service.dart';
 import '../../../services/enhanced_user_service.dart';
 import '../../../utils/currency_helper.dart';
+import '../../../utils/address_utils.dart';
 import 'edit_ride_request_screen.dart';
 import 'create_ride_response_screen.dart';
 
@@ -191,7 +192,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
           position: LatLng(_request!.location!.latitude, _request!.location!.longitude),
           infoWindow: InfoWindow(
             title: 'Pickup Location',
-            snippet: _request!.location!.address,
+            snippet: AddressUtils.cleanAddress(_request!.location!.address),
           ),
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
         ),
@@ -208,7 +209,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
             ),
             infoWindow: InfoWindow(
               title: 'Destination',
-              snippet: _request!.destinationLocation!.address,
+              snippet: AddressUtils.cleanAddress(_request!.destinationLocation!.address),
             ),
             icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
           ),
@@ -646,7 +647,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    _request!.location?.address ?? 'Pickup location not specified',
+                    AddressUtils.cleanAddress(_request!.location?.address ?? 'Pickup location not specified'),
                     style: const TextStyle(
                       fontWeight: FontWeight.w500,
                       color: Color(0xFF1C1C1E), // Same color as title
@@ -681,7 +682,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      _request!.destinationLocation!.address,
+                      AddressUtils.cleanAddress(_request!.destinationLocation!.address),
                       style: const TextStyle(
                         fontWeight: FontWeight.w500,
                         color: Color(0xFF1C1C1E), // Same color as title

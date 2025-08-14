@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/google_places_service.dart';
+import '../utils/address_utils.dart';
 import 'dart:async';
 
 class AccurateLocationPickerWidget extends StatefulWidget {
@@ -177,11 +178,13 @@ class _AccurateLocationPickerWidgetState extends State<AccurateLocationPickerWid
       final placeDetails = await GooglePlacesService.getPlaceDetails(suggestion.placeId);
       
       if (placeDetails != null) {
-        widget.controller.text = placeDetails.formattedAddress;
+        // Clean the address to remove location codes
+        final cleanedAddress = AddressUtils.cleanAddress(placeDetails.formattedAddress);
+        widget.controller.text = cleanedAddress;
         
         if (widget.onLocationSelected != null) {
           widget.onLocationSelected!(
-            placeDetails.formattedAddress,
+            cleanedAddress,
             placeDetails.latitude,
             placeDetails.longitude,
           );

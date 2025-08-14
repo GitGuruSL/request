@@ -8,6 +8,7 @@ import '../../../models/vehicle_type_model.dart';
 import '../../../services/enhanced_request_service.dart';
 import '../../../services/enhanced_user_service.dart';
 import '../../../services/vehicle_service.dart';
+import '../../../utils/address_utils.dart';
 import '../../../widgets/image_upload_widget.dart';
 import '../../../widgets/accurate_location_picker_widget.dart';
 import '../../../utils/currency_helper.dart';
@@ -88,7 +89,8 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
   void _initializeFromRequest() {
     _titleController.text = widget.request.title;
     _descriptionController.text = widget.request.description;
-    _pickupLocationController.text = widget.request.location?.address ?? '';
+    // Clean the pickup location address
+    _pickupLocationController.text = AddressUtils.cleanAddress(widget.request.location?.address ?? '');
     _budgetController.text = widget.request.budget?.toString() ?? '';
     _imageUrls = List<String>.from(widget.request.images);
     
@@ -98,9 +100,9 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
       _pickupLng = widget.request.location!.longitude;
     }
     
-    // Handle destination location
+    // Handle destination location - clean the address
     if (widget.request.destinationLocation != null) {
-      _destinationController.text = widget.request.destinationLocation!.address;
+      _destinationController.text = AddressUtils.cleanAddress(widget.request.destinationLocation!.address);
       _destinationLat = widget.request.destinationLocation!.latitude;
       _destinationLng = widget.request.destinationLocation!.longitude;
     }
