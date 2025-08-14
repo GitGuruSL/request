@@ -148,6 +148,17 @@ const DriverVerificationEnhanced = () => {
         const data = docSnapshot.data();
         const driverData = { id: docSnapshot.id, ...data };
         
+        console.log(`📋 Driver ${driverData.fullName || driverData.id} data:`, {
+          address: driverData.address,
+          fullAddress: driverData.fullAddress,
+          location: driverData.location,
+          submittedAt: driverData.submittedAt,
+          createdAt: driverData.createdAt,
+          appliedAt: driverData.appliedAt,
+          applicationDate: driverData.applicationDate,
+          vehicleType: driverData.vehicleType
+        });
+        
         // Auto-migrate missing country field
         if (!data.country && data.userId && isSuperAdmin) {
           missingCountryDrivers.push({ docRef: docSnapshot.ref, data: driverData });
@@ -231,10 +242,15 @@ const DriverVerificationEnhanced = () => {
     try {
       const citiesSnapshot = await getDocs(collection(db, 'cities'));
       const cityMap = {};
+      
+      console.log('🏙️ Loading cities...');
       citiesSnapshot.forEach((doc) => {
         const data = doc.data();
-        cityMap[doc.id] = data.name || data.cityName || doc.id;
+        console.log(`City ${doc.id}:`, data);
+        cityMap[doc.id] = data.name || data.cityName || data.displayName || doc.id;
       });
+      
+      console.log('City mapping:', cityMap);
       setCityNames(cityMap);
     } catch (error) {
       console.error('Error loading city names:', error);
@@ -245,10 +261,15 @@ const DriverVerificationEnhanced = () => {
     try {
       const vehicleTypesSnapshot = await getDocs(collection(db, 'vehicle_types'));
       const vehicleTypeMap = {};
+      
+      console.log('🚗 Loading vehicle types...');
       vehicleTypesSnapshot.forEach((doc) => {
         const data = doc.data();
-        vehicleTypeMap[doc.id] = data.name || data.typeName || doc.id;
+        console.log(`Vehicle type ${doc.id}:`, data);
+        vehicleTypeMap[doc.id] = data.name || data.typeName || data.displayName || doc.id;
       });
+      
+      console.log('Vehicle type mapping:', vehicleTypeMap);
       setVehicleTypeNames(vehicleTypeMap);
     } catch (error) {
       console.error('Error loading vehicle type names:', error);
@@ -680,7 +701,7 @@ const DriverVerificationEnhanced = () => {
                 <Grid item xs={12} sm={6}>
                   <Box display="flex" alignItems="center" gap={1}>
                     <LocationIcon fontSize="small" color="action" />
-                    <Typography variant="body2">{driver.country || 'Unknown'} • {driver.address || 'No address'}</Typography>
+                    <Typography variant="body2">{getCityName(driver.city)} • {driver.address || driver.fullAddress || 'No address'}</Typography>
                   </Box>
                 </Grid>
                 <Grid item xs={12} sm={6}>
@@ -698,12 +719,18 @@ const DriverVerificationEnhanced = () => {
                 <Grid item xs={12} sm={6}>
                   <Box display="flex" alignItems="center" gap={1}>
                     <CarIcon fontSize="small" color="action" />
-                    <Typography variant="body2">{driver.vehicleType || 'No vehicle'}</Typography>
+                    <Typography variant="body2">{getVehicleTypeName(driver.vehicleType) || 'No vehicle'}</Typography>
                   </Box>
                 </Grid>
                 <Grid item xs={12}>
                   <Typography variant="body2">
-                    Applied: {driver.submittedAt?.toDate?.()?.toLocaleDateString() || 'Unknown'}
+                    Applied: {
+                      (driver.submittedAt?.toDate?.()?.toLocaleDateString()) ||
+                      (driver.createdAt?.toDate?.()?.toLocaleDateString()) ||
+                      (driver.appliedAt?.toDate?.()?.toLocaleDateString()) ||
+                      (driver.applicationDate?.toDate?.()?.toLocaleDateString()) ||
+                      'Unknown'
+                    }
                   </Typography>
                 </Grid>
               </Grid>
