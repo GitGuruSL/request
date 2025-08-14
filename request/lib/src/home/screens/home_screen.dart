@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/country_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/module_service.dart';
 import '../../models/request_model.dart';
 import '../../screens/unified_request_response/unified_request_create_screen.dart';
 import '../../models/enhanced_user_model.dart';
@@ -44,8 +45,8 @@ class _HomeScreenState extends State<HomeScreen> {
     });
     
     try {
-      // Get user's selected country
-      _selectedCountry = await CountryService.instance.getUserCountry();
+      // Get user's selected country - use country CODE for module configuration
+      _selectedCountry = CountryService.instance.countryCode; // Use country code (LK) not name (Sri Lanka)
       _currencySymbol = CountryService.instance.getCurrencySymbol();
       
       // Load country-filtered requests
@@ -186,7 +187,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             Icon(Icons.location_on, color: Theme.of(context).colorScheme.primary),
                             const SizedBox(width: 8),
                             Text(
-                              _selectedCountry ?? 'No country selected',
+                              CountryService.instance.countryName ?? _selectedCountry ?? 'No country selected',
                               style: Theme.of(context).textTheme.bodyLarge,
                             ),
                             const Spacer(),
@@ -239,7 +240,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               const SizedBox(height: 8),
                               Text(
                                 _selectedCountry != null
-                                    ? 'No requests available in $_selectedCountry yet'
+                                    ? 'No requests available in ${CountryService.instance.countryName ?? _selectedCountry} yet'
                                     : 'Please select a country first',
                                 style: Theme.of(context).textTheme.bodyMedium,
                                 textAlign: TextAlign.center,
@@ -357,103 +358,8 @@ class _HomeScreenState extends State<HomeScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.7,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Create New Request',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 16),
-            Flexible(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    ListTile(
-                      leading: const Icon(Icons.shopping_bag),
-                      title: const Text('Item Request'),
-                      subtitle: const Text('Request for products or items'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const UnifiedRequestCreateScreen(initialType: RequestType.item),
-                          ),
-                        );
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.build),
-                      title: const Text('Service Request'),
-                      subtitle: const Text('Request for services'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const UnifiedRequestCreateScreen(initialType: RequestType.service),
-                          ),
-                        );
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.local_shipping),
-                      title: const Text('Delivery Request'),
-                      subtitle: const Text('Request for delivery services'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const UnifiedRequestCreateScreen(initialType: RequestType.delivery),
-                          ),
-                        );
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.key),
-                      title: const Text('Rental Request'),
-                      subtitle: const Text('Rent vehicles, equipment, or items'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const UnifiedRequestCreateScreen(initialType: RequestType.rental),
-                          ),
-                        );
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.directions_car),
-                      title: const Text('Ride Request'),
-                      subtitle: const Text('Request for transportation'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.pushNamed(context, '/create-ride-request');
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.compare_arrows),
-                      title: const Text('Price Request'),
-                      subtitle: const Text('Request price quotes for items or services'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.pushNamed(context, '/price');
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+      builder: (context) => _DynamicRequestTypesModal(
+        countryCode: _selectedCountry!,
       ),
     );
   }
@@ -608,6 +514,241 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (e) {
       print('Error during logout: $e');
+    }
+  }
+}
+
+/// Dynamic Modal for showing available request types based on country configuration
+class _DynamicRequestTypesModal extends StatefulWidget {
+  final String countryCode;
+
+  const _DynamicRequestTypesModal({
+    required this.countryCode,
+  });
+
+  @override
+  State<_DynamicRequestTypesModal> createState() => _DynamicRequestTypesModalState();
+}
+
+class _DynamicRequestTypesModalState extends State<_DynamicRequestTypesModal> {
+  CountryModules? _countryModules;
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCountryModules();
+  }
+
+  Future<void> _loadCountryModules() async {
+    try {
+      print('🔄 Loading modules for country: ${widget.countryCode}');
+      final modules = await ModuleService.getCountryModules(widget.countryCode);
+      
+      if (mounted) {
+        setState(() {
+          _countryModules = modules;
+          _isLoading = false;
+          if (!modules.success) {
+            _error = modules.error ?? 'Failed to load modules';
+          }
+        });
+      }
+    } catch (error) {
+      print('❌ Error loading country modules: $error');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _error = error.toString();
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.7,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Create New Request',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 16),
+          if (_isLoading)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32.0),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (_error != null)
+            _buildErrorWidget()
+          else if (_countryModules != null)
+            _buildModulesList()
+          else
+            const Center(
+              child: Text('No modules configured for this country'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorWidget() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          const Icon(
+            Icons.error_outline,
+            color: Colors.orange,
+            size: 48,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Error loading modules',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _error!,
+            style: Theme.of(context).textTheme.bodyMedium,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _loadCountryModules,
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModulesList() {
+    final enabledModules = ModuleService.getEnabledModulesForDisplay(_countryModules!.modules);
+    
+    if (enabledModules.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(32.0),
+        child: Column(
+          children: [
+            Icon(
+              Icons.info_outline,
+              color: Colors.blue,
+              size: 48,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'No request types available',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Contact your administrator to enable request modules for your country.',
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Flexible(
+      child: SingleChildScrollView(
+        child: Column(
+          children: enabledModules.map((moduleInfo) => _buildModuleTile(moduleInfo)).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModuleTile(ModuleInfo moduleInfo) {
+    return ListTile(
+      leading: Icon(
+        _getIconForModule(moduleInfo.iconName),
+        color: moduleInfo.color,
+      ),
+      title: Text(moduleInfo.name),
+      subtitle: Text(moduleInfo.subtitle),
+      onTap: () => _handleModuleTap(moduleInfo.id),
+    );
+  }
+
+  IconData _getIconForModule(String iconName) {
+    switch (iconName) {
+      case 'Icons.shopping_bag':
+        return Icons.shopping_bag;
+      case 'Icons.build':
+        return Icons.build;
+      case 'Icons.key':
+        return Icons.key;
+      case 'Icons.local_shipping':
+        return Icons.local_shipping;
+      case 'Icons.directions_car':
+        return Icons.directions_car;
+      case 'Icons.compare_arrows':
+        return Icons.compare_arrows;
+      default:
+        return Icons.help_outline;
+    }
+  }
+
+  void _handleModuleTap(String moduleId) {
+    Navigator.pop(context);
+    
+    switch (moduleId) {
+      case 'item':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const UnifiedRequestCreateScreen(initialType: RequestType.item),
+          ),
+        );
+        break;
+      case 'service':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const UnifiedRequestCreateScreen(initialType: RequestType.service),
+          ),
+        );
+        break;
+      case 'rent':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const UnifiedRequestCreateScreen(initialType: RequestType.rental),
+          ),
+        );
+        break;
+      case 'delivery':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const UnifiedRequestCreateScreen(initialType: RequestType.delivery),
+          ),
+        );
+        break;
+      case 'ride':
+        Navigator.pushNamed(context, '/create-ride-request');
+        break;
+      case 'price':
+        Navigator.pushNamed(context, '/price');
+        break;
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Module "$moduleId" not implemented yet'),
+          ),
+        );
+        break;
     }
   }
 }

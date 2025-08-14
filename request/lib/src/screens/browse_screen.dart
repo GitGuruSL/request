@@ -4,6 +4,7 @@ import '../models/request_model.dart';
 import '../models/enhanced_user_model.dart';
 import '../services/enhanced_request_service.dart';
 import '../services/country_service.dart';
+import '../services/module_service.dart';
 import 'unified_request_response/unified_request_view_screen.dart';
 import 'requests/ride/view_ride_request_screen.dart';
 
@@ -23,6 +24,8 @@ class _BrowseScreenState extends State<BrowseScreen> {
   bool _isLoading = true;
   String? _error; // Add error state
   String? _currencySymbol;
+  CountryModules? _countryModules;
+  List<RequestType> _enabledRequestTypes = [];
 
   @override
   void initState() {
@@ -33,6 +36,14 @@ class _BrowseScreenState extends State<BrowseScreen> {
   Future<void> _loadData() async {
     try {
       _currencySymbol = CountryService.instance.getCurrencySymbol();
+      
+      // Load country modules configuration
+      final countryCode = CountryService.instance.countryCode;
+      if (countryCode != null) {
+        _countryModules = await ModuleService.getCountryModules(countryCode);
+        _enabledRequestTypes = _getEnabledRequestTypes();
+      }
+      
       await _loadRequests();
     } catch (e) {
       if (mounted) {
@@ -46,6 +57,41 @@ class _BrowseScreenState extends State<BrowseScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  List<RequestType> _getEnabledRequestTypes() {
+    if (_countryModules == null) return RequestType.values;
+    
+    List<RequestType> enabledTypes = [];
+    _countryModules!.modules.forEach((moduleId, isEnabled) {
+      if (isEnabled) {
+        RequestType? type = _getRequestTypeFromModuleId(moduleId);
+        if (type != null) {
+          enabledTypes.add(type);
+        }
+      }
+    });
+    
+    return enabledTypes;
+  }
+
+  RequestType? _getRequestTypeFromModuleId(String moduleId) {
+    switch (moduleId) {
+      case 'item':
+        return RequestType.item;
+      case 'service':
+        return RequestType.service;
+      case 'rent':
+        return RequestType.rental;
+      case 'delivery':
+        return RequestType.delivery;
+      case 'ride':
+        return RequestType.ride;
+      case 'price':
+        return RequestType.price;
+      default:
+        return null;
     }
   }
 
@@ -120,8 +166,39 @@ class _BrowseScreenState extends State<BrowseScreen> {
     }
   }
 
+  String? _getModuleIdFromRequestType(RequestType requestType) {
+    switch (requestType) {
+      case RequestType.item:
+        return 'item';
+      case RequestType.service:
+        return 'service';
+      case RequestType.rental:
+        return 'rent';
+      case RequestType.delivery:
+        return 'delivery';
+      case RequestType.ride:
+        return 'ride';
+      case RequestType.price:
+        return 'price';
+      default:
+        return null;
+    }
+  }
+
   List<RequestModel> get _filteredRequests {
     List<RequestModel> filtered = List.from(_requests);
+    
+    // Apply module-based filtering first - only show requests for enabled modules
+    if (_countryModules != null) {
+      filtered = filtered.where((request) {
+        // Get the module ID for this request type
+        String? moduleId = _getModuleIdFromRequestType(request.type);
+        if (moduleId == null) return false;
+        
+        // Check if this module is enabled for the user's country
+        return _countryModules!.isModuleEnabled(moduleId);
+      }).toList();
+    }
     
     // Apply search filter
     if (_searchQuery.isNotEmpty) {
@@ -192,7 +269,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
                         ),
                         items: [
                           const DropdownMenuItem(value: null, child: Text('All Categories')),
-                          ...RequestType.values.map((type) {
+                          ..._enabledRequestTypes.map((type) {
                             return DropdownMenuItem(
                               value: type,
                               child: Text(_getRequestTypeDisplayName(type)),

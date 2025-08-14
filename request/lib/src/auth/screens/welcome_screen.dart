@@ -13,6 +13,8 @@ class WelcomeScreen extends StatefulWidget {
 class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateMixin {
   Country? _selectedCountry;
   List<Country> _availableCountries = [];
+  List<Country> _filteredCountries = [];
+  final TextEditingController _searchController = TextEditingController();
   bool _isLoading = true;
   late AnimationController _fadeController;
   late AnimationController _slideController;
@@ -62,6 +64,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
       final countries = await CountryService.instance.getAllCountries();
       setState(() {
         _availableCountries = countries;
+        _filteredCountries = countries; // Initialize filtered list
         _isLoading = false;
       });
     } catch (e) {
@@ -70,6 +73,19 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
         _isLoading = false;
       });
     }
+  }
+
+  void _filterCountries(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredCountries = _availableCountries;
+      } else {
+        _filteredCountries = _availableCountries.where((country) {
+          return country.name.toLowerCase().contains(query.toLowerCase()) ||
+                 country.phoneCode.contains(query);
+        }).toList();
+      }
+    });
   }
 
   Future<void> _checkExistingCountry() async {
@@ -148,88 +164,102 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
   }
 
   void _showCountryListBottomSheet() {
+    // Reset search when opening
+    _searchController.clear();
+    _filteredCountries = _availableCountries;
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.8,
-          maxChildSize: 0.9,
-          minChildSize: 0.5,
-          builder: (context, scrollController) {
-            return Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              child: Column(
-                children: [
-                  // Handle bar
-                  Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(2),
-                    ),
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return DraggableScrollableSheet(
+              initialChildSize: 0.8,
+              maxChildSize: 0.9,
+              minChildSize: 0.5,
+              builder: (context, scrollController) {
+                return Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                   ),
-                  // Title
-                  const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Text(
-                      'Select Country',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
+                  child: Column(
+                    children: [
+                      // Handle bar
+                      Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
-                    ),
-                  ),
-                  // Search bar
-                  Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Search country',
-                        border: InputBorder.none,
-                        prefixIcon: Icon(Icons.search, color: Colors.grey),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Countries list
-                  Expanded(
-                    child: ListView.builder(
-                      controller: scrollController,
-                      itemCount: _availableCountries.length,
-                      itemBuilder: (context, index) {
-                        final country = _availableCountries[index];
-                        return ListTile(
-                          leading: Text(
-                            country.flag,
-                            style: const TextStyle(fontSize: 24),
+                      // Title
+                      const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text(
+                          'Select Country',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
                           ),
-                          title: Text(country.name),
-                          subtitle: Text(country.phoneCode),
-                          trailing: country.isEnabled 
-                              ? const Icon(Icons.check_circle, color: Colors.green)
-                              : const Icon(Icons.schedule, color: Colors.orange),
-                          onTap: () {
-                            Navigator.pop(context);
-                            _onCountrySelected(country);
+                        ),
+                      ),
+                      // Search bar
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: const InputDecoration(
+                            hintText: 'Search country',
+                            border: InputBorder.none,
+                            prefixIcon: Icon(Icons.search, color: Colors.grey),
+                          ),
+                          onChanged: (query) {
+                            setModalState(() {
+                              _filterCountries(query);
+                            });
                           },
-                        );
-                      },
-                    ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Countries list
+                      Expanded(
+                        child: ListView.builder(
+                          controller: scrollController,
+                          itemCount: _filteredCountries.length,
+                          itemBuilder: (context, index) {
+                            final country = _filteredCountries[index];
+                            return ListTile(
+                              leading: Text(
+                                country.flag,
+                                style: const TextStyle(fontSize: 24),
+                              ),
+                              title: Text(country.name),
+                              subtitle: Text(country.phoneCode),
+                              trailing: country.isEnabled 
+                                  ? const Icon(Icons.check_circle, color: Colors.green)
+                                  : const Icon(Icons.schedule, color: Colors.orange),
+                              onTap: () {
+                                Navigator.pop(context);
+                                _onCountrySelected(country);
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             );
           },
         );
@@ -241,6 +271,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
   void dispose() {
     _fadeController.dispose();
     _slideController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
