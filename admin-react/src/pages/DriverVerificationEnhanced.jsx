@@ -26,7 +26,14 @@ import {
   CardHeader,
   CardMedia,
   CardActions,
-  LinearProgress
+  LinearProgress,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper
 } from '@mui/material';
 import {
   Person as PersonIcon,
@@ -68,7 +75,9 @@ import {
   Fullscreen as FullscreenIcon,
   Close as CloseIcon,
   Warning as WarningIcon,
-  Info as InfoIcon
+  Info as InfoIcon,
+  Visibility as VisibilityIcon,
+  AccessTime as AccessTimeIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase/config';
@@ -229,6 +238,14 @@ const DriverVerificationEnhanced = () => {
     }
   };
 
+  const getVehicleImageStatus = (driver, imageIndex) => {
+    const vehicleImageVerification = driver.vehicleImageVerification?.[imageIndex];
+    if (vehicleImageVerification?.status) {
+      return vehicleImageVerification.status;
+    }
+    return 'pending';
+  };
+
   const getVehicleIcon = (vehicleType) => {
     switch (vehicleType?.toLowerCase()) {
       case 'bicycle':
@@ -268,6 +285,44 @@ const DriverVerificationEnhanced = () => {
       case 'billingProof': return driver.billingProofUrl;
       case 'vehicleInsurance': return driver.vehicleInsuranceUrl || driver.insuranceDocumentUrl;
       default: return null;
+    }
+  };
+
+  const handleDocumentApprovalWithClose = async (driver, docType, action) => {
+    setActionLoading(true);
+    try {
+      const updateData = {
+        [`documentVerification.${docType}.status`]: action,
+        [`${docType}Status`]: action,
+        updatedAt: Timestamp.now()
+      };
+
+      if (action === 'approved') {
+        updateData[`documentVerification.${docType}.approvedAt`] = Timestamp.now();
+      }
+
+      await updateDoc(doc(db, 'new_driver_verifications', driver.id), updateData);
+      await loadDrivers(); // Refresh data
+      
+      // Update selected driver data to show new status immediately
+      const updatedDriver = { 
+        ...selectedDriver, 
+        documentVerification: {
+          ...selectedDriver.documentVerification,
+          [docType]: {
+            ...selectedDriver.documentVerification?.[docType],
+            status: action,
+            approvedAt: action === 'approved' ? Timestamp.now() : selectedDriver.documentVerification?.[docType]?.approvedAt
+          }
+        }
+      };
+      setSelectedDriver(updatedDriver);
+      
+      console.log(`✅ Document ${docType} ${action} for ${driver.fullName}`);
+    } catch (error) {
+      console.error(`Error updating document status:`, error);
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -461,6 +516,25 @@ const DriverVerificationEnhanced = () => {
 
       await updateDoc(doc(db, 'new_driver_verifications', target.id), updateData);
       await loadDrivers();
+      
+      // Update selected driver data to show new status immediately
+      if (selectedDriver && selectedDriver.id === target.id) {
+        if (type === 'document') {
+          const updatedDriver = { 
+            ...selectedDriver, 
+            documentVerification: {
+              ...selectedDriver.documentVerification,
+              [docType]: {
+                ...selectedDriver.documentVerification?.[docType],
+                status: 'rejected',
+                rejectionReason: rejectionReason,
+                rejectedAt: Timestamp.now()
+              }
+            }
+          };
+          setSelectedDriver(updatedDriver);
+        }
+      }
       
       setRejectionDialog({ open: false, target: null, type: '' });
       setRejectionReason('');
@@ -808,7 +882,7 @@ const DriverVerificationEnhanced = () => {
           {url ? (
             <CardMedia
               component="img"
-              height="200"
+              height="140"
               image={url}
               alt={title}
               sx={{ 
@@ -825,7 +899,7 @@ const DriverVerificationEnhanced = () => {
           ) : (
             <Box 
               sx={{ 
-                height: 200, 
+                height: 140, 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',
@@ -950,6 +1024,118 @@ const DriverVerificationEnhanced = () => {
     );
   };
 
+  const renderDocumentListItem = (docType, title, description, required) => {
+    const url = getDocumentUrl(selectedDriver, docType);
+    const status = getDocumentStatus(selectedDriver, docType);
+    const rejectionReason = selectedDriver.documentVerification?.[docType]?.rejectionReason || 
+                           selectedDriver[`${docType}RejectionReason`];
+    
+    // Determine if driver is already approved - if so, all docs should show as approved
+    const isDriverApproved = selectedDriver.status === 'approved';
+    const displayStatus = isDriverApproved ? 'approved' : status;
+    
+    const isApproved = displayStatus === 'approved';
+    const isPending = displayStatus === 'pending' || !displayStatus;
+    const isRejected = displayStatus === 'rejected';
+
+    return (
+      <TableRow 
+        key={docType}
+        sx={{ 
+          backgroundColor: isApproved ? 'success.50' : isPending ? 'warning.50' : 'error.50',
+          '&:hover': { 
+            backgroundColor: isApproved ? 'success.100' : isPending ? 'warning.100' : 'error.100' 
+          }
+        }}
+      >
+        <TableCell>
+          <Box display="flex" alignItems="center" gap={2}>
+            <Avatar sx={{ 
+              bgcolor: isApproved ? 'success.main' : isPending ? 'warning.main' : 'error.main',
+              width: 32, 
+              height: 32
+            }}>
+              {getDocumentIcon(docType)}
+            </Avatar>
+            <Box>
+              <Typography variant="body2" fontWeight="bold">
+                {title}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {description}
+              </Typography>
+              {rejectionReason && isRejected && (
+                <Typography variant="caption" color="error.main" display="block" sx={{ mt: 0.5 }}>
+                  <strong>Reason:</strong> {rejectionReason}
+                </Typography>
+              )}
+            </Box>
+          </Box>
+        </TableCell>
+        <TableCell>
+          <Chip 
+            label={isApproved ? 'Approved' : isPending ? 'Pending' : 'Rejected'} 
+            color={isApproved ? 'success' : isPending ? 'warning' : 'error'}
+            size="small"
+            icon={isApproved ? <CheckIcon /> : isPending ? <AccessTimeIcon /> : <ErrorIcon />}
+          />
+        </TableCell>
+        <TableCell>
+          <Chip 
+            label={required ? 'Required' : 'Optional'} 
+            variant="outlined"
+            size="small" 
+            color={required ? (isApproved ? 'success' : 'error') : 'default'}
+          />
+        </TableCell>
+        <TableCell align="center">
+          <Box display="flex" gap={1} justifyContent="center" alignItems="center">
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<VisibilityIcon />}
+              onClick={() => viewDocument(url, title)}
+            >
+              View Document
+            </Button>
+            <Button
+              variant="text"
+              size="small"
+              startIcon={<DownloadIcon />}
+              onClick={() => window.open(url, '_blank')}
+            >
+              Download
+            </Button>
+            {isPending && !isDriverApproved && (
+              <>
+                <Button
+                  variant="contained"
+                  color="success"
+                  size="small"
+                  startIcon={<CheckIcon />}
+                  onClick={() => handleDocumentApprovalWithClose(selectedDriver, docType, 'approved')}
+                  disabled={actionLoading}
+                >
+                  Approve
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                  startIcon={<ErrorIcon />}
+                  onClick={() => handleDocumentAction(selectedDriver, docType, 'reject')}
+                  disabled={actionLoading}
+                >
+                  Reject
+                </Button>
+              </>
+            )}
+          </Box>
+        </TableCell>
+      </TableRow>
+    );
+  };
+
   const calculateVerificationCompletion = (driver) => {
     // Define all possible document types (both new and legacy)
     const allDocTypes = [
@@ -1062,175 +1248,224 @@ const DriverVerificationEnhanced = () => {
           </Tabs>
 
           {tabValue === 0 && (
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <Card variant="outlined">
-                  <CardHeader 
-                    avatar={<PersonIcon color="primary" />}
-                    title="Driver Information"
-                    subheader="Core driver details and identification info"
-                  />
-                  <CardContent>
-                    <Grid container spacing={3}>
-                      <Grid item xs={12} md={6}>
-                        <Box mb={2}>
-                          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                            Full Name
-                          </Typography>
-                          <Typography variant="body1" fontWeight="medium">
-                            {selectedDriver.fullName || selectedDriver.name || 
-                             (selectedDriver.firstName && selectedDriver.lastName ? 
-                              `${selectedDriver.firstName} ${selectedDriver.lastName}` : 'Not provided')}
-                          </Typography>
-                        </Box>
+            <Box sx={{ mt: 2 }}>
+              <Grid container spacing={3}>
+                {/* Personal Information Card */}
+                <Grid item xs={12} md={6}>
+                  <Card variant="outlined" sx={{ height: 'fit-content' }}>
+                    <CardHeader 
+                      avatar={<PersonIcon color="primary" />}
+                      title="Personal Information"
+                      subheader="Basic personal details"
+                    />
+                    <CardContent>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12}>
+                          <Box mb={2}>
+                            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                              Full Name
+                            </Typography>
+                            <Typography variant="body1" fontWeight="medium">
+                              {selectedDriver.fullName || selectedDriver.name || 
+                               (selectedDriver.firstName && selectedDriver.lastName ? 
+                                `${selectedDriver.firstName} ${selectedDriver.lastName}` : 'Not provided')}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        
+                        <Grid item xs={6}>
+                          <Box mb={2}>
+                            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                              Gender
+                            </Typography>
+                            <Typography variant="body1">
+                              {selectedDriver.gender || 'Not provided'}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        
+                        <Grid item xs={6}>
+                          <Box mb={2}>
+                            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                              Date of Birth
+                            </Typography>
+                            <Typography variant="body1">
+                              {selectedDriver.dateOfBirth ? 
+                                new Date(selectedDriver.dateOfBirth.seconds * 1000).toLocaleDateString() : 
+                                'Not provided'}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        
+                        <Grid item xs={12}>
+                          <Box mb={2}>
+                            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                              NIC Number
+                            </Typography>
+                            <Typography variant="body1" fontFamily="monospace">
+                              {selectedDriver.nicNumber || 'Not provided'}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        
+                        <Grid item xs={12}>
+                          <Box mb={2}>
+                            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                              City
+                            </Typography>
+                            <Typography variant="body1">
+                              {selectedDriver.city || 'Not provided'}
+                            </Typography>
+                          </Box>
+                        </Grid>
                       </Grid>
-                      
-                      <Grid item xs={12} md={6}>
-                        <Box mb={2}>
-                          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                            Gender
-                          </Typography>
-                          <Typography variant="body1">
-                            {selectedDriver.gender || 'Not provided'}
-                          </Typography>
-                        </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+
+                {/* Contact Information Card */}
+                <Grid item xs={12} md={6}>
+                  <Card variant="outlined" sx={{ height: 'fit-content' }}>
+                    <CardHeader 
+                      avatar={<PhoneIcon color="primary" />}
+                      title="Contact Information"
+                      subheader="Phone and email details"
+                    />
+                    <CardContent>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12}>
+                          <Box mb={2}>
+                            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                              Email Address
+                            </Typography>
+                            <Typography variant="body1">
+                              {selectedDriver.email || 'Not provided'}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        
+                        <Grid item xs={12}>
+                          <Box mb={2}>
+                            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                              Primary Phone
+                            </Typography>
+                            <Typography variant="body1" fontFamily="monospace">
+                              {selectedDriver.phoneNumber || 'Not provided'}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        
+                        <Grid item xs={12}>
+                          <Box mb={2}>
+                            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                              Secondary Mobile
+                            </Typography>
+                            <Typography variant="body1" fontFamily="monospace">
+                              {selectedDriver.secondaryMobile || 'Not provided'}
+                            </Typography>
+                          </Box>
+                        </Grid>
                       </Grid>
-                      
-                      <Grid item xs={12} md={6}>
-                        <Box mb={2}>
-                          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                            Date of Birth
-                          </Typography>
-                          <Typography variant="body1">
-                            {selectedDriver.dateOfBirth ? 
-                              new Date(selectedDriver.dateOfBirth.seconds * 1000).toLocaleDateString() : 
-                              'Not provided'}
-                          </Typography>
-                        </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+
+                {/* License Information Card */}
+                <Grid item xs={12} md={6}>
+                  <Card variant="outlined" sx={{ height: 'fit-content' }}>
+                    <CardHeader 
+                      avatar={<AssignmentIcon color="primary" />}
+                      title="License Information"
+                      subheader="Driving license details"
+                    />
+                    <CardContent>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12}>
+                          <Box mb={2}>
+                            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                              License Number
+                            </Typography>
+                            <Typography variant="body1" fontFamily="monospace">
+                              {selectedDriver.licenseNumber || 'Not provided'}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        
+                        <Grid item xs={12}>
+                          <Box mb={2}>
+                            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                              License Expiry Date
+                            </Typography>
+                            <Typography variant="body1">
+                              {selectedDriver.licenseHasNoExpiry ? (
+                                <Chip label="No Expiry Date" color="success" size="small" />
+                              ) : selectedDriver.licenseExpiry ? 
+                                new Date(selectedDriver.licenseExpiry.seconds * 1000).toLocaleDateString() : 
+                                'Not provided'}
+                            </Typography>
+                          </Box>
+                        </Grid>
                       </Grid>
-                      
-                      <Grid item xs={12} md={6}>
-                        <Box mb={2}>
-                          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                            NIC Number
-                          </Typography>
-                          <Typography variant="body1">
-                            {selectedDriver.nicNumber || 'Not provided'}
-                          </Typography>
-                        </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+
+                {/* Vehicle Ownership & Registration Card */}
+                <Grid item xs={12} md={6}>
+                  <Card variant="outlined" sx={{ height: 'fit-content' }}>
+                    <CardHeader 
+                      avatar={<CarIcon color="primary" />}
+                      title="Vehicle Ownership & Registration"
+                      subheader="Vehicle ownership status and registration date"
+                    />
+                    <CardContent>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12}>
+                          <Box mb={2}>
+                            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                              Ownership Status
+                            </Typography>
+                            <Typography variant="body1">
+                              {selectedDriver.isVehicleOwner !== undefined ? (
+                                <Chip 
+                                  label={selectedDriver.isVehicleOwner ? 'Vehicle Owner' : 'Not Vehicle Owner'} 
+                                  color={selectedDriver.isVehicleOwner ? 'success' : 'default'} 
+                                  size="small" 
+                                />
+                              ) : 'Not specified'}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        
+                        <Grid item xs={12}>
+                          <Box mb={2}>
+                            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                              Country
+                            </Typography>
+                            <Typography variant="body1">
+                              {selectedDriver.country || 'Not provided'}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        
+                        <Grid item xs={12}>
+                          <Box mb={2}>
+                            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                              Registration Date
+                            </Typography>
+                            <Typography variant="body1">
+                              {selectedDriver.createdAt ? 
+                                new Date(selectedDriver.createdAt.toDate()).toLocaleString() : 
+                                'Not available'}
+                            </Typography>
+                          </Box>
+                        </Grid>
                       </Grid>
-                      
-                      <Grid item xs={12} md={6}>
-                        <Box mb={2}>
-                          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                            Email Address
-                          </Typography>
-                          <Typography variant="body1">
-                            {selectedDriver.email || 'Not provided'}
-                          </Typography>
-                        </Box>
-                      </Grid>
-                      
-                      <Grid item xs={12} md={6}>
-                        <Box mb={2}>
-                          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                            Phone Number
-                          </Typography>
-                          <Typography variant="body1">
-                            {selectedDriver.phoneNumber || 'Not provided'}
-                          </Typography>
-                        </Box>
-                      </Grid>
-                      
-                      <Grid item xs={12} md={6}>
-                        <Box mb={2}>
-                          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                            Secondary Mobile
-                          </Typography>
-                          <Typography variant="body1">
-                            {selectedDriver.secondaryMobile || 'Not provided'}
-                          </Typography>
-                        </Box>
-                      </Grid>
-                      
-                      <Grid item xs={12} md={6}>
-                        <Box mb={2}>
-                          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                            City
-                          </Typography>
-                          <Typography variant="body1">
-                            {selectedDriver.city || 'Not provided'}
-                          </Typography>
-                        </Box>
-                      </Grid>
-                      
-                      <Grid item xs={12} md={6}>
-                        <Box mb={2}>
-                          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                            Vehicle Ownership
-                          </Typography>
-                          <Typography variant="body1">
-                            {selectedDriver.isVehicleOwner !== undefined ? 
-                              (selectedDriver.isVehicleOwner ? 'Owner of the vehicle' : 'Not the owner of the vehicle') :
-                              'Not specified'}
-                          </Typography>
-                        </Box>
-                      </Grid>
-                      
-                      <Grid item xs={12} md={6}>
-                        <Box mb={2}>
-                          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                            License Number
-                          </Typography>
-                          <Typography variant="body1">
-                            {selectedDriver.licenseNumber || 'Not provided'}
-                          </Typography>
-                        </Box>
-                      </Grid>
-                      
-                      <Grid item xs={12} md={6}>
-                        <Box mb={2}>
-                          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                            License Expiry Date
-                          </Typography>
-                          <Typography variant="body1">
-                            {selectedDriver.licenseHasNoExpiry ? 'No expiry date' :
-                             selectedDriver.licenseExpiry ? 
-                               new Date(selectedDriver.licenseExpiry.seconds * 1000).toLocaleDateString() : 
-                               'Not provided'}
-                          </Typography>
-                        </Box>
-                      </Grid>
-                      
-                      <Grid item xs={12} md={6}>
-                        <Box mb={2}>
-                          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                            Country
-                          </Typography>
-                          <Typography variant="body1">
-                            {selectedDriver.country || 'Not provided'}
-                          </Typography>
-                        </Box>
-                      </Grid>
-                      
-                      <Grid item xs={12} md={6}>
-                        <Box mb={2}>
-                          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                            Registration Date
-                          </Typography>
-                          <Typography variant="body1">
-                            {selectedDriver.createdAt ? 
-                              new Date(selectedDriver.createdAt.toDate()).toLocaleDateString() : 
-                              'Not available'
-                            }
-                          </Typography>
-                        </Box>
-                      </Grid>
-                    </Grid>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                </Grid>
               </Grid>
-            </Grid>
+            </Box>
           )}
 
           {tabValue === 1 && (
@@ -1241,29 +1476,41 @@ const DriverVerificationEnhanced = () => {
                 </Typography>
                 <Typography variant="body2">
                   All documents must be clear, readable, and match the driver information provided. 
-                  Click on any document to view it in full screen.
+                  Click "View Document" to review each submitted document.
                 </Typography>
               </Alert>
               
-              <Grid container spacing={2}>
-                {/* Mandatory Documents - Only show documents that are actually submitted by users */}
-                {getDocumentUrl(selectedDriver, 'driverImage') && renderEnhancedDocumentCard('driverImage', 'Driver Photo', 'Driver identification photo (Profile Photo)', true)}
-                {getDocumentUrl(selectedDriver, 'licenseFront') && renderEnhancedDocumentCard('licenseFront', 'License (Front)', 'Front side of driving license', true)}
-                {getDocumentUrl(selectedDriver, 'licenseBack') && renderEnhancedDocumentCard('licenseBack', 'License (Back)', 'Back side of driving license', true)}
-                {getDocumentUrl(selectedDriver, 'vehicleInsurance') && renderEnhancedDocumentCard('vehicleInsurance', 'Vehicle Insurance', 'Vehicle insurance certificate', true)}
-                {getDocumentUrl(selectedDriver, 'vehicleRegistration') && renderEnhancedDocumentCard('vehicleRegistration', 'Vehicle Registration', 'Official vehicle registration document', true)}
-                
-                {/* Optional Documents - New document types from mobile app */}
-                {getDocumentUrl(selectedDriver, 'nicFront') && renderEnhancedDocumentCard('nicFront', 'NIC (Front)', 'Front side of National Identity Card', false)}
-                {getDocumentUrl(selectedDriver, 'nicBack') && renderEnhancedDocumentCard('nicBack', 'NIC (Back)', 'Back side of National Identity Card', false)}
-                {getDocumentUrl(selectedDriver, 'billingProof') && renderEnhancedDocumentCard('billingProof', 'Billing Proof', 'Utility bill or bank statement for address verification', false)}
-                {getDocumentUrl(selectedDriver, 'licenseDocument') && renderEnhancedDocumentCard('licenseDocument', 'License Document', 'Additional license document if available', false)}
-                
-                {/* Legacy document support for older drivers */}
-                {getDocumentUrl(selectedDriver, 'profileImage') && renderEnhancedDocumentCard('profileImage', 'Profile Photo (Legacy)', 'Driver profile image', true)}
-                {getDocumentUrl(selectedDriver, 'licenseImage') && renderEnhancedDocumentCard('licenseImage', 'Driver License (Legacy)', 'Driver license document', true)}
-                {getDocumentUrl(selectedDriver, 'idImage') && renderEnhancedDocumentCard('idImage', 'National ID (Legacy)', 'National identification document', true)}
-              </Grid>
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell><strong>Document Type</strong></TableCell>
+                      <TableCell><strong>Status</strong></TableCell>
+                      <TableCell><strong>Required</strong></TableCell>
+                      <TableCell align="center"><strong>Actions</strong></TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {/* Mandatory Documents */}
+                    {getDocumentUrl(selectedDriver, 'driverImage') && renderDocumentListItem('driverImage', 'Driver Photo', 'Driver identification photo (Profile Photo)', true)}
+                    {getDocumentUrl(selectedDriver, 'licenseFront') && renderDocumentListItem('licenseFront', 'License (Front)', 'Front side of driving license', true)}
+                    {getDocumentUrl(selectedDriver, 'licenseBack') && renderDocumentListItem('licenseBack', 'License (Back)', 'Back side of driving license', true)}
+                    {getDocumentUrl(selectedDriver, 'vehicleInsurance') && renderDocumentListItem('vehicleInsurance', 'Vehicle Insurance', 'Vehicle insurance certificate', true)}
+                    {getDocumentUrl(selectedDriver, 'vehicleRegistration') && renderDocumentListItem('vehicleRegistration', 'Vehicle Registration', 'Official vehicle registration document', true)}
+                    
+                    {/* Optional Documents */}
+                    {getDocumentUrl(selectedDriver, 'nicFront') && renderDocumentListItem('nicFront', 'NIC (Front)', 'Front side of National Identity Card', false)}
+                    {getDocumentUrl(selectedDriver, 'nicBack') && renderDocumentListItem('nicBack', 'NIC (Back)', 'Back side of National Identity Card', false)}
+                    {getDocumentUrl(selectedDriver, 'billingProof') && renderDocumentListItem('billingProof', 'Billing Proof', 'Utility bill or bank statement for address verification', false)}
+                    {getDocumentUrl(selectedDriver, 'licenseDocument') && renderDocumentListItem('licenseDocument', 'License Document', 'Additional license document if available', false)}
+                    
+                    {/* Legacy Documents */}
+                    {getDocumentUrl(selectedDriver, 'profileImage') && renderDocumentListItem('profileImage', 'Profile Photo (Legacy)', 'Driver profile image', true)}
+                    {getDocumentUrl(selectedDriver, 'licenseImage') && renderDocumentListItem('licenseImage', 'Driver License (Legacy)', 'Driver license document', true)}
+                    {getDocumentUrl(selectedDriver, 'idImage') && renderDocumentListItem('idImage', 'National ID (Legacy)', 'National identification document', true)}
+                  </TableBody>
+                </Table>
+              </TableContainer>
 
               {/* Vehicle Photos Section - only show if they exist */}
               {selectedDriver.vehicleImageUrls && selectedDriver.vehicleImageUrls.length > 0 && (
@@ -1272,178 +1519,136 @@ const DriverVerificationEnhanced = () => {
                     Vehicle Photos
                   </Typography>
                   <Alert severity="info" sx={{ mb: 3 }}>
-                    <Typography variant="caption">
+                    <Typography variant="body2">
                       {selectedDriver.vehicleImageUrls.length} of 6 photos uploaded. Minimum 4 required for approval.
                     </Typography>
                   </Alert>
-                  <Grid container spacing={2}>
-                    {selectedDriver.vehicleImageUrls.map((imageUrl, index) => {
-                      const vehicleStatus = selectedDriver.vehicleImageVerification?.[index]?.status || 'pending';
-                      const isDriverApproved = selectedDriver.status === 'approved';
-                      const displayStatus = isDriverApproved ? 'approved' : vehicleStatus;
-                      
-                      const getVehiclePhotoTitle = (index) => {
-                        switch (index) {
-                          case 0: return 'Front View with Number Plate';
-                          case 1: return 'Rear View with Number Plate'; 
-                          default: return `Vehicle Photo ${index + 1}`;
-                        }
-                      };
+                  
+                  <TableContainer component={Paper} variant="outlined">
+                    <Table size="medium">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell><strong>Vehicle Photo Type</strong></TableCell>
+                          <TableCell><strong>Status</strong></TableCell>
+                          <TableCell><strong>Required</strong></TableCell>
+                          <TableCell align="center"><strong>Actions</strong></TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {selectedDriver.vehicleImageUrls.map((imageUrl, index) => {
+                          const vehicleStatus = selectedDriver.vehicleImageVerification?.[index]?.status || 'pending';
+                          const isDriverApproved = selectedDriver.status === 'approved';
+                          const displayStatus = isDriverApproved ? 'approved' : vehicleStatus;
+                          
+                          const getVehiclePhotoTitle = (index) => {
+                            switch (index) {
+                              case 0: return 'Front View with Number Plate';
+                              case 1: return 'Rear View with Number Plate'; 
+                              default: return `Vehicle Photo ${index + 1}`;
+                            }
+                          };
 
-                      const getVehiclePhotoDescription = (index) => {
-                        switch (index) {
-                          case 0: return 'Clear front view showing number plate (Required)';
-                          case 1: return 'Clear rear view showing number plate (Required)';
-                          default: return 'Additional vehicle photo';
-                        }
-                      };
-                      
-                      return (
-                        <Grid item xs={12} md={6} key={index}>
-                          <Card 
-                            variant="outlined" 
-                            sx={{ 
-                              height: '100%',
-                              border: displayStatus === 'approved' ? 2 : 1,
-                              borderColor: displayStatus === 'approved' ? 'success.main' : 
-                                          displayStatus === 'rejected' ? 'error.main' : 'divider'
-                            }}
-                          >
-                            <CardHeader
-                              avatar={
-                                <Avatar sx={{ 
-                                  bgcolor: displayStatus === 'approved' ? 'success.main' : 
-                                          displayStatus === 'rejected' ? 'error.main' : 'grey.400' 
-                                }}>
-                                  <ImageIcon />
-                                </Avatar>
-                              }
-                              title={
-                                <Box display="flex" alignItems="center" gap={1}>
-                                  <Typography variant="subtitle1" fontWeight="medium">
-                                    {getVehiclePhotoTitle(index)}
-                                  </Typography>
-                                  {index < 2 && (
-                                    <Chip 
-                                      label="Required" 
-                                      size="small" 
-                                      color="warning" 
-                                      variant="outlined"
-                                    />
-                                  )}
-                                  {displayStatus === 'approved' && (
-                                    <Chip 
-                                      label="Verified" 
-                                      size="small" 
-                                      color="success" 
-                                      icon={<CheckIcon />}
-                                    />
-                                  )}
+                          const getVehiclePhotoDescription = (index) => {
+                            switch (index) {
+                              case 0: return 'Clear front view showing number plate';
+                              case 1: return 'Clear rear view showing number plate';
+                              default: return 'Additional vehicle photo';
+                            }
+                          };
+
+                          const isRequired = index < 2; // First two photos are required
+                          
+                          return (
+                            <TableRow key={index} hover>
+                              <TableCell>
+                                <Box display="flex" alignItems="center" gap={2}>
+                                  <Avatar sx={{ 
+                                    bgcolor: displayStatus === 'approved' ? 'success.main' : 
+                                            displayStatus === 'rejected' ? 'error.main' : 'grey.400',
+                                    width: 40, height: 40
+                                  }}>
+                                    <ImageIcon />
+                                  </Avatar>
+                                  <Box>
+                                    <Typography variant="subtitle1" fontWeight="medium">
+                                      {getVehiclePhotoTitle(index)}
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                      {getVehiclePhotoDescription(index)}
+                                    </Typography>
+                                  </Box>
                                 </Box>
-                              }
-                              subheader={getVehiclePhotoDescription(index)}
-                              action={
+                              </TableCell>
+                              <TableCell>
                                 <Chip 
                                   label={displayStatus ? displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1) : 'Pending'} 
                                   color={getStatusColor(displayStatus)} 
                                   icon={getStatusIcon(displayStatus)}
-                                  variant="filled"
                                   size="small"
                                 />
-                              }
-                            />
-                            
-                            <CardMedia
-                              component="img"
-                              height="200"
-                              image={imageUrl}
-                              alt={getVehiclePhotoTitle(index)}
-                              sx={{ 
-                                objectFit: 'cover',
-                                cursor: 'pointer',
-                                '&:hover': { 
-                                  opacity: 0.9,
-                                  transform: 'scale(1.02)',
-                                  transition: 'all 0.2s ease-in-out'
-                                }
-                              }}
-                              onClick={() => viewDocument(imageUrl, getVehiclePhotoTitle(index))}
-                            />
-                            
-                            <CardContent>
-                              <Box display="flex" justifyContent="space-between" alignItems="center">
-                                <Button
+                              </TableCell>
+                              <TableCell>
+                                <Chip 
+                                  label={isRequired ? "Required" : "Optional"} 
+                                  color={isRequired ? "warning" : "default"} 
                                   size="small"
-                                  startIcon={<ViewIcon />}
-                                  onClick={() => viewDocument(imageUrl, getVehiclePhotoTitle(index))}
                                   variant="outlined"
-                                >
-                                  View Full Size
-                                </Button>
-                                <Button
-                                  size="small"
-                                  startIcon={<DownloadIcon />}
-                                  onClick={() => window.open(imageUrl, '_blank')}
-                                  variant="text"
-                                >
-                                  Download
-                                </Button>
-                              </Box>
-                            </CardContent>
-                            
-                            {displayStatus === 'pending' && !isDriverApproved && (
-                              <CardActions sx={{ justifyContent: 'space-between', px: 2, py: 1.5 }}>
-                                <Button 
-                                  size="small"
-                                  color="success"
-                                  startIcon={<CheckIcon />}
-                                  onClick={() => handleVehicleImageAction(selectedDriver, index, 'approved')}
-                                  disabled={actionLoading}
-                                  variant="contained"
-                                  sx={{ minWidth: 100 }}
-                                >
-                                  Approve
-                                </Button>
-                                <Button 
-                                  size="small"
-                                  color="error"
-                                  startIcon={<ErrorIcon />}
-                                  onClick={() => handleVehicleImageAction(selectedDriver, index, 'reject')}
-                                  disabled={actionLoading}
-                                  variant="outlined"
-                                  sx={{ minWidth: 100 }}
-                                >
-                                  Reject
-                                </Button>
-                              </CardActions>
-                            )}
-                            
-                            {displayStatus === 'approved' && (
-                              <CardActions sx={{ px: 2, py: 1.5 }}>
-                                <Box display="flex" alignItems="center" gap={1} width="100%">
-                                  <CheckIcon color="success" fontSize="small" />
-                                  <Typography variant="caption" color="success.main" fontWeight="medium">
-                                    Photo verified and approved
-                                  </Typography>
+                                />
+                              </TableCell>
+                              <TableCell align="center">
+                                <Box display="flex" gap={1} justifyContent="center" alignItems="center">
+                                  <Button
+                                    size="small"
+                                    startIcon={<ViewIcon />}
+                                    onClick={() => viewDocument(imageUrl, getVehiclePhotoTitle(index))}
+                                    variant="outlined"
+                                    color="primary"
+                                  >
+                                    View
+                                  </Button>
+                                  <Button
+                                    size="small"
+                                    startIcon={<DownloadIcon />}
+                                    onClick={() => window.open(imageUrl, '_blank')}
+                                    variant="text"
+                                    color="primary"
+                                  >
+                                    Download
+                                  </Button>
+                                  {displayStatus === 'pending' && !isDriverApproved && (
+                                    <>
+                                      <Button 
+                                        size="small"
+                                        color="success"
+                                        startIcon={<CheckIcon />}
+                                        onClick={() => handleVehicleImageAction(selectedDriver, index, 'approved')}
+                                        disabled={actionLoading}
+                                        variant="contained"
+                                        sx={{ ml: 1 }}
+                                      >
+                                        APPROVE
+                                      </Button>
+                                      <Button 
+                                        size="small"
+                                        color="error"
+                                        startIcon={<CloseIcon />}
+                                        onClick={() => handleVehicleImageAction(selectedDriver, index, 'reject')}
+                                        disabled={actionLoading}
+                                        variant="outlined"
+                                        sx={{ ml: 1 }}
+                                      >
+                                        REJECT
+                                      </Button>
+                                    </>
+                                  )}
                                 </Box>
-                              </CardActions>
-                            )}
-                            
-                            {displayStatus === 'rejected' && (
-                              <CardActions sx={{ px: 2, py: 1.5 }}>
-                                <Box display="flex" alignItems="center" gap={1} width="100%">
-                                  <ErrorIcon color="error" fontSize="small" />
-                                  <Typography variant="caption" color="error.main" fontWeight="medium">
-                                    Photo rejected - needs resubmission
-                                  </Typography>
-                                </Box>
-                              </CardActions>
-                            )}
-                          </Card>
-                        </Grid>
-                      );
-                    })}
-                  </Grid>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
                 </Box>
               )}
             </Box>
@@ -1456,7 +1661,7 @@ const DriverVerificationEnhanced = () => {
                   Contact Verification Status
                 </Typography>
                 <Typography variant="body2">
-                  Contact verification is handled automatically in the mobile app. Both phone and email must be verified before driver approval.
+                  Phone number verification is mandatory and handled automatically in the mobile app. Phone must be verified before driver approval.
                 </Typography>
               </Alert>
               
@@ -1554,82 +1759,248 @@ const DriverVerificationEnhanced = () => {
 
           {tabValue === 3 && (
             <Box sx={{ mt: 2 }}>
-              <Card variant="outlined">
-                <CardHeader
-                  avatar={<CarIcon color="primary" />}
-                  title="Vehicle Information"
-                  subheader="Driver's vehicle details and registration info"
-                />
-                <CardContent>
-                  <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
-                      <Box mb={2}>
-                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                          Vehicle Type
-                        </Typography>
-                        <Typography variant="body1" fontWeight="medium">
-                          {selectedDriver.vehicleType || 'Not specified'}
-                        </Typography>
-                      </Box>
-                    </Grid>
-                    
-                    <Grid item xs={12} md={6}>
-                      <Box mb={2}>
-                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                          Vehicle Make
-                        </Typography>
-                        <Typography variant="body1">
-                          {selectedDriver.vehicleMake || 'Not provided'}
-                        </Typography>
-                      </Box>
-                    </Grid>
-                    
-                    <Grid item xs={12} md={6}>
-                      <Box mb={2}>
-                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                          Vehicle Model
-                        </Typography>
-                        <Typography variant="body1">
-                          {selectedDriver.vehicleModel || 'Not provided'}
-                        </Typography>
-                      </Box>
-                    </Grid>
-                    
-                    <Grid item xs={12} md={6}>
-                      <Box mb={2}>
-                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                          Vehicle Year
-                        </Typography>
-                        <Typography variant="body1">
-                          {selectedDriver.vehicleYear || 'Not provided'}
-                        </Typography>
-                      </Box>
-                    </Grid>
-                    
-                    <Grid item xs={12} md={6}>
-                      <Box mb={2}>
-                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                          License Plate
-                        </Typography>
-                        <Typography variant="body1" fontWeight="medium">
-                          {selectedDriver.licensePlate || 'Not provided'}
-                        </Typography>
-                      </Box>
-                    </Grid>
-                    
-                    <Grid item xs={12} md={6}>
-                      <Box mb={2}>
-                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                          Vehicle Color
-                        </Typography>
-                        <Typography variant="body1">
-                          {selectedDriver.vehicleColor || 'Not provided'}
-                        </Typography>
-                      </Box>
-                    </Grid>
-                  </Grid>
-                </CardContent>
-              </Card>
+              <Grid container spacing={3}>
+                {/* Vehicle Details Card */}
+                <Grid item xs={12} md={6}>
+                  <Card variant="outlined" sx={{ height: 'fit-content' }}>
+                    <CardHeader
+                      avatar={
+                        <Avatar sx={{ bgcolor: 'primary.main', width: 48, height: 48 }}>
+                          {getVehicleIcon(selectedDriver.vehicleType)}
+                        </Avatar>
+                      }
+                      title="Vehicle Details"
+                      subheader="Primary vehicle information"
+                    />
+                    <CardContent>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12}>
+                          <Box mb={2}>
+                            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                              Vehicle Type
+                            </Typography>
+                            <Typography variant="body1" fontWeight="medium">
+                              {selectedDriver.vehicleType ? (
+                                <Box display="flex" alignItems="center" gap={1}>
+                                  <Chip 
+                                    label={selectedDriver.vehicleType} 
+                                    color="primary" 
+                                    size="small" 
+                                    variant="outlined"
+                                  />
+                                </Box>
+                              ) : (
+                                <Typography color="text.secondary" variant="body2">Not specified</Typography>
+                              )}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        
+                        <Grid item xs={6}>
+                          <Box mb={2}>
+                            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                              Make
+                            </Typography>
+                            <Typography variant="body1" fontWeight="medium">
+                              {selectedDriver.vehicleMake || 'Not provided'}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        
+                        <Grid item xs={6}>
+                          <Box mb={2}>
+                            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                              Model
+                            </Typography>
+                            <Typography variant="body1">
+                              {selectedDriver.vehicleModel || 'Not provided'}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        
+                        <Grid item xs={6}>
+                          <Box mb={2}>
+                            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                              Year
+                            </Typography>
+                            <Typography variant="body1">
+                              {selectedDriver.vehicleYear || 'Not provided'}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        
+                        <Grid item xs={6}>
+                          <Box mb={2}>
+                            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                              Color
+                            </Typography>
+                            <Typography variant="body1">
+                              {selectedDriver.vehicleColor || 'Not provided'}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                      </Grid>
+                    </CardContent>
+                  </Card>
+                </Grid>
+
+                {/* License Plate & Registration Card */}
+                <Grid item xs={12} md={6}>
+                  <Card variant="outlined" sx={{ height: 'fit-content' }}>
+                    <CardHeader
+                      avatar={<AssignmentIcon color="primary" />}
+                      title="Registration Details"
+                      subheader="License plate and registration info"
+                    />
+                    <CardContent>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12}>
+                          <Box mb={2}>
+                            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                              License Plate Number
+                            </Typography>
+                            <Typography variant="h6" fontFamily="monospace" color="primary">
+                              {selectedDriver.licensePlate || 'Not provided'}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        
+                        {selectedDriver.vehicleRegistration && (
+                          <Grid item xs={12}>
+                            <Box mb={2}>
+                              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                                Registration Status
+                              </Typography>
+                              <Chip 
+                                label="Registration Document Submitted" 
+                                color="success" 
+                                size="small" 
+                                icon={<CheckIcon />}
+                              />
+                            </Box>
+                          </Grid>
+                        )}
+                      </Grid>
+                    </CardContent>
+                  </Card>
+                </Grid>
+
+                {/* Vehicle Images Section */}
+                <Grid item xs={12}>
+                  <Card variant="outlined">
+                    <CardHeader
+                      avatar={<ImageIcon color="primary" />}
+                      title="Vehicle Photos"
+                      subheader="Submitted vehicle images for verification"
+                    />
+                    <CardContent>
+                      {selectedDriver.vehicleImages && selectedDriver.vehicleImages.length > 0 ? (
+                        <Grid container spacing={2}>
+                          {selectedDriver.vehicleImages.map((imageUrl, index) => {
+                            if (!imageUrl) return null;
+                            
+                            const status = getVehicleImageStatus(selectedDriver, index);
+                            const isDriverApproved = selectedDriver.status === 'approved';
+                            const displayStatus = isDriverApproved ? 'approved' : status;
+                            
+                            return (
+                              <Grid item xs={12} sm={6} md={4} key={index}>
+                                <Card 
+                                  variant="outlined" 
+                                  sx={{ 
+                                    height: '100%',
+                                    border: displayStatus === 'approved' ? 2 : 1,
+                                    borderColor: displayStatus === 'approved' ? 'success.main' : 
+                                                displayStatus === 'rejected' ? 'error.main' : 'divider'
+                                  }}
+                                >
+                                  <Box sx={{ position: 'relative' }}>
+                                    <CardMedia
+                                      component="img"
+                                      height="120"
+                                      image={imageUrl}
+                                      alt={`Vehicle Image ${index + 1}`}
+                                      sx={{ 
+                                        objectFit: 'cover',
+                                        cursor: 'pointer',
+                                        '&:hover': { 
+                                          opacity: 0.9
+                                        }
+                                      }}
+                                      onClick={() => viewDocument(imageUrl, `Vehicle Photo ${index + 1}`)}
+                                    />
+                                    <Box 
+                                      sx={{ 
+                                        position: 'absolute',
+                                        top: 8,
+                                        right: 8,
+                                        bgcolor: 'rgba(0,0,0,0.7)',
+                                        borderRadius: 1,
+                                        p: 0.5
+                                      }}
+                                    >
+                                      <Chip 
+                                        label={displayStatus ? displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1) : 'Pending'} 
+                                        color={getStatusColor(displayStatus)} 
+                                        size="small"
+                                        sx={{ fontSize: '0.7rem', height: 20 }}
+                                      />
+                                    </Box>
+                                  </Box>
+                                  
+                                  <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                                    <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+                                      Vehicle Photo {index + 1}
+                                    </Typography>
+                                    <Box display="flex" gap={1}>
+                                      <Button
+                                        size="small"
+                                        startIcon={<ViewIcon />}
+                                        onClick={() => viewDocument(imageUrl, `Vehicle Photo ${index + 1}`)}
+                                        variant="outlined"
+                                        sx={{ fontSize: '0.7rem', py: 0.5 }}
+                                      >
+                                        View
+                                      </Button>
+                                      <Button
+                                        size="small"
+                                        startIcon={<DownloadIcon />}
+                                        onClick={() => window.open(imageUrl, '_blank')}
+                                        variant="text"
+                                        sx={{ fontSize: '0.7rem', py: 0.5 }}
+                                      >
+                                        Download
+                                      </Button>
+                                    </Box>
+                                  </CardContent>
+                                </Card>
+                              </Grid>
+                            );
+                          })}
+                        </Grid>
+                      ) : (
+                        <Box 
+                          sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            py: 4,
+                            bgcolor: 'grey.50',
+                            borderRadius: 1
+                          }}
+                        >
+                          <Box textAlign="center">
+                            <ImageIcon sx={{ fontSize: 48, opacity: 0.3, color: 'text.secondary' }} />
+                            <Typography variant="body2" color="text.secondary" mt={1}>
+                              No vehicle photos submitted
+                            </Typography>
+                          </Box>
+                        </Box>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
             </Box>
           )}
 

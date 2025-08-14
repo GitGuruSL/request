@@ -153,9 +153,21 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          _buildInfoRow('Full Name', _driverData!['name'] ?? 'N/A'),
+          _buildInfoRow('Full Name', _driverData!['fullName'] ?? _driverData!['name'] ?? 
+                       ((_driverData!['firstName'] ?? '').isNotEmpty && (_driverData!['lastName'] ?? '').isNotEmpty 
+                        ? '${_driverData!['firstName']} ${_driverData!['lastName']}' : 'N/A')),
           _buildInfoRow('Email', _driverData!['email'] ?? 'N/A'),
           _buildInfoRow('Phone', _driverData!['phoneNumber'] ?? 'N/A'),
+          if ((_driverData!['secondaryMobile'] ?? '').isNotEmpty)
+            _buildInfoRow('Secondary Mobile', _driverData!['secondaryMobile']),
+          if ((_driverData!['gender'] ?? '').isNotEmpty)
+            _buildInfoRow('Gender', _driverData!['gender']),
+          if (_driverData!['dateOfBirth'] != null)
+            _buildInfoRow('Date of Birth', _formatDate(_driverData!['dateOfBirth'])),
+          if ((_driverData!['nicNumber'] ?? '').isNotEmpty)
+            _buildInfoRow('NIC Number', _driverData!['nicNumber']),
+          if ((_driverData!['city'] ?? '').isNotEmpty)
+            _buildInfoRow('City', _driverData!['city']),
           _buildInfoRow('License Number', _driverData!['licenseNumber'] ?? 'N/A'),
           _buildInfoRow('License Expiry', _formatDate(_driverData!['licenseExpiry'])),
           _buildInfoRow('Insurance Number', _driverData!['insuranceNumber'] ?? 'N/A'),
@@ -219,6 +231,30 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
               'Additional license document',
               Icons.badge,
             ),
+          if (_driverData!['nicFrontUrl'] != null)
+            _buildDocumentItem(
+              'NIC (Front)',
+              docVerification['nicFront'],
+              _driverData!['nicFrontUrl'],
+              'Front side of National Identity Card',
+              Icons.badge,
+            ),
+          if (_driverData!['nicBackUrl'] != null)
+            _buildDocumentItem(
+              'NIC (Back)',
+              docVerification['nicBack'],
+              _driverData!['nicBackUrl'],
+              'Back side of National Identity Card',
+              Icons.flip_to_back,
+            ),
+          if (_driverData!['billingProofUrl'] != null)
+            _buildDocumentItem(
+              'Billing Proof',
+              docVerification['billingProof'],
+              _driverData!['billingProofUrl'],
+              'Utility bill or bank statement for address verification',
+              Icons.receipt,
+            ),
           _buildDocumentItem(
             'Vehicle Insurance Document',
             docVerification['vehicleInsurance'],
@@ -226,6 +262,14 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
             'Vehicle insurance certificate (Expires: ${_formatDate(_driverData!['insuranceExpiry'])})',
             Icons.security,
           ),
+          if (_driverData!['vehicleRegistrationUrl'] != null)
+            _buildDocumentItem(
+              'Vehicle Registration Document',
+              docVerification['vehicleRegistration'],
+              _driverData!['vehicleRegistrationUrl'],
+              'Official vehicle registration document',
+              Icons.assignment,
+            ),
         ],
       ),
     );
@@ -259,6 +303,9 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
           _buildInfoRow('Color', _driverData!['vehicleColor'] ?? 'N/A'),
           _buildInfoRow('License Plate', _driverData!['vehicleNumber'] ?? 'N/A'),
           _buildInfoRow('Vehicle Type', _driverData!['vehicleType'] ?? 'N/A'),
+          if (_driverData!['vehicleOwnership'] != null)
+            _buildInfoRow('Vehicle Ownership', 
+                (_driverData!['vehicleOwnership'] as bool? ?? true) ? 'Owner' : 'Not Owner'),
         ],
       ),
     );
