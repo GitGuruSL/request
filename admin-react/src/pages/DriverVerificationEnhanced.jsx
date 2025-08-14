@@ -107,9 +107,15 @@ const DriverVerificationEnhanced = () => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState({ open: false, url: '', title: '' });
+  
+  // City and Vehicle Type mapping
+  const [cityNames, setCityNames] = useState({});
+  const [vehicleTypeNames, setVehicleTypeNames] = useState({});
 
   useEffect(() => {
     loadDrivers();
+    loadCityNames();
+    loadVehicleTypeNames();
   }, [filterStatus]);
 
   const loadDrivers = async () => {
@@ -181,6 +187,30 @@ const DriverVerificationEnhanced = () => {
         }
       }
       
+      // Fix any drivers with "approve" status (should be "approved")
+      const driversToFix = driverList.filter(driver => driver.status === 'approve');
+      for (const driver of driversToFix) {
+        try {
+          console.log(`🔄 Fixing status for driver ${driver.fullName}: "approve" → "approved"`);
+          const driverRef = doc(db, 'new_driver_verifications', driver.id);
+          await updateDoc(driverRef, {
+            status: 'approved',
+            isVerified: true,
+            updatedAt: Timestamp.now()
+          });
+          
+          // Update local data
+          const driverIndex = driverList.findIndex(d => d.id === driver.id);
+          if (driverIndex !== -1) {
+            driverList[driverIndex].status = 'approved';
+            driverList[driverIndex].isVerified = true;
+          }
+          console.log(`✅ Fixed status for ${driver.fullName}`);
+        } catch (error) {
+          console.error(`❌ Failed to fix status for ${driver.fullName}:`, error);
+        }
+      }
+      
       // Sort by created date
       driverList.sort((a, b) => {
         const aTime = a.submittedAt?.toDate?.() || a.createdAt?.toDate?.() || new Date(0);
@@ -194,6 +224,34 @@ const DriverVerificationEnhanced = () => {
       console.error('Error loading drivers:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCityNames = async () => {
+    try {
+      const citiesSnapshot = await getDocs(collection(db, 'cities'));
+      const cityMap = {};
+      citiesSnapshot.forEach((doc) => {
+        const data = doc.data();
+        cityMap[doc.id] = data.name || data.cityName || doc.id;
+      });
+      setCityNames(cityMap);
+    } catch (error) {
+      console.error('Error loading city names:', error);
+    }
+  };
+
+  const loadVehicleTypeNames = async () => {
+    try {
+      const vehicleTypesSnapshot = await getDocs(collection(db, 'vehicle_types'));
+      const vehicleTypeMap = {};
+      vehicleTypesSnapshot.forEach((doc) => {
+        const data = doc.data();
+        vehicleTypeMap[doc.id] = data.name || data.typeName || doc.id;
+      });
+      setVehicleTypeNames(vehicleTypeMap);
+    } catch (error) {
+      console.error('Error loading vehicle type names:', error);
     }
   };
 
@@ -317,6 +375,14 @@ const DriverVerificationEnhanced = () => {
     }
   };
 
+  const getCityName = (cityId) => {
+    return cityNames[cityId] || cityId || 'Unknown City';
+  };
+
+  const getVehicleTypeName = (vehicleTypeId) => {
+    return vehicleTypeNames[vehicleTypeId] || vehicleTypeId || 'Unknown Vehicle Type';
+  };
+
   const handleDocumentApprovalWithClose = async (driver, docType, action) => {
     setActionLoading(true);
     try {
@@ -392,12 +458,21 @@ const DriverVerificationEnhanced = () => {
     }
 
     if (action === 'approve') {
-      // Check if all documents are approved
-      const docTypes = ['licenseImage', 'idImage', 'vehicleRegistration', 'profileImage'];
-      const allDocsApproved = docTypes.every(docType => {
+      // Define all possible document types (both new and legacy)
+      const allDocTypes = [
+        // New mobile app documents (mandatory)
+        'driverImage', 'licenseFront', 'licenseBack', 'vehicleInsurance', 'vehicleRegistration',
+        // Legacy documents (for backward compatibility)  
+        'profileImage', 'licenseImage', 'idImage'
+      ];
+      
+      // Find which documents this driver actually has
+      const availableDocuments = allDocTypes.filter(docType => getDocumentUrl(driver, docType));
+      
+      // Check if all available documents are approved
+      const allDocsApproved = availableDocuments.every(docType => {
         const status = getDocumentStatus(driver, docType);
-        const url = getDocumentUrl(driver, docType);
-        return !url || status === 'approved'; // Skip missing documents
+        return status === 'approved';
       });
 
       if (!allDocsApproved) {
@@ -430,11 +505,11 @@ const DriverVerificationEnhanced = () => {
     setActionLoading(true);
     try {
       const updateData = {
-        status: action,
+        status: action === 'approve' ? 'approved' : action,
         updatedAt: Timestamp.now()
       };
 
-      if (action === 'approved') {
+      if (action === 'approve') {
         updateData.approvedAt = Timestamp.now();
         updateData.isVerified = true;
       }
@@ -1336,7 +1411,7 @@ const DriverVerificationEnhanced = () => {
                               City
                             </Typography>
                             <Typography variant="body1">
-                              {selectedDriver.city || 'Not provided'}
+                              {getCityName(selectedDriver.city) || 'Not provided'}
                             </Typography>
                           </Box>
                         </Grid>
@@ -1892,7 +1967,7 @@ const DriverVerificationEnhanced = () => {
                     <CardHeader
                       avatar={
                         <Avatar sx={{ bgcolor: 'primary.main', width: 48, height: 48 }}>
-                          {getVehicleIcon(selectedDriver.vehicleType)}
+                          {getVehicleIcon(getVehicleTypeName(selectedDriver.vehicleType))}
                         </Avatar>
                       }
                       title="Vehicle Details"
@@ -1909,7 +1984,7 @@ const DriverVerificationEnhanced = () => {
                               {selectedDriver.vehicleType ? (
                                 <Box display="flex" alignItems="center" gap={1}>
                                   <Chip 
-                                    label={selectedDriver.vehicleType} 
+                                    label={getVehicleTypeName(selectedDriver.vehicleType)} 
                                     color="primary" 
                                     size="small" 
                                     variant="outlined"
