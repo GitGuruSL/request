@@ -12,6 +12,7 @@ import Categories from './pages/Categories';
 import Brands from './pages/Brands';
 import Variables from './pages/Variables';
 import Countries from './pages/Countries';
+import Cities from './pages/Cities';
 import PrivacyTerms from './pages/PrivacyTerms';
 import PaymentMethods from './pages/PaymentMethods';
 import AdminUsers from './pages/AdminUsers';
@@ -56,6 +57,7 @@ function App() {
               <Route path="brands" element={<Brands />} />
               <Route path="variables" element={<Variables />} />
               <Route path="countries" element={<Countries />} />
+              <Route path="cities" element={<Cities />} />
               <Route path="payment-methods" element={<PaymentMethods />} />
               <Route path="admin-users" element={<AdminUsers />} />
               <Route path="businesses" element={<BusinessVerificationEnhanced />} />

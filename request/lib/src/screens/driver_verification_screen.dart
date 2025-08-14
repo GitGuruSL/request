@@ -4,7 +4,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
 import '../services/enhanced_user_service.dart';
 import '../services/file_upload_service.dart';
-import '../models/enhanced_user_model.dart';
 import '../theme/app_theme.dart';
 
 class DriverVerificationScreen extends StatefulWidget {
@@ -48,6 +47,10 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
   List<Map<String, dynamic>> _availableVehicleTypes = [];
   String? _userCountry;
   
+  // Cities selection
+  List<Map<String, dynamic>> _availableCities = [];
+  bool _loadingCities = false;
+  
   // Document files
   File? _driverImage;                    // Driver's photo (Profile Photo)
   File? _licenseFrontPhoto;              // License front photo
@@ -81,6 +84,9 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
         
         // Load available vehicle types for user's country
         await _loadAvailableVehicleTypes();
+        
+        // Load available cities for user's country
+        await _loadAvailableCities();
       }
     } catch (e) {
       print('Error loading user data: $e');
@@ -138,6 +144,67 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Error loading vehicle types. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _loadAvailableCities() async {
+    try {
+      setState(() {
+        _loadingCities = true;
+      });
+
+      // Get cities for the user's country
+      final citiesSnapshot = await FirebaseFirestore.instance
+          .collection('cities')
+          .where('countryCode', isEqualTo: _userCountry)
+          .where('isActive', isEqualTo: true)
+          .orderBy('name')
+          .get();
+
+      final availableCities = citiesSnapshot.docs
+          .map((doc) => {
+                'id': doc.id,
+                'name': doc.data()['name'] as String,
+                'countryCode': doc.data()['countryCode'] as String,
+                'population': doc.data()['population'] as int?,
+                'coordinates': doc.data()['coordinates'] as Map<String, dynamic>?,
+              })
+          .toList();
+
+      // Remove duplicates based on city name (in case there are duplicate entries in database)
+      final Map<String, Map<String, dynamic>> uniqueCities = {};
+      for (final city in availableCities) {
+        final cityName = city['name'] as String;
+        uniqueCities[cityName] = city;
+      }
+      final uniqueCitiesList = uniqueCities.values.toList();
+
+      if (mounted) {
+        setState(() {
+          _availableCities = uniqueCitiesList;
+          _loadingCities = false;
+        });
+      }
+
+      print('Loaded ${uniqueCitiesList.length} unique cities for country: $_userCountry');
+      for (final city in uniqueCitiesList) {
+        print('City: ${city['name']} (ID: ${city['id']})');
+      }
+    } catch (e) {
+      print('Error loading cities: $e');
+      if (mounted) {
+        setState(() {
+          _loadingCities = false;
+        });
+        
+        // Show user-friendly error
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error loading cities. Please try again.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -402,25 +469,25 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
             ),
             child: DropdownButtonFormField<String>(
               value: _selectedCity,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'City *',
-                prefixIcon: Icon(Icons.location_city),
+                prefixIcon: const Icon(Icons.location_city),
                 border: InputBorder.none,
+                suffixIcon: _loadingCities ? 
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ) : null,
               ),
-              items: const [
-                DropdownMenuItem(value: 'Colombo', child: Text('Colombo')),
-                DropdownMenuItem(value: 'Kandy', child: Text('Kandy')),
-                DropdownMenuItem(value: 'Galle', child: Text('Galle')),
-                DropdownMenuItem(value: 'Jaffna', child: Text('Jaffna')),
-                DropdownMenuItem(value: 'Negombo', child: Text('Negombo')),
-                DropdownMenuItem(value: 'Anuradhapura', child: Text('Anuradhapura')),
-                DropdownMenuItem(value: 'Ratnapura', child: Text('Ratnapura')),
-                DropdownMenuItem(value: 'Batticaloa', child: Text('Batticaloa')),
-                DropdownMenuItem(value: 'Kurunegala', child: Text('Kurunegala')),
-                DropdownMenuItem(value: 'Trincomalee', child: Text('Trincomalee')),
-                DropdownMenuItem(value: 'Other', child: Text('Other')),
-              ],
-              onChanged: (value) {
+              items: _availableCities.map((city) {
+                return DropdownMenuItem<String>(
+                  value: city['id'],
+                  child: Text(city['name']),
+                );
+              }).toList()
+                ..add(const DropdownMenuItem(value: 'other', child: Text('Other'))),
+              onChanged: _loadingCities ? null : (value) {
                 setState(() {
                   _selectedCity = value;
                 });
@@ -431,6 +498,9 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
                 }
                 return null;
               },
+              hint: _loadingCities ? 
+                const Text('Loading cities...') : 
+                const Text('Select your city'),
             ),
           ),
           const SizedBox(height: 24),

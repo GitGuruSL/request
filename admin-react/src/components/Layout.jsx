@@ -34,6 +34,7 @@ import {
   Logout,
   Settings,
   Public,
+  LocationCity,
   Payment,
   AdminPanelSettings
 } from '@mui/icons-material';
@@ -142,6 +143,13 @@ const Layout = () => {
       path: '/countries',
       access: 'super_admin',
       description: 'Manage supported countries'
+    },
+    { 
+      text: 'Cities', 
+      icon: <LocationCity />, 
+      path: '/cities',
+      access: 'all',
+      description: isSuperAdmin ? 'Manage cities across all countries' : `Manage ${adminData?.country} cities`
     },
     { 
       text: 'Payment Methods', 
