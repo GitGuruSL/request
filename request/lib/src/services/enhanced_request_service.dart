@@ -5,6 +5,7 @@ import '../models/request_model.dart';
 import '../models/enhanced_user_model.dart';
 import 'enhanced_user_service.dart';
 import 'notification_service.dart';
+import 'country_service.dart';
 
 class EnhancedRequestService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -39,6 +40,11 @@ class EnhancedRequestService {
 
       final requestId = _firestore.collection(_requestsCollection).doc().id;
       
+      // Get user's country information
+      final countryService = CountryService.instance;
+      final userCountryCode = countryService.countryCode ?? 'LK';
+      final userCountryName = countryService.countryName ?? 'Sri Lanka';
+      
       final request = RequestModel(
         id: requestId,
         requesterId: user.uid,
@@ -59,6 +65,8 @@ class EnhancedRequestService {
         isPublic: isPublic,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
+        country: userCountryCode,
+        countryName: userCountryName,
       );
 
       await _firestore
@@ -376,6 +384,11 @@ class EnhancedRequestService {
 
       final responseId = _firestore.collection(_responsesCollection).doc().id;
       
+      // Get user's country information
+      final countryService = CountryService.instance;
+      final userCountryCode = countryService.countryCode ?? 'LK';
+      final userCountryName = countryService.countryName ?? 'Sri Lanka';
+      
       final response = ResponseModel(
         id: responseId,
         requestId: requestId,
@@ -388,6 +401,8 @@ class EnhancedRequestService {
         images: images,
         additionalInfo: additionalInfo,
         createdAt: DateTime.now(),
+        country: userCountryCode,
+        countryName: userCountryName,
       );
 
       await _firestore

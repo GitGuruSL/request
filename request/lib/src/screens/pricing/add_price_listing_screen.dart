@@ -7,6 +7,7 @@ import '../../models/price_listing.dart';
 import '../../services/pricing_service.dart';
 import '../../services/enhanced_user_service.dart';
 import '../../services/file_upload_service.dart';
+import '../../services/country_service.dart';
 import '../../theme/app_theme.dart';
 
 class AddPriceListingScreen extends StatefulWidget {
@@ -203,6 +204,10 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
       }
 
       // Create price listing
+      final countryService = CountryService.instance;
+      final userCountryCode = countryService.countryCode ?? 'LK';
+      final userCountryName = countryService.countryName ?? 'Sri Lanka';
+      
       final priceListing = PriceListing(
         id: widget.existingListing?.id ?? '',
         businessId: userId,
@@ -227,6 +232,8 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
         clickCount: widget.existingListing?.clickCount ?? 0,
         rating: widget.existingListing?.rating ?? 0.0,
         reviewCount: widget.existingListing?.reviewCount ?? 0,
+        country: userCountryCode,
+        countryName: userCountryName,
       );
 
       await _pricingService.addOrUpdatePriceListing(priceListing);

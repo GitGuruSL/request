@@ -24,6 +24,8 @@ class PriceListing {
   final int clickCount;
   final double rating;
   final int reviewCount;
+  final String? country; // Country code (e.g., "LK")
+  final String? countryName; // Country name (e.g., "Sri Lanka")
 
   PriceListing({
     required this.id,
@@ -49,6 +51,8 @@ class PriceListing {
     this.clickCount = 0,
     this.rating = 0.0,
     this.reviewCount = 0,
+    this.country,
+    this.countryName,
   });
 
   factory PriceListing.fromFirestore(DocumentSnapshot doc) {
@@ -77,6 +81,8 @@ class PriceListing {
       clickCount: data['clickCount'] ?? 0,
       rating: (data['rating'] ?? 0.0).toDouble(),
       reviewCount: data['reviewCount'] ?? 0,
+      country: data['country'],
+      countryName: data['countryName'],
     );
   }
 
@@ -104,6 +110,8 @@ class PriceListing {
       'clickCount': clickCount,
       'rating': rating,
       'reviewCount': reviewCount,
+      'country': country,
+      'countryName': countryName,
     };
   }
 
@@ -131,6 +139,8 @@ class PriceListing {
     int? clickCount,
     double? rating,
     int? reviewCount,
+    String? country,
+    String? countryName,
   }) {
     return PriceListing(
       id: id ?? this.id,
@@ -156,6 +166,8 @@ class PriceListing {
       clickCount: clickCount ?? this.clickCount,
       rating: rating ?? this.rating,
       reviewCount: reviewCount ?? this.reviewCount,
+      country: country ?? this.country,
+      countryName: countryName ?? this.countryName,
     );
   }
 }

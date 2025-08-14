@@ -310,3 +310,7 @@ exports.getAllModules = functions.https.onRequest(async (req, res) => {
     });
   }
 });
+
+// Import and export the migration function
+const { migrateCountrySupport } = require('./migrate-country');
+exports.migrateCountrySupport = migrateCountrySupport;

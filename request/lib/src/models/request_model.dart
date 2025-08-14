@@ -39,6 +39,8 @@ class RequestModel {
   final DateTime updatedAt;
   final String? assignedTo; // ID of the person handling the request
   final List<ResponseModel> responses;
+  final String? country; // Country code (e.g., "LK")
+  final String? countryName; // Country name (e.g., "Sri Lanka")
 
   RequestModel({
     required this.id,
@@ -62,6 +64,8 @@ class RequestModel {
     required this.updatedAt,
     this.assignedTo,
     this.responses = const [],
+    this.country,
+    this.countryName,
   });
 
   // Helper methods for specific request types
@@ -120,6 +124,8 @@ class RequestModel {
       responses: (map['responses'] as List<dynamic>?)
           ?.map((e) => ResponseModel.fromMap(e))
           .toList() ?? [],
+      country: map['country'],
+      countryName: map['countryName'],
     );
   }
 
@@ -189,6 +195,8 @@ class RequestModel {
       'updatedAt': updatedAt.toIso8601String(),
       'assignedTo': assignedTo,
       'responses': responses.map((e) => e.toMap()).toList(),
+      'country': country,
+      'countryName': countryName,
     };
   }
 
@@ -671,6 +679,8 @@ class ResponseModel {
   final DateTime createdAt;
   final bool isAccepted;
   final String? rejectionReason;
+  final String? country; // Country code (e.g., "LK")
+  final String? countryName; // Country name (e.g., "Sri Lanka")
 
   ResponseModel({
     required this.id,
@@ -686,6 +696,8 @@ class ResponseModel {
     required this.createdAt,
     this.isAccepted = false,
     this.rejectionReason,
+    this.country,
+    this.countryName,
   });
 
   factory ResponseModel.fromMap(Map<String, dynamic> map) {
@@ -707,6 +719,8 @@ class ResponseModel {
       createdAt: DateTime.parse(map['createdAt']),
       isAccepted: map['isAccepted'] ?? false,
       rejectionReason: map['rejectionReason'],
+      country: map['country'],
+      countryName: map['countryName'],
     );
   }
 
@@ -725,6 +739,8 @@ class ResponseModel {
       'createdAt': createdAt.toIso8601String(),
       'isAccepted': isAccepted,
       'rejectionReason': rejectionReason,
+      'country': country,
+      'countryName': countryName,
     };
   }
 }
