@@ -1506,15 +1506,37 @@ const DriverVerificationEnhanced = () => {
               </TableContainer>
 
               {/* Vehicle Photos Section - show if they exist or if there are vehicle image verifications */}
-              {((Array.isArray(selectedDriver.vehicleImageUrls) && selectedDriver.vehicleImageUrls.length > 0) ||
-                (selectedDriver.vehicleImageVerification && Object.keys(selectedDriver.vehicleImageVerification).length > 0)) && (
+              {(() => {
+                const hasVehicleImageUrls = Array.isArray(selectedDriver.vehicleImageUrls) && selectedDriver.vehicleImageUrls.length > 0;
+                const hasVehicleImageUrlsObject = selectedDriver.vehicleImageUrls && 
+                  typeof selectedDriver.vehicleImageUrls === 'object' && 
+                  Object.values(selectedDriver.vehicleImageUrls).some(url => url);
+                const hasVehicleImages = Array.isArray(selectedDriver.vehicleImages) && selectedDriver.vehicleImages.length > 0;
+                const hasVehicleImageVerification = selectedDriver.vehicleImageVerification && 
+                  Object.keys(selectedDriver.vehicleImageVerification).length > 0;
+                
+                return (hasVehicleImageUrls || hasVehicleImageUrlsObject || hasVehicleImages || hasVehicleImageVerification);
+              })() && (
                 <Box sx={{ mt: 4 }}>
                   <Typography variant="h6" gutterBottom sx={{ mb: 3, fontWeight: 'bold', color: 'primary.main' }}>
                     Vehicle Photos
                   </Typography>
                   <Alert severity="info" sx={{ mb: 3 }}>
                     <Typography variant="body2">
-                      {Array.isArray(selectedDriver.vehicleImageUrls) ? selectedDriver.vehicleImageUrls.length : 0} of 6 photos uploaded. Minimum 4 required for approval.
+                      {(() => {
+                        let vehicleImageUrlsCount = 0;
+                        
+                        if (Array.isArray(selectedDriver.vehicleImageUrls)) {
+                          vehicleImageUrlsCount = selectedDriver.vehicleImageUrls.length;
+                        } else if (selectedDriver.vehicleImageUrls && typeof selectedDriver.vehicleImageUrls === 'object') {
+                          // Count non-null values in the object
+                          vehicleImageUrlsCount = Object.values(selectedDriver.vehicleImageUrls).filter(url => url).length;
+                        }
+                        
+                        const vehicleImagesCount = Array.isArray(selectedDriver.vehicleImages) ? selectedDriver.vehicleImages.length : 0;
+                        const totalCount = Math.max(vehicleImageUrlsCount, vehicleImagesCount);
+                        return `${totalCount} of 6 photos uploaded. Minimum 4 required for approval.`;
+                      })()}
                     </Typography>
                   </Alert>
                   
@@ -1529,7 +1551,49 @@ const DriverVerificationEnhanced = () => {
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {Array.isArray(selectedDriver.vehicleImageUrls) && selectedDriver.vehicleImageUrls.map((imageUrl, index) => {
+                        {(() => {
+                          // Debug: Log the available vehicle fields
+                          console.log('Vehicle Photo Debug:', {
+                            hasVehicleImageUrls: Array.isArray(selectedDriver.vehicleImageUrls),
+                            vehicleImageUrlsCount: selectedDriver.vehicleImageUrls?.length,
+                            hasVehicleImages: Array.isArray(selectedDriver.vehicleImages),
+                            vehicleImagesCount: selectedDriver.vehicleImages?.length,
+                            vehicleImageVerification: selectedDriver.vehicleImageVerification,
+                            allKeys: Object.keys(selectedDriver)
+                          });
+                          
+                          // Handle vehicleImageUrls which can be either array or object
+                          let vehiclePhotos = [];
+                          
+                          if (Array.isArray(selectedDriver.vehicleImageUrls)) {
+                            vehiclePhotos = selectedDriver.vehicleImageUrls;
+                          } else if (selectedDriver.vehicleImageUrls && typeof selectedDriver.vehicleImageUrls === 'object') {
+                            // Convert object with numeric keys to array
+                            const urlsObj = selectedDriver.vehicleImageUrls;
+                            const maxIndex = Math.max(...Object.keys(urlsObj).map(Number).filter(n => !isNaN(n)));
+                            vehiclePhotos = [];
+                            for (let i = 0; i <= maxIndex; i++) {
+                              if (urlsObj[i]) {
+                                vehiclePhotos[i] = urlsObj[i];
+                              }
+                            }
+                          } else if (Array.isArray(selectedDriver.vehicleImages)) {
+                            vehiclePhotos = selectedDriver.vehicleImages;
+                          }
+                          
+                          if (vehiclePhotos.length === 0) {
+                            return (
+                              <TableRow>
+                                <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
+                                  <Typography variant="body2" color="text.secondary">
+                                    No vehicle photos uploaded yet
+                                  </Typography>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          }
+                          
+                          return vehiclePhotos.map((imageUrl, index) => {
                           const vehicleStatus = selectedDriver.vehicleImageVerification?.[index]?.status || 'pending';
                           const isDriverApproved = selectedDriver.status === 'approved';
                           const displayStatus = isDriverApproved ? 'approved' : vehicleStatus;
@@ -1639,7 +1703,8 @@ const DriverVerificationEnhanced = () => {
                               </TableCell>
                             </TableRow>
                           );
-                        })}
+                          });
+                        })()}
                       </TableBody>
                     </Table>
                   </TableContainer>
