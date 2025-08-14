@@ -98,6 +98,7 @@ import {
   Timestamp,
   getDoc
 } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 
 const BusinessVerificationEnhanced = () => {
   const { adminData, isCountryAdmin, isSuperAdmin } = useAuth();

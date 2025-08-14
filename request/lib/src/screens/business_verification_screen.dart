@@ -308,7 +308,17 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
 
   Widget _buildPhoneVerificationCard() {
     final businessPhone = _businessData?['businessPhone'] ?? '';
-    final isVerified = _credentialsStatus?.businessPhoneVerified ?? false;
+    
+    // Enhanced phone verification logic
+    bool isVerified = _credentialsStatus?.businessPhoneVerified ?? false;
+    String verificationSource = 'manual';
+    
+    // Check if business phone matches Firebase Auth phone (auto-verify)
+    if (!isVerified && businessPhone.isNotEmpty) {
+      // TODO: Compare with Firebase Auth user's phone number
+      // For now, we'll rely on the existing manual verification
+      // This can be enhanced later to auto-verify matching numbers
+    }
     
     return Container(
       padding: const EdgeInsets.all(16),

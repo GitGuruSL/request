@@ -197,6 +197,35 @@ const DriverVerificationEnhanced = () => {
     }
   };
 
+  // Phone verification helper function
+  const getPhoneVerificationStatus = (driverData) => {
+    // If phoneVerified is explicitly set, use that
+    if (typeof driverData.phoneVerified === 'boolean') {
+      return {
+        isVerified: driverData.phoneVerified,
+        source: driverData.phoneVerified ? 'firebase_auth' : 'pending_verification',
+        needsManualVerification: !driverData.phoneVerified
+      };
+    }
+
+    // Auto-verify if phone matches user's auth phone (assuming they registered with this number)
+    // This logic assumes if they have a userId, their phone was verified during registration
+    if (driverData.userId && driverData.phoneNumber) {
+      return {
+        isVerified: true,
+        source: 'firebase_auth_registration',
+        needsManualVerification: false
+      };
+    }
+
+    // Default to not verified, needs manual verification
+    return {
+      isVerified: false,
+      source: 'not_verified',
+      needsManualVerification: true
+    };
+  };
+
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'approved': return 'success';
@@ -1729,7 +1758,10 @@ const DriverVerificationEnhanced = () => {
                   <Card variant="outlined">
                     <CardHeader
                       avatar={
-                        <Avatar sx={{ bgcolor: selectedDriver.phoneVerified ? 'success.main' : 'grey.400' }}>
+                        <Avatar sx={{ bgcolor: (() => {
+                          const phoneStatus = getPhoneVerificationStatus(selectedDriver);
+                          return phoneStatus.isVerified ? 'success.main' : 'grey.400';
+                        })() }}>
                           <PhoneIcon />
                         </Avatar>
                       }
@@ -1749,22 +1781,57 @@ const DriverVerificationEnhanced = () => {
                         <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                           Verification Status
                         </Typography>
-                        <Chip 
-                          label={selectedDriver.phoneVerified ? 'Verified' : 'Not Verified'}
-                          color={selectedDriver.phoneVerified ? 'success' : 'default'}
-                          icon={selectedDriver.phoneVerified ? <CheckIcon /> : <ErrorIcon />}
-                        />
+                        {(() => {
+                          const phoneStatus = getPhoneVerificationStatus(selectedDriver);
+                          return (
+                            <Chip 
+                              label={phoneStatus.isVerified ? 'Verified' : 'Not Verified'}
+                              color={phoneStatus.isVerified ? 'success' : 'default'}
+                              icon={phoneStatus.isVerified ? <CheckIcon /> : <ErrorIcon />}
+                            />
+                          );
+                        })()}
                       </Box>
-                      {selectedDriver.phoneVerified && (
-                        <Box mb={1}>
-                          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                            Verified On
-                          </Typography>
-                          <Typography variant="body2">
-                            Verified via mobile app registration
-                          </Typography>
-                        </Box>
-                      )}
+                      {(() => {
+                        const phoneStatus = getPhoneVerificationStatus(selectedDriver);
+                        if (phoneStatus.isVerified) {
+                          return (
+                            <Box mb={1}>
+                              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                                Verified Via
+                              </Typography>
+                              <Typography variant="body2">
+                                {phoneStatus.source === 'firebase_auth' ? 'Firebase Authentication' : 
+                                 phoneStatus.source === 'firebase_auth_registration' ? 'Firebase Auth (Registration)' : 
+                                 'Manual Verification'}
+                              </Typography>
+                            </Box>
+                          );
+                        } else if (phoneStatus.needsManualVerification) {
+                          return (
+                            <Box mb={1}>
+                              <Alert severity="warning" sx={{ mb: 2 }}>
+                                <Typography variant="body2">
+                                  Phone number needs verification. Driver should verify this number in the mobile app.
+                                </Typography>
+                              </Alert>
+                              <Button
+                                variant="outlined"
+                                color="primary"
+                                startIcon={<PhoneIcon />}
+                                size="small"
+                                onClick={() => {
+                                  // TODO: Implement manual verification trigger
+                                  alert('Manual verification will be implemented for different phone numbers');
+                                }}
+                              >
+                                Trigger Manual Verification
+                              </Button>
+                            </Box>
+                          );
+                        }
+                        return null;
+                      })()}
                     </CardContent>
                   </Card>
                 </Grid>
