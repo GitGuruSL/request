@@ -50,6 +50,31 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
     }
   }
 
+  Future<String> _resolveCityName(String? cityValue) async {
+    if (cityValue == null || cityValue.isEmpty) return 'N/A';
+    
+    // If it's already a readable city name (not a Firebase ID), return it
+    if (!cityValue.contains('_') && cityValue.length < 20) {
+      return cityValue;
+    }
+    
+    // If it looks like a Firebase document ID, try to resolve it
+    try {
+      final cityDoc = await FirebaseFirestore.instance
+          .collection('cities')
+          .doc(cityValue)
+          .get();
+      
+      if (cityDoc.exists && cityDoc.data() != null) {
+        return cityDoc.data()!['name'] ?? cityValue;
+      }
+    } catch (e) {
+      print('Error resolving city name: $e');
+    }
+    
+    return cityValue; // Return original value if resolution fails
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -167,7 +192,7 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
           if ((_driverData!['nicNumber'] ?? '').isNotEmpty)
             _buildInfoRow('NIC Number', _driverData!['nicNumber']),
           if ((_driverData!['city'] ?? '').isNotEmpty)
-            _buildInfoRow('City', _driverData!['city']),
+            _buildCityInfoRow(),
           _buildInfoRow('License Number', _driverData!['licenseNumber'] ?? 'N/A'),
           _buildInfoRow('License Expiry', _formatDate(_driverData!['licenseExpiry'])),
           _buildInfoRow('Insurance Number', _driverData!['insuranceNumber'] ?? 'N/A'),
@@ -1051,13 +1076,29 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
           documentType = 'licenseBack';
           urlField = 'licenseBackUrl';
           break;
+        case 'NIC (Front)':
+          documentType = 'nicFront';
+          urlField = 'nicFrontUrl';
+          break;
+        case 'NIC (Back)':
+          documentType = 'nicBack';
+          urlField = 'nicBackUrl';
+          break;
+        case 'Billing Proof':
+          documentType = 'billingProof';
+          urlField = 'billingProofUrl';
+          break;
         case 'Vehicle Insurance Document':
           documentType = 'vehicleInsurance';
           urlField = 'insuranceDocumentUrl';
           break;
-        case 'Vehicle Registration':
+        case 'Vehicle Registration Document':
           documentType = 'vehicleRegistration';
-          urlField = 'registrationDocumentUrl';
+          urlField = 'vehicleRegistrationUrl';
+          break;
+        case 'Additional License Document':
+          documentType = 'licenseDocument';
+          urlField = 'licenseDocumentUrl';
           break;
         default:
           throw Exception('Unknown document type: $title');
@@ -1286,5 +1327,20 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
         ),
       );
     }
+  }
+
+  Widget _buildCityInfoRow() {
+    return FutureBuilder<String>(
+      future: _resolveCityName(_driverData!['city']),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildInfoRow('City', 'Loading...');
+        } else if (snapshot.hasError) {
+          return _buildInfoRow('City', 'Error loading city');
+        } else {
+          return _buildInfoRow('City', snapshot.data ?? 'N/A');
+        }
+      },
+    );
   }
 }

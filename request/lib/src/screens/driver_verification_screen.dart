@@ -482,7 +482,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
               ),
               items: _availableCities.map((city) {
                 return DropdownMenuItem<String>(
-                  value: city['id'],
+                  value: city['name'],
                   child: Text(city['name']),
                 );
               }).toList()

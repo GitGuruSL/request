@@ -302,21 +302,14 @@ const DriverVerificationEnhanced = () => {
       }
 
       await updateDoc(doc(db, 'new_driver_verifications', driver.id), updateData);
-      await loadDrivers(); // Refresh data
       
-      // Update selected driver data to show new status immediately
-      const updatedDriver = { 
-        ...selectedDriver, 
-        documentVerification: {
-          ...selectedDriver.documentVerification,
-          [docType]: {
-            ...selectedDriver.documentVerification?.[docType],
-            status: action,
-            approvedAt: action === 'approved' ? Timestamp.now() : selectedDriver.documentVerification?.[docType]?.approvedAt
-          }
-        }
-      };
-      setSelectedDriver(updatedDriver);
+      // Refresh the specific driver data
+      const refreshedDriverDoc = await getDoc(doc(db, 'new_driver_verifications', driver.id));
+      if (refreshedDriverDoc.exists()) {
+        setSelectedDriver({ id: refreshedDriverDoc.id, ...refreshedDriverDoc.data() });
+      }
+      
+      await loadDrivers(); // Refresh drivers list
       
       console.log(`✅ Document ${docType} ${action} for ${driver.fullName}`);
     } catch (error) {
@@ -1512,15 +1505,16 @@ const DriverVerificationEnhanced = () => {
                 </Table>
               </TableContainer>
 
-              {/* Vehicle Photos Section - only show if they exist */}
-              {selectedDriver.vehicleImageUrls && selectedDriver.vehicleImageUrls.length > 0 && (
+              {/* Vehicle Photos Section - show if they exist or if there are vehicle image verifications */}
+              {((Array.isArray(selectedDriver.vehicleImageUrls) && selectedDriver.vehicleImageUrls.length > 0) ||
+                (selectedDriver.vehicleImageVerification && Object.keys(selectedDriver.vehicleImageVerification).length > 0)) && (
                 <Box sx={{ mt: 4 }}>
                   <Typography variant="h6" gutterBottom sx={{ mb: 3, fontWeight: 'bold', color: 'primary.main' }}>
                     Vehicle Photos
                   </Typography>
                   <Alert severity="info" sx={{ mb: 3 }}>
                     <Typography variant="body2">
-                      {selectedDriver.vehicleImageUrls.length} of 6 photos uploaded. Minimum 4 required for approval.
+                      {Array.isArray(selectedDriver.vehicleImageUrls) ? selectedDriver.vehicleImageUrls.length : 0} of 6 photos uploaded. Minimum 4 required for approval.
                     </Typography>
                   </Alert>
                   
@@ -1535,7 +1529,7 @@ const DriverVerificationEnhanced = () => {
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {selectedDriver.vehicleImageUrls.map((imageUrl, index) => {
+                        {Array.isArray(selectedDriver.vehicleImageUrls) && selectedDriver.vehicleImageUrls.map((imageUrl, index) => {
                           const vehicleStatus = selectedDriver.vehicleImageVerification?.[index]?.status || 'pending';
                           const isDriverApproved = selectedDriver.status === 'approved';
                           const displayStatus = isDriverApproved ? 'approved' : vehicleStatus;
@@ -1894,7 +1888,7 @@ const DriverVerificationEnhanced = () => {
                       subheader="Submitted vehicle images for verification"
                     />
                     <CardContent>
-                      {selectedDriver.vehicleImages && selectedDriver.vehicleImages.length > 0 ? (
+                      {Array.isArray(selectedDriver.vehicleImages) && selectedDriver.vehicleImages.length > 0 ? (
                         <Grid container spacing={2}>
                           {selectedDriver.vehicleImages.map((imageUrl, index) => {
                             if (!imageUrl) return null;
