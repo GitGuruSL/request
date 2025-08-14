@@ -18,6 +18,12 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const unsubscribe = onAdminAuthStateChanged(({ user, adminData }) => {
+      console.log('AuthContext - Auth State Changed:');
+      console.log('User:', user);
+      console.log('AdminData:', adminData);
+      console.log('Role:', adminData?.role);
+      console.log('Country:', adminData?.country);
+      
       setUser(user);
       setAdminData(adminData);
       setLoading(false);
@@ -32,7 +38,10 @@ export const AuthProvider = ({ children }) => {
     loading,
     isAuthenticated: !!user && !!adminData,
     isSuperAdmin: adminData?.role === 'super_admin',
-    isCountryAdmin: adminData?.role === 'country_admin'
+    isCountryAdmin: adminData?.role === 'country_admin',
+    // Backward compatibility
+    userRole: adminData?.role,
+    userCountry: adminData?.country
   };
 
   return (

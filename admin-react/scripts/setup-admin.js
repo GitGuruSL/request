@@ -7,9 +7,30 @@ async function createSuperAdmin() {
   try {
     console.log('🚀 Setting up Super Admin for Request Marketplace...');
     
-    const email = 'superadmin@request.lk';
-    const password = 'SuperAdmin123!'; // Change this in production!
-    const name = 'Super Administrator';
+    // Prompt for admin credentials instead of hardcoding
+    const readline = require('readline');
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+    
+    const email = await new Promise(resolve => {
+      rl.question('Enter super admin email: ', resolve);
+    });
+    
+    const password = await new Promise(resolve => {
+      rl.question('Enter super admin password (min 6 characters): ', resolve);
+    });
+    
+    const name = await new Promise(resolve => {
+      rl.question('Enter super admin display name: ', resolve);
+    });
+    
+    rl.close();
+    
+    if (!email || !password || password.length < 6) {
+      throw new Error('Email and password (min 6 chars) are required');
+    }
 
     console.log('📧 Creating Firebase Auth user...');
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -33,9 +54,9 @@ async function createSuperAdmin() {
     console.log('');
     console.log('📋 Login Credentials:');
     console.log('   Email:', email);
-    console.log('   Password:', password);
+    console.log('   Password: [HIDDEN FOR SECURITY]');
     console.log('');
-    console.log('🔐 IMPORTANT: Change the password after first login!');
+    console.log('🔐 IMPORTANT: Keep these credentials secure!');
     console.log('');
     console.log('🌐 Access the admin panel at: http://localhost:5173');
     
@@ -45,9 +66,9 @@ async function createSuperAdmin() {
     
     if (error.code === 'auth/email-already-in-use') {
       console.log('');
-      console.log('🔍 The super admin user already exists.');
-      console.log('📧 Email: superadmin@request.lk');
-      console.log('🔑 Try logging in with the existing credentials.');
+      console.log('🔍 A super admin user with this email already exists.');
+      console.log('📧 Try logging in with the existing credentials.');
+      console.log('🔑 If you forgot the password, use the password reset feature in the admin panel.');
     }
     
     process.exit(1);
@@ -57,21 +78,54 @@ async function createSuperAdmin() {
 // Create example country admin
 async function createCountryAdmin() {
   try {
-    const email = 'admin.usa@request.lk';
-    const password = 'CountryAdmin123!'; // Change this in production!
-    const name = 'USA Administrator';
-    const country = 'United States';
+    console.log('');
+    console.log('🌍 Creating Country Admin...');
+    
+    const readline = require('readline');
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+    
+    const email = await new Promise(resolve => {
+      rl.question('Enter country admin email: ', resolve);
+    });
+    
+    const password = await new Promise(resolve => {
+      rl.question('Enter country admin password: ', resolve);
+    });
+    
+    const name = await new Promise(resolve => {
+      rl.question('Enter country admin display name: ', resolve);
+    });
+    
+    const country = await new Promise(resolve => {
+      rl.question('Enter country name: ', resolve);
+    });
+    
+    rl.close();
+    
+    if (!email || !password || !name || !country) {
+      console.log('⚠️ Skipping country admin creation - missing required fields');
+      return;
+    }
 
-    console.log('🇺🇸 Creating Country Admin for', country);
+    console.log(`🇺🇸 Creating Country Admin for ${country}...`);
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
     await setDoc(doc(db, 'admin_users', user.uid), {
-      name: name,
+      displayName: name,
       email: email,
       role: 'country_admin',
       country: country,
       isActive: true,
+      permissions: {
+        paymentMethods: true,
+        legalDocuments: true,
+        businessManagement: true,
+        driverManagement: true
+      },
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
@@ -80,7 +134,7 @@ async function createCountryAdmin() {
 
     console.log('✅ Country Admin created successfully!');
     console.log('📧 Email:', email);
-    console.log('🔑 Password:', password);
+    console.log('🔑 Password: [HIDDEN FOR SECURITY]');
     console.log('🌍 Country:', country);
 
   } catch (error) {
@@ -90,46 +144,41 @@ async function createCountryAdmin() {
   }
 }
 
-// Create Sri Lanka admin
-async function createSriLankaAdmin() {
-  try {
-    const email = 'admin.lk@request.lk';
-    const password = 'CountryAdmin123!'; // Change this in production!
-    const name = 'Sri Lanka Administrator';
-    const country = 'Sri Lanka';
-
-    console.log('🇱🇰 Creating Country Admin for', country);
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
-
-    await setDoc(doc(db, 'admin_users', user.uid), {
-      name: name,
-      email: email,
-      role: 'country_admin',
-      country: country,
-      isActive: true,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
-
-    await signOut(auth);
-
-    console.log('✅ Sri Lanka Admin created successfully!');
-    console.log('📧 Email:', email);
-    console.log('🔑 Password:', password);
-    console.log('🌍 Country:', country);
-
-  } catch (error) {
-    if (error.code !== 'auth/email-already-in-use') {
-      console.error('❌ Error creating Sri Lanka admin:', error);
-    }
-  }
-}
-
 async function setupAdmins() {
-  await createSuperAdmin();
-  await createCountryAdmin();
-  await createSriLankaAdmin();
+  console.log('🎯 Request Marketplace Admin Setup');
+  console.log('=====================================');
+  console.log('This will create admin users for your system.');
+  console.log('');
+  
+  try {
+    await createSuperAdmin();
+    
+    const readline = require('readline');
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+    
+    const createCountryAdmin = await new Promise(resolve => {
+      rl.question('Do you want to create a country admin? (y/n): ', (answer) => {
+        resolve(answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes');
+      });
+    });
+    
+    rl.close();
+    
+    if (createCountryAdmin) {
+      await createCountryAdmin();
+    }
+    
+    console.log('');
+    console.log('🎉 Admin setup complete!');
+    console.log('🚀 Start your admin panel: npm run dev');
+    
+  } catch (error) {
+    console.error('❌ Setup failed:', error.message);
+    process.exit(1);
+  }
 }
 
 setupAdmins();

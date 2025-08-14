@@ -13,6 +13,9 @@ import Brands from './pages/Brands';
 import Variables from './pages/Variables';
 import Countries from './pages/Countries';
 import PrivacyTerms from './pages/PrivacyTerms';
+import PaymentMethods from './pages/PaymentMethods';
+import AdminUsers from './pages/AdminUsers';
+import DebugAuth from './components/DebugAuth';
 
 const theme = createTheme({
   palette: {
@@ -42,11 +45,14 @@ function App() {
               }
             >
               <Route index element={<Dashboard />} />
+              <Route path="debug" element={<DebugAuth />} />
               <Route path="products" element={<Products />} />
               <Route path="categories" element={<Categories />} />
               <Route path="brands" element={<Brands />} />
               <Route path="variables" element={<Variables />} />
               <Route path="countries" element={<Countries />} />
+              <Route path="payment-methods" element={<PaymentMethods />} />
+              <Route path="admin-users" element={<AdminUsers />} />
               <Route path="privacy-terms" element={<PrivacyTerms />} />
               {/* Add more protected routes here */}
             </Route>

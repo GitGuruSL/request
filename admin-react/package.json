@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "setup-admin": "node scripts/setup-admin.js",
+    "reset-password": "node scripts/reset-admin-password.js",
     "create-sample-data": "node scripts/create-sample-data.js"
   },
   "dependencies": {

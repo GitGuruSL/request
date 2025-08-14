@@ -71,19 +71,28 @@ export const createAdminUser = async (adminData) => {
     );
     const user = userCredential.user;
     
-    // Create admin document
+    // Create admin document with proper field mapping
     await setDoc(doc(db, 'admin_users', user.uid), {
-      name: adminData.name,
+      displayName: adminData.displayName,
       email: adminData.email,
       role: adminData.role,
       country: adminData.country,
-      isActive: true,
+      isActive: adminData.isActive !== undefined ? adminData.isActive : true,
+      permissions: adminData.permissions || {
+        paymentMethods: true,
+        legalDocuments: true,
+        businessManagement: true,
+        driverManagement: true,
+        adminUsersManagement: adminData.role === 'super_admin' // Give admin users permission only to super admins by default
+      },
       createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
+      updatedAt: serverTimestamp(),
+      uid: user.uid
     });
     
     return user;
   } catch (error) {
+    console.error('Error in createAdminUser:', error);
     throw error;
   }
 };

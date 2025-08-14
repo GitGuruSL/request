@@ -33,6 +33,7 @@ import {
   Logout,
   Settings,
   Public,
+  Payment,
   AdminPanelSettings
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
@@ -127,10 +128,18 @@ const Layout = () => {
       description: 'Manage supported countries'
     },
     { 
+      text: 'Payment Methods', 
+      icon: <Payment />, 
+      path: '/payment-methods',
+      access: 'all',
+      description: isSuperAdmin ? 'All countries payment methods' : `${adminData?.country} payment methods`
+    },
+    { 
       text: 'Admin Users', 
       icon: <Person />, 
       path: '/admin-users',
-      access: 'super_admin',
+      access: 'permission', // Changed from 'super_admin' to 'permission'
+      permission: 'adminUsersManagement',
       description: 'Manage admin accounts'
     },
     { 
@@ -162,7 +171,14 @@ const Layout = () => {
       <Divider />
       <List>
         {menuItems
-          .filter(item => item.access === 'all' || (item.access === 'super_admin' && isSuperAdmin))
+          .filter(item => {
+            if (item.access === 'all') return true;
+            if (item.access === 'super_admin' && isSuperAdmin) return true;
+            if (item.access === 'permission' && item.permission) {
+              return adminData?.permissions?.[item.permission] === true;
+            }
+            return false;
+          })
           .map((item) => (
             <ListItem key={item.text} disablePadding>
               <ListItemButton
