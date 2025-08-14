@@ -24,6 +24,7 @@ import {
   ShoppingCart,
   Business,
   DirectionsCar,
+  TwoWheeler,
   Category,
   BrandingWatermark,
   Tune,
@@ -98,6 +99,14 @@ const Layout = () => {
       path: '/drivers',
       access: 'all',
       description: isSuperAdmin ? 'All drivers' : `${adminData?.country} drivers`
+    },
+    { 
+      text: 'Vehicle Types', 
+      icon: <TwoWheeler />, 
+      path: '/vehicles',
+      access: 'permission',
+      permission: 'vehicleManagement',
+      description: isSuperAdmin ? 'Manage central vehicle database' : `Configure ${adminData?.country} vehicle types`
     },
     { 
       text: 'Module Management', 
@@ -182,6 +191,8 @@ const Layout = () => {
             if (item.access === 'all') return true;
             if (item.access === 'super_admin' && isSuperAdmin) return true;
             if (item.access === 'permission' && item.permission) {
+              // Super admins get automatic access to vehicleManagement
+              if (isSuperAdmin && item.permission === 'vehicleManagement') return true;
               return adminData?.permissions?.[item.permission] === true;
             }
             return false;

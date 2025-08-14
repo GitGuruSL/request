@@ -18,6 +18,7 @@ import AdminUsers from './pages/AdminUsers';
 import ModuleManagement from './pages/ModuleManagement';
 import BusinessVerificationEnhanced from './pages/BusinessVerificationEnhanced';
 import DriverVerificationEnhanced from './pages/DriverVerificationEnhanced';
+import Vehicles from './pages/Vehicles';
 import DebugAuth from './components/DebugAuth';
 
 const theme = createTheme({
@@ -59,6 +60,7 @@ function App() {
               <Route path="admin-users" element={<AdminUsers />} />
               <Route path="businesses" element={<BusinessVerificationEnhanced />} />
               <Route path="drivers" element={<DriverVerificationEnhanced />} />
+              <Route path="vehicles" element={<Vehicles />} />
               <Route path="privacy-terms" element={<PrivacyTerms />} />
               {/* Add more protected routes here */}
             </Route>

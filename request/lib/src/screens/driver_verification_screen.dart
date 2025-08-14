@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
 import '../services/enhanced_user_service.dart';
 import '../services/file_upload_service.dart';
@@ -31,6 +32,11 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
   DateTime? _licenseExpiryDate;
   DateTime? _insuranceExpiryDate;
   
+  // Vehicle type selection
+  String? _selectedVehicleType;
+  List<Map<String, dynamic>> _availableVehicleTypes = [];
+  String? _userCountry;
+  
   // Document files
   File? _driverImage;                    // Driver's photo
   File? _licenseFrontPhoto;              // New: License front photo
@@ -56,10 +62,72 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
         setState(() {
           _fullNameController.text = user.name ?? '';
           _phoneController.text = user.phoneNumber ?? '';
+          _userCountry = user.countryCode ?? 'LK'; // Default to Sri Lanka if not set
         });
+        
+        // Load available vehicle types for user's country
+        await _loadAvailableVehicleTypes();
       }
     } catch (e) {
       print('Error loading user data: $e');
+    }
+  }
+
+  Future<void> _loadAvailableVehicleTypes() async {
+    try {
+      // Get all vehicle types (without orderBy to avoid index requirement)
+      final vehicleTypesSnapshot = await FirebaseFirestore.instance
+          .collection('vehicle_types')
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      // Get country-specific enabled vehicles
+      final countryVehiclesSnapshot = await FirebaseFirestore.instance
+          .collection('country_vehicles')
+          .where('countryCode', isEqualTo: _userCountry)
+          .limit(1)
+          .get();
+
+      List<String> enabledVehicleIds = [];
+      if (countryVehiclesSnapshot.docs.isNotEmpty) {
+        final countryData = countryVehiclesSnapshot.docs.first.data();
+        enabledVehicleIds = List<String>.from(countryData['enabledVehicles'] ?? []);
+      }
+
+      // Filter vehicle types based on country configuration and sort manually
+      final availableVehicles = vehicleTypesSnapshot.docs
+          .where((doc) => enabledVehicleIds.isEmpty || enabledVehicleIds.contains(doc.id))
+          .map((doc) => {
+                'id': doc.id,
+                'name': doc.data()['name'] as String,
+                'icon': doc.data()['icon'] as String? ?? 'DirectionsCar',
+                'displayOrder': doc.data()['displayOrder'] as int? ?? 1,
+              })
+          .toList();
+
+      // Sort manually by displayOrder
+      availableVehicles.sort((a, b) => (a['displayOrder'] as int).compareTo(b['displayOrder'] as int));
+
+      if (mounted) {
+        setState(() {
+          _availableVehicleTypes = availableVehicles;
+          // Set default selection to first available vehicle type
+          if (_availableVehicleTypes.isNotEmpty && _selectedVehicleType == null) {
+            _selectedVehicleType = _availableVehicleTypes.first['id'];
+          }
+        });
+      }
+    } catch (e) {
+      print('Error loading vehicle types: $e');
+      // Show user-friendly error
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error loading vehicle types. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -110,6 +178,37 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
         ),
       ),
     );
+  }
+
+  // Helper method to get vehicle icon based on icon name
+  Widget _getVehicleIcon(String iconName) {
+    IconData iconData;
+    switch (iconName) {
+      case 'DirectionsCar':
+        iconData = Icons.directions_car;
+        break;
+      case 'TwoWheeler':
+        iconData = Icons.two_wheeler;
+        break;
+      case 'LocalShipping':
+        iconData = Icons.local_shipping;
+        break;
+      case 'DirectionsBus':
+        iconData = Icons.directions_bus;
+        break;
+      case 'Motorcycle':
+        iconData = Icons.motorcycle;
+        break;
+      case 'LocalTaxi':
+        iconData = Icons.local_taxi;
+        break;
+      case 'AirportShuttle':
+        iconData = Icons.airport_shuttle;
+        break;
+      default:
+        iconData = Icons.directions_car;
+    }
+    return Icon(iconData, size: 20);
   }
 
   Widget _buildDriverInformation() {
@@ -396,6 +495,71 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 16),
+          // Vehicle Type Selection
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.all(Radius.circular(8)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.category, color: Colors.grey),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Vehicle Type *',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                if (_availableVehicleTypes.isEmpty)
+                  const Text(
+                    'Loading vehicle types...',
+                    style: TextStyle(color: Colors.grey),
+                  )
+                else
+                  DropdownButtonFormField<String>(
+                    value: _selectedVehicleType,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    items: _availableVehicleTypes.map((vehicle) {
+                      return DropdownMenuItem<String>(
+                        value: vehicle['id'],
+                        child: Row(
+                          children: [
+                            _getVehicleIcon(vehicle['icon']),
+                            const SizedBox(width: 8),
+                            Text(vehicle['name']),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        _selectedVehicleType = newValue;
+                      });
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please select a vehicle type';
+                      }
+                      return null;
+                    },
+                  ),
+              ],
+            ),
           ),
           const SizedBox(height: 16),
           TextFormField(
@@ -1046,7 +1210,8 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
         'vehicleYear': int.parse(_vehicleYearController.text.trim()),
         'vehicleColor': _vehicleColorController.text.trim(),
         'vehicleNumber': _vehicleNumberController.text.trim(),
-        'vehicleType': 'car', // Default
+        'vehicleType': _selectedVehicleType ?? 'car', // Selected vehicle type or default
+        'country': _userCountry, // Save user's country
         'status': 'pending',
         'isVerified': false,
         'isActive': true,

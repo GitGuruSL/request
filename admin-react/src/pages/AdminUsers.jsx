@@ -80,6 +80,7 @@ const AdminUsers = () => {
       legalDocuments: true,
       businessManagement: true,
       driverManagement: true,
+      vehicleManagement: false,
       adminUsersManagement: false // Only super admins should have this by default
     }
   });
@@ -227,6 +228,7 @@ const AdminUsers = () => {
             legalDocuments: formData.permissions?.legalDocuments !== undefined ? formData.permissions.legalDocuments : true,
             businessManagement: formData.permissions?.businessManagement !== undefined ? formData.permissions.businessManagement : true,
             driverManagement: formData.permissions?.driverManagement !== undefined ? formData.permissions.driverManagement : true,
+            vehicleManagement: formData.permissions?.vehicleManagement !== undefined ? formData.permissions.vehicleManagement : false,
             adminUsersManagement: formData.permissions?.adminUsersManagement !== undefined ? formData.permissions.adminUsersManagement : false
           },
           updatedAt: new Date()
@@ -270,6 +272,7 @@ const AdminUsers = () => {
             legalDocuments: formData.permissions?.legalDocuments !== undefined ? formData.permissions.legalDocuments : true,
             businessManagement: formData.permissions?.businessManagement !== undefined ? formData.permissions.businessManagement : true,
             driverManagement: formData.permissions?.driverManagement !== undefined ? formData.permissions.driverManagement : true,
+            vehicleManagement: formData.permissions?.vehicleManagement !== undefined ? formData.permissions.vehicleManagement : false,
             adminUsersManagement: formData.permissions?.adminUsersManagement !== undefined ? formData.permissions.adminUsersManagement : false
           }
         };
@@ -351,6 +354,7 @@ const AdminUsers = () => {
         legalDocuments: user.permissions?.legalDocuments !== undefined ? user.permissions.legalDocuments : true,
         businessManagement: user.permissions?.businessManagement !== undefined ? user.permissions.businessManagement : true,
         driverManagement: user.permissions?.driverManagement !== undefined ? user.permissions.driverManagement : true,
+        vehicleManagement: user.permissions?.vehicleManagement !== undefined ? user.permissions.vehicleManagement : false,
         adminUsersManagement: user.permissions?.adminUsersManagement !== undefined ? user.permissions.adminUsersManagement : false
       }
     });
@@ -441,7 +445,9 @@ const AdminUsers = () => {
         paymentMethods: true,
         legalDocuments: true,
         businessManagement: true,
-        driverManagement: true
+        driverManagement: true,
+        vehicleManagement: false,
+        adminUsersManagement: false
       }
     });
   };
@@ -573,6 +579,9 @@ const AdminUsers = () => {
                     )}
                     {adminUser.permissions?.driverManagement && (
                       <Chip label="Driver" size="small" variant="outlined" />
+                    )}
+                    {adminUser.permissions?.vehicleManagement && (
+                      <Chip label="Vehicle" size="small" variant="outlined" />
                     )}
                     {adminUser.permissions?.adminUsersManagement && (
                       <Chip label="Admin Users" size="small" variant="outlined" color="primary" />
@@ -745,6 +754,17 @@ const AdminUsers = () => {
                       />
                     }
                     label="Driver Management"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={formData.permissions?.vehicleManagement}
+                        onChange={(e) => handlePermissionChange('vehicleManagement', e.target.checked)}
+                      />
+                    }
+                    label="Vehicle Management"
                   />
                 </Grid>
                 <Grid item xs={12} sm={6}>
