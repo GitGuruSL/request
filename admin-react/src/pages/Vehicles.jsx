@@ -264,6 +264,10 @@ const Vehicles = () => {
   };
 
   const addDefaultVehicleTypes = async () => {
+    if (!window.confirm('This will add default vehicle types (Bike, Three Wheeler, Car, Van, Shared Ride). Continue?')) {
+      return;
+    }
+
     const defaultVehicles = [
       { name: 'Bike', icon: 'TwoWheeler', displayOrder: 1 },
       { name: 'Three Wheeler', icon: 'LocalTaxi', displayOrder: 2 },
@@ -272,40 +276,21 @@ const Vehicles = () => {
       { name: 'Shared Ride', icon: 'People', displayOrder: 5 }
     ];
 
-    // Check which default vehicles are missing
-    const existingNames = vehicles.map(v => v.name.toLowerCase());
-    const missingVehicles = defaultVehicles.filter(v => 
-      !existingNames.includes(v.name.toLowerCase())
-    );
-
-    if (missingVehicles.length === 0) {
-      showSnackbar('All default vehicle types already exist', 'info');
-      return;
-    }
-
-    const message = `This will add ${missingVehicles.length} missing default vehicle types: ${missingVehicles.map(v => v.name).join(', ')}. Continue?`;
-    if (!window.confirm(message)) {
-      return;
-    }
-
-    setLoading(true);
     try {
-      for (const vehicle of missingVehicles) {
+      for (const vehicle of defaultVehicles) {
         await addDoc(collection(db, 'vehicle_types'), {
           ...vehicle,
           isActive: true,
           createdAt: serverTimestamp(),
-          createdBy: adminData?.email || 'super-admin'
+          createdBy: adminData.email
         });
       }
       
-      showSnackbar(`${missingVehicles.length} default vehicle types added successfully!`);
+      showSnackbar('Default vehicle types added successfully!');
       fetchVehicles();
     } catch (error) {
       console.error('Error adding default vehicles:', error);
       showSnackbar('Error adding default vehicle types', 'error');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -333,10 +318,9 @@ const Vehicles = () => {
             <Button
               variant="outlined"
               onClick={addDefaultVehicleTypes}
-              disabled={loading}
-              title="Add or refresh default vehicle types"
+              disabled={vehicles.length > 0}
             >
-              {loading ? 'Adding...' : 'Add Default Types'}
+              Add Default Types
             </Button>
             <Button
               variant="contained"
