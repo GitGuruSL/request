@@ -14,7 +14,13 @@ class VehicleService {
   /// Get available vehicles for the user's country
   Future<List<VehicleTypeModel>> getAvailableVehicles() async {
     try {
-      final country = await CountryService.instance.getCurrentCountry();
+      final country = CountryService.instance.getUserCountry();
+      
+      // If no country is set, initialize and try again
+      if (country == null || country.isEmpty) {
+        print('No country found, returning fallback vehicles');
+        return _getFallbackVehicles();
+      }
       
       // Return cached vehicles if same country
       if (_cachedVehicles != null && _cachedCountry == country) {
