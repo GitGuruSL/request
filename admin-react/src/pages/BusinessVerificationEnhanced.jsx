@@ -33,7 +33,19 @@ import {
   Badge,
   Accordion,
   AccordionSummary,
-  AccordionDetails
+  AccordionDetails,
+  CardMedia,
+  Stack,
+  Tooltip,
+  LinearProgress,
+  TableContainer,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  CardHeader,
+  CardActions
 } from '@mui/material';
 import {
   Business as BusinessIcon,
@@ -51,7 +63,27 @@ import {
   Warning as WarningIcon,
   CheckCircleOutline as CheckIcon,
   RadioButtonUnchecked as PendingIcon,
-  Error as ErrorIcon
+  Error as ErrorIcon,
+  Download as DownloadIcon,
+  Launch as LaunchIcon,
+  Person as PersonIcon,
+  Store as StoreIcon,
+  ContactPhone as ContactIcon,
+  Assignment as AssignmentIcon,
+  CalendarToday as CalendarIcon,
+  Category as CategoryIcon,
+  Assessment as ReportsIcon,
+  Security as SecurityIcon,
+  VerifiedUser as VerifiedIcon,
+  AccessTime as TimeIcon,
+  Language as WebsiteIcon,
+  Map as MapIcon,
+  PhotoLibrary as GalleryIcon,
+  PictureAsPdf as PdfIcon,
+  InsertDriveFile as FileIcon,
+  CloudDownload as CloudIcon,
+  Fullscreen as FullscreenIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase/config';
@@ -76,11 +108,17 @@ const BusinessVerificationEnhanced = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [tabValue, setTabValue] = useState(0);
   
-  // Document verification states
-  const [documentDialog, setDocumentDialog] = useState({ open: false, document: null, type: '' });
-  const [rejectionDialog, setRejectionDialog] = useState({ open: false, target: null, type: '' });
+  // Enhanced document and dialog states
+  const [documentDialog, setDocumentDialog] = useState({ open: false, document: null, type: '', title: '' });
+  const [rejectionDialog, setRejectionDialog] = useState({ open: false, target: null, type: '', title: '' });
   const [rejectionReason, setRejectionReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [fullscreenImage, setFullscreenImage] = useState({ open: false, url: '', title: '' });
+  const [verificationNotes, setVerificationNotes] = useState('');
+  const [selectedDocuments, setSelectedDocuments] = useState([]);
+  const [documentStatus, setDocumentStatus] = useState({});
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('submissionDate');
 
   useEffect(() => {
     loadBusinesses();
@@ -530,164 +568,885 @@ const BusinessVerificationEnhanced = () => {
     );
   };
 
+  // Helper function to calculate verification completion percentage
+  const calculateVerificationCompletion = (business) => {
+    const requiredFields = [
+      'businessName', 'businessEmail', 'businessPhone', 'businessCategory', 
+      'businessDescription', 'businessAddress'
+    ];
+    const requiredDocs = ['businessLicense', 'taxCertificate'];
+    
+    let completedFields = 0;
+    let totalFields = requiredFields.length + requiredDocs.length;
+    
+    // Check required fields
+    requiredFields.forEach(field => {
+      if (business[field] && business[field].trim() !== '') {
+        completedFields++;
+      }
+    });
+    
+    // Check required documents
+    requiredDocs.forEach(doc => {
+      if (getDocumentUrl(business, doc)) {
+        completedFields++;
+      }
+    });
+    
+    return Math.round((completedFields / totalFields) * 100);
+  };
+
+  // Enhanced tab rendering functions
+  const renderBusinessDetailsTab = () => (
+    <Grid container spacing={3}>
+      <Grid item xs={12}>
+        <Card variant="outlined">
+          <CardHeader 
+            avatar={<StoreIcon color="primary" />}
+            title="Business Information"
+            subheader="Core business details and registration info"
+          />
+          <CardContent>
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <Box mb={2}>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Business Name
+                  </Typography>
+                  <Typography variant="body1" fontWeight="medium">
+                    {selectedBusiness.businessName || 'Not provided'}
+                  </Typography>
+                </Box>
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <Box mb={2}>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Business Category
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedBusiness.businessCategory || 'Not provided'}
+                  </Typography>
+                </Box>
+              </Grid>
+              
+              <Grid item xs={12}>
+                <Box mb={2}>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Business Description
+                  </Typography>
+                  <Typography variant="body1" sx={{ lineHeight: 1.6 }}>
+                    {selectedBusiness.businessDescription || 'No description provided'}
+                  </Typography>
+                </Box>
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <Box mb={2}>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    License Number
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedBusiness.licenseNumber || 'Not provided'}
+                  </Typography>
+                </Box>
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <Box mb={2}>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Tax ID
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedBusiness.taxId || 'Not provided'}
+                  </Typography>
+                </Box>
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <Box mb={2}>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Website
+                  </Typography>
+                  {selectedBusiness.website ? (
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <Typography variant="body1" component="a" 
+                        href={selectedBusiness.website} 
+                        target="_blank" 
+                        sx={{ textDecoration: 'none', color: 'primary.main' }}
+                      >
+                        {selectedBusiness.website}
+                      </Typography>
+                      <IconButton 
+                        size="small"
+                        onClick={() => window.open(selectedBusiness.website, '_blank')}
+                      >
+                        <LaunchIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  ) : (
+                    <Typography variant="body1">Not provided</Typography>
+                  )}
+                </Box>
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <Box mb={2}>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Country
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedBusiness.country || 'Not specified'}
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      </Grid>
+    </Grid>
+  );
+
+  const renderDocumentsTab = () => (
+    <Box>
+      <Alert severity="info" sx={{ mb: 3 }}>
+        <Typography variant="subtitle2" gutterBottom>
+          Document Verification Requirements
+        </Typography>
+        <Typography variant="body2">
+          All documents must be clear, readable, and match the business information provided. 
+          Click on any document to view it in full screen.
+        </Typography>
+      </Alert>
+      
+      <Grid container spacing={2}>
+        {renderEnhancedDocumentCard('businessLicense', 'Business License', 'Legal registration document', true)}
+        {renderEnhancedDocumentCard('taxCertificate', 'Tax Certificate', 'Government tax registration', true)}
+        {renderEnhancedDocumentCard('insuranceDocument', 'Insurance Document', 'Business liability insurance', false)}
+        {renderEnhancedDocumentCard('businessLogo', 'Business Logo', 'Company branding logo', false)}
+      </Grid>
+    </Box>
+  );
+
+  const renderContactTab = () => {
+    // For approved businesses, contacts should be considered verified
+    const isBusinessApproved = selectedBusiness.status === 'approved';
+    const phoneVerified = isBusinessApproved || selectedBusiness.phoneVerified;
+    const emailVerified = isBusinessApproved || selectedBusiness.emailVerified;
+
+    return (
+      <Grid container spacing={3}>
+        <Grid item xs={12}>
+          <Alert severity="info" sx={{ mb: 3 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Contact Verification Status
+            </Typography>
+            <Typography variant="body2">
+              Contact verification is handled automatically in the mobile app. 
+              Both phone and email must be verified before business approval.
+              {isBusinessApproved && (
+                <strong> Since this business is approved, all contacts are considered verified.</strong>
+              )}
+            </Typography>
+          </Alert>
+        </Grid>
+        
+        <Grid item xs={12} md={6}>
+          <Card variant="outlined" sx={{ height: '100%' }}>
+            <CardContent>
+              <Box display="flex" alignItems="center" gap={2} mb={2}>
+                <Avatar sx={{ bgcolor: phoneVerified ? 'success.main' : 'primary.main' }}>
+                  <PhoneIcon />
+                </Avatar>
+                <Box>
+                  <Typography variant="h6" gutterBottom>
+                    Phone Verification
+                  </Typography>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Primary contact number
+                  </Typography>
+                </Box>
+              </Box>
+              
+              <Divider sx={{ my: 2 }} />
+              
+              <Box mb={2}>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  Phone Number
+                </Typography>
+                <Typography variant="h6" gutterBottom>
+                  {selectedBusiness.businessPhone || 'No phone provided'}
+                </Typography>
+              </Box>
+              
+              <Box mb={2}>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  Verification Status
+                </Typography>
+                <Chip 
+                  label={phoneVerified ? 'Verified' : 'Pending Verification'}
+                  color={phoneVerified ? 'success' : 'warning'}
+                  icon={phoneVerified ? <CheckIcon /> : <TimeIcon />}
+                  variant="filled"
+                />
+              </Box>
+              
+              {(selectedBusiness.phoneVerifiedAt || isBusinessApproved) && (
+                <Box>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Verified On
+                  </Typography>
+                  <Typography variant="body2">
+                    {selectedBusiness.phoneVerifiedAt ? 
+                      new Date(selectedBusiness.phoneVerifiedAt).toLocaleString() :
+                      isBusinessApproved ? 'Verified via business approval' : 'Unknown'
+                    }
+                  </Typography>
+                </Box>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        <Grid item xs={12} md={6}>
+          <Card variant="outlined" sx={{ height: '100%' }}>
+            <CardContent>
+              <Box display="flex" alignItems="center" gap={2} mb={2}>
+                <Avatar sx={{ bgcolor: emailVerified ? 'success.main' : 'primary.main' }}>
+                  <EmailIcon />
+                </Avatar>
+                <Box>
+                  <Typography variant="h6" gutterBottom>
+                    Email Verification
+                  </Typography>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Primary contact email
+                  </Typography>
+                </Box>
+              </Box>
+              
+              <Divider sx={{ my: 2 }} />
+              
+              <Box mb={2}>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  Email Address
+                </Typography>
+                <Typography variant="h6" gutterBottom>
+                  {selectedBusiness.businessEmail || 'No email provided'}
+                </Typography>
+              </Box>
+              
+              <Box mb={2}>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  Verification Status
+                </Typography>
+                <Chip 
+                  label={emailVerified ? 'Verified' : 'Pending Verification'}
+                  color={emailVerified ? 'success' : 'warning'}
+                  icon={emailVerified ? <CheckIcon /> : <TimeIcon />}
+                  variant="filled"
+                />
+              </Box>
+              
+              {(selectedBusiness.emailVerifiedAt || isBusinessApproved) && (
+                <Box>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Verified On
+                  </Typography>
+                  <Typography variant="body2">
+                    {selectedBusiness.emailVerifiedAt ? 
+                      new Date(selectedBusiness.emailVerifiedAt).toLocaleString() :
+                      isBusinessApproved ? 'Verified via business approval' : 'Unknown'
+                    }
+                  </Typography>
+                </Box>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+    );
+  };
+
+  const renderLocationTab = () => {
+    const fullAddress = [
+      selectedBusiness.businessAddress,
+      selectedBusiness.city,
+      selectedBusiness.state,
+      selectedBusiness.postalCode,
+      selectedBusiness.country
+    ].filter(Boolean).join(', ');
+    
+    const mapUrl = fullAddress ? 
+      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}` : null;
+
+    return (
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={8}>
+          <Card variant="outlined">
+            <CardHeader 
+              avatar={<LocationIcon color="primary" />}
+              title="Business Location"
+              subheader="Physical address and location details"
+            />
+            <CardContent>
+              <Grid container spacing={3}>
+                <Grid item xs={12}>
+                  <Box mb={2}>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      Complete Business Address
+                    </Typography>
+                    <Typography variant="body1" sx={{ lineHeight: 1.6, fontWeight: 'medium' }}>
+                      {fullAddress || 'No address provided'}
+                    </Typography>
+                  </Box>
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <Box mb={2}>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      Street Address
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedBusiness.businessAddress || 'Not provided'}
+                    </Typography>
+                  </Box>
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <Box mb={2}>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      City
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedBusiness.city || 'Not provided'}
+                    </Typography>
+                  </Box>
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <Box mb={2}>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      State/Province
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedBusiness.state || 'Not provided'}
+                    </Typography>
+                  </Box>
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <Box mb={2}>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      Postal Code
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedBusiness.postalCode || 'Not provided'}
+                    </Typography>
+                  </Box>
+                </Grid>
+                
+                <Grid item xs={12}>
+                  <Box mb={2}>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      Country
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedBusiness.country || 'Not provided'}
+                    </Typography>
+                  </Box>
+                </Grid>
+              </Grid>
+              
+              {mapUrl && (
+                <Box mt={3}>
+                  <Button
+                    variant="contained"
+                    startIcon={<MapIcon />}
+                    onClick={() => window.open(mapUrl, '_blank')}
+                    size="large"
+                  >
+                    View on Google Maps
+                  </Button>
+                </Box>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        <Grid item xs={12} md={4}>
+          <Card variant="outlined">
+            <CardHeader title="Location Services" />
+            <CardContent>
+              <Stack spacing={2}>
+                <Box>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    GPS Coordinates
+                  </Typography>
+                  <Typography variant="body2">
+                    {selectedBusiness.latitude && selectedBusiness.longitude ? 
+                      `${selectedBusiness.latitude}, ${selectedBusiness.longitude}` : 
+                      'Not available'
+                    }
+                  </Typography>
+                </Box>
+                
+                <Box>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Service Area
+                  </Typography>
+                  <Typography variant="body2">
+                    {selectedBusiness.serviceRadius ? 
+                      `${selectedBusiness.serviceRadius} km radius` : 
+                      'Not specified'
+                    }
+                  </Typography>
+                </Box>
+                
+                <Box>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Location Verified
+                  </Typography>
+                  <Chip 
+                    label={selectedBusiness.locationVerified ? 'Verified' : 'Not Verified'}
+                    color={selectedBusiness.locationVerified ? 'success' : 'default'}
+                    icon={selectedBusiness.locationVerified ? <CheckIcon /> : <LocationIcon />}
+                    size="small"
+                  />
+                </Box>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+    );
+  };
+
+  const renderVerificationHistoryTab = () => {
+    const submissionDate = selectedBusiness.submissionDate ? 
+      new Date(selectedBusiness.submissionDate) : null;
+    const lastModified = selectedBusiness.lastModified ? 
+      new Date(selectedBusiness.lastModified) : null;
+
+    return (
+      <Grid container spacing={3}>
+        <Grid item xs={12}>
+          <Card variant="outlined">
+            <CardHeader 
+              avatar={<AssignmentIcon color="primary" />}
+              title="Verification Timeline"
+            />
+            <CardContent>
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Event</TableCell>
+                      <TableCell>Date</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Notes</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <CalendarIcon fontSize="small" />
+                          Application Submitted
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        {submissionDate ? submissionDate.toLocaleString() : 'Unknown'}
+                      </TableCell>
+                      <TableCell>
+                        <Chip label="Completed" color="success" size="small" />
+                      </TableCell>
+                      <TableCell>Initial application received</TableCell>
+                    </TableRow>
+                    
+                    {selectedBusiness.status === 'approved' && (
+                      <TableRow>
+                        <TableCell>
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <VerifiedIcon fontSize="small" />
+                            Business Approved
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          {lastModified ? lastModified.toLocaleString() : 'Unknown'}
+                        </TableCell>
+                        <TableCell>
+                          <Chip label="Approved" color="success" size="small" />
+                        </TableCell>
+                        <TableCell>Business verification completed</TableCell>
+                      </TableRow>
+                    )}
+                    
+                    {selectedBusiness.status === 'rejected' && (
+                      <TableRow>
+                        <TableCell>
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <ErrorIcon fontSize="small" />
+                            Business Rejected
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          {lastModified ? lastModified.toLocaleString() : 'Unknown'}
+                        </TableCell>
+                        <TableCell>
+                          <Chip label="Rejected" color="error" size="small" />
+                        </TableCell>
+                        <TableCell>
+                          {selectedBusiness.rejectionReason || 'No reason provided'}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+    );
+  };
+
+  const renderEnhancedDocumentCard = (docType, title, description, required) => {
+    const url = getDocumentUrl(selectedBusiness, docType);
+    const status = getDocumentStatus(selectedBusiness, docType);
+    const rejectionReason = selectedBusiness.documentVerification?.[docType]?.rejectionReason || 
+                           selectedBusiness[`${docType}RejectionReason`];
+    
+    // Determine if business is already approved - if so, all docs should show as approved
+    const isBusinessApproved = selectedBusiness.status === 'approved';
+    const displayStatus = isBusinessApproved ? 'approved' : status;
+
+    return (
+      <Grid item xs={12} md={6} key={docType}>
+        <Card 
+          variant="outlined" 
+          sx={{ 
+            height: '100%',
+            opacity: !url ? 0.7 : 1,
+            border: displayStatus === 'approved' ? 2 : 1,
+            borderColor: displayStatus === 'approved' ? 'success.main' : 
+                        displayStatus === 'rejected' ? 'error.main' : 'divider'
+          }}
+        >
+          <CardHeader
+            avatar={
+              <Avatar sx={{ 
+                bgcolor: displayStatus === 'approved' ? 'success.main' : 
+                        displayStatus === 'rejected' ? 'error.main' : 'grey.400' 
+              }}>
+                {getDocumentIcon(docType)}
+              </Avatar>
+            }
+            title={
+              <Box display="flex" alignItems="center" gap={1}>
+                <Typography variant="subtitle1">{title}</Typography>
+                {/* Only show "Required" label if document is not approved and business is not approved */}
+                {required && displayStatus !== 'approved' && !isBusinessApproved && (
+                  <Chip label="Required" size="small" color="warning" />
+                )}
+                {/* Show "Verified" label for approved documents */}
+                {displayStatus === 'approved' && (
+                  <Chip label="Verified" size="small" color="success" />
+                )}
+              </Box>
+            }
+            subheader={description}
+            action={
+              <Chip 
+                label={displayStatus ? displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1) : 'Not Submitted'} 
+                color={getStatusColor(displayStatus)} 
+                icon={getStatusIcon(displayStatus)}
+                variant="filled"
+                size="small"
+              />
+            }
+          />
+          
+          {url && (
+            <CardMedia
+              component="img"
+              height="120"
+              image={url}
+              alt={title}
+              sx={{ 
+                objectFit: 'cover',
+                cursor: 'pointer',
+                '&:hover': { opacity: 0.8 }
+              }}
+              onClick={() => setFullscreenImage({ open: true, url, title })}
+            />
+          )}
+          
+          <CardContent>
+            {!url ? (
+              <Alert severity="warning" size="small">
+                Document not submitted
+              </Alert>
+            ) : (
+              <Box>
+                {displayStatus === 'approved' && isBusinessApproved && (
+                  <Alert severity="success" size="small" sx={{ mb: 1 }}>
+                    <Typography variant="caption">
+                      <strong>Document Verified:</strong> This document has been approved as part of the business verification.
+                    </Typography>
+                  </Alert>
+                )}
+                
+                {rejectionReason && displayStatus === 'rejected' && (
+                  <Alert severity="error" size="small" sx={{ mb: 1 }}>
+                    <Typography variant="caption">
+                      <strong>Rejection Reason:</strong> {rejectionReason}
+                    </Typography>
+                  </Alert>
+                )}
+                
+                <Box display="flex" justifyContent="space-between" alignItems="center" mt={1}>
+                  <Button
+                    size="small"
+                    startIcon={<ViewIcon />}
+                    onClick={() => setFullscreenImage({ open: true, url, title })}
+                  >
+                    View Full Size
+                  </Button>
+                  
+                  <Button
+                    size="small"
+                    startIcon={<DownloadIcon />}
+                    onClick={() => window.open(url, '_blank')}
+                  >
+                    Download
+                  </Button>
+                </Box>
+              </Box>
+            )}
+          </CardContent>
+          
+          {/* Only show approval actions if business is still pending and document is not already approved */}
+          {url && displayStatus === 'pending' && !isBusinessApproved && (
+            <CardActions>
+              <Button 
+                size="small"
+                color="success"
+                startIcon={<CheckIcon />}
+                onClick={() => handleDocumentAction(selectedBusiness, docType, 'approved')}
+                disabled={actionLoading}
+              >
+                Approve
+              </Button>
+              <Button 
+                size="small"
+                color="error"
+                startIcon={<ErrorIcon />}
+                onClick={() => handleDocumentAction(selectedBusiness, docType, 'reject')}
+                disabled={actionLoading}
+              >
+                Reject
+              </Button>
+            </CardActions>
+          )}
+          
+          {/* Show verification completed message for approved documents */}
+          {displayStatus === 'approved' && (
+            <CardActions>
+              <Box display="flex" alignItems="center" gap={1} px={1}>
+                <VerifiedIcon color="success" fontSize="small" />
+                <Typography variant="caption" color="success.main">
+                  Document verified and approved
+                </Typography>
+              </Box>
+            </CardActions>
+          )}
+        </Card>
+      </Grid>
+    );
+  };
+
+  // Helper function to get document icons
+  const getDocumentIcon = (docType) => {
+    switch (docType) {
+      case 'businessLicense': return <AssignmentIcon />;
+      case 'taxCertificate': return <DescriptionIcon />;
+      case 'insuranceDocument': return <SecurityIcon />;
+      case 'businessLogo': return <ImageIcon />;
+      default: return <FileIcon />;
+    }
+  };
+
   const renderBusinessDetails = () => {
     if (!selectedBusiness) return null;
 
+    const completionPercentage = calculateVerificationCompletion(selectedBusiness);
+    const isFullyVerified = completionPercentage === 100;
+    
     return (
-      <Dialog open={detailsOpen} onClose={() => setDetailsOpen(false)} maxWidth="md" fullWidth>
+      <Dialog 
+        open={detailsOpen} 
+        onClose={() => setDetailsOpen(false)} 
+        maxWidth="lg" 
+        fullWidth
+        PaperProps={{
+          sx: { minHeight: '80vh' }
+        }}
+      >
         <DialogTitle>
-          <Box display="flex" alignItems="center" gap={2}>
-            <BusinessIcon />
-            <Box>
-              <Typography variant="h6">{selectedBusiness.businessName}</Typography>
-              <Chip 
-                label={selectedBusiness.status || 'pending'} 
-                color={getStatusColor(selectedBusiness.status)} 
-                size="small"
-              />
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Box display="flex" alignItems="center" gap={2}>
+              <Avatar sx={{ bgcolor: 'primary.main' }}>
+                <BusinessIcon />
+              </Avatar>
+              <Box>
+                <Typography variant="h5" fontWeight="bold">
+                  {selectedBusiness.businessName}
+                </Typography>
+                <Box display="flex" alignItems="center" gap={2} mt={1}>
+                  <Chip 
+                    label={selectedBusiness.status || 'pending'} 
+                    color={getStatusColor(selectedBusiness.status)} 
+                    icon={getStatusIcon(selectedBusiness.status)}
+                    variant="filled"
+                  />
+                  <Chip 
+                    label={`${completionPercentage}% Complete`}
+                    color={isFullyVerified ? 'success' : 'warning'}
+                    variant="outlined"
+                    size="small"
+                  />
+                  <Typography variant="caption" color="text.secondary">
+                    Submitted: {selectedBusiness.submissionDate ? 
+                      new Date(selectedBusiness.submissionDate).toLocaleDateString() : 'Unknown'}
+                  </Typography>
+                </Box>
+              </Box>
             </Box>
+            <IconButton onClick={() => setDetailsOpen(false)} size="large">
+              <CloseIcon />
+            </IconButton>
+          </Box>
+          
+          {/* Progress Bar */}
+          <Box sx={{ mt: 2 }}>
+            <LinearProgress 
+              variant="determinate" 
+              value={completionPercentage} 
+              sx={{ height: 8, borderRadius: 4 }}
+              color={isFullyVerified ? 'success' : 'primary'}
+            />
           </Box>
         </DialogTitle>
         
-        <DialogContent>
-          <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)}>
-            <Tab label="Business Info" />
-            <Tab label="Documents" />
-            <Tab label="Contact Verification" />
-          </Tabs>
+        <DialogContent sx={{ p: 0 }}>
+          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+            <Tabs 
+              value={tabValue} 
+              onChange={(e, v) => setTabValue(v)}
+              variant="scrollable"
+              scrollButtons="auto"
+            >
+              <Tab 
+                icon={<InfoIcon />} 
+                label="Business Details" 
+                iconPosition="start"
+              />
+              <Tab 
+                icon={<AssignmentIcon />} 
+                label="Documents" 
+                iconPosition="start"
+              />
+              <Tab 
+                icon={<ContactIcon />} 
+                label="Contact Info" 
+                iconPosition="start"
+              />
+              <Tab 
+                icon={<MapIcon />} 
+                label="Location" 
+                iconPosition="start"
+              />
+              <Tab 
+                icon={<ReportsIcon />} 
+                label="Verification History" 
+                iconPosition="start"
+              />
+            </Tabs>
+          </Box>
 
-          {tabValue === 0 && (
-            <Box sx={{ mt: 2 }}>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="Business Name"
-                    value={selectedBusiness.businessName || ''}
-                    fullWidth
-                    disabled
-                    margin="normal"
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="Category"
-                    value={selectedBusiness.businessCategory || ''}
-                    fullWidth
-                    disabled
-                    margin="normal"
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    label="Description"
-                    value={selectedBusiness.businessDescription || ''}
-                    fullWidth
-                    disabled
-                    multiline
-                    rows={3}
-                    margin="normal"
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="Email"
-                    value={selectedBusiness.businessEmail || ''}
-                    fullWidth
-                    disabled
-                    margin="normal"
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="Phone"
-                    value={selectedBusiness.businessPhone || ''}
-                    fullWidth
-                    disabled
-                    margin="normal"
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    label="Address"
-                    value={selectedBusiness.businessAddress || ''}
-                    fullWidth
-                    disabled
-                    margin="normal"
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="License Number"
-                    value={selectedBusiness.licenseNumber || ''}
-                    fullWidth
-                    disabled
-                    margin="normal"
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="Tax ID"
-                    value={selectedBusiness.taxId || ''}
-                    fullWidth
-                    disabled
-                    margin="normal"
-                  />
-                </Grid>
-              </Grid>
-            </Box>
-          )}
-
-          {tabValue === 1 && (
-            <Box sx={{ mt: 2 }}>
-              {renderDocumentCard(selectedBusiness, 'businessLicense', 'Business License')}
-              {renderDocumentCard(selectedBusiness, 'taxCertificate', 'Tax Certificate')}
-              {renderDocumentCard(selectedBusiness, 'insuranceDocument', 'Insurance Document')}
-              {renderDocumentCard(selectedBusiness, 'businessLogo', 'Business Logo')}
-            </Box>
-          )}
-
-          {tabValue === 2 && (
-            <Box sx={{ mt: 2 }}>
-              <Alert severity="info" sx={{ mb: 2 }}>
-                Contact verification is handled by the user in the mobile app. 
-                Both phone and email must be verified before business approval.
-              </Alert>
-              
-              <Typography variant="subtitle1" gutterBottom>
-                Contact Information:
-              </Typography>
-              <Box display="flex" alignItems="center" gap={1} mb={1}>
-                <PhoneIcon />
-                <Typography>{selectedBusiness.businessPhone || 'No phone'}</Typography>
-              </Box>
-              <Box display="flex" alignItems="center" gap={1}>
-                <EmailIcon />
-                <Typography>{selectedBusiness.businessEmail || 'No email'}</Typography>
-              </Box>
-            </Box>
-          )}
+          <Box sx={{ p: 3 }}>
+            {/* Business Details Tab */}
+            {tabValue === 0 && renderBusinessDetailsTab()}
+            
+            {/* Documents Tab */}
+            {tabValue === 1 && renderDocumentsTab()}
+            
+            {/* Contact Info Tab */}
+            {tabValue === 2 && renderContactTab()}
+            
+            {/* Location Tab */}
+            {tabValue === 3 && renderLocationTab()}
+            
+            {/* Verification History Tab */}
+            {tabValue === 4 && renderVerificationHistoryTab()}
+          </Box>
         </DialogContent>
 
-        <DialogActions>
-          <Button onClick={() => setDetailsOpen(false)}>Close</Button>
+        <DialogActions sx={{ px: 3, py: 2, borderTop: 1, borderColor: 'divider' }}>
+          <Button 
+            onClick={() => setDetailsOpen(false)}
+            size="large"
+          >
+            Close
+          </Button>
+          
           {selectedBusiness.status === 'pending' && (
-            <>
+            <Box display="flex" gap={1}>
               <Button 
                 color="error"
+                variant="outlined"
+                startIcon={<RejectIcon />}
                 onClick={() => handleBusinessAction(selectedBusiness, 'reject')}
                 disabled={actionLoading}
+                size="large"
               >
                 Reject Business
               </Button>
               <Button 
                 color="success" 
                 variant="contained"
+                startIcon={<ApproveIcon />}
                 onClick={() => handleBusinessAction(selectedBusiness, 'approve')}
                 disabled={actionLoading}
+                size="large"
               >
                 Approve Business
               </Button>
-            </>
+            </Box>
+          )}
+          
+          {selectedBusiness.status === 'approved' && (
+            <Chip 
+              icon={<VerifiedIcon />}
+              label="Verified & Approved"
+              color="success"
+              variant="filled"
+              size="medium"
+            />
+          )}
+          
+          {selectedBusiness.status === 'rejected' && (
+            <Button 
+              color="primary"
+              variant="outlined"
+              startIcon={<ApproveIcon />}
+              onClick={() => handleBusinessAction(selectedBusiness, 'reactivate')}
+              disabled={actionLoading}
+              size="large"
+            >
+              Reactivate Business
+            </Button>
           )}
         </DialogActions>
       </Dialog>
@@ -774,6 +1533,53 @@ const BusinessVerificationEnhanced = () => {
             disabled={actionLoading || !rejectionReason.trim()}
           >
             Confirm Rejection
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Fullscreen Image Dialog */}
+      <Dialog 
+        open={fullscreenImage.open} 
+        onClose={() => setFullscreenImage({ open: false, url: '', title: '' })}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Typography variant="h6">{fullscreenImage.title}</Typography>
+            <IconButton 
+              onClick={() => setFullscreenImage({ open: false, url: '', title: '' })}
+              size="large"
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0 }}>
+          <Box sx={{ textAlign: 'center' }}>
+            <img 
+              src={fullscreenImage.url} 
+              alt={fullscreenImage.title}
+              style={{ 
+                width: '100%', 
+                height: 'auto', 
+                maxHeight: '70vh',
+                objectFit: 'contain'
+              }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            startIcon={<DownloadIcon />}
+            onClick={() => window.open(fullscreenImage.url, '_blank')}
+          >
+            Download
+          </Button>
+          <Button 
+            onClick={() => setFullscreenImage({ open: false, url: '', title: '' })}
+          >
+            Close
           </Button>
         </DialogActions>
       </Dialog>
