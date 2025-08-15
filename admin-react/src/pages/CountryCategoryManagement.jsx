@@ -30,6 +30,8 @@ import {
   Cancel,
   Category
 } from '@mui/icons-material';
+import { collection, addDoc, updateDoc, doc } from 'firebase/firestore';
+import { db } from '../firebase/config';
 import useCountryFilter from '../hooks/useCountryFilter.jsx';
 import { DataLookupService } from '../services/DataLookupService.js';
 
@@ -99,28 +101,39 @@ const CountryCategoryManagement = () => {
       const currentStatus = isCategoryActive(categoryId);
       const newStatus = !currentStatus;
 
-      // TODO: Implement Firebase update logic
-      // await updateCountryCategoryStatus(categoryId, userCountry, newStatus);
-      
-      // Update local state
-      setCountryCategories(prev => {
-        const existing = prev.find(cc => cc.categoryId === categoryId && cc.country === userCountry);
-        if (existing) {
-          return prev.map(cc => 
-            cc.categoryId === categoryId && cc.country === userCountry
-              ? { ...cc, isActive: newStatus }
-              : cc
-          );
-        } else {
-          return [...prev, {
-            id: `${categoryId}_${userCountry}`,
-            categoryId,
-            country: userCountry,
-            isActive: newStatus,
-            updatedAt: new Date()
-          }];
-        }
-      });
+      // Find existing record or create new one
+      const existingRecord = countryCategories.find(
+        cc => cc.categoryId === categoryId && cc.country === userCountry
+      );
+
+      const updateData = {
+        categoryId,
+        categoryName,
+        country: userCountry,
+        countryName: getCountryDisplayName(userCountry),
+        isActive: newStatus,
+        updatedAt: new Date(),
+        updatedBy: adminData.uid,
+        updatedByName: adminData.displayName || adminData.email
+      };
+
+      if (existingRecord) {
+        // Update existing record
+        await updateDoc(doc(db, 'country_categories', existingRecord.id), updateData);
+        
+        setCountryCategories(prev => prev.map(cc => 
+          cc.id === existingRecord.id ? { ...cc, ...updateData } : cc
+        ));
+      } else {
+        // Create new record
+        updateData.createdAt = new Date();
+        updateData.createdBy = adminData.uid;
+        updateData.createdByName = adminData.displayName || adminData.email;
+        
+        const docRef = await addDoc(collection(db, 'country_categories'), updateData);
+        
+        setCountryCategories(prev => [...prev, { id: docRef.id, ...updateData }]);
+      }
 
       console.log(`🔄 Toggled category ${categoryName} to ${newStatus ? 'active' : 'inactive'} in ${userCountry}`);
     } catch (err) {

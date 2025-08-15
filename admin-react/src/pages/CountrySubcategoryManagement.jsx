@@ -31,6 +31,8 @@ import {
   Category,
   SubdirectoryArrowRight
 } from '@mui/icons-material';
+import { collection, addDoc, updateDoc, doc } from 'firebase/firestore';
+import { db } from '../firebase/config';
 import useCountryFilter from '../hooks/useCountryFilter.jsx';
 import { DataLookupService } from '../services/DataLookupService.js';
 
@@ -93,7 +95,8 @@ const CountrySubcategoryManagement = () => {
   };
 
   // Get parent category name
-  const getCategoryName = (categoryId) => {
+  const getCategoryName = (subcategory) => {
+    const categoryId = subcategory.categoryId || subcategory.category_id || subcategory.parentCategoryId || subcategory.parentId;
     const category = categories.find(cat => cat.id === categoryId);
     return category?.name || category?.category || category?.title || 'Unknown Category';
   };
@@ -111,28 +114,39 @@ const CountrySubcategoryManagement = () => {
       const currentStatus = isSubcategoryActive(subcategoryId);
       const newStatus = !currentStatus;
 
-      // TODO: Implement Firebase update logic
-      // await updateCountrySubcategoryStatus(subcategoryId, userCountry, newStatus);
-      
-      // Update local state
-      setCountrySubcategories(prev => {
-        const existing = prev.find(cs => cs.subcategoryId === subcategoryId && cs.country === userCountry);
-        if (existing) {
-          return prev.map(cs => 
-            cs.subcategoryId === subcategoryId && cs.country === userCountry
-              ? { ...cs, isActive: newStatus }
-              : cs
-          );
-        } else {
-          return [...prev, {
-            id: `${subcategoryId}_${userCountry}`,
-            subcategoryId,
-            country: userCountry,
-            isActive: newStatus,
-            updatedAt: new Date()
-          }];
-        }
-      });
+      // Find existing record or create new one
+      const existingRecord = countrySubcategories.find(
+        cs => cs.subcategoryId === subcategoryId && cs.country === userCountry
+      );
+
+      const updateData = {
+        subcategoryId,
+        subcategoryName,
+        country: userCountry,
+        countryName: getCountryDisplayName(userCountry),
+        isActive: newStatus,
+        updatedAt: new Date(),
+        updatedBy: adminData.uid,
+        updatedByName: adminData.displayName || adminData.email
+      };
+
+      if (existingRecord) {
+        // Update existing record
+        await updateDoc(doc(db, 'country_subcategories', existingRecord.id), updateData);
+        
+        setCountrySubcategories(prev => prev.map(cs => 
+          cs.id === existingRecord.id ? { ...cs, ...updateData } : cs
+        ));
+      } else {
+        // Create new record
+        updateData.createdAt = new Date();
+        updateData.createdBy = adminData.uid;
+        updateData.createdByName = adminData.displayName || adminData.email;
+        
+        const docRef = await addDoc(collection(db, 'country_subcategories'), updateData);
+        
+        setCountrySubcategories(prev => [...prev, { id: docRef.id, ...updateData }]);
+      }
 
       console.log(`🔄 Toggled subcategory ${subcategoryName} to ${newStatus ? 'active' : 'inactive'} in ${userCountry}`);
     } catch (err) {
@@ -153,7 +167,7 @@ const CountrySubcategoryManagement = () => {
     subcategory.subcategory?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     subcategory.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     subcategory.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    getCategoryName(subcategory.categoryId)?.toLowerCase().includes(searchTerm.toLowerCase())
+    getCategoryName(subcategory)?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Get activation stats
@@ -305,7 +319,7 @@ const CountrySubcategoryManagement = () => {
                   </TableCell>
                   <TableCell>
                     <Chip 
-                      label={getCategoryName(subcategory.categoryId)}
+                      label={getCategoryName(subcategory)}
                       size="small"
                       variant="outlined"
                     />

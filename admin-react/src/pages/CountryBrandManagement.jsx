@@ -30,6 +30,8 @@ import {
   Cancel,
   BrandingWatermark
 } from '@mui/icons-material';
+import { collection, addDoc, updateDoc, doc } from 'firebase/firestore';
+import { db } from '../firebase/config';
 import useCountryFilter from '../hooks/useCountryFilter.jsx';
 import { DataLookupService } from '../services/DataLookupService.js';
 
@@ -99,28 +101,39 @@ const CountryBrandManagement = () => {
       const currentStatus = isBrandActive(brandId);
       const newStatus = !currentStatus;
 
-      // TODO: Implement Firebase update logic
-      // await updateCountryBrandStatus(brandId, userCountry, newStatus);
-      
-      // Update local state
-      setCountryBrands(prev => {
-        const existing = prev.find(cb => cb.brandId === brandId && cb.country === userCountry);
-        if (existing) {
-          return prev.map(cb => 
-            cb.brandId === brandId && cb.country === userCountry
-              ? { ...cb, isActive: newStatus }
-              : cb
-          );
-        } else {
-          return [...prev, {
-            id: `${brandId}_${userCountry}`,
-            brandId,
-            country: userCountry,
-            isActive: newStatus,
-            updatedAt: new Date()
-          }];
-        }
-      });
+      // Find existing record or create new one
+      const existingRecord = countryBrands.find(
+        cb => cb.brandId === brandId && cb.country === userCountry
+      );
+
+      const updateData = {
+        brandId,
+        brandName,
+        country: userCountry,
+        countryName: getCountryDisplayName(userCountry),
+        isActive: newStatus,
+        updatedAt: new Date(),
+        updatedBy: adminData.uid,
+        updatedByName: adminData.displayName || adminData.email
+      };
+
+      if (existingRecord) {
+        // Update existing record
+        await updateDoc(doc(db, 'country_brands', existingRecord.id), updateData);
+        
+        setCountryBrands(prev => prev.map(cb => 
+          cb.id === existingRecord.id ? { ...cb, ...updateData } : cb
+        ));
+      } else {
+        // Create new record
+        updateData.createdAt = new Date();
+        updateData.createdBy = adminData.uid;
+        updateData.createdByName = adminData.displayName || adminData.email;
+        
+        const docRef = await addDoc(collection(db, 'country_brands'), updateData);
+        
+        setCountryBrands(prev => [...prev, { id: docRef.id, ...updateData }]);
+      }
 
       console.log(`🔄 Toggled brand ${brandName} to ${newStatus ? 'active' : 'inactive'} in ${userCountry}`);
     } catch (err) {
