@@ -2,7 +2,7 @@
 export const BUSINESS_MODULES = {
   ITEM: {
     id: 'item',
-    name: 'Item Marketplace',
+    name: 'Item Request',
     description: 'Buy and sell items - electronics, furniture, clothing, etc.',
     icon: '🛍️',
     color: '#FF6B35',
@@ -19,7 +19,7 @@ export const BUSINESS_MODULES = {
   },
   SERVICE: {
     id: 'service',
-    name: 'Service Marketplace',
+    name: 'Service Request',
     description: 'Find and offer services - cleaning, repairs, tutoring, etc.',
     icon: '🔧',
     color: '#4ECDC4',
@@ -36,7 +36,7 @@ export const BUSINESS_MODULES = {
   },
   RENT: {
     id: 'rent',
-    name: 'Rental System',
+    name: 'Rent Request',
     description: 'Rent items temporarily - tools, equipment, vehicles, etc.',
     icon: '📅',
     color: '#45B7D1',
@@ -53,7 +53,7 @@ export const BUSINESS_MODULES = {
   },
   DELIVERY: {
     id: 'delivery',
-    name: 'Delivery Service',
+    name: 'Delivery Request',
     description: 'Package delivery and courier services',
     icon: '📦',
     color: '#96CEB4',
@@ -87,7 +87,7 @@ export const BUSINESS_MODULES = {
   },
   PRICE: {
     id: 'price',
-    name: 'Price Comparison',
+    name: 'Price Request',
     description: 'Compare prices across different sellers/services',
     icon: '💰',
     color: '#DDA0DD',
@@ -99,7 +99,7 @@ export const BUSINESS_MODULES = {
       'Best deals',
       'Price predictions'
     ],
-    dependencies: ['item', 'service'],
+    dependencies: ['payment', 'messaging'],
     defaultEnabled: false
   }
 };
