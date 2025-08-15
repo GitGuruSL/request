@@ -93,6 +93,12 @@ const AdminUsers = () => {
       userManagement: true,
       subscriptionManagement: true,
       
+      // Product Catalog Management
+      categoryManagement: true,
+      subcategoryManagement: true,
+      brandManagement: true,
+      variableTypeManagement: true,
+      
       // Module Management
       moduleManagement: true,
       
@@ -263,6 +269,12 @@ const AdminUsers = () => {
             subscriptionManagement: formData.permissions?.subscriptionManagement !== undefined ? formData.permissions.subscriptionManagement : true,
             moduleManagement: formData.permissions?.moduleManagement !== undefined ? formData.permissions.moduleManagement : true,
             
+            // Product Catalog Management
+            categoryManagement: formData.permissions?.categoryManagement !== undefined ? formData.permissions.categoryManagement : true,
+            subcategoryManagement: formData.permissions?.subcategoryManagement !== undefined ? formData.permissions.subcategoryManagement : true,
+            brandManagement: formData.permissions?.brandManagement !== undefined ? formData.permissions.brandManagement : true,
+            variableTypeManagement: formData.permissions?.variableTypeManagement !== undefined ? formData.permissions.variableTypeManagement : true,
+            
             // Legal & Payment (Super Admin Only)
             paymentMethodManagement: formData.permissions?.paymentMethodManagement !== undefined ? formData.permissions.paymentMethodManagement : false,
             legalDocumentManagement: formData.permissions?.legalDocumentManagement !== undefined ? formData.permissions.legalDocumentManagement : false,
@@ -325,6 +337,12 @@ const AdminUsers = () => {
             userManagement: formData.permissions?.userManagement !== undefined ? formData.permissions.userManagement : true,
             subscriptionManagement: formData.permissions?.subscriptionManagement !== undefined ? formData.permissions.subscriptionManagement : true,
             moduleManagement: formData.permissions?.moduleManagement !== undefined ? formData.permissions.moduleManagement : true,
+            
+            // Product Catalog Management
+            categoryManagement: formData.permissions?.categoryManagement !== undefined ? formData.permissions.categoryManagement : true,
+            subcategoryManagement: formData.permissions?.subcategoryManagement !== undefined ? formData.permissions.subcategoryManagement : true,
+            brandManagement: formData.permissions?.brandManagement !== undefined ? formData.permissions.brandManagement : true,
+            variableTypeManagement: formData.permissions?.variableTypeManagement !== undefined ? formData.permissions.variableTypeManagement : true,
             
             // Legal & Payment (Super Admin Only)
             paymentMethodManagement: formData.permissions?.paymentMethodManagement !== undefined ? formData.permissions.paymentMethodManagement : false,
@@ -426,6 +444,12 @@ const AdminUsers = () => {
         userManagement: user.permissions?.userManagement !== undefined ? user.permissions.userManagement : true,
         subscriptionManagement: user.permissions?.subscriptionManagement !== undefined ? user.permissions.subscriptionManagement : true,
         moduleManagement: user.permissions?.moduleManagement !== undefined ? user.permissions.moduleManagement : true,
+        
+        // Product Catalog Management
+        categoryManagement: user.permissions?.categoryManagement !== undefined ? user.permissions.categoryManagement : true,
+        subcategoryManagement: user.permissions?.subcategoryManagement !== undefined ? user.permissions.subcategoryManagement : true,
+        brandManagement: user.permissions?.brandManagement !== undefined ? user.permissions.brandManagement : true,
+        variableTypeManagement: user.permissions?.variableTypeManagement !== undefined ? user.permissions.variableTypeManagement : true,
         
         // Legal & Payment (backward compatibility)
         paymentMethodManagement: user.permissions?.paymentMethodManagement !== undefined ? user.permissions.paymentMethodManagement : (user.permissions?.paymentMethods !== undefined ? user.permissions.paymentMethods : false),
@@ -963,6 +987,61 @@ const AdminUsers = () => {
                       />
                     }
                     label="Module Management"
+                  />
+                </Grid>
+              </Grid>
+
+              {/* Product Catalog Management Section */}
+              <Typography variant="body2" color="primary" gutterBottom sx={{ fontWeight: 'bold' }}>
+                📦 Product Catalog Management
+              </Typography>
+              <Grid container spacing={1} sx={{ ml: 2, mb: 2 }}>
+                <Grid item xs={12} sm={6} md={4}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={formData.permissions?.categoryManagement}
+                        onChange={(e) => handlePermissionChange('categoryManagement', e.target.checked)}
+                      />
+                    }
+                    label="Categories"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={formData.permissions?.subcategoryManagement}
+                        onChange={(e) => handlePermissionChange('subcategoryManagement', e.target.checked)}
+                      />
+                    }
+                    label="Subcategories"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={formData.permissions?.brandManagement}
+                        onChange={(e) => handlePermissionChange('brandManagement', e.target.checked)}
+                      />
+                    }
+                    label="Brands"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={formData.permissions?.variableTypeManagement}
+                        onChange={(e) => handlePermissionChange('variableTypeManagement', e.target.checked)}
+                      />
+                    }
+                    label="Variable Types"
                   />
                 </Grid>
               </Grid>
