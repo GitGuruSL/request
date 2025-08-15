@@ -51,8 +51,10 @@ import {
   Timestamp 
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import useCountryFilter from '../hooks/useCountryFilter';
 
 const Cities = () => {
+  const { getFilteredData, adminData, isSuperAdmin, userCountry } = useCountryFilter();
   const [cities, setCities] = useState([]);
   const [filteredCities, setFilteredCities] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -60,8 +62,6 @@ const Cities = () => {
   const [editingCity, setEditingCity] = useState(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [cityToDelete, setCityToDelete] = useState(null);
-  const [userCountry, setUserCountry] = useState(null);
-  const [userRole, setUserRole] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -79,63 +79,27 @@ const Cities = () => {
   });
 
   useEffect(() => {
-    loadUserProfile();
+    loadCities();
   }, []);
-
-  useEffect(() => {
-    if (userCountry && userRole) {
-      loadCities();
-    }
-  }, [userCountry, userRole]);
-
-  const loadUserProfile = async () => {
-    try {
-      // Get current user info from localStorage or Firebase Auth
-      const adminData = JSON.parse(localStorage.getItem('adminUser') || '{}');
-      setUserCountry(adminData.country || 'LK');
-      setUserRole(adminData.role || 'country_admin');
-    } catch (error) {
-      console.error('Error loading user profile:', error);
-      setUserCountry('LK'); // Default to Sri Lanka
-      setUserRole('country_admin');
-    }
-  };
 
   const loadCities = async () => {
     try {
       setLoading(true);
-      let citiesQuery;
-
-      if (userRole === 'super_admin') {
-        // Super admin can see all cities
-        citiesQuery = query(
-          collection(db, 'cities'),
-          orderBy('name', 'asc')
-        );
-      } else {
-        // Country admin can only see their country's cities
-        citiesQuery = query(
-          collection(db, 'cities'),
-          where('countryCode', '==', userCountry),
-          orderBy('name', 'asc')
-        );
-      }
-
-      const snapshot = await getDocs(citiesQuery);
-      const citiesList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-
-      setCities(citiesList);
-      setFilteredCities(citiesList);
+      const data = await getFilteredData('cities', adminData);
+      const citiesData = (data || []).sort((a, b) => {
+        const aName = a.name || '';
+        const bName = b.name || '';
+        return aName.localeCompare(bName);
+      });
+      setCities(citiesData);
+      setFilteredCities(citiesData);
       
       // If no cities exist for this country, suggest adding default cities
-      if (citiesList.length === 0 && userCountry === 'LK') {
+      if (citiesData.length === 0 && userCountry === 'LK') {
         setSuccess('No cities found. Consider adding default Sri Lankan cities.');
       }
       
-      console.log(`Loaded ${citiesList.length} cities`);
+      console.log(`Loaded ${citiesData.length} cities`);
     } catch (error) {
       console.error('Error loading cities:', error);
       setError('Failed to load cities');

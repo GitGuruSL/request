@@ -57,10 +57,10 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../firebase/config';
-import { useAuth } from '../contexts/AuthContext';
+import useCountryFilter from '../hooks/useCountryFilter';
 
 const Products = () => {
-  const { adminData } = useAuth();
+  const { getFilteredData, adminData, isSuperAdmin, userCountry } = useCountryFilter();
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -107,15 +107,8 @@ const Products = () => {
   const loadProducts = async () => {
     try {
       setLoading(true);
-      const productsQuery = query(
-        collection(db, 'master_products'),
-        orderBy('name')
-      );
-      const snapshot = await getDocs(productsQuery);
-      const productsData = [];
-      snapshot.forEach(doc => {
-        productsData.push({ id: doc.id, ...doc.data() });
-      });
+      const data = await getFilteredData('master_products', adminData);
+      const productsData = data || [];
       setProducts(productsData);
     } catch (error) {
       console.error('Error loading products:', error);
@@ -126,16 +119,10 @@ const Products = () => {
 
   const loadCategories = async () => {
     try {
-      // Load all categories from your existing Firebase data
-      const snapshot = await getDocs(collection(db, 'categories'));
-      const categoriesData = [];
-      snapshot.forEach(doc => {
-        const categoryData = { id: doc.id, ...doc.data() };
-        // Only include item categories (filter out service categories)
-        if (categoryData.type === 'item' || !categoryData.type) {
-          categoriesData.push(categoryData);
-        }
-      });
+      const data = await getFilteredData('categories', adminData);
+      const categoriesData = (data || []).filter(category => 
+        category.type === 'item' || !category.type
+      );
       console.log('Loaded item categories:', categoriesData);
       setCategories(categoriesData.sort((a, b) => {
         const aName = a.name || a.category || '';
@@ -198,14 +185,8 @@ const Products = () => {
 
   const loadBrands = async () => {
     try {
-      const snapshot = await getDocs(collection(db, 'brands'));
-      const brandsData = [];
-      snapshot.forEach(doc => {
-        const brandData = { id: doc.id, ...doc.data() };
-        if (brandData.isActive !== false) { // Include active brands
-          brandsData.push(brandData);
-        }
-      });
+      const data = await getFilteredData('brands', adminData);
+      const brandsData = (data || []).filter(brand => brand.isActive !== false);
       
       // Sort brands by name
       brandsData.sort((a, b) => {

@@ -46,6 +46,8 @@ import {
   Star
 } from '@mui/icons-material';
 import useCountryFilter from '../hooks/useCountryFilter.jsx';
+import { DataLookupService } from '../services/DataLookupService.js';
+import { CurrencyService } from '../services/CurrencyService.js';
 
 const PriceListingsModule = () => {
   const {
@@ -65,6 +67,8 @@ const PriceListingsModule = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedListing, setSelectedListing] = useState(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [productDataMap, setProductDataMap] = useState(new Map());
+  const [businessDataMap, setBusinessDataMap] = useState(new Map());
 
   const statusColors = {
     active: 'success',
@@ -80,6 +84,35 @@ const PriceListingsModule = () => {
 
       const data = await getFilteredData('price_listings', adminData);
       setListings(data || []);
+      
+      // Fetch product and business data for all listings
+      if (data && data.length > 0) {
+        const uniqueProductIds = [...new Set(data.map(listing => listing.productId).filter(Boolean))];
+        const uniqueBusinessIds = [...new Set(data.map(listing => listing.businessId).filter(Boolean))];
+        
+        const [productData, businessData] = await Promise.all([
+          DataLookupService.getMultipleProducts(uniqueProductIds),
+          DataLookupService.getMultipleBusinesses(uniqueBusinessIds)
+        ]);
+        
+        const productMap = new Map();
+        const businessMap = new Map();
+        
+        uniqueProductIds.forEach((productId, index) => {
+          if (productData[index]) {
+            productMap.set(productId, productData[index]);
+          }
+        });
+        
+        uniqueBusinessIds.forEach((businessId, index) => {
+          if (businessData[index]) {
+            businessMap.set(businessId, businessData[index]);
+          }
+        });
+        
+        setProductDataMap(productMap);
+        setBusinessDataMap(businessMap);
+      }
       
       console.log(`📊 Loaded ${data?.length || 0} price listings for ${isSuperAdmin ? 'super admin' : `country admin (${userCountry})`}`);
     } catch (err) {
@@ -137,8 +170,8 @@ const PriceListingsModule = () => {
   };
 
   const formatCurrency = (amount, currency) => {
-    if (!amount) return 'N/A';
-    return `${currency || 'LKR'} ${amount.toLocaleString()}`;
+    if (!amount && amount !== 0) return 'N/A';
+    return CurrencyService.formatCurrency(amount, currency, userCountry);
   };
 
   const getListingStats = () => {
@@ -335,7 +368,7 @@ const PriceListingsModule = () => {
                     )}
                     <Box>
                       <Typography variant="subtitle2" noWrap sx={{ maxWidth: 200 }}>
-                        {listing.title || 'Untitled Listing'}
+                        {DataLookupService.formatProductDisplayName(productDataMap.get(listing.productId)) || listing.title || 'Untitled Listing'}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 200 }}>
                         {listing.description}
@@ -347,7 +380,7 @@ const PriceListingsModule = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Store fontSize="small" color="action" />
                     <Typography variant="body2" noWrap>
-                      {listing.businessName || listing.businessId || 'N/A'}
+                      {DataLookupService.formatBusinessDisplayName(businessDataMap.get(listing.businessId)) || listing.businessName || 'Unknown Business'}
                     </Typography>
                   </Box>
                 </TableCell>

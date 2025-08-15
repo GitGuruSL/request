@@ -44,10 +44,10 @@ import {
   orderBy
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { useAuth } from '../contexts/AuthContext';
+import useCountryFilter from '../hooks/useCountryFilter';
 
 const Brands = () => {
-  const { adminData } = useAuth();
+  const { getFilteredData, adminData, isSuperAdmin, userCountry } = useCountryFilter();
   const [brands, setBrands] = useState([]);
   const [filteredBrands, setFilteredBrands] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -70,19 +70,11 @@ const Brands = () => {
     filterBrands();
   }, [brands, searchTerm]);
 
-  const loadBrands = async () => {
+    const loadBrands = async () => {
     try {
       setLoading(true);
-      const brandsQuery = query(
-        collection(db, 'brands'),
-        orderBy('name')
-      );
-      const snapshot = await getDocs(brandsQuery);
-      const brandsData = [];
-      snapshot.forEach(doc => {
-        brandsData.push({ id: doc.id, ...doc.data() });
-      });
-      console.log('Loaded brands:', brandsData);
+      const data = await getFilteredData('brands', adminData);
+      const brandsData = data || [];
       setBrands(brandsData);
     } catch (error) {
       console.error('Error loading brands:', error);

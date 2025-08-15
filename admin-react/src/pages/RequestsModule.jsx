@@ -43,6 +43,8 @@ import {
   Category
 } from '@mui/icons-material';
 import useCountryFilter from '../hooks/useCountryFilter.jsx';
+import { DataLookupService } from '../services/DataLookupService.js';
+import { CurrencyService } from '../services/CurrencyService.js';
 
 const RequestsModule = () => {
   const {
@@ -62,6 +64,7 @@ const RequestsModule = () => {
   const [selectedType, setSelectedType] = useState('all');
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [userDataMap, setUserDataMap] = useState(new Map());
 
   const statusColors = {
     active: 'success',
@@ -86,6 +89,20 @@ const RequestsModule = () => {
 
       const data = await getFilteredData('requests', adminData);
       setRequests(data || []);
+      
+      // Fetch user data for all requesters
+      if (data && data.length > 0) {
+        const uniqueUserIds = [...new Set(data.map(req => req.requesterId).filter(Boolean))];
+        const userData = await DataLookupService.getMultipleUsers(uniqueUserIds);
+        
+        const userMap = new Map();
+        uniqueUserIds.forEach((userId, index) => {
+          if (userData[index]) {
+            userMap.set(userId, userData[index]);
+          }
+        });
+        setUserDataMap(userMap);
+      }
       
       console.log(`📊 Loaded ${data?.length || 0} requests for ${isSuperAdmin ? 'super admin' : `country admin (${userCountry})`}`);
     } catch (err) {
@@ -116,17 +133,19 @@ const RequestsModule = () => {
   };
 
   const filteredRequests = requests.filter(request => {
-    const matchesSearch = request.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = !searchTerm || 
+                         request.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          request.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         request.requesterId?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+                         request.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         request.requesterId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         DataLookupService.formatUserDisplayName(userDataMap.get(request.requesterId))
+                           ?.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesStatus = selectedStatus === 'all' || request.status === selectedStatus;
     const matchesType = selectedType === 'all' || request.type === selectedType;
-    
-    return matchesSearch && matchesStatus && matchesType;
-  });
 
-  const formatDate = (dateValue) => {
+    return matchesSearch && matchesStatus && matchesType;
+  });  const formatDate = (dateValue) => {
     if (!dateValue) return 'N/A';
     
     let date;
@@ -142,8 +161,8 @@ const RequestsModule = () => {
   };
 
   const formatCurrency = (amount, currency) => {
-    if (!amount) return 'N/A';
-    return `${currency || 'LKR'} ${amount.toLocaleString()}`;
+    if (!amount && amount !== 0) return 'N/A';
+    return CurrencyService.formatCurrency(amount, currency, userCountry);
   };
 
   const getRequestStats = () => {
@@ -340,7 +359,7 @@ const RequestsModule = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Person fontSize="small" color="action" />
                     <Typography variant="body2" noWrap>
-                      {request.requesterId || 'N/A'}
+                      {DataLookupService.formatUserDisplayName(userDataMap.get(request.requesterId)) || 'Unknown User'}
                     </Typography>
                   </Box>
                 </TableCell>

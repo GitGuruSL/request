@@ -52,6 +52,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 const Categories = () => {
   const { adminData } = useAuth();
+  
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -89,13 +90,9 @@ const Categories = () => {
 
   const loadCategories = async () => {
     try {
-      const snapshot = await getDocs(collection(db, 'categories'));
-      const categoriesData = [];
-      snapshot.forEach(doc => {
-        categoriesData.push({ id: doc.id, ...doc.data() });
-      });
-      console.log('Raw categories data:', categoriesData);
-      setCategories(categoriesData.sort((a, b) => {
+      const data = await getFilteredData('categories', adminData);
+      console.log('Filtered categories data:', data);
+      setCategories((data || []).sort((a, b) => {
         const aName = a.name || a.category || a.title || '';
         const bName = b.name || b.category || b.title || '';
         return aName.localeCompare(bName);
@@ -107,12 +104,9 @@ const Categories = () => {
 
   const loadSubcategories = async () => {
     try {
-      const snapshot = await getDocs(collection(db, 'subcategories'));
-      const subcategoriesData = [];
-      snapshot.forEach(doc => {
-        subcategoriesData.push({ id: doc.id, ...doc.data() });
-      });
-      console.log('Raw subcategories data:', subcategoriesData);
+      const data = await getFilteredData('subcategories', adminData);
+      const subcategoriesData = data || [];
+      console.log('Filtered subcategories data:', subcategoriesData);
       console.log('Sample subcategory:', subcategoriesData[0]);
       console.log('Available categories:', categories.map(c => ({id: c.id, name: c.name || c.category})));
       setSubcategories(subcategoriesData.sort((a, b) => {

@@ -36,7 +36,7 @@ import {
   AirportShuttle,
   People
 } from '@mui/icons-material';
-import { useAuth } from '../contexts/AuthContext';
+import useCountryFilter from '../hooks/useCountryFilter';
 import { 
   collection, 
   addDoc, 
@@ -52,7 +52,7 @@ import {
 import { db } from '../firebase/config';
 
 const Vehicles = () => {
-  const { adminData, isSuperAdmin } = useAuth();
+  const { getFilteredData, adminData, isSuperAdmin, userCountry } = useCountryFilter();
   const [vehicles, setVehicles] = useState([]);
   const [countryVehicles, setCountryVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -100,15 +100,10 @@ const Vehicles = () => {
 
   const fetchVehicles = async () => {
     try {
-      const vehiclesQuery = query(
-        collection(db, 'vehicle_types'),
-        orderBy('displayOrder', 'asc')
+      const data = await getFilteredData('vehicle_types', adminData);
+      const vehiclesData = (data || []).sort((a, b) => 
+        (a.displayOrder || 0) - (b.displayOrder || 0)
       );
-      const snapshot = await getDocs(vehiclesQuery);
-      const vehiclesData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
       setVehicles(vehiclesData);
     } catch (error) {
       console.error('Error fetching vehicles:', error);

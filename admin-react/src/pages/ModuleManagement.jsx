@@ -34,7 +34,7 @@ import {
   Warning as WarningIcon,
   Info as InfoIcon
 } from '@mui/icons-material';
-import { useAuth } from '../contexts/AuthContext';
+import useCountryFilter from '../hooks/useCountryFilter';
 import { db } from '../firebase/config';
 import { 
   collection, 
@@ -48,7 +48,8 @@ import {
 import { BUSINESS_MODULES, CORE_DEPENDENCIES, canEnableModule, getModulesUsingDependency } from '../constants/businessModules';
 
 const ModuleManagement = () => {
-  const { user, adminData, userRole, userCountry } = useAuth();
+  const { getFilteredData, adminData, isSuperAdmin, userCountry } = useCountryFilter();
+  const userRole = isSuperAdmin ? 'super_admin' : 'country_admin';
   const [countries, setCountries] = useState([]);
   const [selectedCountry, setSelectedCountry] = useState('');
   const [countryModules, setCountryModules] = useState({});

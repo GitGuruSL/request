@@ -21,9 +21,14 @@ import ModuleManagement from './pages/ModuleManagement';
 import BusinessVerificationEnhanced from './pages/BusinessVerificationEnhanced';
 import DriverVerificationEnhanced from './pages/DriverVerificationEnhanced';
 import Vehicles from './pages/Vehicles';
-import RequestsModule from './pages/RequestsModule.jsx';
-import ResponsesModule from './pages/ResponsesModule.jsx';
-import PriceListingsModule from './pages/PriceListingsModule.jsx';
+import RequestsModule from './pages/RequestsModule';
+import ResponsesModule from './pages/ResponsesModule';
+import PriceListingsModule from './pages/PriceListingsModule';
+import CategoriesModule from './pages/CategoriesModule';
+import DriverVerificationModule from './pages/DriverVerificationModule';
+import VehiclesModule from './pages/VehiclesModule';
+import VariablesModule from './pages/VariablesModule';
+import SubcategoriesModule from './pages/SubcategoriesModule';
 import DebugAuth from './components/DebugAuth';
 
 const theme = createTheme({
@@ -58,16 +63,25 @@ function App() {
               <Route path="debug" element={<DebugAuth />} />
               <Route path="modules" element={<ModuleManagement />} />
               <Route path="products" element={<Products />} />
-              <Route path="categories" element={<Categories />} />
+              <Route path="categories" element={<CategoriesModule />} />
               <Route path="brands" element={<Brands />} />
               <Route path="variables" element={<Variables />} />
+              <Route path="variable-types" element={<VariablesModule />} />
+              <Route path="subcategories" element={<SubcategoriesModule />} />
               <Route path="countries" element={<Countries />} />
+              <Route path="country-data" element={<Countries />} />
               <Route path="cities" element={<Cities />} />
               <Route path="payment-methods" element={<PaymentMethods />} />
               <Route path="admin-users" element={<AdminUsers />} />
+              <Route path="admin-management" element={<AdminUsers />} />
+              <Route path="users" element={<AdminUsers />} />
               <Route path="businesses" element={<BusinessVerificationEnhanced />} />
+              <Route path="business-management" element={<BusinessVerificationEnhanced />} />
               <Route path="drivers" element={<DriverVerificationEnhanced />} />
-              <Route path="vehicles" element={<Vehicles />} />
+              <Route path="vehicles" element={<VehiclesModule />} />
+              <Route path="cars" element={<VehiclesModule />} />
+              <Route path="bikes" element={<VehiclesModule />} />
+              <Route path="driver-verification" element={<DriverVerificationEnhanced />} />
               <Route path="requests" element={<RequestsModule />} />
               <Route path="responses" element={<ResponsesModule />} />
               <Route path="price-listings" element={<PriceListingsModule />} />
