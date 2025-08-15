@@ -25,6 +25,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
   String? _currencySymbol;
   CountryModules? _countryModules;
   List<RequestType> _enabledRequestTypes = [];
+  bool _showFilters = false; // Add filter visibility state
 
   @override
   void initState() {
@@ -199,90 +200,124 @@ class _BrowseScreenState extends State<BrowseScreen> {
         elevation: 0, // No shadow
         foregroundColor: theme.textTheme.bodyLarge?.color, // Use theme text color
         titleSpacing: 0,
+        actions: [
+          IconButton(
+            icon: Icon(
+              _showFilters ? Icons.filter_alt : Icons.filter_alt_outlined,
+              color: _showFilters ? Colors.blue : theme.textTheme.bodyLarge?.color,
+            ),
+            onPressed: () {
+              setState(() {
+                _showFilters = !_showFilters;
+              });
+            },
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
         children: [
-          // Search and Filter Section
+          // Search bar
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                // Search Bar
-                TextFormField(
-                  decoration: InputDecoration(
-                    hintText: 'Search requests...',
-                    prefixIcon: const Icon(Icons.search),
-                    filled: true,
-                    fillColor: Colors.white, // White background for the field
-                    border: InputBorder.none, // No border
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      _searchQuery = value;
-                    });
-                  },
-                ),
-                const SizedBox(height: 12),
-                // Filter Row
-                Row(
-                  children: [
-                    // Category Filter
-                    Expanded(
-                      child: DropdownButtonFormField<RequestType>(
-                        value: _selectedType,
-                        decoration: InputDecoration(
-                          labelText: 'Category',
-                          filled: true,
-                          fillColor: Colors.white, // White background
-                          border: InputBorder.none, // No border
-                        ),
-                        items: [
-                          const DropdownMenuItem(value: null, child: Text('All Categories')),
-                          ..._enabledRequestTypes.map((type) {
-                            return DropdownMenuItem(
-                              value: type,
-                              child: Text(_getRequestTypeDisplayName(type)),
-                            );
-                          }).toList(),
-                        ],
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedType = value;
-                          });
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    // Location Filter
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        value: _selectedLocation,
-                        decoration: InputDecoration(
-                          labelText: 'Location',
-                          filled: true,
-                          fillColor: Colors.white, // White background
-                          border: InputBorder.none, // No border
-                        ),
-                        items: const [
-                          DropdownMenuItem(value: 'All Locations', child: Text('All Locations')),
-                          DropdownMenuItem(value: 'Nearby', child: Text('Nearby')),
-                          DropdownMenuItem(value: 'City Center', child: Text('City Center')),
-                          DropdownMenuItem(value: 'Suburbs', child: Text('Suburbs')),
-                        ],
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedLocation = value ?? 'All Locations';
-                          });
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+            child: TextFormField(
+              decoration: InputDecoration(
+                hintText: 'Search requests...',
+                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: Colors.white, // White background for the field
+                border: InputBorder.none, // No border
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value;
+                });
+              },
             ),
           ),
+
+          // Collapsible filter section
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            height: _showFilters ? null : 0,
+            child: _showFilters
+                ? Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    color: theme.colorScheme.surface.withOpacity(0.5),
+                    child: Column(
+                      children: [
+                        // Category filter
+                        Row(
+                          children: [
+                            const Text('Category:', style: TextStyle(fontWeight: FontWeight.w500)),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: DropdownButtonFormField<RequestType>(
+                                value: _selectedType,
+                                decoration: InputDecoration(
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                ),
+                                hint: const Text('All Categories'),
+                                items: [
+                                  const DropdownMenuItem(value: null, child: Text('All Categories')),
+                                  ..._enabledRequestTypes.map((type) {
+                                    return DropdownMenuItem(
+                                      value: type,
+                                      child: Text(_getRequestTypeDisplayName(type)),
+                                    );
+                                  }).toList(),
+                                ],
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedType = value;
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        
+                        // Location filter
+                        Row(
+                          children: [
+                            const Text('Location:', style: TextStyle(fontWeight: FontWeight.w500)),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                value: _selectedLocation,
+                                decoration: InputDecoration(
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                ),
+                                items: const [
+                                  DropdownMenuItem(value: 'All Locations', child: Text('All Locations')),
+                                  DropdownMenuItem(value: 'Nearby', child: Text('Nearby')),
+                                  DropdownMenuItem(value: 'City Center', child: Text('City Center')),
+                                  DropdownMenuItem(value: 'Suburbs', child: Text('Suburbs')),
+                                ],
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedLocation = value ?? 'All Locations';
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
+
           // Results List
           Expanded(
             child: _error != null
@@ -617,17 +652,17 @@ class _BrowseScreenState extends State<BrowseScreen> {
   IconData _getIconForRequestType(RequestType type) {
     switch (type) {
       case RequestType.item:
-        return Icons.shopping_bag;
+        return Icons.shopping_bag_outlined;
       case RequestType.service:
-        return Icons.build;
+        return Icons.build_outlined;
       case RequestType.ride:
-        return Icons.directions_car;
+        return Icons.directions_car_outlined;
       case RequestType.delivery:
-        return Icons.local_shipping;
+        return Icons.local_shipping_outlined;
       case RequestType.rental:
-        return Icons.key;
+        return Icons.vpn_key_outlined;
       case RequestType.price:
-        return Icons.compare_arrows;
+        return Icons.compare_arrows_outlined;
     }
   }
 }
