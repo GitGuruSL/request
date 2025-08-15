@@ -519,83 +519,112 @@ class _BrowseScreenState extends State<BrowseScreen> {
     
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: iconData['color'].withOpacity(0.15),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            iconData['icon'],
-            color: iconData['color'],
-            size: 22,
-          ),
-        ),
-        title: Text(
-          request.title,
-          style: const TextStyle(fontWeight: FontWeight.w500),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              request.description,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Text(
-                  _getRequestTypeName(request.type),
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                if (request.budget != null) ...[
-                  Text(
-                    ' • ',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 12,
-                    ),
-                  ),
-                  Text(
-                    request.budget != null 
-                      ? CountryService.instance.formatPrice(request.budget!)
-                      : 'Budget not specified',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ],
-        ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
-            Text(
-              _getLocationDisplay(request),
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
+      child: InkWell(
         onTap: () {
           _showRequestDetail(request);
         },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top row with icon and title
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: iconData['color'].withOpacity(0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      iconData['icon'],
+                      color: iconData['color'],
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      request.title,
+                      style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              
+              // Description
+              Text(
+                request.description,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.grey[700],
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 8),
+              
+              // Bottom row with type/budget on left and location on right
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Left side - type and budget
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Text(
+                          _getRequestTypeName(request.type),
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        if (request.budget != null) ...[
+                          Text(
+                            ' • ',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                            ),
+                          ),
+                          Text(
+                            CountryService.instance.formatPrice(request.budget!),
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  
+                  // Right side - location
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
+                      const SizedBox(width: 4),
+                      Text(
+                        _getLocationDisplay(request),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
