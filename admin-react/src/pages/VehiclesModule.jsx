@@ -56,6 +56,7 @@ const VehiclesModule = () => {
 
   const [vehicles, setVehicles] = useState([]);
   const [vehicleTypes, setVehicleTypes] = useState([]);
+  const [vehicleTypesMap, setVehicleTypesMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -88,24 +89,60 @@ const VehiclesModule = () => {
       // Load vehicle types first
       const vehicleTypesData = await getFilteredData('vehicle_types', adminData);
       setVehicleTypes(vehicleTypesData || []);
+      
+      // Create a mapping of vehicle type IDs to names
+      const typesMap = {};
+      if (vehicleTypesData) {
+        vehicleTypesData.forEach(type => {
+          typesMap[type.id] = type.name || type.type_name || 'Unknown';
+        });
+      }
+      setVehicleTypesMap(typesMap);
 
-      // Load both cars and bikes
-      const [carsData, bikesData] = await Promise.all([
-        getFilteredData('cars', adminData),
-        getFilteredData('bikes', adminData)
-      ]);
+      // Load driver verifications (contains vehicle data)
+      const driversData = await getFilteredData('new_driver_verifications', adminData);
       
-      const allVehicles = [
-        ...(carsData || []).map(car => ({ ...car, type: 'car' })),
-        ...(bikesData || []).map(bike => ({ ...bike, type: 'bike' }))
-      ];
+      if (driversData) {
+        // Extract vehicle information from driver verification data
+        const vehiclesWithDrivers = driversData.map(driver => {
+          return {
+            id: driver.id,
+            // Driver info
+            driverName: driver.name || driver.driverName || 'N/A',
+            driverPhone: driver.phone || driver.phoneNumber || 'N/A', 
+            driverEmail: driver.email || 'N/A',
+            status: driver.status || 'pending',
+            country: driver.country || userCountry,
+            // Vehicle info 
+            vehicleNumber: driver.vehicleNumber || driver.vehicle_number || 'N/A',
+            vehicleType: typesMap[driver.vehicleType] || driver.vehicleType || 'Unknown',
+            vehicleTypeId: driver.vehicleType, // Keep original ID for filtering
+            vehicleBrand: driver.vehicleBrand || driver.vehicle_brand || 'N/A',
+            vehicleModel: driver.vehicleModel || driver.vehicle_model || '',
+            vehicleColor: driver.vehicleColor || driver.vehicle_color || 'N/A',
+            vehicleYear: driver.vehicleYear || driver.vehicle_year || 'N/A',
+            vehicleImages: driver.vehicleImages || driver.vehicle_images || []
+          };
+        });
+        
+        setVehicles(vehiclesWithDrivers);
+        
+        // Calculate stats
+        const total = vehiclesWithDrivers.length;
+        const active = vehiclesWithDrivers.filter(v => v.status === 'approved').length;
+        const available = vehiclesWithDrivers.filter(v => v.status === 'approved').length;
+        
+        setStats({ total, active, available });
+      } else {
+        setVehicles([]);
+        setStats({ total: 0, active: 0, available: 0 });
+      }
       
-      setVehicles(allVehicles);
-      
-      console.log(`📊 Loaded ${allVehicles.length} vehicles and ${vehicleTypesData?.length || 0} vehicle types for ${isSuperAdmin ? 'super admin' : `country admin (${userCountry})`}`);
-    } catch (err) {
-      console.error('Error loading vehicles:', err);
-      setError('Failed to load vehicles: ' + err.message);
+    } catch (error) {
+      console.error('Error loading vehicles:', error);
+      setError('Failed to load vehicles');
+      setVehicles([]);
+      setStats({ total: 0, active: 0, available: 0 });
     } finally {
       setLoading(false);
     }
@@ -127,12 +164,14 @@ const VehiclesModule = () => {
 
   const filteredVehicles = vehicles.filter(vehicle => {
     const matchesSearch = !searchTerm || 
-                         vehicle.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         vehicle.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         vehicle.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         vehicle.color?.toLowerCase().includes(searchTerm.toLowerCase());
+                         vehicle.driverName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         vehicle.vehicleModel?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         vehicle.vehicleNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         vehicle.vehicleColor?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesType = selectedType === 'all' || vehicle.type === selectedType;
+    const matchesType = selectedType === 'all' || 
+                       vehicle.vehicleTypeId === selectedType ||
+                       vehicle.vehicleType?.toLowerCase().includes(selectedType.toLowerCase());
 
     return matchesSearch && matchesType;
   });
@@ -144,27 +183,27 @@ const VehiclesModule = () => {
   };
 
   const getVehicleStats = () => {
+    const totalVehicles = filteredVehicles.length;
+    const activeVehicles = filteredVehicles.filter(v => v.isActive).length;
+    const availableVehicles = filteredVehicles.filter(v => v.availability).length;
+    
+    // Get vehicle type counts
     const vehicleTypeStats = vehicleTypes.map(vType => {
-      const matchingVehicles = vehicles.filter(v => 
-        v.vehicleType === vType.name || 
-        v.type === vType.name.toLowerCase() ||
-        v.vehicleTypeId === vType.id
-      );
+      const matchingVehicles = vehicles.filter(v => v.vehicleType === vType.id);
       return {
-        ...vType,
-        registeredCount: matchingVehicles.length,
-        vehicles: matchingVehicles
+        name: vType.name,
+        count: matchingVehicles.length,
+        color: vType.name.toLowerCase().includes('car') ? 'primary' : 
+               vType.name.toLowerCase().includes('bike') ? 'success' : 
+               vType.name.toLowerCase().includes('van') ? 'info' : 
+               vType.name.toLowerCase().includes('truck') ? 'warning' : 'secondary'
       };
     });
 
     return {
-      total: filteredVehicles.length,
-      cars: filteredVehicles.filter(v => v.type === 'car' || v.vehicleType === 'Car').length,
-      bikes: filteredVehicles.filter(v => v.type === 'bike' || v.vehicleType === 'Bike').length,
-      threeWheelers: filteredVehicles.filter(v => v.type === 'three-wheeler' || v.vehicleType === 'Three Wheeler').length,
-      vans: filteredVehicles.filter(v => v.type === 'van' || v.vehicleType === 'Van').length,
-      sharedRides: filteredVehicles.filter(v => v.type === 'shared' || v.vehicleType === 'Shared Ride').length,
-      trucks: filteredVehicles.filter(v => v.type === 'truck' || v.vehicleType === 'Truck').length,
+      total: totalVehicles,
+      active: activeVehicles,
+      available: availableVehicles,
       vehicleTypeStats
     };
   };
@@ -228,30 +267,13 @@ const VehiclesModule = () => {
               <Box display="flex" alignItems="center" justifyContent="space-between">
                 <Box>
                   <Typography color="text.secondary" gutterBottom variant="overline">
-                    Cars
-                  </Typography>
-                  <Typography variant="h4" color="primary.main">
-                    {stats.cars}
-                  </Typography>
-                </Box>
-                <DirectionsCar color="primary" sx={{ fontSize: 40, opacity: 0.3 }} />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={4}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" justifyContent="space-between">
-                <Box>
-                  <Typography color="text.secondary" gutterBottom variant="overline">
-                    Bikes
+                    Active Vehicles
                   </Typography>
                   <Typography variant="h4" color="success.main">
-                    {stats.bikes}
+                    {stats.active}
                   </Typography>
                 </Box>
-                <TwoWheeler color="success" sx={{ fontSize: 40, opacity: 0.3 }} />
+                <DirectionsCar color="success" sx={{ fontSize: 40, opacity: 0.3 }} />
               </Box>
             </CardContent>
           </Card>
@@ -262,47 +284,13 @@ const VehiclesModule = () => {
               <Box display="flex" alignItems="center" justifyContent="space-between">
                 <Box>
                   <Typography color="text.secondary" gutterBottom variant="overline">
-                    Three Wheelers
+                    Available Now
                   </Typography>
                   <Typography variant="h4" color="info.main">
-                    {stats.threeWheelers}
+                    {stats.available}
                   </Typography>
                 </Box>
-                <LocalShipping color="info" sx={{ fontSize: 40, opacity: 0.3 }} />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={4}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" justifyContent="space-between">
-                <Box>
-                  <Typography color="text.secondary" gutterBottom variant="overline">
-                    Vans
-                  </Typography>
-                  <Typography variant="h4" color="secondary.main">
-                    {stats.vans}
-                  </Typography>
-                </Box>
-                <LocalShipping color="secondary" sx={{ fontSize: 40, opacity: 0.3 }} />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={4}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" justifyContent="space-between">
-                <Box>
-                  <Typography color="text.secondary" gutterBottom variant="overline">
-                    Shared Rides
-                  </Typography>
-                  <Typography variant="h4" color="warning.main">
-                    {stats.sharedRides}
-                  </Typography>
-                </Box>
-                <TwoWheeler color="warning" sx={{ fontSize: 40, opacity: 0.3 }} />
+                <Speed color="info" sx={{ fontSize: 40, opacity: 0.3 }} />
               </Box>
             </CardContent>
           </Card>
@@ -353,12 +341,13 @@ const VehiclesModule = () => {
         <Table>
           <TableHead>
             <TableRow>
+              <TableCell>Driver</TableCell>
               <TableCell>Vehicle</TableCell>
-              <TableCell>Brand</TableCell>
-              <TableCell>Model</TableCell>
+              <TableCell>Brand/Model</TableCell>
               <TableCell>Type</TableCell>
               <TableCell>Color</TableCell>
               <TableCell>Year</TableCell>
+              <TableCell>Status</TableCell>
               <TableCell>Country</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
@@ -368,67 +357,73 @@ const VehiclesModule = () => {
               <TableRow key={vehicle.id} hover>
                 <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    {vehicle.imageUrl ? (
+                    <Avatar sx={{ bgcolor: 'primary.main' }}>
+                      {vehicle.driverName?.charAt(0) || 'D'}
+                    </Avatar>
+                    <Box>
+                      <Typography variant="subtitle2" fontWeight="medium">
+                        {vehicle.driverName || 'N/A'}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {vehicle.driverPhone || 'No phone'}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </TableCell>
+                <TableCell>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    {vehicle.vehicleImages?.[0] ? (
                       <Avatar
-                        src={vehicle.imageUrl}
-                        alt={vehicle.name}
-                        sx={{ width: 48, height: 48 }}
+                        src={vehicle.vehicleImages[0]}
+                        alt="Vehicle"
                         variant="rounded"
+                        sx={{ width: 40, height: 40 }}
                       />
                     ) : (
-                      <Avatar sx={{ width: 48, height: 48 }} variant="rounded">
-                        {typeIcons[vehicle.type] || <DirectionsCar />}
+                      <Avatar variant="rounded" sx={{ width: 40, height: 40, bgcolor: 'grey.300' }}>
+                        <DirectionsCar />
                       </Avatar>
                     )}
                     <Box>
                       <Typography variant="subtitle2" fontWeight="medium">
-                        {vehicle.name}
+                        {vehicle.vehicleNumber || 'N/A'}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {vehicle.description}
+                        {vehicle.vehicleType || 'Unknown type'}
                       </Typography>
                     </Box>
                   </Box>
                 </TableCell>
                 <TableCell>
                   <Typography variant="body2">
-                    {vehicle.brand || 'N/A'}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2">
-                    {vehicle.model || 'N/A'}
+                    {vehicle.vehicleBrand || 'N/A'} {vehicle.vehicleModel || ''}
                   </Typography>
                 </TableCell>
                 <TableCell>
                   <Chip
-                    icon={typeIcons[vehicle.type]}
-                    label={vehicle.type}
-                    color={typeColors[vehicle.type] || 'default'}
+                    label={vehicle.vehicleType || 'Unknown'}
                     size="small"
                     variant="outlined"
+                    color="primary"
                   />
                 </TableCell>
                 <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Box
-                      sx={{
-                        width: 16,
-                        height: 16,
-                        borderRadius: '50%',
-                        backgroundColor: vehicle.color?.toLowerCase() || '#ccc',
-                        border: '1px solid #ddd'
-                      }}
-                    />
-                    <Typography variant="body2">
-                      {vehicle.color || 'N/A'}
-                    </Typography>
-                  </Box>
+                  <Typography variant="body2">
+                    {vehicle.vehicleColor || 'N/A'}
+                  </Typography>
                 </TableCell>
                 <TableCell>
                   <Typography variant="body2">
-                    {vehicle.year || 'N/A'}
+                    {vehicle.vehicleYear || 'N/A'}
                   </Typography>
+                </TableCell>
+                <TableCell>
+                  <Chip
+                    label={vehicle.status === 'approved' ? 'Active' : 'Pending'}
+                    size="small"
+                    color={vehicle.status === 'approved' ? 'success' : 'warning'}
+                    variant="outlined"
+                  />
                 </TableCell>
                 <TableCell>
                   <Chip
@@ -473,11 +468,11 @@ const VehiclesModule = () => {
         onClose={() => setFilterAnchorEl(null)}
       >
         <MenuItem onClick={() => handleTypeFilter('all')}>All Types</MenuItem>
-        <MenuItem onClick={() => handleTypeFilter('car')}>Cars</MenuItem>
-        <MenuItem onClick={() => handleTypeFilter('bike')}>Bikes</MenuItem>
-        <MenuItem onClick={() => handleTypeFilter('truck')}>Trucks</MenuItem>
-        <MenuItem onClick={() => handleTypeFilter('van')}>Vans</MenuItem>
-        <MenuItem onClick={() => handleTypeFilter('bus')}>Buses</MenuItem>
+        {vehicleTypes.map((type) => (
+          <MenuItem key={type.id} onClick={() => handleTypeFilter(type.id)}>
+            {type.name || type.type_name || 'Unknown'}
+          </MenuItem>
+        ))}
       </Menu>
 
       {/* View Dialog */}
@@ -490,48 +485,89 @@ const VehiclesModule = () => {
         {selectedVehicle && (
           <>
             <DialogTitle>
-              Vehicle Details: {selectedVehicle.name}
+              Driver & Vehicle Details: {selectedVehicle.driverName}
             </DialogTitle>
             <DialogContent>
-              <Grid container spacing={2}>
+              <Grid container spacing={3}>
                 <Grid item xs={12} sm={6}>
-                  {selectedVehicle.imageUrl && (
-                    <img
-                      src={selectedVehicle.imageUrl}
-                      alt={selectedVehicle.name}
-                      style={{ width: '100%', maxWidth: 300, borderRadius: 8 }}
-                    />
-                  )}
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" gutterBottom>Vehicle Name</Typography>
+                  <Typography variant="h6" gutterBottom color="primary">Driver Information</Typography>
+                  
+                  <Typography variant="subtitle2" gutterBottom>Full Name</Typography>
                   <Typography variant="body2" paragraph>
-                    {selectedVehicle.name}
+                    {selectedVehicle.driverName || 'N/A'}
                   </Typography>
                   
-                  <Typography variant="subtitle2" gutterBottom>Brand & Model</Typography>
+                  <Typography variant="subtitle2" gutterBottom>Phone Number</Typography>
                   <Typography variant="body2" paragraph>
-                    {selectedVehicle.brand} {selectedVehicle.model}
+                    {selectedVehicle.driverPhone || 'N/A'}
                   </Typography>
 
+                  <Typography variant="subtitle2" gutterBottom>Email</Typography>
+                  <Typography variant="body2" paragraph>
+                    {selectedVehicle.driverEmail || 'N/A'}
+                  </Typography>
+
+                  <Typography variant="subtitle2" gutterBottom>Country</Typography>
+                  <Typography variant="body2" paragraph>
+                    {selectedVehicle.country || 'N/A'}
+                  </Typography>
+
+                  <Typography variant="subtitle2" gutterBottom>Status</Typography>
+                  <Chip
+                    label={selectedVehicle.status === 'approved' ? 'Approved' : 'Pending'}
+                    color={selectedVehicle.status === 'approved' ? 'success' : 'warning'}
+                    size="small"
+                    sx={{ mb: 2 }}
+                  />
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="h6" gutterBottom color="primary">Vehicle Information</Typography>
+                  
+                  <Typography variant="subtitle2" gutterBottom>Vehicle Number</Typography>
+                  <Typography variant="body2" paragraph>
+                    {selectedVehicle.vehicleNumber || 'N/A'}
+                  </Typography>
+                  
                   <Typography variant="subtitle2" gutterBottom>Type</Typography>
                   <Chip
-                    icon={typeIcons[selectedVehicle.type]}
-                    label={selectedVehicle.type}
-                    color={typeColors[selectedVehicle.type] || 'default'}
+                    label={selectedVehicle.vehicleType || 'Unknown'}
+                    color="primary"
                     size="small"
                     sx={{ mb: 2 }}
                   />
 
-                  <Typography variant="subtitle2" gutterBottom>Year & Color</Typography>
+                  <Typography variant="subtitle2" gutterBottom>Brand & Model</Typography>
                   <Typography variant="body2" paragraph>
-                    {selectedVehicle.year} • {selectedVehicle.color}
+                    {selectedVehicle.vehicleBrand || 'N/A'} {selectedVehicle.vehicleModel || ''}
                   </Typography>
 
-                  <Typography variant="subtitle2" gutterBottom>Description</Typography>
+                  <Typography variant="subtitle2" gutterBottom>Year & Color</Typography>
                   <Typography variant="body2" paragraph>
-                    {selectedVehicle.description || 'No description available'}
+                    {selectedVehicle.vehicleYear || 'N/A'} • {selectedVehicle.vehicleColor || 'N/A'}
                   </Typography>
+
+                  {selectedVehicle.vehicleImages && selectedVehicle.vehicleImages.length > 0 && (
+                    <>
+                      <Typography variant="subtitle2" gutterBottom>Vehicle Images</Typography>
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                        {selectedVehicle.vehicleImages.map((image, index) => (
+                          <img
+                            key={index}
+                            src={image}
+                            alt={`Vehicle ${index + 1}`}
+                            style={{ 
+                              width: 80, 
+                              height: 80, 
+                              objectFit: 'cover', 
+                              borderRadius: 8,
+                              border: '1px solid #ddd'
+                            }}
+                          />
+                        ))}
+                      </Box>
+                    </>
+                  )}
                 </Grid>
               </Grid>
             </DialogContent>
