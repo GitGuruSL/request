@@ -52,10 +52,10 @@ import {
   orderBy
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { useAuth } from '../contexts/AuthContext';
+import useCountryFilter from '../hooks/useCountryFilter';
 
 const Variables = () => {
-  const { adminData } = useAuth();
+  const { getFilteredData, adminData, isSuperAdmin, userCountry } = useCountryFilter();
   const [variables, setVariables] = useState([]);
   const [filteredVariables, setFilteredVariables] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -96,20 +96,10 @@ const Variables = () => {
     try {
       setLoading(true);
       
-      // Load variables
-      const variablesQuery = query(
-        collection(db, 'custom_product_variables'),
-        orderBy('name')
-      );
-      const variablesSnapshot = await getDocs(variablesQuery);
-      const variablesData = [];
-      variablesSnapshot.forEach(doc => {
-        variablesData.push({ id: doc.id, ...doc.data() });
-      });
-      
+      // Load variables using country filter system
+      const variablesData = await getFilteredData('custom_product_variables', adminData);
       console.log('Loaded variables:', variablesData);
-      
-      setVariables(variablesData);
+      setVariables(variablesData || []);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {

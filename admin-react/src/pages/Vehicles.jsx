@@ -367,7 +367,7 @@ const Vehicles = () => {
               disabled={loading}
               title="Add or refresh default vehicle types"
             >
-              {loading ? 'Adding...' : 'Add Default Types'}
+              {loading ? 'Adding...' : 'Refresh Default Types'}
             </Button>
             <Button
               variant="contained"

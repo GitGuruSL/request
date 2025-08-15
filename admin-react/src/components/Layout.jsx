@@ -132,7 +132,7 @@ const Layout = () => {
     { text: 'Divider' },
     { text: 'Products', icon: <ShoppingCart />, path: '/products', access: 'all', permission: 'productManagement' },
     { text: 'Businesses', icon: <Business />, path: '/businesses', access: 'all', permission: 'businessManagement' },
-    { text: 'Driver Verification', icon: <Gavel />, path: '/driver-verification', access: 'all', permission: 'driverVerification' },
+    { text: 'Drivers', icon: <Gavel />, path: '/driver-verification', access: 'all', permission: 'driverVerification' },
     { text: 'Divider' },
     { text: 'Vehicles', icon: <DirectionsCar />, path: '/vehicles', access: 'super_admin', permission: 'vehicleManagement' },
     { text: 'Divider' },

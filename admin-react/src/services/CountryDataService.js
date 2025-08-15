@@ -42,7 +42,30 @@ export class CountryDataService {
    */
   async getFilteredData(collectionName, adminData, additionalFilters = []) {
     try {
-      const filteredQuery = this.getCountryFilteredQuery(collectionName, adminData, additionalFilters);
+      // Global collections that don't need country filtering
+      const globalCollections = [
+        'master_products',
+        'categories', 
+        'subcategories',
+        'brands',
+        'vehicle_types',
+        'variables',
+        'product_variables'
+      ];
+
+      let filteredQuery;
+      
+      if (globalCollections.includes(collectionName)) {
+        // For global collections, don't apply country filter
+        filteredQuery = collection(db, collectionName);
+        if (additionalFilters.length > 0) {
+          filteredQuery = query(filteredQuery, ...additionalFilters);
+        }
+      } else {
+        // For country-specific collections, apply country filter
+        filteredQuery = this.getCountryFilteredQuery(collectionName, adminData, additionalFilters);
+      }
+      
       const snapshot = await getDocs(filteredQuery);
       return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {

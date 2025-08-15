@@ -153,7 +153,7 @@ const Cities = () => {
       }
 
       // Validate if user can manage this country
-      if (userRole !== 'super_admin' && formData.countryCode !== userCountry) {
+      if (!isSuperAdmin && formData.countryCode !== userCountry) {
         setError('You can only manage cities in your assigned country');
         return;
       }
@@ -169,7 +169,7 @@ const Cities = () => {
         },
         description: formData.description.trim(),
         updatedAt: Timestamp.now(),
-        updatedBy: userRole
+        updatedBy: adminData?.email || adminData?.role || 'admin'
       };
 
       if (editingCity) {
@@ -179,7 +179,7 @@ const Cities = () => {
       } else {
         // Create new city
         cityData.createdAt = Timestamp.now();
-        cityData.createdBy = userRole;
+        cityData.createdBy = adminData?.email || adminData?.role || 'admin';
         await addDoc(collection(db, 'cities'), cityData);
         setSuccess('City added successfully');
       }
@@ -259,7 +259,7 @@ const Cities = () => {
             Cities Management
           </Typography>
           <Typography variant="subtitle1" color="text.secondary">
-            {userRole === 'super_admin' 
+            {isSuperAdmin 
               ? 'Manage cities across all countries' 
               : `Manage cities in ${getCountryName(userCountry)}`
             }
@@ -333,7 +333,7 @@ const Cities = () => {
             <TableHead>
               <TableRow>
                 <TableCell>City Name</TableCell>
-                {userRole === 'super_admin' && <TableCell>Country</TableCell>}
+                {isSuperAdmin && <TableCell>Country</TableCell>}
                 <TableCell>Status</TableCell>
                 <TableCell>Population</TableCell>
                 <TableCell>Created</TableCell>
@@ -355,7 +355,7 @@ const Cities = () => {
                       )}
                     </Box>
                   </TableCell>
-                  {userRole === 'super_admin' && (
+                  {isSuperAdmin && (
                     <TableCell>
                       <Chip
                         label={getCountryName(city.countryCode)}
@@ -427,8 +427,8 @@ const Cities = () => {
                   value={formData.countryCode}
                   onChange={(e) => handleInputChange('countryCode', e.target.value)}
                   margin="normal"
-                  disabled={userRole !== 'super_admin'}
-                  helperText={userRole !== 'super_admin' ? 'You can only manage cities in your country' : ''}
+                  disabled={!isSuperAdmin}
+                  helperText={!isSuperAdmin ? 'You can only manage cities in your country' : ''}
                 />
               </Grid>
               <Grid item xs={12} md={6}>
