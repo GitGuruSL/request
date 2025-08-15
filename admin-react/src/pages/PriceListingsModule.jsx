@@ -43,7 +43,9 @@ import {
   AttachMoney,
   Category,
   Store,
-  Star
+  Star,
+  ArrowBack,
+  ArrowForward
 } from '@mui/icons-material';
 import useCountryFilter from '../hooks/useCountryFilter.jsx';
 import { DataLookupService } from '../services/DataLookupService.js';
@@ -59,6 +61,11 @@ const PriceListingsModule = () => {
   } = useCountryFilter();
 
   const [listings, setListings] = useState([]);
+  const [productGroups, setProductGroups] = useState([]);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [selectedProductForDetail, setSelectedProductForDetail] = useState(null);
+  const [productPrices, setProductPrices] = useState([]);
+  const [showProductDetail, setShowProductDetail] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -83,12 +90,19 @@ const PriceListingsModule = () => {
       setError(null);
 
       const data = await getFilteredData('price_listings', adminData);
+      console.log(`📊 Raw listings data:`, data);
       setListings(data || []);
       
       // Fetch product and business data for all listings
       if (data && data.length > 0) {
-        const uniqueProductIds = [...new Set(data.map(listing => listing.productId).filter(Boolean))];
+        // Get unique product IDs from both productId and masterProductId fields
+        const uniqueProductIds = [...new Set(
+          data.map(listing => listing.productId || listing.masterProductId).filter(Boolean)
+        )];
         const uniqueBusinessIds = [...new Set(data.map(listing => listing.businessId).filter(Boolean))];
+        
+        console.log(`🔍 Found ${uniqueProductIds.length} unique products and ${uniqueBusinessIds.length} unique businesses`);
+        console.log(`📦 Product IDs:`, uniqueProductIds);
         
         const [productData, businessData] = await Promise.all([
           DataLookupService.getMultipleProducts(uniqueProductIds),
@@ -107,11 +121,126 @@ const PriceListingsModule = () => {
         uniqueBusinessIds.forEach((businessId, index) => {
           if (businessData[index]) {
             businessMap.set(businessId, businessData[index]);
+            console.log(`📋 Business ${businessId}:`, businessData[index]);
+          } else {
+            console.warn(`❌ No business data for ID: ${businessId}`);
           }
         });
         
         setProductDataMap(productMap);
         setBusinessDataMap(businessMap);
+        
+        // Create product groups with price counts - grouped by product AND country
+        const productGroupMap = new Map();
+        
+        data.forEach(listing => {
+          // Try both productId and masterProductId field names
+          const productId = listing.productId || listing.masterProductId;
+          const productData = productMap.get(productId);
+          
+          // Try multiple country field names and fallback to user's country
+          const country = listing.country || listing.countryCode || listing.countryName || userCountry || 'LK';
+          
+          // Create unique key combining product and country
+          const groupKey = `${productId}_${country}`;
+          
+          console.log(`Processing listing:`, { 
+            listingId: listing.id, 
+            productId: listing.productId, 
+            masterProductId: listing.masterProductId, 
+            finalProductId: productId,
+            businessId: listing.businessId,
+            businessName: listing.businessName,
+            business_name: listing.business_name,
+            country: listing.country,
+            countryCode: listing.countryCode,
+            countryName: listing.countryName,
+            finalCountry: country,
+            groupKey: groupKey,
+            hasProductData: !!productData 
+          });
+          
+          if (productId) {
+            // Create a fallback product data if we don't have the actual product data
+            const fallbackProductData = productData || {
+              name: listing.productName || listing.title || `Product ${productId}`,
+              title: listing.productName || listing.title || `Product ${productId}`,
+              category: listing.category || 'Other',
+              categories: [listing.category || 'Other'],
+              images: listing.productImages || []
+            };
+            
+            if (!productGroupMap.has(groupKey)) {
+              productGroupMap.set(groupKey, {
+                productId,
+                country,
+                groupKey,
+                productData: fallbackProductData,
+                productName: fallbackProductData.name || fallbackProductData.title || `Product ${productId}`,
+                categories: fallbackProductData.categories || [fallbackProductData.category || 'Other'],
+                sampleImage: fallbackProductData.images?.[0] || listing.images?.[0] || listing.productImages?.[0],
+                listings: [],
+                priceCount: 0,
+                totalListings: 0,
+                minPrice: null,
+                maxPrice: null,
+                avgPrice: 0,
+                averagePrice: 0,
+                priceRange: { min: 0, max: 0 },
+                businessCount: 0,
+                statusBreakdown: { active: 0, pending: 0, inactive: 0 },
+                averageRating: 0,
+                totalReviews: 0
+              });
+            }
+            
+            const group = productGroupMap.get(groupKey);
+            group.listings.push(listing);
+            group.priceCount = group.listings.length;
+            group.totalListings = group.listings.length;
+            
+            // Calculate price statistics
+            const prices = group.listings
+              .filter(l => l.price && !isNaN(parseFloat(l.price)))
+              .map(l => parseFloat(l.price));
+              
+            if (prices.length > 0) {
+              group.minPrice = Math.min(...prices);
+              group.maxPrice = Math.max(...prices);
+              group.avgPrice = prices.reduce((sum, price) => sum + price, 0) / prices.length;
+              group.averagePrice = group.avgPrice;
+              group.priceRange = { min: group.minPrice, max: group.maxPrice };
+            }
+            
+            // Count unique businesses
+            const uniqueBusinesses = new Set(group.listings.map(l => l.businessId).filter(Boolean));
+            group.businessCount = uniqueBusinesses.size;
+            
+            // Calculate status breakdown
+            group.statusBreakdown = {
+              active: group.listings.filter(l => l.status === 'active').length,
+              pending: group.listings.filter(l => l.status === 'pending').length,
+              inactive: group.listings.filter(l => l.status === 'inactive').length
+            };
+            
+            // Calculate average rating from businesses
+            const businessRatings = group.listings
+              .map(l => businessMap.get(l.businessId)?.rating)
+              .filter(rating => rating != null);
+            
+            if (businessRatings.length > 0) {
+              group.averageRating = businessRatings.reduce((sum, rating) => sum + rating, 0) / businessRatings.length;
+            }
+            
+            // Count total reviews
+            group.totalReviews = group.listings
+              .map(l => businessMap.get(l.businessId)?.reviewCount || 0)
+              .reduce((sum, count) => sum + count, 0);
+          }
+        });
+        
+        setProductGroups(Array.from(productGroupMap.values()));
+        console.log(`📦 Created ${productGroupMap.size} product groups from ${data.length} listings`);
       }
       
       console.log(`📊 Loaded ${data?.length || 0} price listings for ${isSuperAdmin ? 'super admin' : `country admin (${userCountry})`}`);
@@ -130,6 +259,37 @@ const PriceListingsModule = () => {
   const handleViewListing = (listing) => {
     setSelectedListing(listing);
     setViewDialogOpen(true);
+  };
+
+  const handleViewProductDetail = (productGroup) => {
+    setSelectedProductForDetail(productGroup);
+    
+    // Sort listings by price (cheapest first), then by business rating
+    const sortedListings = [...productGroup.listings].sort((a, b) => {
+      const priceA = parseFloat(a.price) || 0;
+      const priceB = parseFloat(b.price) || 0;
+      
+      if (priceA !== priceB) {
+        return priceA - priceB; // Cheapest first
+      }
+      
+      // If prices are equal, sort by business rating (highest first)
+      const businessA = businessDataMap.get(a.businessId);
+      const businessB = businessDataMap.get(b.businessId);
+      const ratingA = businessA?.rating || 0;
+      const ratingB = businessB?.rating || 0;
+      
+      return ratingB - ratingA;
+    });
+    
+    setProductPrices(sortedListings);
+    setShowProductDetail(true);
+  };
+
+  const handleBackToProducts = () => {
+    setShowProductDetail(false);
+    setSelectedProductForDetail(null);
+    setProductPrices([]);
   };
 
   const handleStatusFilter = (status) => {
@@ -172,6 +332,44 @@ const PriceListingsModule = () => {
   const formatCurrency = (amount, currency) => {
     if (!amount && amount !== 0) return 'N/A';
     return CurrencyService.formatCurrency(amount, currency, userCountry);
+  };
+
+  const getCountryFlag = (countryCode) => {
+    const flags = {
+      'LK': '🇱🇰', // Sri Lanka
+      'UK': '🇬🇧', // United Kingdom
+      'US': '🇺🇸', // United States
+      'IN': '🇮🇳', // India
+      'AU': '🇦🇺', // Australia
+      'CA': '🇨🇦', // Canada
+      'DE': '🇩🇪', // Germany
+      'FR': '🇫🇷', // France
+      'JP': '🇯🇵', // Japan
+      'CN': '🇨🇳', // China
+      'AE': '🇦🇪', // UAE
+      'SA': '🇸🇦', // Saudi Arabia
+      // Add more country flags as needed
+    };
+    return flags[countryCode?.toUpperCase()] || '🌐';
+  };
+
+  const getCountryCurrency = (countryCode) => {
+    const currencies = {
+      'LK': 'LKR', // Sri Lanka
+      'UK': 'GBP', // United Kingdom
+      'US': 'USD', // United States
+      'IN': 'INR', // India
+      'AU': 'AUD', // Australia
+      'CA': 'CAD', // Canada
+      'DE': 'EUR', // Germany
+      'FR': 'EUR', // France
+      'JP': 'JPY', // Japan
+      'CN': 'CNY', // China
+      'AE': 'AED', // UAE
+      'SA': 'SAR', // Saudi Arabia
+      // Add more country currencies as needed
+    };
+    return currencies[countryCode?.toUpperCase()] || 'USD';
   };
 
   const getListingStats = () => {
@@ -337,138 +535,293 @@ const PriceListingsModule = () => {
         )}
       </Menu>
 
-      {/* Listings Table */}
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Product/Service</TableCell>
-              <TableCell>Business</TableCell>
-              <TableCell>Category</TableCell>
-              <TableCell>Price</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Location</TableCell>
-              <TableCell>Rating</TableCell>
-              <TableCell>Created</TableCell>
-              <TableCell>Country</TableCell>
-              <TableCell align="center">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredListings.map((listing) => (
-              <TableRow key={listing.id} hover>
-                <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    {listing.images && listing.images[0] && (
-                      <Avatar 
-                        src={listing.images[0]} 
-                        alt={listing.title}
-                        variant="rounded"
-                      />
-                    )}
-                    <Box>
-                      <Typography variant="subtitle2" noWrap sx={{ maxWidth: 200 }}>
-                        {DataLookupService.formatProductDisplayName(productDataMap.get(listing.productId)) || listing.title || 'Untitled Listing'}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 200 }}>
-                        {listing.description}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </TableCell>
-                <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Store fontSize="small" color="action" />
-                    <Typography variant="body2" noWrap>
-                      {DataLookupService.formatBusinessDisplayName(businessDataMap.get(listing.businessId)) || listing.businessName || 'Unknown Business'}
-                    </Typography>
-                  </Box>
-                </TableCell>
-                <TableCell>
-                  <Chip 
-                    label={listing.category || 'N/A'}
-                    size="small"
-                    variant="outlined"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <AttachMoney fontSize="small" color="action" />
-                    <Typography variant="body2">
-                      {formatCurrency(listing.price, listing.currency)}
-                    </Typography>
-                  </Box>
-                </TableCell>
-                <TableCell>
-                  <Chip 
-                    label={listing.status?.toUpperCase() || 'N/A'}
-                    color={statusColors[listing.status] || 'default'}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <LocationOn fontSize="small" color="action" />
-                    <Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>
-                      {listing.location?.address || listing.location?.name || 'N/A'}
-                    </Typography>
-                  </Box>
-                </TableCell>
-                <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Rating 
-                      value={listing.averageRating || 0} 
-                      size="small" 
-                      readOnly 
-                      precision={0.1}
-                    />
-                    <Typography variant="caption" color="text.secondary">
-                      ({listing.reviewCount || 0})
-                    </Typography>
-                  </Box>
-                </TableCell>
-                <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <AccessTime fontSize="small" color="action" />
-                    <Typography variant="body2">
-                      {formatDate(listing.createdAt)}
-                    </Typography>
-                  </Box>
-                </TableCell>
-                <TableCell>
-                  <Chip 
-                    label={getCountryDisplayName(listing.country)}
-                    size="small"
-                    variant="outlined"
-                  />
-                </TableCell>
-                <TableCell align="center">
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Tooltip title="View Details">
-                      <IconButton
+      {/* Main Content - Products View or Product Detail View */}
+      {selectedProductForDetail ? (
+        // Product Detail View - Show all businesses for selected product
+        <Paper>
+          <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 2 }}>
+            <IconButton onClick={handleBackToProducts} color="primary">
+              <ArrowBack />
+            </IconButton>
+            <Box>
+              <Typography variant="h6">
+                {selectedProductForDetail.productName}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {selectedProductForDetail.totalListings} listings • Average: {formatCurrency(selectedProductForDetail.averagePrice, getCountryCurrency(selectedProductForDetail.country))} • Range: {formatCurrency(selectedProductForDetail.priceRange.min, getCountryCurrency(selectedProductForDetail.country))} - {formatCurrency(selectedProductForDetail.priceRange.max, getCountryCurrency(selectedProductForDetail.country))}
+              </Typography>
+            </Box>
+          </Box>
+          
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Business</TableCell>
+                  <TableCell>Price</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Location</TableCell>
+                  <TableCell>Rating</TableCell>
+                  <TableCell>Created</TableCell>
+                  <TableCell>Country</TableCell>
+                  <TableCell align="center">Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {selectedProductForDetail.listings
+                  .sort((a, b) => (a.price || 0) - (b.price || 0)) // Sort by price - cheapest first
+                  .map((listing) => (
+                  <TableRow key={listing.id} hover>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        {listing.images && listing.images[0] && (
+                          <Avatar 
+                            src={listing.images[0]} 
+                            alt={listing.title}
+                            variant="rounded"
+                          />
+                        )}
+                        <Box>
+                          <Typography variant="subtitle2">
+                            {(() => {
+                              const business = businessDataMap.get(listing.businessId);
+                              if (business) {
+                                return business.businessName || business.name || business.title || `Business ${listing.businessId}`;
+                              }
+                              return listing.businessName || listing.business_name || 'Unknown Business';
+                            })()}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 200 }}>
+                            {listing.description || listing.productName || 'No description'}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <AttachMoney fontSize="small" color="action" />
+                        <Typography variant="body2" fontWeight="bold">
+                          {formatCurrency(listing.price, listing.currency)}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={listing.status?.toUpperCase() || 'N/A'}
+                        color={statusColors[listing.status] || 'default'}
                         size="small"
-                        onClick={() => handleViewListing(listing)}
-                        color="primary"
-                      >
-                        <Visibility fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-                </TableCell>
-              </TableRow>
-            ))}
-            {filteredListings.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={10} align="center">
-                  <Typography variant="body1" color="text.secondary">
-                    No price listings found
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <LocationOn fontSize="small" color="action" />
+                        <Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>
+                          {listing.location?.address || 
+                           listing.location?.name || 
+                           listing.address || 
+                           listing.city || 
+                           'N/A'}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Rating 
+                          value={(() => {
+                            const business = businessDataMap.get(listing.businessId);
+                            return business?.rating || listing.averageRating || listing.rating || 0;
+                          })()} 
+                          size="small" 
+                          readOnly 
+                          precision={0.1}
+                        />
+                        <Typography variant="caption" color="text.secondary">
+                          ({(() => {
+                            const business = businessDataMap.get(listing.businessId);
+                            return business?.reviewCount || listing.reviewCount || 0;
+                          })()})
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {formatDate(listing.createdAt)}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body2">
+                          {getCountryFlag(listing.country || listing.countryCode || listing.countryName || userCountry || 'LK')}
+                        </Typography>
+                        <Typography variant="body2">
+                          {getCountryDisplayName(listing.country || listing.countryCode || listing.countryName || userCountry || 'LK')}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Tooltip title="View Details">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleViewListing(listing)}
+                          color="primary"
+                        >
+                          <Visibility fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      ) : (
+        // Products Overview - Show grouped products with statistics
+        <Grid container spacing={2}>
+          {productGroups.length === 0 ? (
+            <Grid item xs={12}>
+              <Paper sx={{ p: 4, textAlign: 'center' }}>
+                <Typography variant="body1" color="text.secondary">
+                  No products found matching your criteria
+                </Typography>
+              </Paper>
+            </Grid>
+          ) : (
+            productGroups.map((productData) => (
+              <Grid item xs={12} sm={6} md={4} key={productData.groupKey}>
+                <Card 
+                  sx={{ 
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease-in-out',
+                    position: 'relative',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: 4
+                    }
+                  }}
+                  onClick={() => handleViewProductDetail(productData)}
+                >
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
+                      {productData.sampleImage && (
+                        <Avatar 
+                          src={productData.sampleImage} 
+                          alt={productData.productName}
+                          variant="rounded"
+                          sx={{ width: 60, height: 60 }}
+                        />
+                      )}
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="h6" noWrap>
+                          {productData.productName}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {productData.categories.join(', ')}
+                        </Typography>
+                      </Box>
+                    </Box>
+                    
+                    <Box sx={{ mb: 2 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Total Listings
+                        </Typography>
+                        <Chip 
+                          label={productData.totalListings}
+                          color="primary"
+                          size="small"
+                        />
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Price Range
+                        </Typography>
+                        <Typography variant="body2" fontWeight="bold">
+                          {formatCurrency(productData.priceRange.min, getCountryCurrency(productData.country))} - {formatCurrency(productData.priceRange.max, getCountryCurrency(productData.country))}
+                        </Typography>
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Average Price
+                        </Typography>
+                        <Typography variant="body2" fontWeight="bold" color="primary.main">
+                          {formatCurrency(productData.averagePrice, getCountryCurrency(productData.country))}
+                        </Typography>
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Businesses
+                        </Typography>
+                        <Typography variant="body2">
+                          {productData.businessCount} businesses
+                        </Typography>
+                      </Box>
+                    </Box>
+                    
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      <Chip 
+                        label={`${productData.statusBreakdown.active || 0} Active`}
+                        color="success"
+                        size="small"
+                        variant="outlined"
+                      />
+                      {productData.statusBreakdown.pending > 0 && (
+                        <Chip 
+                          label={`${productData.statusBreakdown.pending} Pending`}
+                          color="warning"
+                          size="small"
+                          variant="outlined"
+                        />
+                      )}
+                      {productData.statusBreakdown.inactive > 0 && (
+                        <Chip 
+                          label={`${productData.statusBreakdown.inactive} Inactive`}
+                          color="error"
+                          size="small"
+                          variant="outlined"
+                        />
+                      )}
+                    </Box>
+                    
+                    <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Rating 
+                          value={productData.averageRating} 
+                          size="small" 
+                          readOnly 
+                          precision={0.1}
+                        />
+                        <Typography variant="caption" color="text.secondary">
+                          ({productData.totalReviews} reviews)
+                        </Typography>
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography sx={{ fontSize: '1.2rem' }}>
+                          {getCountryFlag(productData.country)}
+                        </Typography>
+                        <IconButton 
+                          size="small" 
+                          color="primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewProductDetail(productData);
+                          }}
+                        >
+                          <ArrowForward fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))
+          )}
+        </Grid>
+      )}
 
       {/* View Listing Dialog */}
       <Dialog
