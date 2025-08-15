@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class PaymentMethodsService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   

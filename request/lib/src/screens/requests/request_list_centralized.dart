@@ -20,7 +20,7 @@ class _RequestListCentralizedState extends State<RequestListCentralized> {
   bool _loading = true;
   String? _error;
   String _selectedCategory = 'All';
-  RequestType? _selectedType;
+  String? _selectedType;
 
   @override
   void initState() {
@@ -146,21 +146,29 @@ class _RequestListCentralizedState extends State<RequestListCentralized> {
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: DropdownButtonFormField<RequestType?>(
+                child: DropdownButtonFormField<String?>(
                   value: _selectedType,
                   decoration: const InputDecoration(
                     labelText: 'Type',
                     border: OutlineInputBorder(),
                   ),
                   items: [
-                    const DropdownMenuItem<RequestType?>(
+                    const DropdownMenuItem<String?>(
                       value: null,
                       child: Text('All Types'),
                     ),
-                    ...RequestType.values.map((type) => DropdownMenuItem(
-                          value: type,
-                          child: Text(type.name.toUpperCase()),
-                        )),
+                    const DropdownMenuItem<String?>(
+                      value: 'delivery',
+                      child: Text('DELIVERY'),
+                    ),
+                    const DropdownMenuItem<String?>(
+                      value: 'ride',
+                      child: Text('RIDE'),
+                    ),
+                    const DropdownMenuItem<String?>(
+                      value: 'service',
+                      child: Text('SERVICE'),
+                    ),
                   ],
                   onChanged: (value) {
                     setState(() {
@@ -197,7 +205,7 @@ class _RequestListCentralizedState extends State<RequestListCentralized> {
                 ),
                 Chip(
                   label: Text(request.type.name.toUpperCase()),
-                  size: MaterialTapTargetSize.shrinkWrap,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
               ],
             ),
