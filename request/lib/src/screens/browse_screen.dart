@@ -174,10 +174,35 @@ class _BrowseScreenState extends State<BrowseScreen> {
     
     // Apply search filter
     if (_searchQuery.isNotEmpty) {
-      filtered = filtered.where((request) =>
-        request.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        request.description.toLowerCase().contains(_searchQuery.toLowerCase())
-      ).toList();
+      // Split search query by comma, period, and space to handle multiple terms
+      List<String> searchTerms = _searchQuery
+          .toLowerCase()
+          .split(RegExp(r'[,.\s]+'))
+          .where((term) => term.isNotEmpty)
+          .toList();
+      
+      filtered = filtered.where((request) {
+        // Create a searchable string with all request fields
+        String searchableContent = [
+          request.title,
+          request.description,
+          _getRequestTypeDisplayName(request.type),
+          request.location?.address ?? '',
+          request.location?.city ?? '',
+          request.budget?.toString() ?? '',
+          request.priority.name, // Use priority instead of urgency
+          request.status.name,
+          ...request.tags, // Include tags which might contain categories
+          // Add type-specific data that might contain categories
+          ...request.typeSpecificData.values.map((value) => value?.toString() ?? ''),
+        ].join(' ').toLowerCase();
+        
+        // Check if ALL search terms are found (AND logic)
+        // You can change this to ANY (OR logic) by using .any() instead of .every()
+        return searchTerms.every((term) => 
+          searchableContent.contains(term)
+        );
+      }).toList();
     }
     
     // Apply type filter
@@ -223,7 +248,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
             padding: const EdgeInsets.all(16),
             child: TextFormField(
               decoration: InputDecoration(
-                hintText: 'Search requests...',
+                hintText: 'Search requests... (use , or . to separate terms)',
                 prefixIcon: const Icon(Icons.search),
                 filled: true,
                 fillColor: Colors.white, // White background for the field
@@ -559,7 +584,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
           children: [
             Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
             Text(
-              request.location?.city ?? 'Location',
+              _getLocationDisplay(request),
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey[600],
@@ -690,5 +715,30 @@ class _BrowseScreenState extends State<BrowseScreen> {
           'color': Colors.purple,
         };
     }
+  }
+
+  String _getLocationDisplay(RequestModel request) {
+    if (request.location == null) {
+      return 'Location';
+    }
+    
+    // First try city
+    if (request.location!.city != null && request.location!.city!.isNotEmpty) {
+      return request.location!.city!;
+    }
+    
+    // Then try to extract city from address
+    final address = request.location!.address;
+    if (address.isNotEmpty) {
+      // Split by comma and take the last meaningful part (usually city)
+      final parts = address.split(',').map((part) => part.trim()).where((part) => part.isNotEmpty).toList();
+      if (parts.length >= 2) {
+        return parts[parts.length - 2]; // Second last part is usually city
+      } else if (parts.isNotEmpty) {
+        return parts.first; // If only one part, use it
+      }
+    }
+    
+    return 'Location';
   }
 }
