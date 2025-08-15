@@ -115,10 +115,11 @@ const CategoriesModule = () => {
 
   const filteredCategories = categories.filter(category => {
     const matchesSearch = !searchTerm || 
-                         category.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (category.name || category.category)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          category.description?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesStatus = selectedStatus === 'all' || category.status === selectedStatus;
+    const categoryStatus = category.status || (category.isActive !== false ? 'active' : 'inactive');
+    const matchesStatus = selectedStatus === 'all' || categoryStatus === selectedStatus;
 
     return matchesSearch && matchesStatus;
   });
@@ -132,8 +133,14 @@ const CategoriesModule = () => {
   const getCategoryStats = () => {
     return {
       total: filteredCategories.length,
-      active: filteredCategories.filter(c => c.status === 'active').length,
-      inactive: filteredCategories.filter(c => c.status === 'inactive').length,
+      active: filteredCategories.filter(c => {
+        const status = c.status || (c.isActive !== false ? 'active' : 'inactive');
+        return status === 'active';
+      }).length,
+      inactive: filteredCategories.filter(c => {
+        const status = c.status || (c.isActive !== false ? 'active' : 'inactive');
+        return status === 'inactive';
+      }).length,
       draft: filteredCategories.filter(c => c.status === 'draft').length,
     };
   };
@@ -305,7 +312,7 @@ const CategoriesModule = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Category fontSize="small" color="action" />
                     <Typography variant="body2" fontWeight="medium">
-                      {category.name}
+                      {category.name || category.category || 'Unnamed Category'}
                     </Typography>
                   </Box>
                 </TableCell>
@@ -316,8 +323,8 @@ const CategoriesModule = () => {
                 </TableCell>
                 <TableCell>
                   <Chip
-                    label={category.status || 'active'}
-                    color={statusColors[category.status] || 'default'}
+                    label={category.status || (category.isActive !== false ? 'active' : 'inactive')}
+                    color={statusColors[category.status || (category.isActive !== false ? 'active' : 'inactive')] || 'success'}
                     size="small"
                     variant="outlined"
                   />
@@ -392,14 +399,14 @@ const CategoriesModule = () => {
         {selectedCategory && (
           <>
             <DialogTitle>
-              Category Details: {selectedCategory.name}
+              Category Details: {selectedCategory.name || selectedCategory.category}
             </DialogTitle>
             <DialogContent>
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2" gutterBottom>Name</Typography>
                   <Typography variant="body2" paragraph>
-                    {selectedCategory.name}
+                    {selectedCategory.name || selectedCategory.category}
                   </Typography>
                   
                   <Typography variant="subtitle2" gutterBottom>Status</Typography>
@@ -453,6 +460,51 @@ const CategoriesModule = () => {
           <Add />
         </Fab>
       )}
+
+      {/* Edit/Add Dialog */}
+      <Dialog
+        open={editDialogOpen}
+        onClose={() => setEditDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          {selectedCategory ? 'Edit Category' : 'Add Category'}
+        </DialogTitle>
+        <DialogContent>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Category editing is not yet implemented. This feature is under development.
+          </Alert>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditDialogOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        maxWidth="sm"
+      >
+        <DialogTitle>Delete Category</DialogTitle>
+        <DialogContent>
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            Category deletion is not yet implemented. This feature is under development.
+          </Alert>
+          {selectedCategory && (
+            <Typography>
+              Are you sure you want to delete "{selectedCategory.name}"?
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button color="error" onClick={() => setDeleteDialogOpen(false)}>
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

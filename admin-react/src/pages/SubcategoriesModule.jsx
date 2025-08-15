@@ -101,10 +101,11 @@ const SubcategoriesModule = () => {
 
   const filteredSubcategories = subcategories.filter(subcategory => {
     const matchesSearch = !searchTerm || 
-                         subcategory.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (subcategory.name || subcategory.subcategory)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          subcategory.description?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesCategory = selectedCategory === 'all' || subcategory.categoryId === selectedCategory;
+    const matchesCategory = selectedCategory === 'all' || 
+                           (subcategory.categoryId || subcategory.category_id) === selectedCategory;
 
     return matchesSearch && matchesCategory;
   });
@@ -112,7 +113,7 @@ const SubcategoriesModule = () => {
   // Get category name by ID
   const getCategoryName = (categoryId) => {
     const category = categories.find(c => c.id === categoryId);
-    return category ? category.name : 'Unknown Category';
+    return category ? (category.name || category.category) : 'Unknown Category';
   };
 
   // Calculate stats
@@ -264,7 +265,7 @@ const SubcategoriesModule = () => {
                       <SubdirectoryArrowRight fontSize="small" color="action" />
                     )}
                     <Typography variant="body2" fontWeight="medium">
-                      {subcategory.name || 'Unnamed Subcategory'}
+                      {subcategory.name || subcategory.subcategory || 'Unnamed Subcategory'}
                     </Typography>
                   </Box>
                 </TableCell>
@@ -272,7 +273,7 @@ const SubcategoriesModule = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Folder fontSize="small" color="action" />
                     <Typography variant="body2">
-                      {getCategoryName(subcategory.categoryId)}
+                      {getCategoryName(subcategory.categoryId || subcategory.category_id)}
                     </Typography>
                   </Box>
                 </TableCell>
@@ -322,12 +323,24 @@ const SubcategoriesModule = () => {
                     {isSuperAdmin && (
                       <>
                         <Tooltip title="Edit">
-                          <IconButton size="small" color="primary">
+                          <IconButton 
+                            size="small" 
+                            color="primary"
+                            onClick={() => {
+                              alert('Edit functionality not yet implemented');
+                            }}
+                          >
                             <Edit />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Delete">
-                          <IconButton size="small" color="error">
+                          <IconButton 
+                            size="small" 
+                            color="error"
+                            onClick={() => {
+                              alert('Delete functionality not yet implemented');
+                            }}
+                          >
                             <Delete />
                           </IconButton>
                         </Tooltip>
@@ -359,17 +372,17 @@ const SubcategoriesModule = () => {
         {selectedSubcategory && (
           <>
             <DialogTitle>
-              Subcategory Details: {selectedSubcategory.name}
+              Subcategory Details: {selectedSubcategory.name || selectedSubcategory.subcategory}
             </DialogTitle>
             <DialogContent>
               <Grid container spacing={2}>
                 <Grid item xs={12} md={6}>
                   <Typography variant="body2" color="text.secondary">Name</Typography>
-                  <Typography variant="body1" gutterBottom>{selectedSubcategory.name || 'N/A'}</Typography>
+                  <Typography variant="body1" gutterBottom>{selectedSubcategory.name || selectedSubcategory.subcategory || 'N/A'}</Typography>
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <Typography variant="body2" color="text.secondary">Parent Category</Typography>
-                  <Typography variant="body1" gutterBottom>{getCategoryName(selectedSubcategory.categoryId)}</Typography>
+                  <Typography variant="body1" gutterBottom>{getCategoryName(selectedSubcategory.categoryId || selectedSubcategory.category_id)}</Typography>
                 </Grid>
                 <Grid item xs={12}>
                   <Typography variant="body2" color="text.secondary">Description</Typography>

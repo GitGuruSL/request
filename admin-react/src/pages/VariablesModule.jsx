@@ -79,7 +79,7 @@ const VariablesModule = () => {
       setLoading(true);
       setError(null);
 
-      const data = await getFilteredData('variable_types', adminData);
+      const data = await getFilteredData('custom_product_variables', adminData);
       setVariables(data || []);
       
       console.log(`📊 Loaded ${data?.length || 0} variables for ${isSuperAdmin ? 'super admin' : `country admin (${userCountry})`}`);
@@ -314,12 +314,24 @@ const VariablesModule = () => {
                     {isSuperAdmin && (
                       <>
                         <Tooltip title="Edit">
-                          <IconButton size="small" color="primary">
+                          <IconButton 
+                            size="small" 
+                            color="primary"
+                            onClick={() => {
+                              alert('Edit functionality not yet implemented');
+                            }}
+                          >
                             <Edit />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Delete">
-                          <IconButton size="small" color="error">
+                          <IconButton 
+                            size="small" 
+                            color="error"
+                            onClick={() => {
+                              alert('Delete functionality not yet implemented');
+                            }}
+                          >
                             <Delete />
                           </IconButton>
                         </Tooltip>

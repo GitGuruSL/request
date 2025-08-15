@@ -50,7 +50,8 @@ export class CountryDataService {
         'brands',
         'vehicle_types',
         'variables',
-        'product_variables'
+        'product_variables',
+        'custom_product_variables'
       ];
 
       let filteredQuery;
