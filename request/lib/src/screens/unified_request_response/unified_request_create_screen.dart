@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/request_model.dart';
 import '../../models/enhanced_user_model.dart';
-import '../../services/enhanced_request_service.dart';
+import '../../services/centralized_request_service.dart';
 import '../../services/enhanced_user_service.dart';
 import '../../widgets/image_upload_widget.dart';
 import '../../widgets/accurate_location_picker_widget.dart';
@@ -20,7 +20,7 @@ class UnifiedRequestCreateScreen extends StatefulWidget {
 
 class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen> {
   final _formKey = GlobalKey<FormState>();
-  final EnhancedRequestService _requestService = EnhancedRequestService();
+  final CentralizedRequestService _requestService = CentralizedRequestService();
   final EnhancedUserService _userService = EnhancedUserService();
 
   // Common form controllers

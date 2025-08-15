@@ -6,7 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../models/request_model.dart';
 import '../../../models/enhanced_user_model.dart';
 import '../../../models/vehicle_type_model.dart';
-import '../../../services/enhanced_request_service.dart';
+import '../../../services/centralized_request_service.dart';
 import '../../../services/enhanced_user_service.dart';
 import '../../../services/country_service.dart';
 import '../../../services/vehicle_service.dart';
@@ -26,7 +26,7 @@ class CreateRideRequestScreen extends StatefulWidget {
 
 class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
   final _formKey = GlobalKey<FormState>();
-  final EnhancedRequestService _requestService = EnhancedRequestService();
+  final CentralizedRequestService _requestService = CentralizedRequestService();
   final EnhancedUserService _userService = EnhancedUserService();
   final VehicleService _vehicleService = VehicleService();
 

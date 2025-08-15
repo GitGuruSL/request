@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/request_model.dart';
 import '../../models/enhanced_user_model.dart';
-import '../../services/enhanced_request_service.dart';
+import '../../services/centralized_request_service.dart';
 import '../../services/enhanced_user_service.dart';
 import '../../utils/currency_helper.dart';
 
@@ -14,7 +14,7 @@ class CreatePriceRequestScreen extends StatefulWidget {
 
 class _CreatePriceRequestScreenState extends State<CreatePriceRequestScreen> {
   final _formKey = GlobalKey<FormState>();
-  final EnhancedRequestService _requestService = EnhancedRequestService();
+  final CentralizedRequestService _requestService = CentralizedRequestService();
   final EnhancedUserService _userService = EnhancedUserService();
 
   // Form Controllers

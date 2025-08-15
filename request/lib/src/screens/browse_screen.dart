@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/request_model.dart';
 import '../models/enhanced_user_model.dart';
-import '../services/enhanced_request_service.dart';
+import '../services/country_filtered_data_service.dart';
 import '../services/country_service.dart';
 import '../services/module_service.dart';
 import 'unified_request_response/unified_request_view_screen.dart';
@@ -16,7 +15,7 @@ class BrowseScreen extends StatefulWidget {
 }
 
 class _BrowseScreenState extends State<BrowseScreen> {
-  final EnhancedRequestService _requestService = EnhancedRequestService();
+  final CountryFilteredDataService _dataService = CountryFilteredDataService.instance;
   String _searchQuery = '';
   RequestType? _selectedType;
   String _selectedLocation = 'All Locations';
@@ -103,51 +102,23 @@ class _BrowseScreenState extends State<BrowseScreen> {
       });
     }
     try {
-      print('📥 Attempting to fetch requests from Firestore...');
+      print('📥 Fetching country-filtered requests...');
       
-      // Most basic query possible - get all documents from requests collection
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('requests')
-          .get();
+      // Use centralized service which automatically filters by user's country
+      final requestsStream = _dataService.getCountryRequestsStream(
+        status: null, // Get all statuses
+        type: _selectedType,
+        limit: 50,
+      );
+      
+      // Listen to the stream and get the first result
+      final loadedRequests = await requestsStream.first;
           
-      print('📊 Found ${querySnapshot.docs.length} documents in requests collection');
+      print('📊 Found ${loadedRequests.length} country-filtered requests');
       
       if (mounted) {
-        final List<RequestModel> loadedRequests = [];
-        
-        // Let's inspect the first document to understand the data structure
-        if (querySnapshot.docs.isNotEmpty) {
-          final firstDoc = querySnapshot.docs.first;
-          final data = firstDoc.data();
-          
-          print('🔍 First document structure:');
-          print('Document ID: ${firstDoc.id}');
-          print('Document data keys: ${data.keys.toList()}');
-          
-          // Print each field and its type
-          data.forEach((key, value) {
-            print('Field "$key": ${value.runtimeType} = $value');
-          });
-        }
-        
-        for (var doc in querySnapshot.docs) {
-          try {
-            final data = doc.data();
-            data['id'] = doc.id; // Add document ID
-            
-            // Use the fromMap constructor which handles all type conversions properly
-            final request = RequestModel.fromMap(data);
-            
-            loadedRequests.add(request);
-            print('✅ Successfully parsed document ${doc.id}');
-          } catch (e) {
-            print('❌ Error parsing document ${doc.id}: $e');
-            // Continue with other documents even if one fails
-          }
-        }
-        
         _requests = loadedRequests;
-        print('📝 Successfully loaded ${_requests.length} requests');
+        print('📝 Successfully loaded ${_requests.length} requests for country: ${CountryService.instance.countryCode}');
         setState(() {});
       }
     } catch (e) {
