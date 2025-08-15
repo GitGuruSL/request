@@ -27,7 +27,11 @@ import {
   CircularProgress,
   Tooltip,
   Fab,
-  Avatar
+  Avatar,
+  FormControl,
+  InputLabel,
+  Select,
+  Snackbar
 } from '@mui/material';
 import {
   Search,
@@ -42,6 +46,15 @@ import {
   FolderOpen,
   SubdirectoryArrowRight
 } from '@mui/icons-material';
+import { 
+  collection, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  doc, 
+  serverTimestamp 
+} from 'firebase/firestore';
+import { db } from '../firebase/config';
 import useCountryFilter from '../hooks/useCountryFilter.jsx';
 
 const SubcategoriesModule = () => {
@@ -62,6 +75,20 @@ const SubcategoriesModule = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedSubcategory, setSelectedSubcategory] = useState(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    categoryId: '',
+    country: ''
+  });
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+  const [operationLoading, setOperationLoading] = useState(false);
 
   const loadSubcategories = async () => {
     try {
@@ -92,6 +119,111 @@ const SubcategoriesModule = () => {
   const handleViewSubcategory = (subcategory) => {
     setSelectedSubcategory(subcategory);
     setViewDialogOpen(true);
+  };
+
+  const handleAddSubcategory = () => {
+    setSelectedSubcategory(null);
+    setFormData({
+      name: '',
+      description: '',
+      categoryId: '',
+      country: isSuperAdmin ? '' : userCountry
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleEditSubcategory = (subcategory) => {
+    setSelectedSubcategory(subcategory);
+    setFormData({
+      name: subcategory.name || subcategory.subcategory || '',
+      description: subcategory.description || '',
+      categoryId: subcategory.categoryId || subcategory.category_id || '',
+      country: subcategory.country || userCountry
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleDeleteSubcategory = (subcategory) => {
+    setSelectedSubcategory(subcategory);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleSaveSubcategory = async () => {
+    try {
+      setOperationLoading(true);
+      
+      const subcategoryData = {
+        name: formData.name,
+        subcategory: formData.name, // Store in both fields for compatibility
+        description: formData.description,
+        categoryId: formData.categoryId,
+        category_id: formData.categoryId, // Store in both fields for compatibility
+        country: formData.country,
+        isActive: true,
+        updatedAt: serverTimestamp()
+      };
+
+      if (selectedSubcategory) {
+        // Update existing subcategory
+        await updateDoc(doc(db, 'subcategories', selectedSubcategory.id), {
+          ...subcategoryData,
+          updatedBy: adminData?.email || 'admin'
+        });
+        setSnackbar({
+          open: true,
+          message: 'Subcategory updated successfully!',
+          severity: 'success'
+        });
+      } else {
+        // Add new subcategory
+        await addDoc(collection(db, 'subcategories'), {
+          ...subcategoryData,
+          createdAt: serverTimestamp(),
+          createdBy: adminData?.email || 'admin'
+        });
+        setSnackbar({
+          open: true,
+          message: 'Subcategory added successfully!',
+          severity: 'success'
+        });
+      }
+
+      setEditDialogOpen(false);
+      loadSubcategories();
+    } catch (error) {
+      console.error('Error saving subcategory:', error);
+      setSnackbar({
+        open: true,
+        message: 'Error saving subcategory: ' + error.message,
+        severity: 'error'
+      });
+    } finally {
+      setOperationLoading(false);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      setOperationLoading(true);
+      
+      await deleteDoc(doc(db, 'subcategories', selectedSubcategory.id));
+      setSnackbar({
+        open: true,
+        message: 'Subcategory deleted successfully!',
+        severity: 'success'
+      });
+      setDeleteDialogOpen(false);
+      loadSubcategories();
+    } catch (error) {
+      console.error('Error deleting subcategory:', error);
+      setSnackbar({
+        open: true,
+        message: 'Error deleting subcategory: ' + error.message,
+        severity: 'error'
+      });
+    } finally {
+      setOperationLoading(false);
+    }
   };
 
   const handleCategoryFilter = (categoryId) => {
@@ -207,14 +339,14 @@ const SubcategoriesModule = () => {
           </Button>
 
           {isSuperAdmin && (
-            <Fab
-              color="primary"
-              aria-label="add"
-              size="medium"
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={handleAddSubcategory}
               sx={{ ml: 'auto' }}
             >
-              <Add />
-            </Fab>
+              Add Subcategory
+            </Button>
           )}
         </Box>
       </Paper>
@@ -326,9 +458,7 @@ const SubcategoriesModule = () => {
                           <IconButton 
                             size="small" 
                             color="primary"
-                            onClick={() => {
-                              alert('Edit functionality not yet implemented');
-                            }}
+                            onClick={() => handleEditSubcategory(subcategory)}
                           >
                             <Edit />
                           </IconButton>
@@ -337,9 +467,7 @@ const SubcategoriesModule = () => {
                           <IconButton 
                             size="small" 
                             color="error"
-                            onClick={() => {
-                              alert('Delete functionality not yet implemented');
-                            }}
+                            onClick={() => handleDeleteSubcategory(subcategory)}
                           >
                             <Delete />
                           </IconButton>
@@ -415,6 +543,116 @@ const SubcategoriesModule = () => {
           </>
         )}
       </Dialog>
+
+      {/* Edit/Add Dialog */}
+      <Dialog
+        open={editDialogOpen}
+        onClose={() => setEditDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          {selectedSubcategory ? 'Edit Subcategory' : 'Add Subcategory'}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+            <TextField
+              label="Subcategory Name"
+              fullWidth
+              value={formData.name}
+              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              required
+            />
+            
+            <TextField
+              label="Description"
+              fullWidth
+              multiline
+              rows={3}
+              value={formData.description}
+              onChange={(e) => setFormData({...formData, description: e.target.value})}
+            />
+            
+            <FormControl fullWidth required>
+              <InputLabel>Parent Category</InputLabel>
+              <Select
+                value={formData.categoryId}
+                label="Parent Category"
+                onChange={(e) => setFormData({...formData, categoryId: e.target.value})}
+              >
+                {categories.map((category) => (
+                  <MenuItem key={category.id} value={category.id}>
+                    {category.name || category.category}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {isSuperAdmin && (
+              <TextField
+                label="Country"
+                fullWidth
+                value={formData.country}
+                onChange={(e) => setFormData({...formData, country: e.target.value})}
+                placeholder="Leave empty for global"
+              />
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+          <Button 
+            variant="contained" 
+            onClick={handleSaveSubcategory}
+            disabled={!formData.name || !formData.categoryId || operationLoading}
+          >
+            {operationLoading ? <CircularProgress size={20} /> : (selectedSubcategory ? 'Update' : 'Add')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        maxWidth="sm"
+      >
+        <DialogTitle>Delete Subcategory</DialogTitle>
+        <DialogContent>
+          {selectedSubcategory && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              Are you sure you want to delete "{selectedSubcategory.name || selectedSubcategory.subcategory}"?
+              This action cannot be undone.
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button 
+            color="error" 
+            variant="contained"
+            onClick={handleDeleteConfirm}
+            disabled={operationLoading}
+          >
+            {operationLoading ? <CircularProgress size={20} /> : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({...snackbar, open: false})}
+      >
+        <Alert 
+          onClose={() => setSnackbar({...snackbar, open: false})} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

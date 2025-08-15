@@ -29,7 +29,10 @@ import {
   Fab,
   FormControl,
   InputLabel,
-  Select
+  Select,
+  Snackbar,
+  Checkbox,
+  FormControlLabel
 } from '@mui/material';
 import {
   Search,
@@ -45,6 +48,15 @@ import {
   ToggleOn,
   ToggleOff
 } from '@mui/icons-material';
+import { 
+  collection, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  doc, 
+  serverTimestamp 
+} from 'firebase/firestore';
+import { db } from '../firebase/config';
 import useCountryFilter from '../hooks/useCountryFilter.jsx';
 
 const VariablesModule = () => {
@@ -64,6 +76,22 @@ const VariablesModule = () => {
   const [selectedType, setSelectedType] = useState('all');
   const [selectedVariable, setSelectedVariable] = useState(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    type: 'text',
+    unit: '',
+    isRequired: false,
+    possibleValues: []
+  });
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+  const [operationLoading, setOperationLoading] = useState(false);
 
   const typeColors = {
     text: 'primary',
@@ -98,6 +126,114 @@ const VariablesModule = () => {
   const handleViewVariable = (variable) => {
     setSelectedVariable(variable);
     setViewDialogOpen(true);
+  };
+
+  const handleAddVariable = () => {
+    setSelectedVariable(null);
+    setFormData({
+      name: '',
+      description: '',
+      type: 'text',
+      unit: '',
+      isRequired: false,
+      possibleValues: []
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleEditVariable = (variable) => {
+    setSelectedVariable(variable);
+    setFormData({
+      name: variable.name || '',
+      description: variable.description || '',
+      type: variable.type || 'text',
+      unit: variable.unit || '',
+      isRequired: variable.isRequired || false,
+      possibleValues: variable.possibleValues || []
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleDeleteVariable = (variable) => {
+    setSelectedVariable(variable);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleSaveVariable = async () => {
+    try {
+      setOperationLoading(true);
+      
+      const variableData = {
+        name: formData.name,
+        description: formData.description,
+        type: formData.type,
+        unit: formData.unit,
+        isRequired: formData.isRequired,
+        possibleValues: formData.possibleValues,
+        isActive: true,
+        usageCount: 0,
+        updatedAt: serverTimestamp(),
+        updatedBy: adminData?.email || 'admin'
+      };
+
+      if (selectedVariable) {
+        // Update existing variable
+        await updateDoc(doc(db, 'custom_product_variables', selectedVariable.id), variableData);
+        setSnackbar({
+          open: true,
+          message: 'Variable updated successfully!',
+          severity: 'success'
+        });
+      } else {
+        // Add new variable
+        await addDoc(collection(db, 'custom_product_variables'), {
+          ...variableData,
+          createdAt: serverTimestamp(),
+          categoryIds: [] // Initialize empty array for category assignments
+        });
+        setSnackbar({
+          open: true,
+          message: 'Variable added successfully!',
+          severity: 'success'
+        });
+      }
+
+      setEditDialogOpen(false);
+      loadVariables();
+    } catch (error) {
+      console.error('Error saving variable:', error);
+      setSnackbar({
+        open: true,
+        message: 'Error saving variable: ' + error.message,
+        severity: 'error'
+      });
+    } finally {
+      setOperationLoading(false);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      setOperationLoading(true);
+      
+      await deleteDoc(doc(db, 'custom_product_variables', selectedVariable.id));
+      setSnackbar({
+        open: true,
+        message: 'Variable deleted successfully!',
+        severity: 'success'
+      });
+      setDeleteDialogOpen(false);
+      loadVariables();
+    } catch (error) {
+      console.error('Error deleting variable:', error);
+      setSnackbar({
+        open: true,
+        message: 'Error deleting variable: ' + error.message,
+        severity: 'error'
+      });
+    } finally {
+      setOperationLoading(false);
+    }
   };
 
   const handleTypeFilter = (type) => {
@@ -209,14 +345,14 @@ const VariablesModule = () => {
           </Button>
 
           {isSuperAdmin && (
-            <Fab
-              color="primary"
-              aria-label="add"
-              size="medium"
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={handleAddVariable}
               sx={{ ml: 'auto' }}
             >
-              <Add />
-            </Fab>
+              Add Variable
+            </Button>
           )}
         </Box>
       </Paper>
@@ -317,9 +453,7 @@ const VariablesModule = () => {
                           <IconButton 
                             size="small" 
                             color="primary"
-                            onClick={() => {
-                              alert('Edit functionality not yet implemented');
-                            }}
+                            onClick={() => handleEditVariable(variable)}
                           >
                             <Edit />
                           </IconButton>
@@ -328,9 +462,7 @@ const VariablesModule = () => {
                           <IconButton 
                             size="small" 
                             color="error"
-                            onClick={() => {
-                              alert('Delete functionality not yet implemented');
-                            }}
+                            onClick={() => handleDeleteVariable(variable)}
                           >
                             <Delete />
                           </IconButton>
@@ -405,7 +537,10 @@ const VariablesModule = () => {
             <DialogActions>
               <Button onClick={() => setViewDialogOpen(false)}>Close</Button>
               {isSuperAdmin && (
-                <Button variant="contained" color="primary">
+                <Button variant="contained" color="primary" onClick={() => {
+                  setViewDialogOpen(false);
+                  handleEditVariable(selectedVariable);
+                }}>
                   Edit Variable
                 </Button>
               )}
@@ -413,6 +548,140 @@ const VariablesModule = () => {
           </>
         )}
       </Dialog>
+
+      {/* Edit/Add Dialog */}
+      <Dialog
+        open={editDialogOpen}
+        onClose={() => setEditDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          {selectedVariable ? 'Edit Variable' : 'Add Variable'}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+            <TextField
+              label="Variable Name"
+              fullWidth
+              value={formData.name}
+              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              required
+            />
+            
+            <TextField
+              label="Description"
+              fullWidth
+              multiline
+              rows={3}
+              value={formData.description}
+              onChange={(e) => setFormData({...formData, description: e.target.value})}
+            />
+            
+            <FormControl fullWidth required>
+              <InputLabel>Variable Type</InputLabel>
+              <Select
+                value={formData.type}
+                label="Variable Type"
+                onChange={(e) => setFormData({...formData, type: e.target.value})}
+              >
+                <MenuItem value="text">Text</MenuItem>
+                <MenuItem value="number">Number</MenuItem>
+                <MenuItem value="boolean">Boolean</MenuItem>
+                <MenuItem value="select">Select</MenuItem>
+                <MenuItem value="multiselect">Multi-select</MenuItem>
+                <MenuItem value="date">Date</MenuItem>
+              </Select>
+            </FormControl>
+
+            <TextField
+              label="Unit (Optional)"
+              fullWidth
+              value={formData.unit}
+              onChange={(e) => setFormData({...formData, unit: e.target.value})}
+              placeholder="e.g., GB, inches, kg"
+            />
+
+            {(formData.type === 'select' || formData.type === 'multiselect') && (
+              <TextField
+                label="Possible Values (comma-separated)"
+                fullWidth
+                multiline
+                rows={2}
+                value={formData.possibleValues.join(', ')}
+                onChange={(e) => setFormData({
+                  ...formData, 
+                  possibleValues: e.target.value.split(',').map(v => v.trim()).filter(v => v)
+                })}
+                placeholder="Option 1, Option 2, Option 3"
+              />
+            )}
+
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={formData.isRequired}
+                  onChange={(e) => setFormData({...formData, isRequired: e.target.checked})}
+                />
+              }
+              label="Required Field"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+          <Button 
+            variant="contained" 
+            onClick={handleSaveVariable}
+            disabled={!formData.name || operationLoading}
+          >
+            {operationLoading ? <CircularProgress size={20} /> : (selectedVariable ? 'Update' : 'Add')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        maxWidth="sm"
+      >
+        <DialogTitle>Delete Variable</DialogTitle>
+        <DialogContent>
+          {selectedVariable && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              Are you sure you want to delete "{selectedVariable.name}"?
+              This action cannot be undone.
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button 
+            color="error" 
+            variant="contained"
+            onClick={handleDeleteConfirm}
+            disabled={operationLoading}
+          >
+            {operationLoading ? <CircularProgress size={20} /> : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({...snackbar, open: false})}
+      >
+        <Alert 
+          onClose={() => setSnackbar({...snackbar, open: false})} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

@@ -29,7 +29,8 @@ import {
   Fab,
   FormControl,
   InputLabel,
-  Select
+  Select,
+  Snackbar
 } from '@mui/material';
 import {
   Search,
@@ -44,6 +45,15 @@ import {
   Folder,
   FolderOpen
 } from '@mui/icons-material';
+import { 
+  collection, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  doc, 
+  serverTimestamp 
+} from 'firebase/firestore';
+import { db } from '../firebase/config';
 import useCountryFilter from '../hooks/useCountryFilter.jsx';
 
 const CategoriesModule = () => {
@@ -56,6 +66,7 @@ const CategoriesModule = () => {
   } = useCountryFilter();
 
   const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -65,6 +76,19 @@ const CategoriesModule = () => {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    status: 'active',
+    type: 'item',
+    country: ''
+  });
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+  const [operationLoading, setOperationLoading] = useState(false);
 
   const statusColors = {
     active: 'success',
@@ -77,10 +101,15 @@ const CategoriesModule = () => {
       setLoading(true);
       setError(null);
 
-      const data = await getFilteredData('categories', adminData);
-      setCategories(data || []);
+      const [catsData, subcatsData] = await Promise.all([
+        getFilteredData('categories', adminData),
+        getFilteredData('subcategories', adminData)
+      ]);
       
-      console.log(`📊 Loaded ${data?.length || 0} categories for ${isSuperAdmin ? 'super admin' : `country admin (${userCountry})`}`);
+      setCategories(catsData || []);
+      setSubcategories(subcatsData || []);
+      
+      console.log(`📊 Loaded ${catsData?.length || 0} categories and ${subcatsData?.length || 0} subcategories for ${isSuperAdmin ? 'super admin' : `country admin (${userCountry})`}`);
     } catch (err) {
       console.error('Error loading categories:', err);
       setError('Failed to load categories: ' + err.message);
@@ -98,11 +127,6 @@ const CategoriesModule = () => {
     setViewDialogOpen(true);
   };
 
-  const handleEditCategory = (category) => {
-    setSelectedCategory(category);
-    setEditDialogOpen(true);
-  };
-
   const handleDeleteCategory = (category) => {
     setSelectedCategory(category);
     setDeleteDialogOpen(true);
@@ -111,6 +135,126 @@ const CategoriesModule = () => {
   const handleStatusFilter = (status) => {
     setSelectedStatus(status);
     setFilterAnchorEl(null);
+  };
+
+  const getSubcategoryCount = (categoryId) => {
+    return subcategories.filter(sub => 
+      (sub.categoryId || sub.category_id) === categoryId
+    ).length;
+  };
+
+  const handleAddCategory = () => {
+    setSelectedCategory(null);
+    setFormData({
+      name: '',
+      description: '',
+      status: 'active',
+      type: 'item',
+      country: isSuperAdmin ? '' : userCountry
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleEditCategory = (category) => {
+    setSelectedCategory(category);
+    setFormData({
+      name: category.name || category.category || '',
+      description: category.description || '',
+      status: category.status || (category.isActive !== false ? 'active' : 'inactive'),
+      type: category.type || 'item',
+      country: category.country || userCountry
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveCategory = async () => {
+    try {
+      setOperationLoading(true);
+      
+      const categoryData = {
+        name: formData.name,
+        category: formData.name, // Store in both fields for compatibility
+        description: formData.description,
+        status: formData.status,
+        type: formData.type,
+        isActive: formData.status === 'active',
+        country: formData.country,
+        updatedAt: serverTimestamp()
+      };
+
+      if (selectedCategory) {
+        // Update existing category
+        await updateDoc(doc(db, 'categories', selectedCategory.id), {
+          ...categoryData,
+          updatedBy: adminData?.email || 'admin'
+        });
+        setSnackbar({
+          open: true,
+          message: 'Category updated successfully!',
+          severity: 'success'
+        });
+      } else {
+        // Add new category
+        await addDoc(collection(db, 'categories'), {
+          ...categoryData,
+          createdAt: serverTimestamp(),
+          createdBy: adminData?.email || 'admin'
+        });
+        setSnackbar({
+          open: true,
+          message: 'Category added successfully!',
+          severity: 'success'
+        });
+      }
+
+      setEditDialogOpen(false);
+      loadCategories();
+    } catch (error) {
+      console.error('Error saving category:', error);
+      setSnackbar({
+        open: true,
+        message: 'Error saving category: ' + error.message,
+        severity: 'error'
+      });
+    } finally {
+      setOperationLoading(false);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      setOperationLoading(true);
+      
+      // Check if category has subcategories
+      const subcatCount = getSubcategoryCount(selectedCategory.id);
+      if (subcatCount > 0) {
+        setSnackbar({
+          open: true,
+          message: `Cannot delete category with ${subcatCount} subcategories. Delete subcategories first.`,
+          severity: 'warning'
+        });
+        setDeleteDialogOpen(false);
+        return;
+      }
+
+      await deleteDoc(doc(db, 'categories', selectedCategory.id));
+      setSnackbar({
+        open: true,
+        message: 'Category deleted successfully!',
+        severity: 'success'
+      });
+      setDeleteDialogOpen(false);
+      loadCategories();
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      setSnackbar({
+        open: true,
+        message: 'Error deleting category: ' + error.message,
+        severity: 'error'
+      });
+    } finally {
+      setOperationLoading(false);
+    }
   };
 
   const filteredCategories = categories.filter(category => {
@@ -283,7 +427,7 @@ const CategoriesModule = () => {
             <Button
               variant="contained"
               startIcon={<Add />}
-              onClick={() => setEditDialogOpen(true)}
+              onClick={handleAddCategory}
             >
               Add Category
             </Button>
@@ -298,6 +442,7 @@ const CategoriesModule = () => {
             <TableRow>
               <TableCell>Category</TableCell>
               <TableCell>Description</TableCell>
+              <TableCell>Type</TableCell>
               <TableCell>Status</TableCell>
               <TableCell>Subcategories</TableCell>
               <TableCell>Created</TableCell>
@@ -323,6 +468,14 @@ const CategoriesModule = () => {
                 </TableCell>
                 <TableCell>
                   <Chip
+                    label={category.type || 'item'}
+                    color={category.type === 'service' ? 'secondary' : category.type === 'rent' ? 'info' : category.type === 'delivery' ? 'warning' : 'primary'}
+                    size="small"
+                    variant="outlined"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Chip
                     label={category.status || (category.isActive !== false ? 'active' : 'inactive')}
                     color={statusColors[category.status || (category.isActive !== false ? 'active' : 'inactive')] || 'success'}
                     size="small"
@@ -331,9 +484,10 @@ const CategoriesModule = () => {
                 </TableCell>
                 <TableCell>
                   <Chip
-                    label={category.subcategories?.length || 0}
+                    label={getSubcategoryCount(category.id)}
                     size="small"
                     variant="filled"
+                    color="primary"
                   />
                 </TableCell>
                 <TableCell>
@@ -409,6 +563,14 @@ const CategoriesModule = () => {
                     {selectedCategory.name || selectedCategory.category}
                   </Typography>
                   
+                  <Typography variant="subtitle2" gutterBottom>Type</Typography>
+                  <Chip
+                    label={selectedCategory.type || 'item'}
+                    color={selectedCategory.type === 'service' ? 'secondary' : selectedCategory.type === 'rent' ? 'info' : selectedCategory.type === 'delivery' ? 'warning' : 'primary'}
+                    size="small"
+                    sx={{ mb: 2 }}
+                  />
+                  
                   <Typography variant="subtitle2" gutterBottom>Status</Typography>
                   <Chip
                     label={selectedCategory.status || 'active'}
@@ -430,14 +592,22 @@ const CategoriesModule = () => {
                   />
                 </Grid>
                 <Grid item xs={12}>
-                  <Typography variant="subtitle2" gutterBottom>Subcategories</Typography>
+                  <Typography variant="subtitle2" gutterBottom>Subcategories ({getSubcategoryCount(selectedCategory.id)})</Typography>
                   <Box display="flex" gap={1} flexWrap="wrap">
-                    {selectedCategory.subcategories?.length > 0 ? 
-                      selectedCategory.subcategories.map((sub, index) => (
-                        <Chip key={index} label={sub} size="small" variant="outlined" />
-                      )) :
-                      <Typography variant="body2" color="text.secondary">No subcategories</Typography>
+                    {subcategories
+                      .filter(sub => (sub.categoryId || sub.category_id) === selectedCategory.id)
+                      .map((sub, index) => (
+                        <Chip 
+                          key={index} 
+                          label={sub.name || sub.subcategory} 
+                          size="small" 
+                          variant="outlined" 
+                        />
+                      ))
                     }
+                    {getSubcategoryCount(selectedCategory.id) === 0 && (
+                      <Typography variant="body2" color="text.secondary">No subcategories</Typography>
+                    )}
                   </Box>
                 </Grid>
               </Grid>
@@ -455,7 +625,7 @@ const CategoriesModule = () => {
           color="primary"
           aria-label="add category"
           sx={{ position: 'fixed', bottom: 16, right: 16 }}
-          onClick={() => setEditDialogOpen(true)}
+          onClick={handleAddCategory}
         >
           <Add />
         </Fab>
@@ -472,12 +642,71 @@ const CategoriesModule = () => {
           {selectedCategory ? 'Edit Category' : 'Add Category'}
         </DialogTitle>
         <DialogContent>
-          <Alert severity="info" sx={{ mb: 2 }}>
-            Category editing is not yet implemented. This feature is under development.
-          </Alert>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+            <TextField
+              label="Category Name"
+              fullWidth
+              value={formData.name}
+              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              required
+            />
+            
+            <TextField
+              label="Description"
+              fullWidth
+              multiline
+              rows={3}
+              value={formData.description}
+              onChange={(e) => setFormData({...formData, description: e.target.value})}
+            />
+            
+            <FormControl fullWidth required>
+              <InputLabel>Category Type</InputLabel>
+              <Select
+                value={formData.type}
+                label="Category Type"
+                onChange={(e) => setFormData({...formData, type: e.target.value})}
+              >
+                <MenuItem value="item">Item</MenuItem>
+                <MenuItem value="service">Service</MenuItem>
+                <MenuItem value="rent">Rent</MenuItem>
+                <MenuItem value="delivery">Delivery</MenuItem>
+              </Select>
+            </FormControl>
+            
+            <FormControl fullWidth>
+              <InputLabel>Status</InputLabel>
+              <Select
+                value={formData.status}
+                label="Status"
+                onChange={(e) => setFormData({...formData, status: e.target.value})}
+              >
+                <MenuItem value="active">Active</MenuItem>
+                <MenuItem value="inactive">Inactive</MenuItem>
+                <MenuItem value="draft">Draft</MenuItem>
+              </Select>
+            </FormControl>
+
+            {isSuperAdmin && (
+              <TextField
+                label="Country"
+                fullWidth
+                value={formData.country}
+                onChange={(e) => setFormData({...formData, country: e.target.value})}
+                placeholder="Leave empty for global"
+              />
+            )}
+          </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setEditDialogOpen(false)}>Close</Button>
+          <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+          <Button 
+            variant="contained" 
+            onClick={handleSaveCategory}
+            disabled={!formData.name || operationLoading}
+          >
+            {operationLoading ? <CircularProgress size={20} /> : (selectedCategory ? 'Update' : 'Add')}
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -489,22 +718,45 @@ const CategoriesModule = () => {
       >
         <DialogTitle>Delete Category</DialogTitle>
         <DialogContent>
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            Category deletion is not yet implemented. This feature is under development.
-          </Alert>
           {selectedCategory && (
-            <Typography>
-              Are you sure you want to delete "{selectedCategory.name}"?
-            </Typography>
+            <>
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                Are you sure you want to delete "{selectedCategory.name || selectedCategory.category}"?
+              </Alert>
+              <Typography variant="body2" color="text.secondary">
+                This category has {getSubcategoryCount(selectedCategory.id)} subcategories.
+                {getSubcategoryCount(selectedCategory.id) > 0 && ' You must delete all subcategories first.'}
+              </Typography>
+            </>
           )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button color="error" onClick={() => setDeleteDialogOpen(false)}>
-            Close
+          <Button 
+            color="error" 
+            variant="contained"
+            onClick={handleDeleteConfirm}
+            disabled={operationLoading}
+          >
+            {operationLoading ? <CircularProgress size={20} /> : 'Delete'}
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({...snackbar, open: false})}
+      >
+        <Alert 
+          onClose={() => setSnackbar({...snackbar, open: false})} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
