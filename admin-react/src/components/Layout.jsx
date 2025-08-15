@@ -16,7 +16,14 @@ import {
   MenuItem,
   Avatar,
   Divider,
-  Chip
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Button,
+  Alert
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -36,18 +43,31 @@ import {
   Public,
   LocationCity,
   Payment,
-  AdminPanelSettings
+  AdminPanelSettings,
+  Assignment,
+  Reply,
+  PriceCheck,
+  Lock
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { signOutAdmin } from '../firebase/auth';
+import { signOutAdmin, updateUserPassword } from '../firebase/auth';
 
 const drawerWidth = 280;
 
 const Layout = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
-  const { adminData, isSuperAdmin } = useAuth();
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+
+  const { user, adminData, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -55,11 +75,11 @@ const Layout = () => {
     setMobileOpen(!mobileOpen);
   };
 
-  const handleMenu = (event) => {
+  const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
   };
 
-  const handleClose = () => {
+  const handleMenuClose = () => {
     setAnchorEl(null);
   };
 
@@ -70,159 +90,116 @@ const Layout = () => {
     } catch (error) {
       console.error('Logout error:', error);
     }
-    handleClose();
+    handleMenuClose();
+  };
+
+  const handlePasswordChange = async () => {
+    setPasswordError('');
+    
+    if (!passwordData.currentPassword || !passwordData.newPassword) {
+      setPasswordError('Please fill in all fields');
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      setPasswordError('New password must be at least 6 characters long');
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      await updateUserPassword(passwordData.currentPassword, passwordData.newPassword);
+      setPasswordDialogOpen(false);
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      // Show success message or notification here
+    } catch (error) {
+      setPasswordError(error.message || 'Failed to update password');
+    } finally {
+      setPasswordLoading(false);
+    }
   };
 
   const menuItems = [
-    { 
-      text: 'Dashboard', 
-      icon: <Dashboard />, 
-      path: '/',
-      access: 'all'
-    },
-    { 
-      text: 'Master Products', 
-      icon: <ShoppingCart />, 
-      path: '/products',
-      access: 'all',
-      description: 'Centralized product database'
-    },
-    { 
-      text: 'Businesses', 
-      icon: <Business />, 
-      path: '/businesses',
-      access: 'all',
-      description: isSuperAdmin ? 'All businesses' : `${adminData?.country} businesses`
-    },
-    { 
-      text: 'Drivers', 
-      icon: <DirectionsCar />, 
-      path: '/drivers',
-      access: 'all',
-      description: isSuperAdmin ? 'All drivers' : `${adminData?.country} drivers`
-    },
-    { 
-      text: 'Vehicle Types', 
-      icon: <TwoWheeler />, 
-      path: '/vehicles',
-      access: 'permission',
-      permission: 'vehicleManagement',
-      description: isSuperAdmin ? 'Manage central vehicle database' : `Configure ${adminData?.country} vehicle types`
-    },
-    { 
-      text: 'Module Management', 
-      icon: <Tune />, 
-      path: '/modules',
-      access: 'all',
-      description: isSuperAdmin ? 'Configure modules for all countries' : `Configure ${adminData?.country} modules`
-    },
-    { 
-      text: 'Categories', 
-      icon: <Category />, 
-      path: '/categories',
-      access: 'all',
-      description: 'Product categories & subcategories'
-    },
-    { 
-      text: 'Brands', 
-      icon: <BrandingWatermark />, 
-      path: '/brands',
-      access: 'all',
-      description: 'Product brands and manufacturers'
-    },
-    { 
-      text: 'Product Variables', 
-      icon: <Tune />, 
-      path: '/variables',
-      access: 'all',
-      description: 'Custom product fields and attributes'
-    },
-    { 
-      text: 'Countries', 
-      icon: <Public />, 
-      path: '/countries',
-      access: 'super_admin',
-      description: 'Manage supported countries'
-    },
-    { 
-      text: 'Cities', 
-      icon: <LocationCity />, 
-      path: '/cities',
-      access: 'all',
-      description: isSuperAdmin ? 'Manage cities across all countries' : `Manage ${adminData?.country} cities`
-    },
-    { 
-      text: 'Payment Methods', 
-      icon: <Payment />, 
-      path: '/payment-methods',
-      access: 'all',
-      description: isSuperAdmin ? 'All countries payment methods' : `${adminData?.country} payment methods`
-    },
-    { 
-      text: 'Admin Users', 
-      icon: <Person />, 
-      path: '/admin-users',
-      access: 'permission', // Changed from 'super_admin' to 'permission'
-      permission: 'adminUsersManagement',
-      description: 'Manage admin accounts'
-    },
-    { 
-      text: 'Legal Documents', 
-      icon: <Gavel />, 
-      path: '/legal',
-      access: 'all',
-      description: isSuperAdmin ? 'All countries' : `${adminData?.country} legal docs`
-    },
-    { 
-      text: 'Privacy & Terms', 
-      icon: <PrivacyTip />, 
-      path: '/privacy-terms',
-      access: 'all',
-      description: 'Country-specific policies'
-    }
+    { text: 'Dashboard', icon: <Dashboard />, path: '/', access: 'all' },
+    { text: 'Requests', icon: <Assignment />, path: '/requests', access: 'all' },
+    { text: 'Responses', icon: <Reply />, path: '/responses', access: 'all' },
+    { text: 'Price Listings', icon: <PriceCheck />, path: '/price-listings', access: 'all' },
+    { text: 'Divider' },
+    { text: 'Products', icon: <ShoppingCart />, path: '/products', access: 'all', permission: 'productManagement' },
+    { text: 'Businesses', icon: <Business />, path: '/businesses', access: 'all', permission: 'businessManagement' },
+    { text: 'Divider' },
+    { text: 'Cars', icon: <DirectionsCar />, path: '/cars', access: 'super_admin', permission: 'vehicleManagement' },
+    { text: 'Bikes', icon: <TwoWheeler />, path: '/bikes', access: 'super_admin', permission: 'vehicleManagement' },
+    { text: 'Divider' },
+    { text: 'Categories', icon: <Category />, path: '/categories', access: 'super_admin' },
+    { text: 'Brands', icon: <BrandingWatermark />, path: '/brands', access: 'super_admin' },
+    { text: 'Variable Types', icon: <Tune />, path: '/variable-types', access: 'super_admin' },
+    { text: 'Divider' },
+    { text: 'Users', icon: <Person />, path: '/users', access: 'all', permission: 'userManagement' },
+    { text: 'Driver Verification', icon: <Gavel />, path: '/driver-verification', access: 'all', permission: 'driverVerification' },
+    { text: 'Privacy Policy', icon: <PrivacyTip />, path: '/privacy-policy', access: 'super_admin' },
+    { text: 'Divider' },
+    { text: 'Country Data', icon: <Public />, path: '/country-data', access: 'super_admin' },
+    { text: 'City Management', icon: <LocationCity />, path: '/cities', access: 'super_admin' },
+    { text: 'Payment Methods', icon: <Payment />, path: '/payment-methods', access: 'super_admin' },
+    { text: 'Divider' },
+    { text: 'Admin Management', icon: <AdminPanelSettings />, path: '/admin-management', access: 'super_admin' },
   ];
 
   const drawer = (
     <div>
-      <Toolbar>
-        <Box display="flex" alignItems="center" gap={2}>
-          <AdminPanelSettings color="primary" />
-          <Typography variant="h6" noWrap component="div">
-            Admin Panel
-          </Typography>
-        </Box>
-      </Toolbar>
+      <Toolbar />
       <Divider />
       <List>
-        {menuItems
-          .filter(item => {
-            if (item.access === 'all') return true;
-            if (item.access === 'super_admin' && isSuperAdmin) return true;
-            if (item.access === 'permission' && item.permission) {
-              // Super admins get automatic access to vehicleManagement
-              if (isSuperAdmin && item.permission === 'vehicleManagement') return true;
-              return adminData?.permissions?.[item.permission] === true;
-            }
-            return false;
-          })
-          .map((item) => (
+        {menuItems.filter(item => {
+          if (item.text === 'Divider') return true;
+          
+          // Check access level
+          if (item.access === 'all') return true;
+          if (item.access === 'super_admin' && isSuperAdmin) return true;
+          
+          // Check specific permissions for non-super admins
+          if (item.permission && !isSuperAdmin) {
+            // Special case for vehicle management - only super admins
+            if (isSuperAdmin && item.permission === 'vehicleManagement') return true;
+            return adminData?.permissions?.[item.permission] === true;
+          }
+          
+          return false;
+        }).map((item, index) => 
+          item.text === 'Divider' ? (
+            <Divider key={index} sx={{ my: 1 }} />
+          ) : (
             <ListItem key={item.text} disablePadding>
               <ListItemButton
                 selected={location.pathname === item.path}
                 onClick={() => navigate(item.path)}
+                sx={{
+                  '&.Mui-selected': {
+                    backgroundColor: 'primary.main',
+                    color: 'white',
+                    '&:hover': {
+                      backgroundColor: 'primary.dark',
+                    },
+                    '& .MuiListItemIcon-root': {
+                      color: 'white',
+                    },
+                  },
+                }}
               >
-                <ListItemIcon>{item.icon}</ListItemIcon>
-                <Box>
-                  <ListItemText primary={item.text} />
-                  {item.description && (
-                    <Typography variant="caption" color="text.secondary" display="block">
-                      {item.description}
-                    </Typography>
-                  )}
-                </Box>
+                <ListItemIcon>
+                  {item.icon}
+                </ListItemIcon>
+                <ListItemText primary={item.text} />
               </ListItemButton>
             </ListItem>
-          ))}
+          )
+        )}
       </List>
     </div>
   );
@@ -265,61 +242,64 @@ const Layout = () => {
               label={isSuperAdmin ? 'Super Admin' : 'Country Admin'}
               color={isSuperAdmin ? 'error' : 'success'}
               size="small"
+              variant="outlined"
+              sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.5)' }}
             />
             <IconButton
               size="large"
+              edge="end"
               aria-label="account of current user"
-              aria-controls="menu-appbar"
               aria-haspopup="true"
-              onClick={handleMenu}
+              onClick={handleMenuOpen}
               color="inherit"
             >
               <Avatar sx={{ width: 32, height: 32 }}>
-                {adminData?.name?.charAt(0) || 'A'}
+                {user?.email?.charAt(0).toUpperCase()}
               </Avatar>
             </IconButton>
-            <Menu
-              id="menu-appbar"
-              anchorEl={anchorEl}
-              anchorOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-              }}
-              keepMounted
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-              }}
-              open={Boolean(anchorEl)}
-              onClose={handleClose}
-            >
-              <MenuItem onClick={handleClose}>
-                <ListItemIcon>
-                  <Settings fontSize="small" />
-                </ListItemIcon>
-                Settings
-              </MenuItem>
-              <MenuItem onClick={handleLogout}>
-                <ListItemIcon>
-                  <Logout fontSize="small" />
-                </ListItemIcon>
-                Logout
-              </MenuItem>
-            </Menu>
           </Box>
         </Toolbar>
       </AppBar>
+
+      {/* User Menu */}
+      <Menu
+        anchorEl={anchorEl}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
+        }}
+        keepMounted
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+      >
+        <MenuItem onClick={() => { setPasswordDialogOpen(true); handleMenuClose(); }}>
+          <ListItemIcon>
+            <Lock fontSize="small" />
+          </ListItemIcon>
+          Change Password
+        </MenuItem>
+        <MenuItem onClick={handleLogout}>
+          <ListItemIcon>
+            <Logout fontSize="small" />
+          </ListItemIcon>
+          Logout
+        </MenuItem>
+      </Menu>
+
       <Box
         component="nav"
         sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
-        aria-label="mailbox folders"
       >
         <Drawer
           variant="temporary"
           open={mobileOpen}
           onClose={handleDrawerToggle}
           ModalProps={{
-            keepMounted: true,
+            keepMounted: true, // Better mobile performance
           }}
           sx={{
             display: { xs: 'block', sm: 'none' },
@@ -339,6 +319,7 @@ const Layout = () => {
           {drawer}
         </Drawer>
       </Box>
+
       <Box
         component="main"
         sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` } }}
@@ -346,6 +327,60 @@ const Layout = () => {
         <Toolbar />
         <Outlet />
       </Box>
+
+      {/* Password Change Dialog */}
+      <Dialog
+        open={passwordDialogOpen}
+        onClose={() => setPasswordDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Change Password</DialogTitle>
+        <DialogContent>
+          {passwordError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {passwordError}
+            </Alert>
+          )}
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            type="password"
+            label="Current Password"
+            value={passwordData.currentPassword}
+            onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+          />
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            type="password"
+            label="New Password"
+            value={passwordData.newPassword}
+            onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+          />
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            type="password"
+            label="Confirm New Password"
+            value={passwordData.confirmPassword}
+            onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPasswordDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handlePasswordChange}
+            disabled={passwordLoading}
+            variant="contained"
+          >
+            {passwordLoading ? 'Changing...' : 'Change Password'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

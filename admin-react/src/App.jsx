@@ -21,6 +21,9 @@ import ModuleManagement from './pages/ModuleManagement';
 import BusinessVerificationEnhanced from './pages/BusinessVerificationEnhanced';
 import DriverVerificationEnhanced from './pages/DriverVerificationEnhanced';
 import Vehicles from './pages/Vehicles';
+import RequestsModule from './pages/RequestsModule.jsx';
+import ResponsesModule from './pages/ResponsesModule.jsx';
+import PriceListingsModule from './pages/PriceListingsModule.jsx';
 import DebugAuth from './components/DebugAuth';
 
 const theme = createTheme({
@@ -65,6 +68,9 @@ function App() {
               <Route path="businesses" element={<BusinessVerificationEnhanced />} />
               <Route path="drivers" element={<DriverVerificationEnhanced />} />
               <Route path="vehicles" element={<Vehicles />} />
+              <Route path="requests" element={<RequestsModule />} />
+              <Route path="responses" element={<ResponsesModule />} />
+              <Route path="price-listings" element={<PriceListingsModule />} />
               <Route path="privacy-terms" element={<PrivacyTerms />} />
               {/* Add more protected routes here */}
             </Route>

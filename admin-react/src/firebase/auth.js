@@ -2,7 +2,10 @@ import {
   signInWithEmailAndPassword, 
   signOut, 
   onAuthStateChanged,
-  createUserWithEmailAndPassword 
+  createUserWithEmailAndPassword,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider
 } from 'firebase/auth';
 import { 
   doc, 
@@ -135,4 +138,35 @@ export const getCountryFilteredQuery = (baseQuery, adminData) => {
   
   // Country admin only sees their country's data
   return query(baseQuery, where('country', '==', adminData.country));
+};
+
+// Update user password
+export const updateUserPassword = async (currentPassword, newPassword) => {
+  try {
+    const user = auth.currentUser;
+    if (!user || !user.email) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Re-authenticate the user with their current password
+    const credential = EmailAuthProvider.credential(user.email, currentPassword);
+    await reauthenticateWithCredential(user, credential);
+
+    // Update to new password
+    await updatePassword(user, newPassword);
+    
+    return { success: true };
+  } catch (error) {
+    let errorMessage = 'Failed to update password';
+    
+    if (error.code === 'auth/wrong-password') {
+      errorMessage = 'Current password is incorrect';
+    } else if (error.code === 'auth/weak-password') {
+      errorMessage = 'New password is too weak';
+    } else if (error.code === 'auth/too-many-requests') {
+      errorMessage = 'Too many attempts. Please try again later';
+    }
+    
+    throw new Error(errorMessage);
+  }
 };
