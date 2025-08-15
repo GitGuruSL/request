@@ -78,7 +78,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
       slivers: [
         // Facebook-style header
         SliverAppBar(
-          expandedHeight: 100,
+          expandedHeight: 80,
           floating: false,
           pinned: true,
           backgroundColor: Colors.white,
@@ -92,13 +92,13 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                   bottom: BorderSide(color: Colors.grey, width: 0.2),
                 ),
               ),
-              child: SafeArea(
+              child: const SafeArea(
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Menu',
                         style: TextStyle(
                           fontSize: 28,
@@ -106,8 +106,6 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                           color: Colors.black,
                         ),
                       ),
-                      const Spacer(),
-                      _buildUserProfile(),
                     ],
                   ),
                 ),
@@ -125,6 +123,10 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
         // Menu content
         SliverList(
           delegate: SliverChildListDelegate([
+            const SizedBox(height: 12),
+            
+            // User Profile Card
+            _buildUserProfileCard(),
             const SizedBox(height: 12),
             
             // Facebook-style grid sections
@@ -171,6 +173,54 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildUserProfileCard() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: () => Navigator.pushNamed(context, '/profile'),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundImage: _profileImageUrl != null && _profileImageUrl!.isNotEmpty
+                    ? NetworkImage(_profileImageUrl!)
+                    : null,
+                backgroundColor: Colors.grey[300],
+                child: _profileImageUrl == null || _profileImageUrl!.isEmpty
+                    ? Icon(Icons.person, color: Colors.grey[600], size: 28)
+                    : null,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  _currentUser?['name'] ?? 
+                  _currentUser?['displayName'] ?? 
+                  'User',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.keyboard_arrow_down,
+                color: Colors.grey[600],
+                size: 28,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
