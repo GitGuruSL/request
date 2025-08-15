@@ -32,7 +32,8 @@ import {
   AccordionSummary,
   AccordionDetails,
   Tab,
-  Tabs
+  Tabs,
+  Snackbar
 } from '@mui/material';
 import {
   Add,
@@ -85,6 +86,75 @@ const SUBSCRIPTION_PLANS = [
   { value: 'pay_per_click', label: 'Pay Per Click' }
 ];
 
+// Default subscription plans that super admin can create
+const DEFAULT_SUBSCRIPTION_PLANS = {
+  rider_free: {
+    name: 'Rider Free Plan',
+    type: 'rider',
+    planType: 'monthly',
+    description: 'Limited free plan for riders with basic features',
+    isActive: true,
+    features: [
+      'Browse service requests',
+      'Up to 2 responses per month',
+      'Basic profile creation',
+      'View contact information after selection'
+    ],
+    limitations: {
+      maxResponsesPerMonth: 2,
+      riderRequestNotifications: false,
+      unlimitedResponses: false
+    },
+    isGlobal: true,
+    requiresCountryPricing: false,
+    defaultPrice: 0
+  },
+  rider_premium: {
+    name: 'Rider Premium Plan',
+    type: 'rider',
+    planType: 'monthly',
+    description: 'Unlimited plan for active riders',
+    isActive: true,
+    features: [
+      'Browse all service requests',
+      'Unlimited responses per month',
+      'Priority listing in search results',
+      'Instant rider request notifications',
+      'Advanced profile features',
+      'Analytics and insights'
+    ],
+    limitations: {
+      maxResponsesPerMonth: -1, // -1 means unlimited
+      riderRequestNotifications: true,
+      unlimitedResponses: true
+    },
+    isGlobal: true,
+    requiresCountryPricing: true,
+    defaultPrice: 10 // USD base price, will be converted per country
+  },
+  business_pay_per_click: {
+    name: 'Business Pay Per Click',
+    type: 'business',
+    planType: 'pay_per_click',
+    description: 'Pay only when someone responds to your requests',
+    isActive: true,
+    features: [
+      'Post unlimited service requests',
+      'Pay only for responses received',
+      'Business profile verification',
+      'Priority customer support',
+      'Request analytics and reporting'
+    ],
+    limitations: {
+      payPerResponse: true,
+      unlimitedRequests: true
+    },
+    isGlobal: true,
+    requiresCountryPricing: true,
+    defaultPrice: 2 // USD base price per click, will be converted per country
+  }
+};
+
 const Subscriptions = () => {
   const { user, adminData, userRole, userCountry } = useAuth();
   const { isSuperAdmin, countries } = useCountryFilter();
@@ -96,6 +166,16 @@ const Subscriptions = () => {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [tabValue, setTabValue] = useState(0);
   const [error, setError] = useState('');
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+  // Pricing dialog states
+  const [pricingDialogOpen, setPricingDialogOpen] = useState(false);
+  const [selectedPlanForPricing, setSelectedPlanForPricing] = useState(null);
+  const [countryPricingData, setCountryPricingData] = useState({
+    price: '',
+    currency: '',
+    currencySymbol: ''
+  });
 
   // Form states
   const [formData, setFormData] = useState({
@@ -126,19 +206,44 @@ const Subscriptions = () => {
       const plansRef = collection(db, 'subscription_plans');
       let plansQuery = plansRef;
 
-      // Country filtering for non-super admins
+      // For country admins: show both assigned plans and global default plans
       if (!isSuperAdmin && userCountry) {
-        plansQuery = query(plansRef, where('countries', 'array-contains', userCountry));
+        // Get all plans - we'll filter client-side to show relevant ones
+        plansQuery = query(plansRef, orderBy('createdAt', 'desc'));
       }
 
       const snapshot = await getDocs(plansQuery);
       const plans = [];
       
       snapshot.forEach((doc) => {
-        plans.push({ id: doc.id, ...doc.data() });
+        const planData = { id: doc.id, ...doc.data() };
+        plans.push(planData);
       });
 
-      setSubscriptionPlans(plans);
+      // Client-side filtering for country admins
+      let filteredPlans = plans;
+      if (!isSuperAdmin && userCountry) {
+        filteredPlans = plans.filter(plan => 
+          // Show plans that include this country OR are default plans that need country pricing
+          plan.countries?.includes(userCountry) || 
+          (plan.isDefaultPlan && plan.requiresCountryPricing) ||
+          (plan.isDefaultPlan && !plan.requiresCountryPricing) // Show free plans too
+        );
+      }
+
+      // If no plans exist and user is super admin, create default plans
+      if (plans.length === 0 && isSuperAdmin) {
+        await initializeDefaultPlans();
+        // Refetch after creating default plans
+        const newSnapshot = await getDocs(plansQuery);
+        const newPlans = [];
+        newSnapshot.forEach((doc) => {
+          newPlans.push({ id: doc.id, ...doc.data() });
+        });
+        setSubscriptionPlans(newPlans);
+      } else {
+        setSubscriptionPlans(filteredPlans);
+      }
     } catch (error) {
       console.error('Error fetching subscription plans:', error);
       setError('Failed to fetch subscription plans');
@@ -167,6 +272,321 @@ const Subscriptions = () => {
       setUserSubscriptions(subscriptions);
     } catch (error) {
       console.error('Error fetching user subscriptions:', error);
+    }
+  };
+
+  // Initialize default subscription plans (Super Admin only)
+  const initializeDefaultPlans = async () => {
+    if (!isSuperAdmin) return;
+    
+    try {
+      setLoading(true);
+      let createdCount = 0;
+      let existingCount = 0;
+      
+      for (const [planId, planData] of Object.entries(DEFAULT_SUBSCRIPTION_PLANS)) {
+        // Check if plan already exists
+        const plansRef = collection(db, 'subscription_plans');
+        const existingQuery = query(plansRef, where('planId', '==', planId));
+        const existingSnapshot = await getDocs(existingQuery);
+        
+        if (existingSnapshot.empty) {
+          // Create the plan
+          const newPlan = {
+            ...planData,
+            planId: planId,
+            countries: [], // Will be populated when country admins add pricing
+            pricingByCountry: {},
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            createdBy: user.email,
+            isDefaultPlan: true
+          };
+          
+          await addDoc(collection(db, 'subscription_plans'), newPlan);
+          console.log(`Created default plan: ${planData.name}`);
+          createdCount++;
+        } else {
+          existingCount++;
+        }
+      }
+      
+      // Show appropriate success message
+      if (createdCount > 0) {
+        setSnackbar({
+          open: true,
+          message: `Successfully created ${createdCount} new default subscription plans`,
+          severity: 'success'
+        });
+      } else if (existingCount > 0) {
+        setSnackbar({
+          open: true,
+          message: 'All default subscription plans already exist',
+          severity: 'info'
+        });
+      }
+      
+      // Refresh the plans list
+      fetchSubscriptionPlans();
+    } catch (error) {
+      console.error('Error initializing default plans:', error);
+      setError('Failed to initialize default plans');
+      setSnackbar({
+        open: true,
+        message: 'Failed to initialize default subscription plans',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Add country pricing to a global plan (Country Admin function)
+  const addCountryPricing = async (planId, countryCode, pricing) => {
+    if (isSuperAdmin) return; // Only country admins should do this
+    
+    try {
+      console.log('Adding country pricing:', { planId, countryCode, pricing });
+      
+      const planRef = doc(db, 'subscription_plans', planId);
+      const plan = subscriptionPlans.find(p => p.id === planId);
+      
+      if (!plan) {
+        console.error('Plan not found:', planId);
+        throw new Error('Plan not found');
+      }
+      
+      console.log('Found plan:', plan);
+      
+      // Get currency info for the country
+      const currency = CURRENCIES[countryCode] || { symbol: '$', code: 'USD' };
+      
+      const updatedPricingByCountry = {
+        ...plan.pricingByCountry,
+        [countryCode]: {
+          price: pricing.price,
+          currency: currency.code,
+          currencySymbol: currency.symbol,
+          addedBy: user.email,
+          addedAt: new Date(),
+          approvalStatus: 'pending', // New pricing needs super admin approval
+          isActive: false // Not active until approved
+        }
+      };
+      
+      const updatedCountries = plan.countries?.includes(countryCode) 
+        ? plan.countries 
+        : [...(plan.countries || []), countryCode];
+      
+      console.log('Updating plan with:', {
+        pricingByCountry: updatedPricingByCountry,
+        countries: updatedCountries
+      });
+      
+      await updateDoc(planRef, {
+        pricingByCountry: updatedPricingByCountry,
+        countries: updatedCountries,
+        updatedAt: new Date()
+      });
+      
+      console.log('Successfully updated plan');
+      
+      // Refresh plans
+      fetchSubscriptionPlans();
+    } catch (error) {
+      console.error('Error adding country pricing:', error);
+      throw error; // Re-throw to be caught by the calling function
+    }
+  };
+
+  // Convert USD price to local currency (simplified conversion)
+  const convertPriceToLocalCurrency = (usdPrice, countryCode) => {
+    const conversionRates = {
+      'LK': 300, // 1 USD = 300 LKR (approximate)
+      'IN': 80,  // 1 USD = 80 INR
+      'US': 1,   // Base currency
+      'GB': 0.8, // 1 USD = 0.8 GBP
+      'AU': 1.5, // 1 USD = 1.5 AUD
+      'CA': 1.3, // 1 USD = 1.3 CAD
+      'SG': 1.4, // 1 USD = 1.4 SGD
+      'MY': 4.6, // 1 USD = 4.6 MYR
+      'TH': 35,  // 1 USD = 35 THB
+      'PH': 55,  // 1 USD = 55 PHP
+      'ID': 15000, // 1 USD = 15,000 IDR
+      'VN': 24000, // 1 USD = 24,000 VND
+    };
+    
+    const rate = conversionRates[countryCode] || 1;
+    return Math.round(usdPrice * rate);
+  };
+
+  // Open pricing dialog for country admin
+  const handleOpenPricingDialog = (plan) => {
+    if (isSuperAdmin) return;
+    
+    setSelectedPlanForPricing(plan);
+    
+    // Get currency info for user's country
+    const currency = CURRENCIES[userCountry] || { symbol: '$', code: 'USD' };
+    
+    // Suggest a price based on the default USD price
+    const suggestedPrice = plan.defaultPrice ? convertPriceToLocalCurrency(plan.defaultPrice, userCountry) : '';
+    
+    setCountryPricingData({
+      price: suggestedPrice.toString(),
+      currency: currency.code,
+      currencySymbol: currency.symbol
+    });
+    
+    setPricingDialogOpen(true);
+  };
+
+  // Edit existing pricing
+  const handleEditPricing = (plan) => {
+    if (isSuperAdmin) return;
+    
+    setSelectedPlanForPricing(plan);
+    
+    // Get existing pricing data
+    const existingPricing = plan.pricingByCountry[userCountry];
+    const currency = CURRENCIES[userCountry] || { symbol: '$', code: 'USD' };
+    
+    setCountryPricingData({
+      price: existingPricing.price.toString(),
+      currency: currency.code,
+      currencySymbol: currency.symbol
+    });
+    
+    setPricingDialogOpen(true);
+  };
+
+  // Handle country pricing submission
+  const handleCountryPricingSubmit = async () => {
+    if (!selectedPlanForPricing || !countryPricingData.price) {
+      setError('Please enter a valid price');
+      return;
+    }
+    
+    try {
+      console.log('Submitting country pricing:', {
+        plan: selectedPlanForPricing.id,
+        country: userCountry,
+        price: countryPricingData.price
+      });
+      
+      await addCountryPricing(selectedPlanForPricing.id, userCountry, {
+        price: parseFloat(countryPricingData.price)
+      });
+      
+      setPricingDialogOpen(false);
+      setSelectedPlanForPricing(null);
+      setCountryPricingData({ price: '', currency: '', currencySymbol: '' });
+      setError(''); // Clear any previous errors
+      
+      // Show success message
+      setSnackbar({
+        open: true,
+        message: `Pricing submitted for ${countryPricingData.currencySymbol}${countryPricingData.price}. Awaiting super admin approval.`,
+        severity: 'success'
+      });
+      
+      // Refresh the subscription plans
+      await fetchSubscriptionPlans();
+    } catch (error) {
+      console.error('Failed to add pricing:', error);
+      const errorMessage = error.message || 'Failed to add pricing for this country';
+      setError(errorMessage);
+      setSnackbar({
+        open: true,
+        message: errorMessage,
+        severity: 'error'
+      });
+    }
+  };
+
+  // Super Admin functions for pricing approval
+  const handleApprovePricing = async (planId, countryCode) => {
+    if (!isSuperAdmin) return;
+    
+    try {
+      const planRef = doc(db, 'subscription_plans', planId);
+      const plan = subscriptionPlans.find(p => p.id === planId);
+      
+      if (!plan || !plan.pricingByCountry[countryCode]) return;
+      
+      const updatedPricingByCountry = {
+        ...plan.pricingByCountry,
+        [countryCode]: {
+          ...plan.pricingByCountry[countryCode],
+          approvalStatus: 'approved',
+          approvedBy: user.email,
+          approvedAt: new Date(),
+          isActive: true
+        }
+      };
+      
+      await updateDoc(planRef, {
+        pricingByCountry: updatedPricingByCountry,
+        updatedAt: new Date()
+      });
+      
+      setSnackbar({
+        open: true,
+        message: `Pricing approved for ${countryCode}`,
+        severity: 'success'
+      });
+      
+      fetchSubscriptionPlans();
+    } catch (error) {
+      console.error('Error approving pricing:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to approve pricing',
+        severity: 'error'
+      });
+    }
+  };
+
+  const handleRejectPricing = async (planId, countryCode, reason = '') => {
+    if (!isSuperAdmin) return;
+    
+    try {
+      const planRef = doc(db, 'subscription_plans', planId);
+      const plan = subscriptionPlans.find(p => p.id === planId);
+      
+      if (!plan || !plan.pricingByCountry[countryCode]) return;
+      
+      const updatedPricingByCountry = {
+        ...plan.pricingByCountry,
+        [countryCode]: {
+          ...plan.pricingByCountry[countryCode],
+          approvalStatus: 'rejected',
+          rejectedBy: user.email,
+          rejectedAt: new Date(),
+          rejectionReason: reason,
+          isActive: false
+        }
+      };
+      
+      await updateDoc(planRef, {
+        pricingByCountry: updatedPricingByCountry,
+        updatedAt: new Date()
+      });
+      
+      setSnackbar({
+        open: true,
+        message: `Pricing rejected for ${countryCode}`,
+        severity: 'warning'
+      });
+      
+      fetchSubscriptionPlans();
+    } catch (error) {
+      console.error('Error rejecting pricing:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to reject pricing',
+        severity: 'error'
+      });
     }
   };
 
@@ -302,21 +722,34 @@ const Subscriptions = () => {
     <Box p={3}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4">Subscription Management</Typography>
-        {isSuperAdmin && (
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={() => setDialogOpen(true)}
-            disabled={loading}
-          >
-            Add Subscription Plan
-          </Button>
-        )}
+        <Box display="flex" gap={2}>
+          {isSuperAdmin && (
+            <>
+              <Button
+                variant="outlined"
+                onClick={initializeDefaultPlans}
+                disabled={loading}
+                color="info"
+              >
+                Initialize Default Plans
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={() => setDialogOpen(true)}
+                disabled={loading}
+              >
+                Add Custom Plan
+              </Button>
+            </>
+          )}
+        </Box>
       </Box>
 
       {!isSuperAdmin && userCountry && (
         <Alert severity="info" sx={{ mb: 3 }}>
-          You can only manage subscription plans for {countries.find(c => c.code === userCountry)?.name || userCountry}.
+          You can manage subscription plans for {countries?.find(c => c.code === userCountry)?.name || userCountry}. 
+          Add pricing to global plans to make them available in your country.
         </Alert>
       )}
 
@@ -324,6 +757,7 @@ const Subscriptions = () => {
         <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
           <Tab label="Subscription Plans" />
           <Tab label="User Subscriptions" />
+          {isSuperAdmin && <Tab label="Pricing Approvals" />}
           <Tab label="Analytics" />
         </Tabs>
       </Box>
@@ -349,6 +783,7 @@ const Subscriptions = () => {
                     <TableCell>Type</TableCell>
                     <TableCell>Plan Type</TableCell>
                     <TableCell>Countries</TableCell>
+                    <TableCell>Pricing</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Actions</TableCell>
                   </TableRow>
@@ -386,6 +821,62 @@ const Subscriptions = () => {
                             />
                           )}
                         </Box>
+                      </TableCell>
+                      <TableCell>
+                        {plan.pricingByCountry && userCountry && plan.pricingByCountry[userCountry] ? (
+                          <Box display="flex" flexDirection="column" alignItems="flex-start" gap={0.5}>
+                            <Chip
+                              label={`${plan.pricingByCountry[userCountry].currencySymbol}${plan.pricingByCountry[userCountry].price}`}
+                              color={plan.pricingByCountry[userCountry].approvalStatus === 'approved' ? 'success' : 
+                                     plan.pricingByCountry[userCountry].approvalStatus === 'rejected' ? 'error' : 'warning'}
+                              size="small"
+                            />
+                            {!isSuperAdmin && (
+                              <>
+                                <Chip 
+                                  label={plan.pricingByCountry[userCountry].approvalStatus || 'pending'} 
+                                  size="small" 
+                                  variant="outlined"
+                                  color={plan.pricingByCountry[userCountry].approvalStatus === 'approved' ? 'success' : 
+                                         plan.pricingByCountry[userCountry].approvalStatus === 'rejected' ? 'error' : 'warning'}
+                                />
+                                <Button
+                                  size="small"
+                                  variant="text"
+                                  color="primary"
+                                  onClick={() => handleEditPricing(plan)}
+                                  sx={{ fontSize: '0.7rem', minWidth: 'auto', p: 0.5 }}
+                                >
+                                  Edit Price
+                                </Button>
+                              </>
+                            )}
+                          </Box>
+                        ) : plan.defaultPrice === 0 ? (
+                          <Chip label="FREE" color="success" size="small" />
+                        ) : (
+                          <Box display="flex" flexDirection="column" alignItems="flex-start">
+                            {plan.requiresCountryPricing && !isSuperAdmin ? (
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                color="primary"
+                                onClick={() => handleOpenPricingDialog(plan)}
+                                disabled={plan.pricingByCountry && plan.pricingByCountry[userCountry]}
+                              >
+                                Add Pricing
+                              </Button>
+                            ) : isSuperAdmin && plan.requiresCountryPricing ? (
+                              <Typography variant="body2" color="textSecondary">
+                                Country pricing required
+                              </Typography>
+                            ) : (
+                              <Typography variant="body2" color="textSecondary">
+                                {plan.defaultPrice ? `$${plan.defaultPrice}` : 'No pricing set'}
+                              </Typography>
+                            )}
+                          </Box>
+                        )}
                       </TableCell>
                       <TableCell>{getStatusChip(plan.isActive)}</TableCell>
                       <TableCell>
@@ -456,7 +947,142 @@ const Subscriptions = () => {
             </TableContainer>
           )}
 
-          {tabValue === 2 && (
+          {isSuperAdmin && tabValue === 2 && (
+            <>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                Review and manage pricing requests from country admins. Approve or reject pricing to control what's available in each country.
+              </Alert>
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Plan Name</TableCell>
+                      <TableCell>Country</TableCell>
+                      <TableCell>Price</TableCell>
+                      <TableCell>Submitted By</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Date</TableCell>
+                      <TableCell>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                <TableBody>
+                  {subscriptionPlans.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} align="center">
+                        <Typography variant="body2" color="textSecondary" sx={{ py: 4 }}>
+                          No subscription plans found. Create default plans first.
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : subscriptionPlans.some(plan => plan.pricingByCountry && Object.keys(plan.pricingByCountry).length > 0) ? (
+                    subscriptionPlans.map((plan) => 
+                      plan.pricingByCountry ? Object.entries(plan.pricingByCountry).map(([country, pricing]) => (
+                        <TableRow key={`${plan.id}-${country}`}>
+                          <TableCell>
+                            <Typography variant="subtitle2">{plan.name}</Typography>
+                            <Typography variant="body2" color="textSecondary">
+                              {plan.type} - {plan.planType}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={countries?.find(c => c.code === country)?.name || country} 
+                              size="small" 
+                              variant="outlined"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="h6" color="primary">
+                              {pricing.currencySymbol}{pricing.price}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>{pricing.addedBy}</TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={pricing.approvalStatus || 'pending'} 
+                              size="small"
+                              color={pricing.approvalStatus === 'approved' ? 'success' : 
+                                     pricing.approvalStatus === 'rejected' ? 'error' : 'warning'}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {pricing.addedAt?.toDate?.()?.toLocaleDateString?.() || 'N/A'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            {(!pricing.approvalStatus || pricing.approvalStatus === 'pending') && (
+                              <Box display="flex" gap={1}>
+                                <Button
+                                  size="small"
+                                  variant="contained"
+                                  color="success"
+                                  onClick={() => handleApprovePricing(plan.id, country)}
+                                >
+                                  Approve
+                                </Button>
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  color="error"
+                                  onClick={() => handleRejectPricing(plan.id, country)}
+                                >
+                                  Reject
+                                </Button>
+                              </Box>
+                            )}
+                            {pricing.approvalStatus === 'approved' && (
+                              <Box display="flex" flexDirection="column" alignItems="flex-start">
+                                <Typography variant="body2" color="success.main">
+                                  ✓ Approved
+                                </Typography>
+                                <Button
+                                  size="small"
+                                  variant="text"
+                                  color="error"
+                                  onClick={() => handleRejectPricing(plan.id, country, 'Re-evaluation needed')}
+                                  sx={{ fontSize: '0.7rem', minWidth: 'auto', p: 0.5 }}
+                                >
+                                  Revoke
+                                </Button>
+                              </Box>
+                            )}
+                            {pricing.approvalStatus === 'rejected' && (
+                              <Box display="flex" flexDirection="column" alignItems="flex-start">
+                                <Typography variant="body2" color="error.main">
+                                  ✗ Rejected
+                                </Typography>
+                                <Button
+                                  size="small"
+                                  variant="text"
+                                  color="success"
+                                  onClick={() => handleApprovePricing(plan.id, country)}
+                                  sx={{ fontSize: '0.7rem', minWidth: 'auto', p: 0.5 }}
+                                >
+                                  Approve
+                                </Button>
+                              </Box>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      )) : []
+                    ).flat()
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} align="center">
+                        <Typography variant="body2" color="textSecondary" sx={{ py: 4 }}>
+                          No pricing requests submitted yet. Country admins need to add pricing first.
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            </>
+          )}
+
+          {tabValue === (isSuperAdmin ? 3 : 2) && (
             <Grid container spacing={3}>
               <Grid item xs={12} md={6}>
                 <Card>
@@ -576,11 +1202,11 @@ const Subscriptions = () => {
                         </Box>
                       )}
                     >
-                      {countries.map((country) => (
+                      {countries?.map((country) => (
                         <MenuItem key={country.code} value={country.code}>
                           {country.name} ({country.code})
                         </MenuItem>
-                      ))}
+                      )) || []}
                     </Select>
                   </FormControl>
                 </Grid>
@@ -596,7 +1222,7 @@ const Subscriptions = () => {
                 <Accordion key={country}>
                   <AccordionSummary expandIcon={<ExpandMore />}>
                     <Typography>
-                      {countries.find(c => c.code === country)?.name || country} Pricing
+                      {countries?.find(c => c.code === country)?.name || country} Pricing
                     </Typography>
                   </AccordionSummary>
                   <AccordionDetails>
@@ -696,7 +1322,7 @@ const Subscriptions = () => {
                     <Card key={country} sx={{ mb: 2 }}>
                       <CardContent>
                         <Typography variant="subtitle1" gutterBottom>
-                          {countries.find(c => c.code === country)?.name || country}
+                          {countries?.find(c => c.code === country)?.name || country}
                         </Typography>
                         <Grid container spacing={2}>
                           {pricing.monthlyPrice && (
@@ -736,6 +1362,131 @@ const Subscriptions = () => {
           <Button onClick={handleCloseDialog}>Close</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Country Pricing Dialog */}
+      <Dialog 
+        open={pricingDialogOpen} 
+        onClose={() => setPricingDialogOpen(false)}
+        maxWidth="sm" 
+        fullWidth
+      >
+        <DialogTitle>
+          {selectedPlanForPricing?.pricingByCountry?.[userCountry] ? 'Edit' : 'Add'} Pricing for {countries?.find(c => c.code === userCountry)?.name || userCountry}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            {selectedPlanForPricing && (
+              <>
+                <Typography variant="h6" gutterBottom>
+                  {selectedPlanForPricing.name}
+                </Typography>
+                <Typography variant="body2" color="textSecondary" paragraph>
+                  {selectedPlanForPricing.description}
+                </Typography>
+                
+                <Alert severity="info" sx={{ mb: 3 }}>
+                  <Typography variant="body2">
+                    <strong>Plan Type:</strong> {selectedPlanForPricing.type} - {selectedPlanForPricing.planType}
+                    <br />
+                    <strong>Currency:</strong> {countryPricingData.currencySymbol} ({countryPricingData.currency})
+                    {selectedPlanForPricing.defaultPrice && (
+                      <>
+                        <br />
+                        <strong>Suggested Price:</strong> Based on ${selectedPlanForPricing.defaultPrice} USD
+                      </>
+                    )}
+                  </Typography>
+                </Alert>
+
+                {selectedPlanForPricing.pricingByCountry?.[userCountry] && (
+                  <Alert 
+                    severity={
+                      selectedPlanForPricing.pricingByCountry[userCountry].approvalStatus === 'approved' ? 'success' :
+                      selectedPlanForPricing.pricingByCountry[userCountry].approvalStatus === 'rejected' ? 'error' : 'warning'
+                    } 
+                    sx={{ mb: 3 }}
+                  >
+                    <Typography variant="body2">
+                      <strong>Current Status:</strong> {selectedPlanForPricing.pricingByCountry[userCountry].approvalStatus || 'pending'}
+                      {selectedPlanForPricing.pricingByCountry[userCountry].approvalStatus === 'rejected' && 
+                        selectedPlanForPricing.pricingByCountry[userCountry].rejectionReason && (
+                        <>
+                          <br />
+                          <strong>Reason:</strong> {selectedPlanForPricing.pricingByCountry[userCountry].rejectionReason}
+                        </>
+                      )}
+                      <br />
+                      <strong>Note:</strong> Any changes will require super admin approval again.
+                    </Typography>
+                  </Alert>
+                )}
+
+                <TextField
+                  fullWidth
+                  label={`Price (${countryPricingData.currencySymbol})`}
+                  type="number"
+                  value={countryPricingData.price}
+                  onChange={(e) => setCountryPricingData({
+                    ...countryPricingData,
+                    price: e.target.value
+                  })}
+                  placeholder={
+                    selectedPlanForPricing.planType === 'pay_per_click' 
+                      ? 'Price per response/click' 
+                      : 'Monthly subscription price'
+                  }
+                  helperText={
+                    selectedPlanForPricing.planType === 'pay_per_click'
+                      ? 'This amount will be charged for each response received'
+                      : 'This amount will be charged monthly'
+                  }
+                  sx={{ mb: 2 }}
+                />
+
+                {selectedPlanForPricing.features && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="subtitle2" gutterBottom>Plan Features:</Typography>
+                    <Box component="ul" sx={{ pl: 2, m: 0 }}>
+                      {selectedPlanForPricing.features.map((feature, index) => (
+                        <Typography key={index} component="li" variant="body2" color="textSecondary">
+                          {feature}
+                        </Typography>
+                      ))}
+                    </Box>
+                  </Box>
+                )}
+              </>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPricingDialogOpen(false)}>Cancel</Button>
+          <Button 
+            variant="contained" 
+            onClick={handleCountryPricingSubmit}
+            disabled={!countryPricingData.price}
+          >
+            Add Pricing
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Success/Error Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setSnackbar({ ...snackbar, open: false })} 
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
