@@ -14,7 +14,6 @@ import Brands from './pages/Brands';
 import Variables from './pages/Variables';
 import Countries from './pages/Countries';
 import Cities from './pages/Cities';
-import PrivacyTerms from './pages/PrivacyTerms';
 import PaymentMethods from './pages/PaymentMethods';
 import AdminUsers from './pages/AdminUsers';
 import ModuleManagement from './pages/ModuleManagement';
@@ -90,8 +89,6 @@ function App() {
               <Route path="price-listings" element={<PriceListingsModule />} />
               <Route path="pages" element={<PagesModule />} />
               <Route path="centralized-pages" element={<CentralizedPagesModule />} />
-              <Route path="privacy-terms" element={<PrivacyTerms />} />
-              <Route path="privacy-policy" element={<PrivacyTerms />} />
               {/* Add more protected routes here */}
             </Route>
           </Routes>

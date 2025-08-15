@@ -689,6 +689,9 @@ const AdminUsers = () => {
                     {adminUser.permissions?.legalDocumentManagement && (
                       <Chip label="Legal Mgmt" size="small" variant="outlined" color="secondary" />
                     )}
+                    {adminUser.permissions?.contentManagement && (
+                      <Chip label="Page Mgmt" size="small" variant="outlined" color="info" />
+                    )}
                     
                     {/* Super Admin Only */}
                     {adminUser.permissions?.adminUsersManagement && (
@@ -958,7 +961,7 @@ const AdminUsers = () => {
 
               {/* Legal & Payment Section */}
               <Typography variant="body2" color="primary" gutterBottom sx={{ fontWeight: 'bold' }}>
-                💼 Legal & Payment Management
+                💼 Legal & Content Management
               </Typography>
               <Grid container spacing={1} sx={{ ml: 2, mb: 2 }}>
                 <Grid item xs={12} sm={6} md={4}>
@@ -983,6 +986,18 @@ const AdminUsers = () => {
                       />
                     }
                     label="Legal Documents"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={formData.permissions?.contentManagement}
+                        onChange={(e) => handlePermissionChange('contentManagement', e.target.checked)}
+                      />
+                    }
+                    label="Page Management"
                   />
                 </Grid>
               </Grid>

@@ -125,7 +125,27 @@ const PagesModule = () => {
   const loadPages = async () => {
     try {
       setLoading(true);
-      const pagesData = await getFilteredData('content_pages', adminData);
+      
+      let pagesData;
+      if (isSuperAdmin) {
+        // Super admin sees ALL pages from all countries
+        pagesData = await getFilteredData('content_pages', { role: 'super_admin', country: null });
+      } else {
+        // Country admin only sees pages for their country + global centralized pages
+        const allPagesData = await getFilteredData('content_pages', adminData);
+        
+        // Filter to show:
+        // 1. Pages created for their specific country
+        // 2. Centralized pages (global)
+        // 3. Templates they can customize
+        pagesData = allPagesData?.filter(page => {
+          return page.countries?.includes(userCountry) || // Country-specific pages
+                 page.countries?.includes('global') ||    // Global/centralized pages  
+                 page.type === 'centralized' ||           // Centralized pages
+                 (page.type === 'template' && page.isTemplate); // Templates
+        });
+      }
+      
       setPages(pagesData || []);
     } catch (error) {
       console.error('Error loading pages:', error);
@@ -143,12 +163,12 @@ const PagesModule = () => {
     setFormData({
       title: '',
       slug: '',
-      type: 'centralized',
+      type: isSuperAdmin ? 'centralized' : 'country-specific', // Default based on role
       category: 'legal',
       content: '',
-      countries: userCountry ? [userCountry] : [],
+      countries: isSuperAdmin ? ['global'] : [userCountry], // Auto-assign based on role
       isTemplate: false,
-      requiresApproval: true,
+      requiresApproval: !isSuperAdmin, // Super admin pages don't need approval
       status: 'draft',
       metaDescription: '',
       keywords: []
@@ -279,9 +299,18 @@ const PagesModule = () => {
         <Typography variant="body2" color="text.secondary">
           {isSuperAdmin ? 
             'Manage global and country-specific pages with approval workflow' : 
-            `Manage pages for ${getCountryDisplayName(userCountry)} (requires super admin approval)`
+            `Manage pages for ${getCountryDisplayName(userCountry)} and contribute to global pages (requires super admin approval)`
           }
         </Typography>
+        
+        {!isSuperAdmin && (
+          <Alert severity="info" sx={{ mt: 2 }}>
+            <Typography variant="body2">
+              <strong>Country Admin Access:</strong> You can create pages for {getCountryDisplayName(userCountry)} 
+              and contribute to global pages. All pages require super admin approval before publishing.
+            </Typography>
+          </Alert>
+        )}
       </Box>
 
       {/* Stats Cards */}
@@ -446,11 +475,22 @@ const PagesModule = () => {
                 </TableCell>
                 <TableCell>
                   {page.type === 'centralized' ? (
-                    <Chip label="Global" size="small" color="primary" />
+                    <Chip 
+                      label="🌐 ALL COUNTRIES" 
+                      size="small" 
+                      color="primary"
+                      variant="filled"
+                    />
                   ) : (
                     <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                       {(page.countries || []).map(country => (
-                        <Chip key={country} label={country} size="small" />
+                        <Chip 
+                          key={country} 
+                          label={country === 'global' ? '🌐 Global' : getCountryDisplayName(country)} 
+                          size="small"
+                          color={country === userCountry ? 'success' : 'default'}
+                          variant={country === userCountry ? 'filled' : 'outlined'}
+                        />
                       ))}
                     </Box>
                   )}
@@ -464,9 +504,14 @@ const PagesModule = () => {
                   />
                 </TableCell>
                 <TableCell>
-                  <Typography variant="caption">
-                    {getCountryDisplayName(page.country) || 'Global'}
-                  </Typography>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      {page.createdBy === adminData.uid ? 'You' : 'Other Admin'}
+                    </Typography>
+                    <Typography variant="caption" display="block" color="text.secondary">
+                      {getCountryDisplayName(page.country) || 'Global'}
+                    </Typography>
+                  </Box>
                 </TableCell>
                 <TableCell>
                   <Box sx={{ display: 'flex', gap: 0.5 }}>
@@ -582,18 +627,39 @@ const PagesModule = () => {
                 <InputLabel>Page Type</InputLabel>
                 <Select
                   value={formData.type}
-                  onChange={(e) => setFormData({...formData, type: e.target.value})}
+                  onChange={(e) => {
+                    const newType = e.target.value;
+                    setFormData({
+                      ...formData, 
+                      type: newType,
+                      countries: newType === 'centralized' ? ['global'] : [userCountry],
+                      requiresApproval: !isSuperAdmin || newType === 'centralized'
+                    });
+                  }}
                   label="Page Type"
                 >
-                  {pageTypes.map(type => (
+                  {pageTypes.filter(type => {
+                    // Country admins can create centralized pages but they need approval
+                    // Super admin can create any type
+                    return isSuperAdmin || type.value !== 'template'; // Hide templates for now
+                  }).map(type => (
                     <MenuItem key={type.value} value={type.value}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         {type.icon}
                         {type.label}
+                        {!isSuperAdmin && type.value === 'centralized' && (
+                          <Chip label="Needs Approval" size="small" color="warning" />
+                        )}
                       </Box>
                     </MenuItem>
                   ))}
                 </Select>
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+                  {formData.type === 'centralized' ? 
+                    '🌐 This page will be the same across all countries' :
+                    `📍 This page is specific to ${getCountryDisplayName(userCountry)}`
+                  }
+                </Typography>
               </FormControl>
             </Grid>
             
@@ -649,6 +715,7 @@ const PagesModule = () => {
                     <Switch
                       checked={formData.isTemplate}
                       onChange={(e) => setFormData({...formData, isTemplate: e.target.checked})}
+                      disabled={!isSuperAdmin} // Only super admin can create templates
                     />
                   }
                   label="Is Template"
@@ -658,12 +725,37 @@ const PagesModule = () => {
                     <Switch
                       checked={formData.requiresApproval}
                       onChange={(e) => setFormData({...formData, requiresApproval: e.target.checked})}
+                      disabled={!isSuperAdmin} // Country admins always need approval
                     />
                   }
                   label="Requires Approval"
                 />
               </Box>
             </Grid>
+
+            {/* Warning for country admins creating centralized pages */}
+            {!isSuperAdmin && formData.type === 'centralized' && (
+              <Grid item xs={12}>
+                <Alert severity="warning">
+                  <Typography variant="body2">
+                    <strong>Global Page Alert:</strong> You are creating a page that will affect ALL countries. 
+                    This page will require super admin approval before it can be published globally.
+                  </Typography>
+                </Alert>
+              </Grid>
+            )}
+
+            {/* Info for country-specific pages */}
+            {formData.type === 'country-specific' && (
+              <Grid item xs={12}>
+                <Alert severity="info">
+                  <Typography variant="body2">
+                    <strong>Country Page:</strong> This page will only be visible in {getCountryDisplayName(userCountry)}. 
+                    {!isSuperAdmin && ' It will require super admin approval before publishing.'}
+                  </Typography>
+                </Alert>
+              </Grid>
+            )}
           </Grid>
         </DialogContent>
         <DialogActions>
