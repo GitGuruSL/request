@@ -393,4 +393,204 @@ class CountryFilteredDataService {
       return {};
     }
   }
+
+  // ==================== COUNTRY-SPECIFIC PRODUCTS & CATEGORIES ====================
+
+  /// Get active categories for user's country
+  Future<List<Map<String, dynamic>>> getActiveCategories({String? type}) async {
+    _validateUserCountry();
+    
+    try {
+      // Get all categories
+      Query<Map<String, dynamic>> categoriesQuery = _firestore.collection('categories');
+      if (type != null) {
+        categoriesQuery = categoriesQuery.where('type', isEqualTo: type);
+      }
+      final categoriesSnapshot = await categoriesQuery.get();
+      
+      // Get country-specific activations
+      final countryActivationsSnapshot = await _firestore
+          .collection('country_categories')
+          .where('country', isEqualTo: userCountry)
+          .get();
+      
+      final countryActivations = <String, bool>{};
+      for (final doc in countryActivationsSnapshot.docs) {
+        final data = doc.data();
+        countryActivations[data['categoryId']] = data['isActive'] ?? true;
+      }
+      
+      // Filter active categories
+      final activeCategories = <Map<String, dynamic>>[];
+      for (final doc in categoriesSnapshot.docs) {
+        final categoryId = doc.id;
+        final isActive = countryActivations[categoryId] ?? true; // Default to active
+        
+        if (isActive) {
+          activeCategories.add({...doc.data(), 'id': categoryId});
+        }
+      }
+      
+      return activeCategories;
+    } catch (e) {
+      print('$_tag Error getting active categories: $e');
+      return [];
+    }
+  }
+
+  /// Get active subcategories for user's country
+  Future<List<Map<String, dynamic>>> getActiveSubcategories({String? categoryId}) async {
+    _validateUserCountry();
+    
+    try {
+      // Get all subcategories
+      Query<Map<String, dynamic>> subcategoriesQuery = _firestore.collection('subcategories');
+      if (categoryId != null) {
+        subcategoriesQuery = subcategoriesQuery.where('categoryId', isEqualTo: categoryId);
+      }
+      final subcategoriesSnapshot = await subcategoriesQuery.get();
+      
+      // Get country-specific activations
+      final countryActivationsSnapshot = await _firestore
+          .collection('country_subcategories')
+          .where('country', isEqualTo: userCountry)
+          .get();
+      
+      final countryActivations = <String, bool>{};
+      for (final doc in countryActivationsSnapshot.docs) {
+        final data = doc.data();
+        countryActivations[data['subcategoryId']] = data['isActive'] ?? true;
+      }
+      
+      // Filter active subcategories
+      final activeSubcategories = <Map<String, dynamic>>[];
+      for (final doc in subcategoriesSnapshot.docs) {
+        final subcategoryId = doc.id;
+        final isActive = countryActivations[subcategoryId] ?? true; // Default to active
+        
+        if (isActive) {
+          activeSubcategories.add({...doc.data(), 'id': subcategoryId});
+        }
+      }
+      
+      return activeSubcategories;
+    } catch (e) {
+      print('$_tag Error getting active subcategories: $e');
+      return [];
+    }
+  }
+
+  /// Get active products for user's country
+  Future<List<Map<String, dynamic>>> getActiveProducts() async {
+    _validateUserCountry();
+    
+    try {
+      // Get all products
+      final productsSnapshot = await _firestore.collection('master_products').get();
+      
+      // Get country-specific activations
+      final countryActivationsSnapshot = await _firestore
+          .collection('country_products')
+          .where('country', isEqualTo: userCountry)
+          .get();
+      
+      final countryActivations = <String, bool>{};
+      for (final doc in countryActivationsSnapshot.docs) {
+        final data = doc.data();
+        countryActivations[data['productId']] = data['isActive'] ?? true;
+      }
+      
+      // Filter active products
+      final activeProducts = <Map<String, dynamic>>[];
+      for (final doc in productsSnapshot.docs) {
+        final productId = doc.id;
+        final isActive = countryActivations[productId] ?? true; // Default to active
+        
+        if (isActive) {
+          activeProducts.add({...doc.data(), 'id': productId});
+        }
+      }
+      
+      return activeProducts;
+    } catch (e) {
+      print('$_tag Error getting active products: $e');
+      return [];
+    }
+  }
+
+  /// Get active brands for user's country
+  Future<List<Map<String, dynamic>>> getActiveBrands() async {
+    _validateUserCountry();
+    
+    try {
+      // Get all brands
+      final brandsSnapshot = await _firestore.collection('brands').get();
+      
+      // Get country-specific activations
+      final countryActivationsSnapshot = await _firestore
+          .collection('country_brands')
+          .where('country', isEqualTo: userCountry)
+          .get();
+      
+      final countryActivations = <String, bool>{};
+      for (final doc in countryActivationsSnapshot.docs) {
+        final data = doc.data();
+        countryActivations[data['brandId']] = data['isActive'] ?? true;
+      }
+      
+      // Filter active brands
+      final activeBrands = <Map<String, dynamic>>[];
+      for (final doc in brandsSnapshot.docs) {
+        final brandId = doc.id;
+        final isActive = countryActivations[brandId] ?? true; // Default to active
+        
+        if (isActive) {
+          activeBrands.add({...doc.data(), 'id': brandId});
+        }
+      }
+      
+      return activeBrands;
+    } catch (e) {
+      print('$_tag Error getting active brands: $e');
+      return [];
+    }
+  }
+
+  /// Get active variable types for user's country
+  Future<List<Map<String, dynamic>>> getActiveVariableTypes() async {
+    _validateUserCountry();
+    
+    try {
+      // Get all variable types
+      final variableTypesSnapshot = await _firestore.collection('custom_product_variables').get();
+      
+      // Get country-specific activations
+      final countryActivationsSnapshot = await _firestore
+          .collection('country_variable_types')
+          .where('country', isEqualTo: userCountry)
+          .get();
+      
+      final countryActivations = <String, bool>{};
+      for (final doc in countryActivationsSnapshot.docs) {
+        final data = doc.data();
+        countryActivations[data['variableTypeId']] = data['isActive'] ?? true;
+      }
+      
+      // Filter active variable types
+      final activeVariableTypes = <Map<String, dynamic>>[];
+      for (final doc in variableTypesSnapshot.docs) {
+        final variableTypeId = doc.id;
+        final isActive = countryActivations[variableTypeId] ?? true; // Default to active
+        
+        if (isActive) {
+          activeVariableTypes.add({...doc.data(), 'id': variableTypeId});
+        }
+      }
+      
+      return activeVariableTypes;
+    } catch (e) {
+      print('$_tag Error getting active variable types: $e');
+      return [];
+    }
+  }
 }

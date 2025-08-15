@@ -6,6 +6,7 @@ import '../../models/price_listing.dart';
 import '../../services/pricing_service.dart';
 import '../../services/enhanced_user_service.dart';
 import '../../services/comprehensive_notification_service.dart';
+import '../../services/country_filtered_data_service.dart';
 import '../../theme/app_theme.dart';
 import 'add_price_listing_screen.dart';
 import 'business_profile_modal.dart';
@@ -97,14 +98,17 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
 
   Future<void> _loadAvailableAttributes() async {
     try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('custom_product_variables')
-          .get();
+      // Use country-filtered data service to get only active variable types
+      final CountryFilteredDataService countryService = CountryFilteredDataService.instance;
+      final activeVariableTypesData = await countryService.getActiveVariableTypes();
 
       final attributes = <String, String>{};
-      for (final doc in snapshot.docs) {
-        final data = doc.data();
-        attributes[doc.id] = data['name'] ?? doc.id;
+      for (final data in activeVariableTypesData) {
+        final id = data['id'] ?? '';
+        final name = data['name'] ?? id;
+        if (id.isNotEmpty) {
+          attributes[id] = name;
+        }
       }
 
       if (mounted) {

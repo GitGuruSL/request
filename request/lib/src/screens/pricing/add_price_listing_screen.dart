@@ -8,6 +8,7 @@ import '../../services/pricing_service.dart';
 import '../../services/enhanced_user_service.dart';
 import '../../services/file_upload_service.dart';
 import '../../services/country_service.dart';
+import '../../services/country_filtered_data_service.dart';
 import '../../theme/app_theme.dart';
 
 class AddPriceListingScreen extends StatefulWidget {
@@ -66,16 +67,14 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
 
   Future<void> _loadAvailableAttributes() async {
     try {
-      final attributesSnapshot = await FirebaseFirestore.instance
-          .collection('custom_product_variables')
-          .where('isActive', isEqualTo: true)
-          .get();
+      // Use country-filtered data service to get only active variable types
+      final CountryFilteredDataService countryService = CountryFilteredDataService.instance;
+      final activeVariableTypesData = await countryService.getActiveVariableTypes();
       
       setState(() {
-        _availableAttributes = attributesSnapshot.docs.map((doc) {
-          final data = doc.data();
+        _availableAttributes = activeVariableTypesData.where((data) => data['isActive'] == true).map((data) {
           return {
-            'id': doc.id,
+            'id': data['id'] ?? '',
             'name': data['name'] ?? '',
             'type': data['type'] ?? 'select',
             'required': data['required'] ?? false,

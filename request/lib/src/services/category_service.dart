@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/category_model.dart';
+import 'country_filtered_data_service.dart';
 
 class CategoryModel {
   final String id;
@@ -17,6 +18,14 @@ class CategoryModel {
     return CategoryModel(
       id: doc.id,
       category: data['category'] ?? '',
+      type: data['type'] ?? 'item',
+    );
+  }
+
+  factory CategoryModel.fromMap(Map<String, dynamic> data) {
+    return CategoryModel(
+      id: data['id'] ?? '',
+      category: data['category'] ?? data['name'] ?? '',
       type: data['type'] ?? 'item',
     );
   }
@@ -49,6 +58,14 @@ class SubcategoryModel {
     );
   }
 
+  factory SubcategoryModel.fromMap(Map<String, dynamic> data) {
+    return SubcategoryModel(
+      id: data['id'] ?? '',
+      subcategory: data['subcategory'] ?? data['name'] ?? '',
+      categoryId: data['categoryId'] ?? data['category_id'] ?? '',
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'subcategory': subcategory,
@@ -71,30 +88,29 @@ class CategoryService {
   /// Get all categories for a specific type (item or service)
   Future<List<CategoryModel>> getCategoriesForType(String type) async {
     try {
-      print('🔍 CategoryService: Fetching categories for type: $type');
+      print('🔍 CategoryService: Fetching active categories for type: $type');
       
-      final querySnapshot = await _firestore
-          .collection('categories')
-          .where('type', isEqualTo: type)
-          .get();
-
-      print('📊 CategoryService: Found ${querySnapshot.docs.length} categories for type $type');
+      // Use country-filtered data service to get only active categories
+      final CountryFilteredDataService countryService = CountryFilteredDataService.instance;
+      final activeCategoriesData = await countryService.getActiveCategories(type: type);
       
-      final categories = querySnapshot.docs
-          .map((doc) => CategoryModel.fromFirestore(doc))
+      print('📊 CategoryService: Found ${activeCategoriesData.length} active categories for type $type');
+      
+      final categories = activeCategoriesData
+          .map((data) => CategoryModel.fromMap(data))
           .toList();
       
       // Sort categories alphabetically
       categories.sort((a, b) => a.category.compareTo(b.category));
           
-      print('✅ CategoryService: Successfully parsed ${categories.length} categories');
+      print('✅ CategoryService: Successfully parsed ${categories.length} active categories');
       for (final category in categories) {
         print('   - ${category.category} (ID: ${category.id})');
       }
       
       return categories;
     } catch (e) {
-      print('❌ CategoryService Error fetching categories for type $type: $e');
+      print('❌ CategoryService Error fetching active categories for type $type: $e');
       print('   Stack trace: ${StackTrace.current}');
       return [];
     }
@@ -103,17 +119,16 @@ class CategoryService {
   /// Get subcategories for a specific category ID
   Future<List<SubcategoryModel>> getSubcategoriesForCategory(String categoryId) async {
     try {
-      print('🔍 CategoryService: Fetching subcategories for category ID: $categoryId');
+      print('🔍 CategoryService: Fetching active subcategories for category ID: $categoryId');
       
-      final querySnapshot = await _firestore
-          .collection('subcategories')
-          .where('category_id', isEqualTo: categoryId)
-          .get();
+      // Use country-filtered data service to get only active subcategories
+      final CountryFilteredDataService countryService = CountryFilteredDataService.instance;
+      final activeSubcategoriesData = await countryService.getActiveSubcategories(categoryId: categoryId);
 
-      print('📊 CategoryService: Found ${querySnapshot.docs.length} subcategories for category $categoryId');
+      print('📊 CategoryService: Found ${activeSubcategoriesData.length} active subcategories for category $categoryId');
       
-      final subcategories = querySnapshot.docs
-          .map((doc) => SubcategoryModel.fromFirestore(doc))
+      final subcategories = activeSubcategoriesData
+          .map((data) => SubcategoryModel.fromMap(data))
           .toList();
       
       // Sort subcategories alphabetically  
@@ -245,18 +260,18 @@ class CategoryService {
     }
   }
 
-  /// Get all subcategories (for admin purposes)
+  /// Get all subcategories (filtered by country)
   Future<List<SubcategoryModel>> getAllSubcategories() async {
     try {
-      final querySnapshot = await _firestore
-          .collection('subcategories')
-          .get();
+      // Use country-filtered data service to get only active subcategories
+      final CountryFilteredDataService countryService = CountryFilteredDataService.instance;
+      final activeSubcategoriesData = await countryService.getActiveSubcategories();
 
-      return querySnapshot.docs
-          .map((doc) => SubcategoryModel.fromFirestore(doc))
+      return activeSubcategoriesData
+          .map((data) => SubcategoryModel.fromMap(data))
           .toList();
     } catch (e) {
-      print('Error fetching all subcategories: $e');
+      print('Error fetching active subcategories: $e');
       return [];
     }
   }
