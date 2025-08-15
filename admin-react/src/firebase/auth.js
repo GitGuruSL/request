@@ -86,6 +86,7 @@ export const createAdminUser = async (adminData) => {
         legalDocuments: true,
         businessManagement: true,
         driverManagement: true,
+        moduleManagement: true,
         adminUsersManagement: adminData.role === 'super_admin' // Give admin users permission only to super admins by default
       },
       createdAt: serverTimestamp(),

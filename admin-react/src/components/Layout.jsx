@@ -146,6 +146,7 @@ const Layout = () => {
     { text: 'Divider' },
     { text: 'Country Data', icon: <Public />, path: '/country-data', access: 'super_admin' },
     { text: 'City Management', icon: <LocationCity />, path: '/cities', access: 'super_admin' },
+    { text: 'Module Management', icon: <Settings />, path: '/modules', access: 'all', permission: 'moduleManagement' },
     { text: 'Payment Methods', icon: <Payment />, path: '/payment-methods', access: 'super_admin' },
     { text: 'Divider' },
     { text: 'Admin Management', icon: <AdminPanelSettings />, path: '/admin-management', access: 'super_admin' },

@@ -242,7 +242,7 @@ const ModuleManagement = () => {
       modules,
       coreDependencies: dependencies,
       updatedAt: new Date(),
-      updatedBy: user.uid
+      updatedBy: adminData?.email || adminData?.uid || 'admin'
     };
 
     await setDoc(doc(db, 'country_modules', selectedCountry), configData);
