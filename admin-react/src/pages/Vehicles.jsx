@@ -100,10 +100,13 @@ const Vehicles = () => {
 
   const fetchVehicles = async () => {
     try {
+      console.log('🚗 Fetching vehicles for admin:', adminData);
       const data = await getFilteredData('vehicle_types', adminData);
+      console.log('🚗 Fetched vehicle data:', data);
       const vehiclesData = (data || []).sort((a, b) => 
         (a.displayOrder || 0) - (b.displayOrder || 0)
       );
+      console.log('🚗 Processed vehicles data:', vehiclesData);
       setVehicles(vehiclesData);
     } catch (error) {
       console.error('Error fetching vehicles:', error);
@@ -357,7 +360,10 @@ const Vehicles = () => {
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" component="h1">
-          Vehicle Types Management
+          Vehicle Types
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Manage vehicle types across countries
         </Typography>
         {isSuperAdmin && (
           <Box sx={{ display: 'flex', gap: 2 }}>
@@ -379,6 +385,78 @@ const Vehicles = () => {
           </Box>
         )}
       </Box>
+
+      {/* Stats Cards */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box>
+                  <Typography color="text.secondary" gutterBottom variant="overline">
+                    Total Vehicles
+                  </Typography>
+                  <Typography variant="h4">
+                    {vehicles.length}
+                  </Typography>
+                </Box>
+                <DirectionsCar color="primary" sx={{ fontSize: 40, opacity: 0.3 }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box>
+                  <Typography color="text.secondary" gutterBottom variant="overline">
+                    Active Types
+                  </Typography>
+                  <Typography variant="h4" color="success.main">
+                    {vehicles.filter(v => v.isActive !== false).length}
+                  </Typography>
+                </Box>
+                <TwoWheeler color="success" sx={{ fontSize: 40, opacity: 0.3 }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box>
+                  <Typography color="text.secondary" gutterBottom variant="overline">
+                    Inactive Types
+                  </Typography>
+                  <Typography variant="h4" color="warning.main">
+                    {vehicles.filter(v => v.isActive === false).length}
+                  </Typography>
+                </Box>
+                <LocalTaxi color="warning" sx={{ fontSize: 40, opacity: 0.3 }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box>
+                  <Typography color="text.secondary" gutterBottom variant="overline">
+                    Countries Using
+                  </Typography>
+                  <Typography variant="h4" color="info.main">
+                    {isSuperAdmin ? countryVehicles.length : 1}
+                  </Typography>
+                </Box>
+                <AirportShuttle color="info" sx={{ fontSize: 40, opacity: 0.3 }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
 
       {isSuperAdmin ? (
         // Super Admin View - Manage Vehicle Types
@@ -405,6 +483,11 @@ const Vehicles = () => {
                     </TableCell>
                     <TableCell>
                       <Typography variant="subtitle1">{vehicle.name}</Typography>
+                      {vehicle.description && (
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          {vehicle.description}
+                        </Typography>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Chip 
@@ -414,11 +497,6 @@ const Vehicles = () => {
                       />
                     </TableCell>
                     <TableCell>{vehicle.displayOrder}</TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
-                        {vehicle.passengerCapacity || 1} {vehicle.passengerCapacity === 1 ? 'passenger' : 'passengers'}
-                      </Typography>
-                    </TableCell>
                     <TableCell>
                       <Typography variant="body2">
                         {vehicle.passengerCapacity || 1} {vehicle.passengerCapacity === 1 ? 'passenger' : 'passengers'}

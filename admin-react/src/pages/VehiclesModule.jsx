@@ -55,6 +55,7 @@ const VehiclesModule = () => {
   } = useCountryFilter();
 
   const [vehicles, setVehicles] = useState([]);
+  const [vehicleTypes, setVehicleTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -84,6 +85,10 @@ const VehiclesModule = () => {
       setLoading(true);
       setError(null);
 
+      // Load vehicle types first
+      const vehicleTypesData = await getFilteredData('vehicle_types', adminData);
+      setVehicleTypes(vehicleTypesData || []);
+
       // Load both cars and bikes
       const [carsData, bikesData] = await Promise.all([
         getFilteredData('cars', adminData),
@@ -97,7 +102,7 @@ const VehiclesModule = () => {
       
       setVehicles(allVehicles);
       
-      console.log(`📊 Loaded ${allVehicles.length} vehicles for ${isSuperAdmin ? 'super admin' : `country admin (${userCountry})`}`);
+      console.log(`📊 Loaded ${allVehicles.length} vehicles and ${vehicleTypesData?.length || 0} vehicle types for ${isSuperAdmin ? 'super admin' : `country admin (${userCountry})`}`);
     } catch (err) {
       console.error('Error loading vehicles:', err);
       setError('Failed to load vehicles: ' + err.message);
@@ -139,11 +144,28 @@ const VehiclesModule = () => {
   };
 
   const getVehicleStats = () => {
+    const vehicleTypeStats = vehicleTypes.map(vType => {
+      const matchingVehicles = vehicles.filter(v => 
+        v.vehicleType === vType.name || 
+        v.type === vType.name.toLowerCase() ||
+        v.vehicleTypeId === vType.id
+      );
+      return {
+        ...vType,
+        registeredCount: matchingVehicles.length,
+        vehicles: matchingVehicles
+      };
+    });
+
     return {
       total: filteredVehicles.length,
-      cars: filteredVehicles.filter(v => v.type === 'car').length,
-      bikes: filteredVehicles.filter(v => v.type === 'bike').length,
-      trucks: filteredVehicles.filter(v => v.type === 'truck').length,
+      cars: filteredVehicles.filter(v => v.type === 'car' || v.vehicleType === 'Car').length,
+      bikes: filteredVehicles.filter(v => v.type === 'bike' || v.vehicleType === 'Bike').length,
+      threeWheelers: filteredVehicles.filter(v => v.type === 'three-wheeler' || v.vehicleType === 'Three Wheeler').length,
+      vans: filteredVehicles.filter(v => v.type === 'van' || v.vehicleType === 'Van').length,
+      sharedRides: filteredVehicles.filter(v => v.type === 'shared' || v.vehicleType === 'Shared Ride').length,
+      trucks: filteredVehicles.filter(v => v.type === 'truck' || v.vehicleType === 'Truck').length,
+      vehicleTypeStats
     };
   };
 
@@ -174,16 +196,16 @@ const VehiclesModule = () => {
       {/* Header */}
       <Box mb={3}>
         <Typography variant="h4" gutterBottom>
-          Vehicles Management
+          Vehicle Management
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          {isSuperAdmin ? 'Manage all vehicles across countries' : `Manage vehicles in ${getCountryDisplayName(userCountry)}`}
+          {isSuperAdmin ? 'View all registered vehicles across countries by vehicle type' : `View registered vehicles in ${getCountryDisplayName(userCountry)} by vehicle type`}
         </Typography>
       </Box>
 
       {/* Stats Cards */}
       <Grid container spacing={3} mb={3}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={4}>
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center" justifyContent="space-between">
@@ -200,7 +222,7 @@ const VehiclesModule = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={4}>
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center" justifyContent="space-between">
@@ -217,7 +239,7 @@ const VehiclesModule = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={4}>
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center" justifyContent="space-between">
@@ -234,19 +256,53 @@ const VehiclesModule = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={4}>
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center" justifyContent="space-between">
                 <Box>
                   <Typography color="text.secondary" gutterBottom variant="overline">
-                    Trucks
+                    Three Wheelers
                   </Typography>
-                  <Typography variant="h4" color="warning.main">
-                    {stats.trucks}
+                  <Typography variant="h4" color="info.main">
+                    {stats.threeWheelers}
                   </Typography>
                 </Box>
-                <LocalShipping color="warning" sx={{ fontSize: 40, opacity: 0.3 }} />
+                <LocalShipping color="info" sx={{ fontSize: 40, opacity: 0.3 }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={4}>
+          <Card>
+            <CardContent>
+              <Box display="flex" alignItems="center" justifyContent="space-between">
+                <Box>
+                  <Typography color="text.secondary" gutterBottom variant="overline">
+                    Vans
+                  </Typography>
+                  <Typography variant="h4" color="secondary.main">
+                    {stats.vans}
+                  </Typography>
+                </Box>
+                <LocalShipping color="secondary" sx={{ fontSize: 40, opacity: 0.3 }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={4}>
+          <Card>
+            <CardContent>
+              <Box display="flex" alignItems="center" justifyContent="space-between">
+                <Box>
+                  <Typography color="text.secondary" gutterBottom variant="overline">
+                    Shared Rides
+                  </Typography>
+                  <Typography variant="h4" color="warning.main">
+                    {stats.sharedRides}
+                  </Typography>
+                </Box>
+                <TwoWheeler color="warning" sx={{ fontSize: 40, opacity: 0.3 }} />
               </Box>
             </CardContent>
           </Card>

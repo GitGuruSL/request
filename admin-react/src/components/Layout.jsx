@@ -12,80 +12,91 @@ import {
   ListItemText,
   Toolbar,
   Typography,
+  Divider,
+  Avatar,
   Menu,
   MenuItem,
-  Avatar,
-  Divider,
-  Chip,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   TextField,
   Button,
+  CircularProgress,
   Alert
 } from '@mui/material';
 import {
   Menu as MenuIcon,
   Dashboard,
+  Assignment,
+  Reply,
   ShoppingCart,
   Business,
+  Gavel,
   DirectionsCar,
-  TwoWheeler,
   Category,
   BrandingWatermark,
   Tune,
   Person,
-  Gavel,
   PrivacyTip,
-  Logout,
-  Settings,
   Public,
   LocationCity,
   Payment,
   AdminPanelSettings,
-  Assignment,
-  Reply,
-  PriceCheck,
-  Lock
+  Lock,
+  Logout,
+  Settings,
+  PriceCheck
 } from '@mui/icons-material';
-import { useNavigate, useLocation, Outlet } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { signOutAdmin, updateUserPassword } from '../firebase/auth';
+import useCountryFilter from '../hooks/useCountryFilter';
+import { updateUserPassword } from '../firebase/auth';
 
 const drawerWidth = 280;
 
 const Layout = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { logout } = useAuth();
+  const { adminData, isSuperAdmin } = useCountryFilter();
+  
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [anchorEl, setAnchorEl] = useState(null);
+  const [profileAnchorEl, setProfileAnchorEl] = useState(null);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
-  const [passwordLoading, setPasswordLoading] = useState(false);
-  const [passwordError, setPasswordError] = useState('');
-
-  const { user, adminData, isSuperAdmin } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
 
-  const handleMenuOpen = (event) => {
-    setAnchorEl(event.currentTarget);
+  const handleNavigate = (path) => {
+    navigate(path);
+    setMobileOpen(false);
+  };
+
+  const handleProfileMenuOpen = (event) => {
+    setProfileAnchorEl(event.currentTarget);
   };
 
   const handleMenuClose = () => {
-    setAnchorEl(null);
+    setProfileAnchorEl(null);
+  };
+
+  const handlePasswordDialog = () => {
+    setPasswordDialogOpen(true);
+    handleMenuClose();
   };
 
   const handleLogout = async () => {
     try {
-      await signOutAdmin();
+      await logout();
       navigate('/login');
     } catch (error) {
       console.error('Logout error:', error);
@@ -134,7 +145,8 @@ const Layout = () => {
     { text: 'Businesses', icon: <Business />, path: '/businesses', access: 'all', permission: 'businessManagement' },
     { text: 'Drivers', icon: <Gavel />, path: '/driver-verification', access: 'all', permission: 'driverVerification' },
     { text: 'Divider' },
-    { text: 'Vehicles', icon: <DirectionsCar />, path: '/vehicles', access: 'super_admin', permission: 'vehicleManagement' },
+    { text: 'Vehicle Types', icon: <Settings />, path: '/vehicles', access: 'super_admin', permission: 'vehicleManagement' },
+    { text: 'Vehicle Management', icon: <DirectionsCar />, path: '/vehicles-module', access: 'all', permission: 'vehicleManagement' },
     { text: 'Divider' },
     { text: 'Categories', icon: <Category />, path: '/categories', access: 'super_admin' },
     { text: 'Subcategories', icon: <Category />, path: '/subcategories', access: 'super_admin' },
@@ -167,7 +179,7 @@ const Layout = () => {
           // Check specific permissions for non-super admins
           if (item.permission && !isSuperAdmin) {
             // Special case for vehicle management - only super admins
-            if (isSuperAdmin && item.permission === 'vehicleManagement') return true;
+            if (item.permission === 'vehicleManagement' && item.text === 'Vehicle Management') return false;
             return adminData?.permissions?.[item.permission] === true;
           }
           
@@ -178,24 +190,12 @@ const Layout = () => {
           ) : (
             <ListItem key={item.text} disablePadding>
               <ListItemButton
-                selected={location.pathname === item.path}
-                onClick={() => navigate(item.path)}
+                onClick={() => handleNavigate(item.path)}
                 sx={{
-                  '&.Mui-selected': {
-                    backgroundColor: 'primary.main',
-                    color: 'white',
-                    '&:hover': {
-                      backgroundColor: 'primary.dark',
-                    },
-                    '& .MuiListItemIcon-root': {
-                      color: 'white',
-                    },
-                  },
+                  backgroundColor: location.pathname === item.path ? 'action.selected' : 'transparent'
                 }}
               >
-                <ListItemIcon>
-                  {item.icon}
-                </ListItemIcon>
+                <ListItemIcon>{item.icon}</ListItemIcon>
                 <ListItemText primary={item.text} />
               </ListItemButton>
             </ListItem>
@@ -229,55 +229,36 @@ const Layout = () => {
             Request Marketplace Admin
           </Typography>
           
-          <Box display="flex" alignItems="center" gap={2}>
-            {adminData?.country && (
-              <Chip 
-                icon={<Public />} 
-                label={adminData.country} 
-                variant="outlined" 
-                size="small"
-                sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.5)' }}
-              />
-            )}
-            <Chip 
-              label={isSuperAdmin ? 'Super Admin' : 'Country Admin'}
-              color={isSuperAdmin ? 'error' : 'success'}
-              size="small"
-              variant="outlined"
-              sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.5)' }}
-            />
-            <IconButton
-              size="large"
-              edge="end"
-              aria-label="account of current user"
-              aria-haspopup="true"
-              onClick={handleMenuOpen}
-              color="inherit"
+          {/* Profile Menu */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
+              {adminData?.name || adminData?.email || 'Admin'}
+            </Typography>
+            <Avatar
+              sx={{ bgcolor: 'secondary.main', cursor: 'pointer' }}
+              onClick={handleProfileMenuOpen}
             >
-              <Avatar sx={{ width: 32, height: 32 }}>
-                {user?.email?.charAt(0).toUpperCase()}
-              </Avatar>
-            </IconButton>
+              {(adminData?.name || adminData?.email || 'A')[0].toUpperCase()}
+            </Avatar>
           </Box>
         </Toolbar>
       </AppBar>
-
-      {/* User Menu */}
+      
+      {/* Profile Menu Dropdown */}
       <Menu
-        anchorEl={anchorEl}
+        anchorEl={profileAnchorEl}
+        open={Boolean(profileAnchorEl)}
+        onClose={handleMenuClose}
         anchorOrigin={{
           vertical: 'bottom',
           horizontal: 'right',
         }}
-        keepMounted
         transformOrigin={{
           vertical: 'top',
           horizontal: 'right',
         }}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
       >
-        <MenuItem onClick={() => { setPasswordDialogOpen(true); handleMenuClose(); }}>
+        <MenuItem onClick={handlePasswordDialog}>
           <ListItemIcon>
             <Lock fontSize="small" />
           </ListItemIcon>
@@ -291,16 +272,54 @@ const Layout = () => {
         </MenuItem>
       </Menu>
 
+      {/* Change Password Dialog */}
+      <Dialog open={passwordDialogOpen} onClose={() => setPasswordDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Change Password</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+            {passwordError && <Alert severity="error">{passwordError}</Alert>}
+            <TextField
+              type="password"
+              label="Current Password"
+              value={passwordData.currentPassword}
+              onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
+              fullWidth
+            />
+            <TextField
+              type="password"
+              label="New Password"
+              value={passwordData.newPassword}
+              onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
+              fullWidth
+            />
+            <TextField
+              type="password"
+              label="Confirm New Password"
+              value={passwordData.confirmPassword}
+              onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+              fullWidth
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPasswordDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handlePasswordChange} disabled={passwordLoading}>
+            {passwordLoading ? <CircularProgress size={24} /> : 'Change Password'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Box
         component="nav"
         sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
+        aria-label="mailbox folders"
       >
         <Drawer
           variant="temporary"
           open={mobileOpen}
           onClose={handleDrawerToggle}
           ModalProps={{
-            keepMounted: true, // Better mobile performance
+            keepMounted: true,
           }}
           sx={{
             display: { xs: 'block', sm: 'none' },
@@ -320,7 +339,6 @@ const Layout = () => {
           {drawer}
         </Drawer>
       </Box>
-
       <Box
         component="main"
         sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` } }}
@@ -328,60 +346,6 @@ const Layout = () => {
         <Toolbar />
         <Outlet />
       </Box>
-
-      {/* Password Change Dialog */}
-      <Dialog
-        open={passwordDialogOpen}
-        onClose={() => setPasswordDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Change Password</DialogTitle>
-        <DialogContent>
-          {passwordError && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {passwordError}
-            </Alert>
-          )}
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            type="password"
-            label="Current Password"
-            value={passwordData.currentPassword}
-            onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            type="password"
-            label="New Password"
-            value={passwordData.newPassword}
-            onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            type="password"
-            label="Confirm New Password"
-            value={passwordData.confirmPassword}
-            onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setPasswordDialogOpen(false)}>Cancel</Button>
-          <Button
-            onClick={handlePasswordChange}
-            disabled={passwordLoading}
-            variant="contained"
-          >
-            {passwordLoading ? 'Changing...' : 'Change Password'}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };
