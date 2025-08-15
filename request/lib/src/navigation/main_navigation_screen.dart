@@ -3,7 +3,7 @@ import '../home/screens/home_screen.dart';
 import '../screens/browse_screen.dart';
 import '../screens/pricing/product_search_screen.dart';
 import '../screens/messaging/conversations_list_screen.dart';
-import '../screens/account_screen.dart';
+import '../screens/modern_menu_screen.dart';
 import '../services/country_service.dart';
 import '../services/module_service.dart';
 
@@ -26,35 +26,35 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       screen: HomeScreen(),
       icon: Icons.home_outlined,
       activeIcon: Icons.home,
-      label: 'Home',
+      label: '',
       requiredModule: null, // Always shown
     ),
     _NavigationItem(
       screen: BrowseScreen(),
       icon: Icons.search_outlined,
       activeIcon: Icons.search,
-      label: 'Browse',
+      label: '',
       requiredModule: null, // Browse is available if any module is enabled
     ),
     _NavigationItem(
       screen: ProductSearchScreen(),
-      icon: Icons.price_check_outlined,
-      activeIcon: Icons.price_check,
-      label: 'Prices',
+      icon: Icons.local_offer_outlined,
+      activeIcon: Icons.local_offer,
+      label: '',
       requiredModule: 'price', // Only shown if price module is enabled
     ),
     _NavigationItem(
       screen: ConversationsListScreen(),
-      icon: Icons.message_outlined,
-      activeIcon: Icons.message,
-      label: 'Messages',
+      icon: Icons.chat_bubble_outline,
+      activeIcon: Icons.chat_bubble,
+      label: '',
       requiredModule: null, // Always shown
     ),
     _NavigationItem(
-      screen: AccountScreen(),
-      icon: Icons.account_circle_outlined,
-      activeIcon: Icons.account_circle,
-      label: 'Account',
+      screen: ModernMenuScreen(),
+      icon: Icons.menu,
+      activeIcon: Icons.menu,
+      label: '',
       requiredModule: null, // Always shown
     ),
   ];
@@ -137,9 +137,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         },
         selectedItemColor: Theme.of(context).colorScheme.primary,
         unselectedItemColor: Colors.grey,
+        showSelectedLabels: false,
+        showUnselectedLabels: false,
+        elevation: 8,
         items: _navigationItems.map((item) => BottomNavigationBarItem(
-          icon: Icon(item.icon),
-          activeIcon: Icon(item.activeIcon),
+          icon: Icon(item.icon, size: 28),
+          activeIcon: Icon(item.activeIcon, size: 28),
           label: item.label,
         )).toList(),
       ) : null,

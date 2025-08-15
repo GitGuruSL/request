@@ -22,6 +22,9 @@ import 'src/screens/delivery_verification_screen.dart';
 import 'src/screens/verification_status_screen.dart';
 import 'src/screens/driver_documents_view_screen.dart';         // Driver documents view
 import 'src/screens/role_management_screen.dart';
+import 'src/screens/modern_menu_screen.dart';
+import 'src/screens/content_page_screen.dart';
+import 'src/screens/content_test_screen.dart';
 import 'src/models/master_product.dart';
 import 'src/services/country_service.dart';
 import 'src/theme/app_theme.dart';
@@ -143,10 +146,83 @@ class MyApp extends StatelessWidget {
                 request: args?['request'],
               ),
             );
+          case '/menu':
+            return MaterialPageRoute(builder: (context) => const ModernMenuScreen());
+          case '/content-page':
+            final args = settings.arguments as Map<String, dynamic>?;
+            return MaterialPageRoute(
+              builder: (context) => ContentPageScreen(
+                slug: args?['slug'] ?? '',
+                title: args?['title'],
+              ),
+            );
+          case '/content-test':
+            return MaterialPageRoute(builder: (context) => const ContentTestScreen());
+          // Placeholder routes for menu items
+          case '/saved':
+          case '/marketplace':
+          case '/memories':
+          case '/groups':
+          case '/reels':
+          case '/find-friends':
+          case '/feeds':
+          case '/events':
+          case '/avatars':
+          case '/birthdays':
+          case '/finds':
+          case '/games':
+          case '/messenger-kids':
+          case '/help':
+          case '/settings':
+          case '/meta-apps':
+          case '/search':
+            return MaterialPageRoute(
+              builder: (context) => _buildPlaceholderScreen(settings.name!),
+            );
           default:
             return MaterialPageRoute(builder: (context) => const WelcomeScreen());
         }
       },
+    );
+  }
+
+  Widget _buildPlaceholderScreen(String routeName) {
+    final title = routeName.replaceAll('/', '').replaceAll('-', ' ').toUpperCase();
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(title),
+        backgroundColor: const Color(0xFF1976D2),
+        foregroundColor: Colors.white,
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.construction,
+              size: 80,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 20),
+            Text(
+              '$title - Coming Soon!',
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'This feature is under development',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
