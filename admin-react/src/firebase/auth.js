@@ -82,12 +82,34 @@ export const createAdminUser = async (adminData) => {
       country: adminData.country,
       isActive: adminData.isActive !== undefined ? adminData.isActive : true,
       permissions: adminData.permissions || {
+        // Request Management
+        requestManagement: true,
+        responseManagement: true,
+        priceListingManagement: true,
+        
+        // Business Management
+        productManagement: true,
+        businessManagement: true,
+        driverVerification: true,
+        
+        // Vehicle Management
+        vehicleManagement: adminData.role === 'super_admin', // Super admin only
+        
+        // User & Module Management
+        userManagement: true,
+        moduleManagement: true,
+        
+        // Legal & Payment (Now available for Country Admins too)
+        paymentMethodManagement: true,
+        legalDocumentManagement: true,
+        
+        // Admin Management (Super Admin Only)
+        adminUsersManagement: adminData.role === 'super_admin',
+        
+        // Legacy support for existing users
         paymentMethods: true,
         legalDocuments: true,
-        businessManagement: true,
-        driverManagement: true,
-        moduleManagement: true,
-        adminUsersManagement: adminData.role === 'super_admin' // Give admin users permission only to super admins by default
+        driverManagement: true
       },
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),

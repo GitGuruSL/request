@@ -42,10 +42,23 @@ import {
   orderBy 
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { useAuth } from '../contexts/AuthContext';
+import useCountryFilter from '../hooks/useCountryFilter';
 
 const PaymentMethods = () => {
-  const { user, userRole, userCountry } = useAuth();
+  const { adminData, isSuperAdmin, userCountry } = useCountryFilter();
+  
+  // Check permissions
+  const hasPaymentPermission = isSuperAdmin || adminData?.permissions?.paymentMethodManagement;
+
+  if (!hasPaymentPermission) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Alert severity="error">
+          You don't have permission to access Payment Methods Management. Please contact your administrator.
+        </Alert>
+      </Container>
+    );
+  }
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [countries, setCountries] = useState([]);
   const [open, setOpen] = useState(false);

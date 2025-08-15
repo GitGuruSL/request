@@ -31,7 +31,7 @@ import {
   where 
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { useAuth } from '../contexts/AuthContext';
+import useCountryFilter from '../hooks/useCountryFilter';
 
 const COUNTRIES = [
   'United States', 'Canada', 'United Kingdom', 'Australia', 'Germany', 
@@ -46,7 +46,20 @@ const DOCUMENT_TYPES = [
 ];
 
 const PrivacyTerms = () => {
-  const { adminData, isSuperAdmin } = useAuth();
+  const { adminData, isSuperAdmin, userCountry } = useCountryFilter();
+  
+  // Check permissions
+  const hasLegalPermission = isSuperAdmin || adminData?.permissions?.legalDocumentManagement;
+
+  if (!hasLegalPermission) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">
+          You don't have permission to access Legal Documents Management. Please contact your administrator.
+        </Alert>
+      </Box>
+    );
+  }
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
@@ -61,7 +74,7 @@ const PrivacyTerms = () => {
 
   useEffect(() => {
     loadDocuments();
-  }, [adminData]);
+  }, [userCountry, hasLegalPermission]);
 
   const loadDocuments = async () => {
     try {
@@ -69,8 +82,8 @@ const PrivacyTerms = () => {
       let documentsQuery = collection(db, 'legal_documents');
       
       // Country admin only sees their country's documents
-      if (!isSuperAdmin && adminData?.country) {
-        documentsQuery = query(documentsQuery, where('country', '==', adminData.country));
+      if (!isSuperAdmin && userCountry) {
+        documentsQuery = query(documentsQuery, where('country', '==', userCountry));
       }
 
       const snapshot = await getDocs(documentsQuery);
@@ -104,7 +117,7 @@ const PrivacyTerms = () => {
       setEditingDoc(null);
       setFormData({
         type: '',
-        country: isSuperAdmin ? '' : adminData?.country || '',
+        country: isSuperAdmin ? '' : userCountry || '',
         title: '',
         content: '',
         version: '1.0'

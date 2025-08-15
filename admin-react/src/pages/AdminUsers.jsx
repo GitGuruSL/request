@@ -76,11 +76,30 @@ const AdminUsers = () => {
     role: 'country_admin',
     isActive: true,
     permissions: {
-      paymentMethods: true,
-      legalDocuments: true,
+      // Request Management
+      requestManagement: true,
+      responseManagement: true,
+      priceListingManagement: true,
+      
+      // Business Management
+      productManagement: true,
       businessManagement: true,
-      driverManagement: true,
-      vehicleManagement: false,
+      driverVerification: true,
+      
+      // Vehicle Management
+      vehicleManagement: false, // Only super admins by default
+      
+      // Data Management
+      userManagement: true,
+      
+      // Module Management
+      moduleManagement: true,
+      
+      // Legal & Payment
+      paymentMethodManagement: true, // Now available for country admin
+      legalDocumentManagement: true, // Now available for country admin
+      
+      // Admin Management
       adminUsersManagement: false // Only super admins should have this by default
     }
   });
@@ -224,11 +243,28 @@ const AdminUsers = () => {
           role: formData.role || 'country_admin',
           isActive: formData.isActive !== undefined ? formData.isActive : true,
           permissions: {
-            paymentMethods: formData.permissions?.paymentMethods !== undefined ? formData.permissions.paymentMethods : true,
-            legalDocuments: formData.permissions?.legalDocuments !== undefined ? formData.permissions.legalDocuments : true,
+            // Request Management
+            requestManagement: formData.permissions?.requestManagement !== undefined ? formData.permissions.requestManagement : true,
+            responseManagement: formData.permissions?.responseManagement !== undefined ? formData.permissions.responseManagement : true,
+            priceListingManagement: formData.permissions?.priceListingManagement !== undefined ? formData.permissions.priceListingManagement : true,
+            
+            // Business Management
+            productManagement: formData.permissions?.productManagement !== undefined ? formData.permissions.productManagement : true,
             businessManagement: formData.permissions?.businessManagement !== undefined ? formData.permissions.businessManagement : true,
-            driverManagement: formData.permissions?.driverManagement !== undefined ? formData.permissions.driverManagement : true,
+            driverVerification: formData.permissions?.driverVerification !== undefined ? formData.permissions.driverVerification : true,
+            
+            // Vehicle Management
             vehicleManagement: formData.permissions?.vehicleManagement !== undefined ? formData.permissions.vehicleManagement : false,
+            
+            // User & Module Management
+            userManagement: formData.permissions?.userManagement !== undefined ? formData.permissions.userManagement : true,
+            moduleManagement: formData.permissions?.moduleManagement !== undefined ? formData.permissions.moduleManagement : true,
+            
+            // Legal & Payment (Super Admin Only)
+            paymentMethodManagement: formData.permissions?.paymentMethodManagement !== undefined ? formData.permissions.paymentMethodManagement : false,
+            legalDocumentManagement: formData.permissions?.legalDocumentManagement !== undefined ? formData.permissions.legalDocumentManagement : false,
+            
+            // Admin Management
             adminUsersManagement: formData.permissions?.adminUsersManagement !== undefined ? formData.permissions.adminUsersManagement : false
           },
           updatedAt: new Date()
@@ -268,11 +304,28 @@ const AdminUsers = () => {
           role: formData.role || 'country_admin',
           isActive: true,
           permissions: {
-            paymentMethods: formData.permissions?.paymentMethods !== undefined ? formData.permissions.paymentMethods : true,
-            legalDocuments: formData.permissions?.legalDocuments !== undefined ? formData.permissions.legalDocuments : true,
+            // Request Management
+            requestManagement: formData.permissions?.requestManagement !== undefined ? formData.permissions.requestManagement : true,
+            responseManagement: formData.permissions?.responseManagement !== undefined ? formData.permissions.responseManagement : true,
+            priceListingManagement: formData.permissions?.priceListingManagement !== undefined ? formData.permissions.priceListingManagement : true,
+            
+            // Business Management
+            productManagement: formData.permissions?.productManagement !== undefined ? formData.permissions.productManagement : true,
             businessManagement: formData.permissions?.businessManagement !== undefined ? formData.permissions.businessManagement : true,
-            driverManagement: formData.permissions?.driverManagement !== undefined ? formData.permissions.driverManagement : true,
+            driverVerification: formData.permissions?.driverVerification !== undefined ? formData.permissions.driverVerification : true,
+            
+            // Vehicle Management
             vehicleManagement: formData.permissions?.vehicleManagement !== undefined ? formData.permissions.vehicleManagement : false,
+            
+            // User & Module Management
+            userManagement: formData.permissions?.userManagement !== undefined ? formData.permissions.userManagement : true,
+            moduleManagement: formData.permissions?.moduleManagement !== undefined ? formData.permissions.moduleManagement : true,
+            
+            // Legal & Payment (Super Admin Only)
+            paymentMethodManagement: formData.permissions?.paymentMethodManagement !== undefined ? formData.permissions.paymentMethodManagement : false,
+            legalDocumentManagement: formData.permissions?.legalDocumentManagement !== undefined ? formData.permissions.legalDocumentManagement : false,
+            
+            // Admin Management
             adminUsersManagement: formData.permissions?.adminUsersManagement !== undefined ? formData.permissions.adminUsersManagement : false
           }
         };
@@ -350,11 +403,28 @@ const AdminUsers = () => {
       role: user.role || 'country_admin',
       isActive: user.isActive !== undefined ? user.isActive : true,
       permissions: {
-        paymentMethods: user.permissions?.paymentMethods !== undefined ? user.permissions.paymentMethods : true,
-        legalDocuments: user.permissions?.legalDocuments !== undefined ? user.permissions.legalDocuments : true,
+        // Request Management
+        requestManagement: user.permissions?.requestManagement !== undefined ? user.permissions.requestManagement : (user.permissions?.paymentMethods !== undefined ? true : true),
+        responseManagement: user.permissions?.responseManagement !== undefined ? user.permissions.responseManagement : true,
+        priceListingManagement: user.permissions?.priceListingManagement !== undefined ? user.permissions.priceListingManagement : true,
+        
+        // Business Management
+        productManagement: user.permissions?.productManagement !== undefined ? user.permissions.productManagement : true,
         businessManagement: user.permissions?.businessManagement !== undefined ? user.permissions.businessManagement : true,
-        driverManagement: user.permissions?.driverManagement !== undefined ? user.permissions.driverManagement : true,
+        driverVerification: user.permissions?.driverVerification !== undefined ? user.permissions.driverVerification : (user.permissions?.driverManagement !== undefined ? user.permissions.driverManagement : true),
+        
+        // Vehicle Management
         vehicleManagement: user.permissions?.vehicleManagement !== undefined ? user.permissions.vehicleManagement : false,
+        
+        // User & Module Management
+        userManagement: user.permissions?.userManagement !== undefined ? user.permissions.userManagement : true,
+        moduleManagement: user.permissions?.moduleManagement !== undefined ? user.permissions.moduleManagement : true,
+        
+        // Legal & Payment (backward compatibility)
+        paymentMethodManagement: user.permissions?.paymentMethodManagement !== undefined ? user.permissions.paymentMethodManagement : (user.permissions?.paymentMethods !== undefined ? user.permissions.paymentMethods : false),
+        legalDocumentManagement: user.permissions?.legalDocumentManagement !== undefined ? user.permissions.legalDocumentManagement : (user.permissions?.legalDocuments !== undefined ? user.permissions.legalDocuments : false),
+        
+        // Admin Management
         adminUsersManagement: user.permissions?.adminUsersManagement !== undefined ? user.permissions.adminUsersManagement : false
       }
     });
@@ -568,23 +638,61 @@ const AdminUsers = () => {
                 </TableCell>
                 <TableCell>
                   <Box display="flex" gap={0.5} flexWrap="wrap">
-                    {adminUser.permissions?.paymentMethods && (
-                      <Chip label="Payment" size="small" variant="outlined" />
+                    {/* Request Management */}
+                    {adminUser.permissions?.requestManagement && (
+                      <Chip label="Requests" size="small" variant="outlined" color="primary" />
                     )}
-                    {adminUser.permissions?.legalDocuments && (
-                      <Chip label="Legal" size="small" variant="outlined" />
+                    {adminUser.permissions?.responseManagement && (
+                      <Chip label="Responses" size="small" variant="outlined" color="primary" />
+                    )}
+                    {adminUser.permissions?.priceListingManagement && (
+                      <Chip label="Pricing" size="small" variant="outlined" color="primary" />
+                    )}
+                    
+                    {/* Business Management */}
+                    {adminUser.permissions?.productManagement && (
+                      <Chip label="Products" size="small" variant="outlined" color="success" />
                     )}
                     {adminUser.permissions?.businessManagement && (
-                      <Chip label="Business" size="small" variant="outlined" />
+                      <Chip label="Business" size="small" variant="outlined" color="success" />
+                    )}
+                    {adminUser.permissions?.driverVerification && (
+                      <Chip label="Drivers" size="small" variant="outlined" color="success" />
+                    )}
+                    
+                    {/* Vehicle & User Management */}
+                    {adminUser.permissions?.vehicleManagement && (
+                      <Chip label="Vehicles" size="small" variant="outlined" color="info" />
+                    )}
+                    {adminUser.permissions?.userManagement && (
+                      <Chip label="Users" size="small" variant="outlined" color="info" />
+                    )}
+                    {adminUser.permissions?.moduleManagement && (
+                      <Chip label="Modules" size="small" variant="outlined" color="info" />
+                    )}
+                    
+                    {/* Legacy Support */}
+                    {adminUser.permissions?.paymentMethods && (
+                      <Chip label="Payment" size="small" variant="outlined" color="warning" />
+                    )}
+                    {adminUser.permissions?.legalDocuments && (
+                      <Chip label="Legal" size="small" variant="outlined" color="warning" />
                     )}
                     {adminUser.permissions?.driverManagement && (
-                      <Chip label="Driver" size="small" variant="outlined" />
+                      <Chip label="Driver" size="small" variant="outlined" color="warning" />
                     )}
-                    {adminUser.permissions?.vehicleManagement && (
-                      <Chip label="Vehicle" size="small" variant="outlined" />
+                    
+                    {/* Legal & Payment Management */}
+                    {adminUser.permissions?.paymentMethodManagement && (
+                      <Chip label="Payment Mgmt" size="small" variant="outlined" color="secondary" />
                     )}
+                    {adminUser.permissions?.legalDocumentManagement && (
+                      <Chip label="Legal Mgmt" size="small" variant="outlined" color="secondary" />
+                    )}
+                    
+                    {/* Super Admin Only */}
                     {adminUser.permissions?.adminUsersManagement && (
-                      <Chip label="Admin Users" size="small" variant="outlined" color="primary" />
+                      <Chip label="Admin Users" size="small" variant="filled" color="error" />
                     )}
                   </Box>
                 </TableCell>
@@ -708,58 +816,106 @@ const AdminUsers = () => {
             </Grid>
 
             <Grid item xs={12}>
-              <Typography variant="subtitle2" gutterBottom>
+              <Typography variant="subtitle2" gutterBottom sx={{ mb: 2 }}>
                 Permissions
               </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+              
+              {/* Request Management Section */}
+              <Typography variant="body2" color="primary" gutterBottom sx={{ mt: 2, fontWeight: 'bold' }}>
+                📋 Request Management
+              </Typography>
+              <Grid container spacing={1} sx={{ ml: 2, mb: 2 }}>
+                <Grid item xs={12} sm={6} md={4}>
                   <FormControlLabel
                     control={
                       <Switch
-                        checked={formData.permissions?.paymentMethods}
-                        onChange={(e) => handlePermissionChange('paymentMethods', e.target.checked)}
+                        size="small"
+                        checked={formData.permissions?.requestManagement}
+                        onChange={(e) => handlePermissionChange('requestManagement', e.target.checked)}
                       />
                     }
-                    label="Payment Methods Management"
+                    label="Requests"
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid item xs={12} sm={6} md={4}>
                   <FormControlLabel
                     control={
                       <Switch
-                        checked={formData.permissions?.legalDocuments}
-                        onChange={(e) => handlePermissionChange('legalDocuments', e.target.checked)}
+                        size="small"
+                        checked={formData.permissions?.responseManagement}
+                        onChange={(e) => handlePermissionChange('responseManagement', e.target.checked)}
                       />
                     }
-                    label="Legal Documents Management"
+                    label="Responses"
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid item xs={12} sm={6} md={4}>
                   <FormControlLabel
                     control={
                       <Switch
+                        size="small"
+                        checked={formData.permissions?.priceListingManagement}
+                        onChange={(e) => handlePermissionChange('priceListingManagement', e.target.checked)}
+                      />
+                    }
+                    label="Price Listings"
+                  />
+                </Grid>
+              </Grid>
+
+              {/* Business Management Section */}
+              <Typography variant="body2" color="primary" gutterBottom sx={{ fontWeight: 'bold' }}>
+                🏢 Business Management
+              </Typography>
+              <Grid container spacing={1} sx={{ ml: 2, mb: 2 }}>
+                <Grid item xs={12} sm={6} md={4}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={formData.permissions?.productManagement}
+                        onChange={(e) => handlePermissionChange('productManagement', e.target.checked)}
+                      />
+                    }
+                    label="Products"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
                         checked={formData.permissions?.businessManagement}
                         onChange={(e) => handlePermissionChange('businessManagement', e.target.checked)}
                       />
                     }
-                    label="Business Management"
+                    label="Businesses"
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid item xs={12} sm={6} md={4}>
                   <FormControlLabel
                     control={
                       <Switch
-                        checked={formData.permissions?.driverManagement}
-                        onChange={(e) => handlePermissionChange('driverManagement', e.target.checked)}
+                        size="small"
+                        checked={formData.permissions?.driverVerification}
+                        onChange={(e) => handlePermissionChange('driverVerification', e.target.checked)}
                       />
                     }
-                    label="Driver Management"
+                    label="Drivers"
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+              </Grid>
+
+              {/* Vehicle Management Section */}
+              <Typography variant="body2" color="primary" gutterBottom sx={{ fontWeight: 'bold' }}>
+                🚗 Vehicle Management
+              </Typography>
+              <Grid container spacing={1} sx={{ ml: 2, mb: 2 }}>
+                <Grid item xs={12} sm={6} md={4}>
                   <FormControlLabel
                     control={
                       <Switch
+                        size="small"
                         checked={formData.permissions?.vehicleManagement}
                         onChange={(e) => handlePermissionChange('vehicleManagement', e.target.checked)}
                       />
@@ -767,12 +923,83 @@ const AdminUsers = () => {
                     label="Vehicle Management"
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+              </Grid>
+
+              {/* User & Module Management Section */}
+              <Typography variant="body2" color="primary" gutterBottom sx={{ fontWeight: 'bold' }}>
+                👥 User & Module Management
+              </Typography>
+              <Grid container spacing={1} sx={{ ml: 2, mb: 2 }}>
+                <Grid item xs={12} sm={6} md={4}>
                   <FormControlLabel
                     control={
                       <Switch
+                        size="small"
+                        checked={formData.permissions?.userManagement}
+                        onChange={(e) => handlePermissionChange('userManagement', e.target.checked)}
+                      />
+                    }
+                    label="Users"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={formData.permissions?.moduleManagement}
+                        onChange={(e) => handlePermissionChange('moduleManagement', e.target.checked)}
+                      />
+                    }
+                    label="Module Management"
+                  />
+                </Grid>
+              </Grid>
+
+              {/* Legal & Payment Section */}
+              <Typography variant="body2" color="primary" gutterBottom sx={{ fontWeight: 'bold' }}>
+                💼 Legal & Payment Management
+              </Typography>
+              <Grid container spacing={1} sx={{ ml: 2, mb: 2 }}>
+                <Grid item xs={12} sm={6} md={4}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={formData.permissions?.paymentMethodManagement}
+                        onChange={(e) => handlePermissionChange('paymentMethodManagement', e.target.checked)}
+                      />
+                    }
+                    label="Payment Methods"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={formData.permissions?.legalDocumentManagement}
+                        onChange={(e) => handlePermissionChange('legalDocumentManagement', e.target.checked)}
+                      />
+                    }
+                    label="Legal Documents"
+                  />
+                </Grid>
+              </Grid>
+
+              {/* Admin Management Section */}
+              <Typography variant="body2" color="primary" gutterBottom sx={{ fontWeight: 'bold' }}>
+                ⚙️ Admin Management (Super Admin Only)
+              </Typography>
+              <Grid container spacing={1} sx={{ ml: 2, mb: 2 }}>
+                <Grid item xs={12} sm={6} md={4}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
                         checked={formData.permissions?.adminUsersManagement}
                         onChange={(e) => handlePermissionChange('adminUsersManagement', e.target.checked)}
+                        disabled={formData.role !== 'super_admin'}
                       />
                     }
                     label="Admin Users Management"

@@ -137,9 +137,9 @@ const Layout = () => {
 
   const menuItems = [
     { text: 'Dashboard', icon: <Dashboard />, path: '/', access: 'all' },
-    { text: 'Requests', icon: <Assignment />, path: '/requests', access: 'all' },
-    { text: 'Responses', icon: <Reply />, path: '/responses', access: 'all' },
-    { text: 'Price Listings', icon: <PriceCheck />, path: '/price-listings', access: 'all' },
+    { text: 'Requests', icon: <Assignment />, path: '/requests', access: 'all', permission: 'requestManagement' },
+    { text: 'Responses', icon: <Reply />, path: '/responses', access: 'all', permission: 'responseManagement' },
+    { text: 'Price Listings', icon: <PriceCheck />, path: '/price-listings', access: 'all', permission: 'priceListingManagement' },
     { text: 'Divider' },
     { text: 'Products', icon: <ShoppingCart />, path: '/products', access: 'all', permission: 'productManagement' },
     { text: 'Businesses', icon: <Business />, path: '/businesses', access: 'all', permission: 'businessManagement' },
@@ -154,14 +154,14 @@ const Layout = () => {
     { text: 'Variable Types', icon: <Tune />, path: '/variable-types', access: 'super_admin' },
     { text: 'Divider' },
     { text: 'Users', icon: <Person />, path: '/users', access: 'all', permission: 'userManagement' },
-    { text: 'Privacy Policy', icon: <PrivacyTip />, path: '/privacy-policy', access: 'super_admin' },
+    { text: 'Privacy Policy', icon: <PrivacyTip />, path: '/privacy-policy', access: 'all', permission: 'legalDocumentManagement' },
     { text: 'Divider' },
     { text: 'Country Data', icon: <Public />, path: '/country-data', access: 'super_admin' },
     { text: 'City Management', icon: <LocationCity />, path: '/cities', access: 'super_admin' },
     { text: 'Module Management', icon: <Settings />, path: '/modules', access: 'all', permission: 'moduleManagement' },
-    { text: 'Payment Methods', icon: <Payment />, path: '/payment-methods', access: 'super_admin' },
+    { text: 'Payment Methods', icon: <Payment />, path: '/payment-methods', access: 'all', permission: 'paymentMethodManagement' },
     { text: 'Divider' },
-    { text: 'Admin Management', icon: <AdminPanelSettings />, path: '/admin-management', access: 'super_admin' },
+    { text: 'Admin Management', icon: <AdminPanelSettings />, path: '/admin-management', access: 'super_admin', permission: 'adminUsersManagement' },
   ];
 
   const drawer = (
