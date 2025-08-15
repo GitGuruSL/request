@@ -1,0 +1,396 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../models/request_model.dart';
+import '../models/price_listing.dart';
+import '../models/enhanced_user_model.dart';
+import 'country_service.dart';
+
+/// Centralized Country-Based Data Filtering Service for Flutter App
+/// Ensures all data queries are filtered by user's registered country
+class CountryFilteredDataService {
+  static const String _tag = 'CountryFilteredDataService';
+  
+  static CountryFilteredDataService? _instance;
+  static CountryFilteredDataService get instance => _instance ??= CountryFilteredDataService._();
+  
+  CountryFilteredDataService._();
+  
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final CountryService _countryService = CountryService.instance;
+  
+  /// Get current user's country code
+  String? get userCountry => _countryService.countryCode;
+  String? get userCountryName => _countryService.countryName;
+  
+  /// Validate user has country set
+  void _validateUserCountry() {
+    if (userCountry == null || userCountryName == null) {
+      throw Exception('User country not set. Please select country in welcome screen.');
+    }
+  }
+  
+  // ==================== REQUESTS ====================
+  
+  /// Get requests filtered by user's country
+  Stream<List<RequestModel>> getCountryRequestsStream({
+    String? status,
+    String? category,
+    RequestType? type,
+    int limit = 50,
+  }) {
+    _validateUserCountry();
+    
+    try {
+      Query<Map<String, dynamic>> query = _firestore
+          .collection('requests')
+          .where('country', isEqualTo: userCountry);
+      
+      // Apply additional filters
+      if (status != null && status.isNotEmpty) {
+        query = query.where('status', isEqualTo: status);
+      }
+      
+      if (category != null && category.isNotEmpty) {
+        query = query.where('category', isEqualTo: category);
+      }
+      
+      if (type != null) {
+        query = query.where('type', isEqualTo: type.name);
+      }
+      
+      query = query
+          .orderBy('createdAt', descending: true)
+          .limit(limit);
+      
+      return query.snapshots().map((snapshot) {
+        return snapshot.docs.map((doc) {
+          final data = doc.data();
+          data['id'] = doc.id;
+          return RequestModel.fromMap(data);
+        }).toList();
+      });
+    } catch (e) {
+      print('$_tag Error in getCountryRequestsStream: $e');
+      rethrow;
+    }
+  }
+  
+  /// Get single request by ID (with country validation)
+  Future<RequestModel?> getRequestById(String requestId) async {
+    _validateUserCountry();
+    
+    try {
+      final doc = await _firestore.collection('requests').doc(requestId).get();
+      
+      if (!doc.exists) return null;
+      
+      final data = doc.data()!;
+      data['id'] = doc.id; // Add document ID
+      final request = RequestModel.fromMap(data);
+      
+      // Validate request belongs to user's country
+      if (request.country != userCountry) {
+        print('$_tag Access denied: Request from different country');
+        return null;
+      }
+      
+      return request;
+    } catch (e) {
+      print('$_tag Error getting request by ID: $e');
+      return null;
+    }
+  }
+  
+  /// Get user's own requests
+  Stream<List<RequestModel>> getUserRequestsStream() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception('User not authenticated');
+    
+    _validateUserCountry();
+    
+    return _firestore
+        .collection('requests')
+        .where('requesterId', isEqualTo: user.uid)
+        .where('country', isEqualTo: userCountry)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id; // Add document ID to the data
+        return RequestModel.fromMap(data);
+      }).toList();
+    });
+  }
+  
+  // ==================== RESPONSES ====================
+  
+  /// Get responses for a request (country-filtered)
+  Stream<List<ResponseModel>> getResponsesForRequestStream(String requestId) {
+    _validateUserCountry();
+    
+    return _firestore
+        .collection('responses')
+        .where('requestId', isEqualTo: requestId)
+        .where('country', isEqualTo: userCountry)
+        .orderBy('createdAt', descending: false)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return ResponseModel.fromMap(data);
+      }).toList();
+    });
+  }
+  
+  /// Get user's responses (what they've responded to)
+  Stream<List<ResponseModel>> getUserResponsesStream() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception('User not authenticated');
+    
+    _validateUserCountry();
+    
+    return _firestore
+        .collection('responses')
+        .where('responderId', isEqualTo: user.uid)
+        .where('country', isEqualTo: userCountry)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return ResponseModel.fromMap(data);
+      }).toList();
+    });
+  }
+  
+  // ==================== PRICE LISTINGS ====================
+  
+  /// Get price listings filtered by country
+  Stream<List<PriceListing>> getPriceListingsStream({
+    String? category,
+    String? businessId,
+    bool activeOnly = true,
+    int limit = 50,
+  }) {
+    _validateUserCountry();
+    
+    try {
+      Query<Map<String, dynamic>> query = _firestore
+          .collection('price_listings')
+          .where('country', isEqualTo: userCountry);
+      
+      if (category != null && category.isNotEmpty) {
+        query = query.where('category', isEqualTo: category);
+      }
+      
+      if (businessId != null && businessId.isNotEmpty) {
+        query = query.where('businessId', isEqualTo: businessId);
+      }
+      
+      if (activeOnly) {
+        query = query.where('isActive', isEqualTo: true);
+      }
+      
+      query = query
+          .orderBy('createdAt', descending: true)
+          .limit(limit);
+      
+      return query.snapshots().map((snapshot) {
+        return snapshot.docs.map((doc) {
+          return PriceListing.fromFirestore(doc);
+        }).toList();
+      });
+    } catch (e) {
+      print('$_tag Error in getPriceListingsStream: $e');
+      rethrow;
+    }
+  }
+  
+  /// Get business's price listings
+  Stream<List<PriceListing>> getBusinessPriceListingsStream(String businessId) {
+    _validateUserCountry();
+    
+    return _firestore
+        .collection('price_listings')
+        .where('businessId', isEqualTo: businessId)
+        .where('country', isEqualTo: userCountry)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        return PriceListing.fromFirestore(doc);
+      }).toList();
+    });
+  }
+  
+  // ==================== USERS & BUSINESSES ====================
+  
+  /// Get businesses in user's country
+  Stream<List<Map<String, dynamic>>> getCountryBusinessesStream({
+    bool verifiedOnly = true,
+    String? category,
+    int limit = 50,
+  }) {
+    _validateUserCountry();
+    
+    try {
+      Query<Map<String, dynamic>> query = _firestore
+          .collection('new_business_verifications')
+          .where('country', isEqualTo: userCountry);
+      
+      if (verifiedOnly) {
+        query = query.where('verificationStatus', isEqualTo: 'approved');
+      }
+      
+      if (category != null && category.isNotEmpty) {
+        query = query.where('category', isEqualTo: category);
+      }
+      
+      query = query
+          .orderBy('createdAt', descending: true)
+          .limit(limit);
+      
+      return query.snapshots().map((snapshot) {
+        return snapshot.docs.map((doc) {
+          return {'id': doc.id, ...doc.data()};
+        }).toList();
+      });
+    } catch (e) {
+      print('$_tag Error in getCountryBusinessesStream: $e');
+      rethrow;
+    }
+  }
+  
+  /// Get drivers in user's country
+  Stream<List<Map<String, dynamic>>> getCountryDriversStream({
+    bool verifiedOnly = true,
+    String? vehicleType,
+    int limit = 50,
+  }) {
+    _validateUserCountry();
+    
+    try {
+      Query<Map<String, dynamic>> query = _firestore
+          .collection('driver_verification')
+          .where('country', isEqualTo: userCountry);
+      
+      if (verifiedOnly) {
+        query = query.where('verificationStatus', isEqualTo: 'approved');
+      }
+      
+      if (vehicleType != null && vehicleType.isNotEmpty) {
+        query = query.where('vehicleType', isEqualTo: vehicleType);
+      }
+      
+      query = query
+          .orderBy('createdAt', descending: true)
+          .limit(limit);
+      
+      return query.snapshots().map((snapshot) {
+        return snapshot.docs.map((doc) {
+          return {'id': doc.id, ...doc.data()};
+        }).toList();
+      });
+    } catch (e) {
+      print('$_tag Error in getCountryDriversStream: $e');
+      rethrow;
+    }
+  }
+  
+  // ==================== VALIDATION & UTILITIES ====================
+  
+  /// Validate data belongs to user's country before operations
+  Future<bool> validateDataCountryAccess(String collection, String documentId) async {
+    _validateUserCountry();
+    
+    try {
+      final doc = await _firestore.collection(collection).doc(documentId).get();
+      
+      if (!doc.exists) return false;
+      
+      final data = doc.data();
+      final dataCountry = data?['country'];
+      
+      return dataCountry == userCountry;
+    } catch (e) {
+      print('$_tag Error validating country access: $e');
+      return false;
+    }
+  }
+  
+  /// Ensure data includes country information when creating
+  Map<String, dynamic> addCountryToData(Map<String, dynamic> data) {
+    _validateUserCountry();
+    
+    return {
+      ...data,
+      'country': userCountry,
+      'countryName': userCountryName,
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+  }
+  
+  /// Search within country-filtered data
+  Future<List<Map<String, dynamic>>> searchInCountry({
+    required String collection,
+    required String searchField,
+    required String searchTerm,
+    int limit = 20,
+  }) async {
+    _validateUserCountry();
+    
+    try {
+      // Note: Firestore doesn't support full-text search natively
+      // This is a simple prefix search
+      final query = await _firestore
+          .collection(collection)
+          .where('country', isEqualTo: userCountry)
+          .where(searchField, isGreaterThanOrEqualTo: searchTerm)
+          .where(searchField, isLessThanOrEqualTo: searchTerm + '\\uf8ff')
+          .limit(limit)
+          .get();
+      
+      return query.docs.map((doc) {
+        return {'id': doc.id, ...doc.data()};
+      }).toList();
+    } catch (e) {
+      print('$_tag Error searching in country: $e');
+      return [];
+    }
+  }
+  
+  /// Get country-specific statistics for user
+  Future<Map<String, int>> getCountryStats() async {
+    _validateUserCountry();
+    
+    try {
+      final futures = await Future.wait([
+        _firestore.collection('requests').where('country', isEqualTo: userCountry).get(),
+        _firestore.collection('responses').where('country', isEqualTo: userCountry).get(),
+        _firestore.collection('price_listings').where('country', isEqualTo: userCountry).get(),
+        _firestore.collection('new_business_verifications')
+            .where('country', isEqualTo: userCountry)
+            .where('verificationStatus', isEqualTo: 'approved')
+            .get(),
+        _firestore.collection('driver_verification')
+            .where('country', isEqualTo: userCountry)
+            .where('verificationStatus', isEqualTo: 'approved')
+            .get(),
+      ]);
+      
+      return {
+        'requests': futures[0].docs.length,
+        'responses': futures[1].docs.length,
+        'priceListings': futures[2].docs.length,
+        'businesses': futures[3].docs.length,
+        'drivers': futures[4].docs.length,
+      };
+    } catch (e) {
+      print('$_tag Error getting country stats: $e');
+      return {};
+    }
+  }
+}
