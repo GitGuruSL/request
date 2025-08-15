@@ -55,6 +55,10 @@ import useCountryFilter from '../hooks/useCountryFilter';
 
 const Cities = () => {
   const { getFilteredData, adminData, isSuperAdmin, userCountry } = useCountryFilter();
+  
+  // Permission check
+  const hasCityManagementPermission = adminData?.permissions?.cityManagement || isSuperAdmin;
+  
   const [cities, setCities] = useState([]);
   const [filteredCities, setFilteredCities] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -252,8 +256,16 @@ const Cities = () => {
 
   return (
     <Box p={3}>
-      {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+      {!hasCityManagementPermission && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          You don't have permission to access City Management. Contact your administrator to get access.
+        </Alert>
+      )}
+      
+      {hasCityManagementPermission && (
+        <>
+          {/* Header */}
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Box>
           <Typography variant="h4" gutterBottom>
             Cities Management
@@ -516,6 +528,8 @@ const Cities = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      </>
+      )}
     </Box>
   );
 };

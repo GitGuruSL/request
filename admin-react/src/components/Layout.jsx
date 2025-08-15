@@ -167,7 +167,7 @@ const Layout = () => {
     { text: 'Global Pages', icon: <Public />, path: '/centralized-pages', access: 'super_admin' },
     { text: 'Divider' },
     { text: 'Country Data', icon: <Public />, path: '/country-data', access: 'super_admin' },
-    { text: 'City Management', icon: <LocationCity />, path: '/cities', access: 'super_admin' },
+    { text: 'City Management', icon: <LocationCity />, path: '/cities', access: 'all', permission: 'cityManagement' },
     { text: 'Module Management', icon: <Settings />, path: '/modules', access: 'all', permission: 'moduleManagement' },
     { text: 'Payment Methods', icon: <Payment />, path: '/payment-methods', access: 'all', permission: 'paymentMethodManagement' },
     { text: 'Divider' },

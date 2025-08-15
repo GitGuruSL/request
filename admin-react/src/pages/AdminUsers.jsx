@@ -89,6 +89,9 @@ const AdminUsers = () => {
       // Vehicle Management
       vehicleManagement: false, // Only super admins by default
       
+      // City Management
+      cityManagement: true, // Country admins can manage cities in their country
+      
       // Data Management
       userManagement: true,
       subscriptionManagement: true,
@@ -265,6 +268,9 @@ const AdminUsers = () => {
             // Vehicle Management
             vehicleManagement: formData.permissions?.vehicleManagement !== undefined ? formData.permissions.vehicleManagement : false,
             
+            // City Management  
+            cityManagement: formData.permissions?.cityManagement !== undefined ? formData.permissions.cityManagement : true,
+            
             // User & Module Management
             userManagement: formData.permissions?.userManagement !== undefined ? formData.permissions.userManagement : true,
             subscriptionManagement: formData.permissions?.subscriptionManagement !== undefined ? formData.permissions.subscriptionManagement : true,
@@ -334,6 +340,9 @@ const AdminUsers = () => {
             
             // Vehicle Management
             vehicleManagement: formData.permissions?.vehicleManagement !== undefined ? formData.permissions.vehicleManagement : false,
+            
+            // City Management
+            cityManagement: formData.permissions?.cityManagement !== undefined ? formData.permissions.cityManagement : true,
             
             // User & Module Management
             userManagement: formData.permissions?.userManagement !== undefined ? formData.permissions.userManagement : true,
@@ -442,6 +451,9 @@ const AdminUsers = () => {
         
         // Vehicle Management
         vehicleManagement: user.permissions?.vehicleManagement !== undefined ? user.permissions.vehicleManagement : false,
+        
+        // City Management
+        cityManagement: user.permissions?.cityManagement !== undefined ? user.permissions.cityManagement : true,
         
         // User & Module Management
         userManagement: user.permissions?.userManagement !== undefined ? user.permissions.userManagement : true,
@@ -960,6 +972,25 @@ const AdminUsers = () => {
                       />
                     }
                     label="Vehicle Management"
+                  />
+                </Grid>
+              </Grid>
+
+              {/* City Management Section */}
+              <Typography variant="body2" color="primary" gutterBottom sx={{ fontWeight: 'bold' }}>
+                🏙️ City Management
+              </Typography>
+              <Grid container spacing={1} sx={{ ml: 2, mb: 2 }}>
+                <Grid item xs={12} sm={6} md={4}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={formData.permissions?.cityManagement}
+                        onChange={(e) => handlePermissionChange('cityManagement', e.target.checked)}
+                      />
+                    }
+                    label="City Management"
                   />
                 </Grid>
               </Grid>
