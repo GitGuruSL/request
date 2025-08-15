@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { onAdminAuthStateChanged } from '../firebase/auth';
+import { onAdminAuthStateChanged, signOutAdmin } from '../firebase/auth';
 
 const AuthContext = createContext();
 
@@ -32,10 +32,28 @@ export const AuthProvider = ({ children }) => {
     return unsubscribe;
   }, []);
 
+  const logout = async () => {
+    try {
+      console.log('🚪 Starting logout process...');
+      await signOutAdmin();
+      console.log('✅ SignOut successful, clearing state...');
+      setUser(null);
+      setAdminData(null);
+      console.log('✅ Logout completed successfully');
+    } catch (error) {
+      console.error('❌ Logout error in context:', error);
+      // Even if signOut fails, clear the local state
+      setUser(null);
+      setAdminData(null);
+      throw error;
+    }
+  };
+
   const value = {
     user,
     adminData,
     loading,
+    logout,
     isAuthenticated: !!user && !!adminData,
     isSuperAdmin: adminData?.role === 'super_admin',
     isCountryAdmin: adminData?.role === 'country_admin',

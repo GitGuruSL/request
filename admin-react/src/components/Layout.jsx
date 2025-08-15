@@ -96,12 +96,17 @@ const Layout = () => {
 
   const handleLogout = async () => {
     try {
+      console.log('🚪 Layout: Starting logout...');
+      handleMenuClose();
       await logout();
-      navigate('/login');
+      console.log('✅ Layout: Logout successful, navigating to login...');
+      navigate('/login', { replace: true });
+      console.log('✅ Layout: Navigation completed');
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('❌ Layout: Logout error:', error);
+      // Even if logout fails, try to navigate to login
+      navigate('/login', { replace: true });
     }
-    handleMenuClose();
   };
 
   const handlePasswordChange = async () => {
