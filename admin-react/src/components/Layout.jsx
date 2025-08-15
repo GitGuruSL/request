@@ -47,7 +47,8 @@ import {
   Settings,
   PriceCheck,
   Article,
-  Subscriptions
+  Subscriptions,
+  LocalOffer
 } from '@mui/icons-material';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -161,6 +162,7 @@ const Layout = () => {
     { text: 'Divider' },
     { text: 'Users', icon: <Person />, path: '/users', access: 'all', permission: 'userManagement' },
     { text: 'Subscriptions', icon: <Subscriptions />, path: '/subscriptions', access: 'all', permission: 'subscriptionManagement' },
+    { text: 'Promo Codes', icon: <LocalOffer />, path: '/promo-codes', access: 'all', permission: 'promoCodeManagement' },
     { text: 'Page Management', icon: <Article />, path: '/pages', access: 'all', permission: 'countryPageManagement' },
     { text: 'Global Pages', icon: <Public />, path: '/centralized-pages', access: 'super_admin' },
     { text: 'Divider' },

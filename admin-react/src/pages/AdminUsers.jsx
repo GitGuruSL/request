@@ -92,6 +92,7 @@ const AdminUsers = () => {
       // Data Management
       userManagement: true,
       subscriptionManagement: true,
+      promoCodeManagement: true,
       
       // Product Catalog Management
       categoryManagement: true,
@@ -267,6 +268,7 @@ const AdminUsers = () => {
             // User & Module Management
             userManagement: formData.permissions?.userManagement !== undefined ? formData.permissions.userManagement : true,
             subscriptionManagement: formData.permissions?.subscriptionManagement !== undefined ? formData.permissions.subscriptionManagement : true,
+            promoCodeManagement: formData.permissions?.promoCodeManagement !== undefined ? formData.permissions.promoCodeManagement : true,
             moduleManagement: formData.permissions?.moduleManagement !== undefined ? formData.permissions.moduleManagement : true,
             
             // Product Catalog Management
@@ -336,6 +338,7 @@ const AdminUsers = () => {
             // User & Module Management
             userManagement: formData.permissions?.userManagement !== undefined ? formData.permissions.userManagement : true,
             subscriptionManagement: formData.permissions?.subscriptionManagement !== undefined ? formData.permissions.subscriptionManagement : true,
+            promoCodeManagement: formData.permissions?.promoCodeManagement !== undefined ? formData.permissions.promoCodeManagement : true,
             moduleManagement: formData.permissions?.moduleManagement !== undefined ? formData.permissions.moduleManagement : true,
             
             // Product Catalog Management
@@ -443,6 +446,7 @@ const AdminUsers = () => {
         // User & Module Management
         userManagement: user.permissions?.userManagement !== undefined ? user.permissions.userManagement : true,
         subscriptionManagement: user.permissions?.subscriptionManagement !== undefined ? user.permissions.subscriptionManagement : true,
+        promoCodeManagement: user.permissions?.promoCodeManagement !== undefined ? user.permissions.promoCodeManagement : true,
         moduleManagement: user.permissions?.moduleManagement !== undefined ? user.permissions.moduleManagement : true,
         
         // Product Catalog Management
@@ -975,6 +979,18 @@ const AdminUsers = () => {
                       />
                     }
                     label="Users"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={formData.permissions?.promoCodeManagement}
+                        onChange={(e) => handlePermissionChange('promoCodeManagement', e.target.checked)}
+                      />
+                    }
+                    label="Promo Codes"
                   />
                 </Grid>
                 <Grid item xs={12} sm={6} md={4}>
