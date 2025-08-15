@@ -78,7 +78,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
       slivers: [
         // Facebook-style header
         SliverAppBar(
-          expandedHeight: 120,
+          expandedHeight: 100,
           floating: false,
           pinned: true,
           backgroundColor: Colors.white,
@@ -125,19 +125,19 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
         // Menu content
         SliverList(
           delegate: SliverChildListDelegate([
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             
             // Facebook-style grid sections
             _buildMenuGrid(),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
             
             // Content pages section
             if (_pages.isNotEmpty) _buildContentPagesSection(),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
             
             // Account actions section
             _buildAccountActionsSection(),
-            const SizedBox(height: 100),
+            const SizedBox(height: 120),
           ]),
         ),
       ],
@@ -221,15 +221,15 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
-            childAspectRatio: 3,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
+            childAspectRatio: 3.2,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
           ),
           itemCount: accountItems.length,
           itemBuilder: (context, index) {
@@ -242,28 +242,28 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
               },
               borderRadius: BorderRadius.circular(8),
               child: Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 child: Row(
                   children: [
                     Container(
-                      width: 40,
-                      height: 40,
+                      width: 32,
+                      height: 32,
                       decoration: BoxDecoration(
                         color: item.color.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(6),
                       ),
                       child: Icon(
                         item.icon,
                         color: item.color,
-                        size: 22,
+                        size: 18,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         item.title,
                         style: const TextStyle(
-                          fontSize: 15,
+                          fontSize: 14,
                           fontWeight: FontWeight.w500,
                         ),
                         overflow: TextOverflow.ellipsis,
@@ -453,23 +453,23 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Row(
           children: [
             Container(
-              width: 40,
-              height: 40,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(6),
               ),
               child: Icon(
                 icon,
                 color: color,
-                size: 20,
+                size: 18,
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -477,16 +477,16 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                   Text(
                     title,
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                   if (subtitle != null) ...[
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 1),
                     Text(
                       subtitle,
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 12,
                         color: Colors.grey[600],
                       ),
                     ),
