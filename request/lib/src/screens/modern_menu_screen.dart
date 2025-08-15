@@ -4,6 +4,10 @@ import '../services/auth_service.dart';
 import '../services/enhanced_user_service.dart';
 import '../models/enhanced_user_model.dart';
 import 'content_page_screen.dart';
+import 'my_activities_screen.dart';
+import 'settings_privacy_screen.dart';
+import 'help_support_screen.dart';
+import 'about_request_screen.dart';
 
 class ModernMenuScreen extends StatefulWidget {
   const ModernMenuScreen({super.key});
@@ -184,42 +188,86 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: InkWell(
-        onTap: () => Navigator.pushNamed(context, '/profile'),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundImage: _profileImageUrl != null && _profileImageUrl!.isNotEmpty
-                    ? NetworkImage(_profileImageUrl!)
-                    : null,
-                backgroundColor: Colors.grey[300],
-                child: _profileImageUrl == null || _profileImageUrl!.isEmpty
-                    ? Icon(Icons.person, color: Colors.grey[600], size: 28)
-                    : null,
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  _currentUser?['name'] ?? 
-                  _currentUser?['displayName'] ?? 
-                  'User',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
+      child: Column(
+        children: [
+          InkWell(
+            onTap: () => _showProfileMenu(context),
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: () => Navigator.pushNamed(context, '/account'),
+                    child: CircleAvatar(
+                      radius: 24,
+                      backgroundImage: _profileImageUrl != null && _profileImageUrl!.isNotEmpty
+                          ? NetworkImage(_profileImageUrl!)
+                          : null,
+                      backgroundColor: Colors.grey[300],
+                      child: _profileImageUrl == null || _profileImageUrl!.isEmpty
+                          ? Icon(Icons.person, color: Colors.grey[600], size: 28)
+                          : null,
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      _currentUser?['name'] ?? 
+                      _currentUser?['displayName'] ?? 
+                      'User',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    Icons.keyboard_arrow_down,
+                    color: Colors.grey[600],
+                    size: 28,
+                  ),
+                ],
               ),
-              Icon(
-                Icons.keyboard_arrow_down,
-                color: Colors.grey[600],
-                size: 28,
-              ),
-            ],
+            ),
           ),
+        ],
+      ),
+    );
+  }
+
+  void _showProfileMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildActionTile(
+              icon: Icons.person,
+              title: 'Profile',
+              subtitle: 'Manage your profile information',
+              color: Colors.blue,
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/account');
+              },
+            ),
+            _buildActionTile(
+              icon: Icons.settings,
+              title: 'Account Settings',
+              subtitle: 'Privacy, security and more',
+              color: Colors.grey,
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/account-settings');
+              },
+            ),
+          ],
         ),
       ),
     );
@@ -228,21 +276,16 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
   Widget _buildMenuGrid() {
     final accountItems = [
       _MenuItem(
-        title: 'Profile',
-        icon: Icons.person_outline,
-        color: Colors.blue,
-        route: '/profile',
-      ),
-      _MenuItem(
         title: 'Roles',
         icon: Icons.work_outline,
         color: Colors.purple,
+        route: '/role-management',
       ),
       _MenuItem(
         title: 'Products',
         icon: Icons.inventory_2_outlined,
         color: Colors.orange,
-        route: '/products',
+        route: '/business-pricing',
       ),
       _MenuItem(
         title: 'Messages',
@@ -287,7 +330,14 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
             return InkWell(
               onTap: () {
                 if (item.route != null) {
-                  Navigator.pushNamed(context, item.route!);
+                  if (item.route == '/activities') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const MyActivitiesScreen()),
+                    );
+                  } else {
+                    Navigator.pushNamed(context, item.route!);
+                  }
                 }
               },
               borderRadius: BorderRadius.circular(8),
@@ -439,21 +489,30 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
             title: 'Help and Support',
             subtitle: 'Get help when you need it',
             color: Colors.grey,
-            onTap: () => Navigator.pushNamed(context, '/help'),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const HelpSupportScreen()),
+            ),
           ),
           _buildActionTile(
             icon: Icons.settings,
             title: 'Settings & Privacy',
             subtitle: 'Manage app settings and privacy',
             color: Colors.grey,
-            onTap: () => Navigator.pushNamed(context, '/settings'),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const SettingsPrivacyScreen()),
+            ),
           ),
           _buildActionTile(
             icon: Icons.info_outline,
             title: 'About Request',
             subtitle: 'Learn more about the app',
             color: Colors.grey,
-            onTap: () => Navigator.pushNamed(context, '/about'),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const AboutRequestScreen()),
+            ),
           ),
           _buildActionTile(
             icon: Icons.logout,
