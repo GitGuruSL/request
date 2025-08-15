@@ -32,6 +32,11 @@ import PagesModule from './pages/PagesModule';
 import CentralizedPagesModule from './pages/CentralizedPagesModule';
 import SubscriptionsModule from './pages/Subscriptions';
 import PromoCodes from './pages/PromoCodes';
+import CountryProductManagement from './pages/CountryProductManagement';
+import CountryCategoryManagement from './pages/CountryCategoryManagement';
+import CountrySubcategoryManagement from './pages/CountrySubcategoryManagement';
+import CountryBrandManagement from './pages/CountryBrandManagement';
+import CountryVariableTypeManagement from './pages/CountryVariableTypeManagement';
 import DebugAuth from './components/DebugAuth';
 
 const theme = createTheme({
@@ -93,6 +98,14 @@ function App() {
               <Route path="promo-codes" element={<PromoCodes />} />
               <Route path="pages" element={<PagesModule />} />
               <Route path="centralized-pages" element={<CentralizedPagesModule />} />
+              
+              {/* Country Management Routes */}
+              <Route path="country-products" element={<CountryProductManagement />} />
+              <Route path="country-categories" element={<CountryCategoryManagement />} />
+              <Route path="country-subcategories" element={<CountrySubcategoryManagement />} />
+              <Route path="country-brands" element={<CountryBrandManagement />} />
+              <Route path="country-variable-types" element={<CountryVariableTypeManagement />} />
+              
               {/* Add more protected routes here */}
             </Route>
           </Routes>

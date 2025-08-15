@@ -148,17 +148,23 @@ const Layout = () => {
     { text: 'Responses', icon: <Reply />, path: '/responses', access: 'all', permission: 'responseManagement' },
     { text: 'Price Listings', icon: <PriceCheck />, path: '/price-listings', access: 'all', permission: 'priceListingManagement' },
     { text: 'Divider' },
-    { text: 'Products', icon: <ShoppingCart />, path: '/products', access: 'all', permission: 'productManagement' },
+    { text: 'Products', icon: <ShoppingCart />, path: '/products', access: 'super_admin', permission: 'productManagement' },
     { text: 'Businesses', icon: <Business />, path: '/businesses', access: 'all', permission: 'businessManagement' },
     { text: 'Drivers', icon: <Gavel />, path: '/driver-verification', access: 'all', permission: 'driverVerification' },
     { text: 'Divider' },
     { text: 'Vehicle Types', icon: <Settings />, path: '/vehicles', access: 'super_admin', permission: 'vehicleManagement' },
     { text: 'Vehicle Management', icon: <DirectionsCar />, path: '/vehicles-module', access: 'all', permission: 'vehicleManagement' },
     { text: 'Divider' },
-    { text: 'Categories', icon: <Category />, path: '/categories', access: 'all', permission: 'categoryManagement' },
-    { text: 'Subcategories', icon: <Category />, path: '/subcategories', access: 'all', permission: 'subcategoryManagement' },
-    { text: 'Brands', icon: <BrandingWatermark />, path: '/brands', access: 'all', permission: 'brandManagement' },
-    { text: 'Variable Types', icon: <Tune />, path: '/variable-types', access: 'all', permission: 'variableTypeManagement' },
+    { text: 'Categories', icon: <Category />, path: '/categories', access: 'super_admin', permission: 'categoryManagement' },
+    { text: 'Subcategories', icon: <Category />, path: '/subcategories', access: 'super_admin', permission: 'subcategoryManagement' },
+    { text: 'Brands', icon: <BrandingWatermark />, path: '/brands', access: 'super_admin', permission: 'brandManagement' },
+    { text: 'Variable Types', icon: <Tune />, path: '/variable-types', access: 'super_admin', permission: 'variableTypeManagement' },
+    { text: 'Divider' },
+    { text: 'Products', icon: <ShoppingCart />, path: '/country-products', access: 'country_admin', permission: 'countryProductManagement' },
+    { text: 'Categories', icon: <Category />, path: '/country-categories', access: 'country_admin', permission: 'countryCategoryManagement' },
+    { text: 'Subcategories', icon: <Category />, path: '/country-subcategories', access: 'country_admin', permission: 'countrySubcategoryManagement' },
+    { text: 'Brands', icon: <BrandingWatermark />, path: '/country-brands', access: 'country_admin', permission: 'countryBrandManagement' },
+    { text: 'Variable Types', icon: <Tune />, path: '/country-variable-types', access: 'country_admin', permission: 'countryVariableTypeManagement' },
     { text: 'Divider' },
     { text: 'Users', icon: <Person />, path: '/users', access: 'all', permission: 'userManagement' },
     { text: 'Subscriptions', icon: <Subscriptions />, path: '/subscriptions', access: 'all', permission: 'subscriptionManagement' },
@@ -182,15 +188,24 @@ const Layout = () => {
         {menuItems.filter(item => {
           if (item.text === 'Divider') return true;
           
-          // Check access level
-          if (item.access === 'all') return true;
-          if (item.access === 'super_admin' && isSuperAdmin) return true;
+          // For super admin - show super_admin and all access items
+          if (isSuperAdmin) {
+            return item.access === 'super_admin' || item.access === 'all';
+          }
           
-          // Check specific permissions for non-super admins
-          if (item.permission && !isSuperAdmin) {
-            // Special case for vehicle management - only super admins
-            if (item.permission === 'vehicleManagement' && item.text === 'Vehicle Management') return false;
-            return adminData?.permissions?.[item.permission] === true;
+          // For country admin - show only country_admin and all access items (excluding super_admin items)
+          if (!isSuperAdmin) {
+            if (item.access === 'super_admin') return false; // Explicitly exclude super admin items
+            if (item.access === 'country_admin') return true;
+            if (item.access === 'all') {
+              // For 'all' access items, check permissions
+              if (item.permission) {
+                // Special case for vehicle management - only super admins
+                if (item.permission === 'vehicleManagement' && item.text === 'Vehicle Management') return false;
+                return adminData?.permissions?.[item.permission] === true;
+              }
+              return true;
+            }
           }
           
           return false;

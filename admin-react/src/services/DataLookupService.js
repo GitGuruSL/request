@@ -128,6 +128,76 @@ export class DataLookupService {
     
     return businessData.businessName || businessData.name || 'Unnamed Business';
   }
+
+  // Get all products
+  static async getAllProducts() {
+    try {
+      const productsSnapshot = await getDocs(collection(db, 'products'));
+      return productsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (error) {
+      console.error('Error fetching all products:', error);
+      return [];
+    }
+  }
+
+  // Get all categories
+  static async getAllCategories() {
+    try {
+      const categoriesSnapshot = await getDocs(collection(db, 'categories'));
+      return categoriesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (error) {
+      console.error('Error fetching all categories:', error);
+      return [];
+    }
+  }
+
+  // Get all subcategories
+  static async getAllSubcategories() {
+    try {
+      const subcategoriesSnapshot = await getDocs(collection(db, 'subcategories'));
+      return subcategoriesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (error) {
+      console.error('Error fetching all subcategories:', error);
+      return [];
+    }
+  }
+
+  // Get all brands
+  static async getAllBrands() {
+    try {
+      const brandsSnapshot = await getDocs(collection(db, 'brands'));
+      return brandsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (error) {
+      console.error('Error fetching all brands:', error);
+      return [];
+    }
+  }
+
+  // Get all variable types
+  static async getAllVariableTypes() {
+    try {
+      const variableTypesSnapshot = await getDocs(collection(db, 'custom_product_variables'));
+      return variableTypesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (error) {
+      console.error('Error fetching all variable types:', error);
+      return [];
+    }
+  }
 }
 
 export default DataLookupService;
