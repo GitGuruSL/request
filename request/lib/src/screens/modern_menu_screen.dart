@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/content_service.dart';
+import '../services/auth_service.dart';
+import '../services/enhanced_user_service.dart';
+import '../models/enhanced_user_model.dart';
 import 'content_page_screen.dart';
 
 class ModernMenuScreen extends StatefulWidget {
@@ -11,8 +14,13 @@ class ModernMenuScreen extends StatefulWidget {
 
 class _ModernMenuScreenState extends State<ModernMenuScreen> {
   final ContentService _contentService = ContentService.instance;
+  final AuthService _authService = AuthService.instance;
+  final EnhancedUserService _userService = EnhancedUserService();
+  
   List<ContentPage> _pages = [];
+  Map<String, dynamic>? _currentUser;
   bool _isLoading = true;
+  String? _profileImageUrl;
 
   @override
   void initState() {
@@ -23,7 +31,20 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
   Future<void> _loadData() async {
     try {
       setState(() => _isLoading = true);
+      
+      // Load user data
+      final user = _authService.currentUser;
+      if (user != null) {
+        final userData = await _userService.getUserById(user.uid);
+        setState(() {
+          _currentUser = userData?.toMap();
+          _profileImageUrl = null; // No profile image in current model
+        });
+      }
+      
+      // Load content pages
       final pages = await _contentService.getPages();
+      
       if (mounted) {
         setState(() {
           _pages = pages;
@@ -42,32 +63,6 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: const Text('Menu'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.bug_report),
-            onPressed: () {
-              Navigator.pushNamed(context, '/content-test');
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              Navigator.pushNamed(context, '/settings');
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              Navigator.pushNamed(context, '/search');
-            },
-          ),
-        ],
-      ),
       body: _isLoading ? _buildLoadingState() : _buildMenuContent(),
     );
   }
@@ -79,94 +74,207 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
   }
 
   Widget _buildMenuContent() {
-    return RefreshIndicator(
-      onRefresh: _loadData,
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        child: Column(
-          children: [
-            // Main Menu Grid
-            _buildMainMenuGrid(),
-            
-            // Content Pages Section
-            if (_pages.isNotEmpty) _buildContentPagesSection(),
+    return CustomScrollView(
+      slivers: [
+        // Facebook-style header
+        SliverAppBar(
+          expandedHeight: 120,
+          floating: false,
+          pinned: true,
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          elevation: 0,
+          flexibleSpace: FlexibleSpaceBar(
+            background: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                border: Border(
+                  bottom: BorderSide(color: Colors.grey, width: 0.2),
+                ),
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Menu',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                      const Spacer(),
+                      _buildUserProfile(),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: () => Navigator.pushNamed(context, '/search'),
+            ),
           ],
         ),
+        
+        // Menu content
+        SliverList(
+          delegate: SliverChildListDelegate([
+            const SizedBox(height: 16),
+            
+            // Facebook-style grid sections
+            _buildMenuGrid(),
+            const SizedBox(height: 20),
+            
+            // Content pages section
+            if (_pages.isNotEmpty) _buildContentPagesSection(),
+            const SizedBox(height: 20),
+            
+            // Account actions section
+            _buildAccountActionsSection(),
+            const SizedBox(height: 100),
+          ]),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildUserProfile() {
+    return Center(
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 25,
+            backgroundColor: Colors.blue.withOpacity(0.3),
+            child: Icon(Icons.person, color: Colors.blue, size: 28),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _currentUser?['name'] ?? 
+            _currentUser?['displayName'] ?? 
+            'Fathima Nusra',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Text(
+            'View your profile',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildMainMenuGrid() {
-    final menuItems = [
-      _MenuItem(title: 'Saved', icon: Icons.bookmark, route: '/saved'),
-      _MenuItem(title: 'Marketplace', icon: Icons.store, route: '/marketplace'),
-      _MenuItem(title: 'Groups', icon: Icons.group, route: '/groups'),
-      _MenuItem(title: 'Events', icon: Icons.event, route: '/events'),
-      _MenuItem(title: 'Games', icon: Icons.games, route: '/games'),
-      _MenuItem(title: 'Help', icon: Icons.help_outline, route: '/help'),
+  Widget _buildMenuGrid() {
+    final accountItems = [
+      _MenuItem(
+        title: 'Profile',
+        icon: Icons.person_outline,
+        color: Colors.blue,
+        route: '/profile',
+      ),
+      _MenuItem(
+        title: 'Roles',
+        icon: Icons.work_outline,
+        color: Colors.purple,
+      ),
+      _MenuItem(
+        title: 'Products',
+        icon: Icons.inventory_2_outlined,
+        color: Colors.orange,
+        route: '/products',
+      ),
+      _MenuItem(
+        title: 'Messages',
+        icon: Icons.message_outlined,
+        color: Colors.green,
+        route: '/messages',
+      ),
+      _MenuItem(
+        title: 'My Activities',
+        icon: Icons.history,
+        color: Colors.teal,
+        route: '/activities',
+      ),
+      _MenuItem(
+        title: 'Notifications',
+        icon: Icons.notifications_outlined,
+        color: Colors.red,
+        route: '/notifications',
+      ),
     ];
 
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          childAspectRatio: 3,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-        ),
-        itemCount: menuItems.length,
-        itemBuilder: (context, index) {
-          final item = menuItems[index];
-          return InkWell(
-            onTap: () => Navigator.pushNamed(context, item.route),
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      item.icon,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      item.title,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w500,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 3,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+          ),
+          itemCount: accountItems.length,
+          itemBuilder: (context, index) {
+            final item = accountItems[index];
+            return InkWell(
+              onTap: () {
+                if (item.route != null) {
+                  Navigator.pushNamed(context, item.route!);
+                }
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: item.color.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      overflow: TextOverflow.ellipsis,
+                      child: Icon(
+                        item.icon,
+                        color: item.color,
+                        size: 22,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        item.title,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -179,64 +287,74 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
     }
 
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.pages,
-                color: Colors.orange,
-                size: 28,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Pages',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.pages,
+                    color: Colors.blue,
+                    size: 18,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 12),
+                const Text(
+                  'Information Pages',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
           ...pagesByCategory.entries.map((entry) {
-            return _buildPageCategory(entry.key, entry.value);
+            return _buildPageCategory(entry.key, entry.value, pagesByCategory);
           }),
         ],
       ),
     );
   }
 
-  Widget _buildPageCategory(String category, List<ContentPage> pages) {
+  Widget _buildPageCategory(String category, List<ContentPage> pages, Map<String, List<ContentPage>> pagesByCategory) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (category.isNotEmpty) ...[
-          Text(
-            category.toUpperCase(),
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[600],
-              letterSpacing: 0.5,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Text(
+              category.toUpperCase(),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[600],
+                letterSpacing: 0.5,
+              ),
             ),
           ),
-          const SizedBox(height: 8),
         ],
         ...pages.map((page) {
-          return InkWell(
+          return _buildActionTile(
+            icon: Icons.article,
+            title: page.title,
+            subtitle: page.type == 'country_specific' ? 'Local Content' : null,
+            color: Colors.orange,
             onTap: () {
               Navigator.push(
                 context,
@@ -248,58 +366,142 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                 ),
               );
             },
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-              child: Row(
+            showDivider: page != pages.last,
+          );
+        }),
+        if (pages.isNotEmpty && category != pagesByCategory.keys.last) 
+          const SizedBox(height: 8),
+      ],
+    );
+  }
+
+  Widget _buildAccountActionsSection() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          _buildActionTile(
+            icon: Icons.help_outline,
+            title: 'Help and Support',
+            subtitle: 'Get help when you need it',
+            color: Colors.grey,
+            onTap: () => Navigator.pushNamed(context, '/help'),
+          ),
+          _buildActionTile(
+            icon: Icons.settings,
+            title: 'Settings & Privacy',
+            subtitle: 'Manage app settings and privacy',
+            color: Colors.grey,
+            onTap: () => Navigator.pushNamed(context, '/settings'),
+          ),
+          _buildActionTile(
+            icon: Icons.info_outline,
+            title: 'About Request',
+            subtitle: 'Learn more about the app',
+            color: Colors.grey,
+            onTap: () => Navigator.pushNamed(context, '/about'),
+          ),
+          _buildActionTile(
+            icon: Icons.logout,
+            title: 'Log Out',
+            subtitle: 'Sign out of your account',
+            color: Colors.grey,
+            onTap: () async {
+              final shouldLogout = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Log Out'),
+                  content: const Text('Are you sure you want to log out?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Log Out'),
+                    ),
+                  ],
+                ),
+              );
+              
+              if (shouldLogout == true) {
+                await _authService.signOut();
+                if (mounted) {
+                  Navigator.pushReplacementNamed(context, '/login');
+                }
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionTile({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    required Color color,
+    required VoidCallback onTap,
+    bool showDivider = true,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.article,
-                      color: Colors.orange,
-                      size: 20,
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          page.title,
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        if (page.type == 'country_specific')
-                          Text(
-                            'Local Content',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.green,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                      ],
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[600],
+                      ),
                     ),
-                  ),
-                  const Icon(
-                    Icons.arrow_forward_ios,
-                    size: 16,
-                    color: Colors.grey,
-                  ),
+                  ],
                 ],
               ),
             ),
-          );
-        }),
-        if (pages.isNotEmpty) const SizedBox(height: 16),
-      ],
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: Colors.grey[400],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -307,11 +509,13 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
 class _MenuItem {
   final String title;
   final IconData icon;
-  final String route;
+  final Color color;
+  final String? route;
 
   _MenuItem({
     required this.title,
     required this.icon,
-    required this.route,
+    required this.color,
+    this.route,
   });
 }
