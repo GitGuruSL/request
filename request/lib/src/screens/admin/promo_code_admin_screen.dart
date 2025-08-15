@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/promo_code_model.dart';
-import '../services/promo_code_service.dart';
+import '../../models/promo_code_model.dart';
+import '../../services/promo_code_service.dart';
 
 class PromoCodeAdminScreen extends StatefulWidget {
   const PromoCodeAdminScreen({Key? key}) : super(key: key);

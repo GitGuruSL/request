@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../models/promo_code_model.dart';
-import '../services/promo_code_service.dart';
+import '../../models/promo_code_model.dart';
+import '../../services/promo_code_service.dart';
 
 class SuperAdminPromoApprovalScreen extends StatefulWidget {
   const SuperAdminPromoApprovalScreen({Key? key}) : super(key: key);

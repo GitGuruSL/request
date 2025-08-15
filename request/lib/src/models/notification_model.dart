@@ -124,28 +124,33 @@ class NotificationModel {
 
 // Driver subscription model for ride notifications
 class DriverSubscription {
+  final String id;
   final String driverId;
   final String vehicleType;
   final bool isSubscribed;
   final String subscriptionPlan; // 'free', 'premium', etc.
   final DateTime subscriptionExpiry;
   final List<String> serviceAreas; // Cities or areas they serve
+  final String? location; // Primary service location
   final DateTime createdAt;
   final DateTime updatedAt;
 
   DriverSubscription({
+    required this.id,
     required this.driverId,
     required this.vehicleType,
     required this.isSubscribed,
     required this.subscriptionPlan,
     required this.subscriptionExpiry,
     this.serviceAreas = const [],
+    this.location,
     required this.createdAt,
     required this.updatedAt,
   });
 
   factory DriverSubscription.fromMap(Map<String, dynamic> map) {
     return DriverSubscription(
+      id: map['id'] ?? '',
       driverId: map['driverId'] ?? '',
       vehicleType: map['vehicleType'] ?? '',
       isSubscribed: map['isSubscribed'] ?? false,
@@ -154,6 +159,7 @@ class DriverSubscription {
           ? DateTime.parse(map['subscriptionExpiry'])
           : DateTime.now(),
       serviceAreas: List<String>.from(map['serviceAreas'] ?? []),
+      location: map['location'],
       createdAt: map['createdAt'] != null
           ? DateTime.parse(map['createdAt'])
           : DateTime.now(),
@@ -165,12 +171,14 @@ class DriverSubscription {
 
   Map<String, dynamic> toMap() {
     return {
+      'id': id,
       'driverId': driverId,
       'vehicleType': vehicleType,
       'isSubscribed': isSubscribed,
       'subscriptionPlan': subscriptionPlan,
       'subscriptionExpiry': subscriptionExpiry.toIso8601String(),
       'serviceAreas': serviceAreas,
+      'location': location,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -179,4 +187,6 @@ class DriverSubscription {
   bool get isActive {
     return isSubscribed && subscriptionExpiry.isAfter(DateTime.now());
   }
+
+  DateTime get expiresAt => subscriptionExpiry;
 }

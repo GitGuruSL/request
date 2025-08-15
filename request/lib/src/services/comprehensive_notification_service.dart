@@ -527,20 +527,23 @@ class ComprehensiveNotificationService {
     List<String> serviceAreas = const [],
   }) async {
     try {
+      final subscriptionId = '${driverId}_$vehicleType';
       final subscription = DriverSubscription(
+        id: subscriptionId,
         driverId: driverId,
         vehicleType: vehicleType,
         isSubscribed: true,
         subscriptionPlan: subscriptionPlan,
         subscriptionExpiry: subscriptionExpiry,
         serviceAreas: serviceAreas,
+        location: null,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
 
       await _firestore
           .collection(_driverSubscriptionsCollection)
-          .doc('${driverId}_$vehicleType')
+          .doc(subscriptionId)
           .set(subscription.toMap());
 
       print('✅ Driver subscribed for $vehicleType notifications');
@@ -593,11 +596,116 @@ class ComprehensiveNotificationService {
           .get();
 
       return snapshot.docs
-          .map((doc) => DriverSubscription.fromMap(doc.data()))
+          .map((doc) => DriverSubscription.fromMap({...doc.data(), 'id': doc.id}))
           .toList();
     } catch (e) {
       print('❌ Error getting driver subscriptions: $e');
       return [];
+    }
+  }
+
+  /// Subscribe to ride notifications with specific preferences
+  Future<bool> subscribeToRideNotifications({
+    required String driverId,
+    required String vehicleType,
+    required List<String> serviceAreas,
+    String? location,
+    String subscriptionPlan = 'free',
+    int subscriptionDays = 30,
+  }) async {
+    try {
+      final subscriptionId = _firestore.collection(_driverSubscriptionsCollection).doc().id;
+      
+      final subscription = DriverSubscription(
+        id: subscriptionId,
+        driverId: driverId,
+        vehicleType: vehicleType,
+        isSubscribed: true,
+        subscriptionPlan: subscriptionPlan,
+        subscriptionExpiry: DateTime.now().add(Duration(days: subscriptionDays)),
+        serviceAreas: serviceAreas,
+        location: location,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      await _firestore
+          .collection(_driverSubscriptionsCollection)
+          .doc(subscriptionId)
+          .set(subscription.toMap());
+
+      print('✅ Driver subscription created successfully');
+      return true;
+    } catch (e) {
+      print('❌ Error creating driver subscription: $e');
+      return false;
+    }
+  }
+
+  /// Update subscription status (enable/disable)
+  Future<bool> updateSubscriptionStatus(String subscriptionId, bool isSubscribed) async {
+    try {
+      await _firestore
+          .collection(_driverSubscriptionsCollection)
+          .doc(subscriptionId)
+          .update({
+        'isSubscribed': isSubscribed,
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+
+      print('✅ Subscription status updated to: $isSubscribed');
+      return true;
+    } catch (e) {
+      print('❌ Error updating subscription status: $e');
+      return false;
+    }
+  }
+
+  /// Delete a driver subscription
+  Future<bool> deleteSubscription(String subscriptionId) async {
+    try {
+      await _firestore
+          .collection(_driverSubscriptionsCollection)
+          .doc(subscriptionId)
+          .delete();
+
+      print('✅ Subscription deleted successfully');
+      return true;
+    } catch (e) {
+      print('❌ Error deleting subscription: $e');
+      return false;
+    }
+  }
+
+  /// Extend subscription by specified number of days
+  Future<bool> extendSubscription(String subscriptionId, int extensionDays) async {
+    try {
+      final doc = await _firestore
+          .collection(_driverSubscriptionsCollection)
+          .doc(subscriptionId)
+          .get();
+
+      if (!doc.exists) {
+        print('❌ Subscription not found');
+        return false;
+      }
+
+      final subscription = DriverSubscription.fromMap({...doc.data()!, 'id': doc.id});
+      final newExpiry = subscription.subscriptionExpiry.add(Duration(days: extensionDays));
+
+      await _firestore
+          .collection(_driverSubscriptionsCollection)
+          .doc(subscriptionId)
+          .update({
+        'subscriptionExpiry': newExpiry.toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+
+      print('✅ Subscription extended by $extensionDays days');
+      return true;
+    } catch (e) {
+      print('❌ Error extending subscription: $e');
+      return false;
     }
   }
 }

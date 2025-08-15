@@ -152,7 +152,7 @@ class MessagingService {
             senderId: currentUser.uid,
             senderName: userModel.name,
             recipientId: participantId,
-            messageText: messageText,
+            message: messageText,
           );
         }
       }

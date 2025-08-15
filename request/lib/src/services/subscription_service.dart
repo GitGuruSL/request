@@ -17,11 +17,30 @@ class SubscriptionService {
 
   // ==================== SUBSCRIPTION PLANS ====================
 
-  /// Get all active subscription plans for a specific type and country
+  /// Get all available subscription plans by country
+  static Future<List<SubscriptionPlan>> getAvailablePlans(String countryCode) async {
+    try {
+      final snapshot = await _firestore
+          .collection(_subscriptionPlansCollection)
+          .where('isActive', isEqualTo: true)
+          .get();
+      
+      final allPlans = snapshot.docs
+          .map((doc) => SubscriptionPlan.fromFirestore(doc.data(), doc.id))
+          .toList();
+      
+      // Filter plans that have pricing for this country
+      return allPlans.where((plan) => 
+        plan.pricingByCountry.containsKey(countryCode)
+      ).toList();
+    } catch (e) {
+      print('Error getting available plans: $e');
+      return [];
+    }
+  }
+
+  /// Get all subscription plans (optionally filtered by country)
   static Future<List<SubscriptionPlan>> getSubscriptionPlans(
-    SubscriptionType type,
-    String countryCode,
-  ) async {
     try {
       final QuerySnapshot snapshot = await _firestore
           .collection(_subscriptionPlansCollection)
@@ -509,6 +528,54 @@ class SubscriptionService {
     } catch (e) {
       print('Error initializing default plans: $e');
       rethrow;
+    }
+  }
+
+  /// Get currency for country
+  static String _getCurrencyForCountry(String countryCode) {
+    const currencies = {
+      'US': 'USD',
+      'GB': 'GBP', 
+      'IN': 'INR',
+      'LK': 'LKR',
+      'AU': 'AUD',
+      'CA': 'CAD',
+      'SG': 'SGD',
+      'MY': 'MYR',
+      'TH': 'THB',
+      'PH': 'PHP',
+      'ID': 'IDR',
+      'VN': 'VND',
+    };
+    return currencies[countryCode] ?? 'USD';
+  }
+
+  /// Get initial usage stats for subscription type
+  static Map<String, int> _getInitialUsageStats(SubscriptionType type) {
+    return {
+      'requestsCreated': 0,
+      'responsesReceived': 0,
+      'messagesExchanged': 0,
+      'promoCodesUsed': 0,
+    };
+  }
+
+  /// Get trial limitations for subscription type
+  static Map<String, int> _getTrialLimitations(SubscriptionType type) {
+    switch (type) {
+      case SubscriptionType.rider:
+        return {
+          'maxRequestsPerDay': 5,
+          'maxResponsesPerRequest': 10,
+          'maxMessagesPerDay': 50,
+        };
+      case SubscriptionType.business:
+        return {
+          'maxRequestsPerDay': 20,
+          'maxResponsesPerRequest': 50,
+          'maxMessagesPerDay': 200,
+          'maxBusinessListings': 10,
+        };
     }
   }
 }

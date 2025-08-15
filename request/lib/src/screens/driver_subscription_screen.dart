@@ -466,10 +466,11 @@ class _DriverSubscriptionScreenState extends State<DriverSubscriptionScreen> {
 
     try {
       await _notificationService.subscribeToRideNotifications(
-        userId,
-        vehicleType,
+        driverId: userId,
+        vehicleType: vehicleType,
+        serviceAreas: [location ?? 'Unknown'],
         location: location,
-        durationDays: durationDays,
+        subscriptionDays: durationDays,
       );
 
       if (mounted) {

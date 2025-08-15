@@ -197,8 +197,7 @@ class EnhancedRequestService {
           requestTitle: newTitle ?? request.title,
           requesterId: user.uid,
           requesterName: userModel.name,
-          responderId: response.responderId,
-          changes: _getSignificantChangesDescription(newTitle, request.title),
+          responderIds: [response.responderId],
         );
         
         notifiedUsers.add(response.responderId);
@@ -531,9 +530,6 @@ class EnhancedRequestService {
           requesterId: request.requesterId,
           responderId: user.uid,
           responderName: userModel.name,
-          message: message,
-          price: price,
-          currency: currency ?? 'LKR',
         );
       } catch (e) {
         print('Failed to send new response notification: $e');
@@ -673,9 +669,6 @@ class EnhancedRequestService {
               requesterId: user.uid,
               requesterName: userModel.name,
               responderId: response.responderId,
-              message: response.message,
-              price: response.price,
-              currency: response.currency ?? 'LKR',
             );
           }
         }
@@ -850,9 +843,6 @@ class EnhancedRequestService {
             requesterId: request.requesterId,
             responderId: user.uid,
             responderName: userModel.name,
-            message: message ?? response.message,
-            price: price ?? response.price,
-            currency: currency ?? response.currency ?? 'LKR',
           );
         }
       } catch (e) {
@@ -912,8 +902,7 @@ class EnhancedRequestService {
             requesterId: user.uid,
             requesterName: userModel.name,
             responderId: response.responderId,
-            message: response.message,
-            rejectionReason: reason,
+            reason: reason,
           );
         }
       } catch (e) {
