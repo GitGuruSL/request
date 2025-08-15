@@ -299,15 +299,15 @@ const PagesModule = () => {
         <Typography variant="body2" color="text.secondary">
           {isSuperAdmin ? 
             'Manage global and country-specific pages with approval workflow' : 
-            `Manage pages for ${getCountryDisplayName(userCountry)} and contribute to global pages (requires super admin approval)`
+            `Manage country-specific pages for ${getCountryDisplayName(userCountry)}`
           }
         </Typography>
         
         {!isSuperAdmin && (
           <Alert severity="info" sx={{ mt: 2 }}>
             <Typography variant="body2">
-              <strong>Country Admin Access:</strong> You can create pages for {getCountryDisplayName(userCountry)} 
-              and contribute to global pages. All pages require super admin approval before publishing.
+              <strong>Country Admin Access:</strong> You can create country-specific pages for {getCountryDisplayName(userCountry)}. 
+              All pages require super admin approval before publishing.
             </Typography>
           </Alert>
         )}
@@ -639,17 +639,17 @@ const PagesModule = () => {
                   label="Page Type"
                 >
                   {pageTypes.filter(type => {
-                    // Country admins can create centralized pages but they need approval
-                    // Super admin can create any type
-                    return isSuperAdmin || type.value !== 'template'; // Hide templates for now
+                    // Country admins can only create country-specific pages
+                    // Super admin can create any type except templates (for now)
+                    if (!isSuperAdmin) {
+                      return type.value === 'country-specific'; // Country admins can only create country-specific pages
+                    }
+                    return type.value !== 'template'; // Super admin can create centralized and country-specific (hide templates for now)
                   }).map(type => (
                     <MenuItem key={type.value} value={type.value}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         {type.icon}
                         {type.label}
-                        {!isSuperAdmin && type.value === 'centralized' && (
-                          <Chip label="Needs Approval" size="small" color="warning" />
-                        )}
                       </Box>
                     </MenuItem>
                   ))}

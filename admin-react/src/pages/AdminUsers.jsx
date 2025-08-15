@@ -105,7 +105,7 @@ const AdminUsers = () => {
       // Legal & Payment
       paymentMethodManagement: true, // Now available for country admin
       legalDocumentManagement: true, // Now available for country admin
-      contentManagement: true, // Page management available for country admin
+      countryPageManagement: true, // Country-specific page management (needs approval to publish)
       
       // Admin Management
       adminUsersManagement: false // Only super admins should have this by default
@@ -278,7 +278,7 @@ const AdminUsers = () => {
             // Legal & Payment (Super Admin Only)
             paymentMethodManagement: formData.permissions?.paymentMethodManagement !== undefined ? formData.permissions.paymentMethodManagement : false,
             legalDocumentManagement: formData.permissions?.legalDocumentManagement !== undefined ? formData.permissions.legalDocumentManagement : false,
-            contentManagement: formData.permissions?.contentManagement !== undefined ? formData.permissions.contentManagement : true,
+            countryPageManagement: formData.permissions?.countryPageManagement !== undefined ? formData.permissions.countryPageManagement : true,
             
             // Admin Management
             adminUsersManagement: formData.permissions?.adminUsersManagement !== undefined ? formData.permissions.adminUsersManagement : false
@@ -347,7 +347,7 @@ const AdminUsers = () => {
             // Legal & Payment (Super Admin Only)
             paymentMethodManagement: formData.permissions?.paymentMethodManagement !== undefined ? formData.permissions.paymentMethodManagement : false,
             legalDocumentManagement: formData.permissions?.legalDocumentManagement !== undefined ? formData.permissions.legalDocumentManagement : false,
-            contentManagement: formData.permissions?.contentManagement !== undefined ? formData.permissions.contentManagement : true,
+            countryPageManagement: formData.permissions?.countryPageManagement !== undefined ? formData.permissions.countryPageManagement : true,
             
             // Admin Management
             adminUsersManagement: formData.permissions?.adminUsersManagement !== undefined ? formData.permissions.adminUsersManagement : false
@@ -454,7 +454,7 @@ const AdminUsers = () => {
         // Legal & Payment (backward compatibility)
         paymentMethodManagement: user.permissions?.paymentMethodManagement !== undefined ? user.permissions.paymentMethodManagement : (user.permissions?.paymentMethods !== undefined ? user.permissions.paymentMethods : false),
         legalDocumentManagement: user.permissions?.legalDocumentManagement !== undefined ? user.permissions.legalDocumentManagement : (user.permissions?.legalDocuments !== undefined ? user.permissions.legalDocuments : false),
-        contentManagement: user.permissions?.contentManagement !== undefined ? user.permissions.contentManagement : true,
+        countryPageManagement: user.permissions?.countryPageManagement !== undefined ? user.permissions.countryPageManagement : (user.permissions?.contentManagement !== undefined ? user.permissions.contentManagement : true),
         
         // Admin Management
         adminUsersManagement: user.permissions?.adminUsersManagement !== undefined ? user.permissions.adminUsersManagement : false
@@ -721,8 +721,8 @@ const AdminUsers = () => {
                     {adminUser.permissions?.legalDocumentManagement && (
                       <Chip label="Legal Mgmt" size="small" variant="outlined" color="secondary" />
                     )}
-                    {adminUser.permissions?.contentManagement && (
-                      <Chip label="Page Mgmt" size="small" variant="outlined" color="info" />
+                    {adminUser.permissions?.countryPageManagement && (
+                      <Chip label="Country Pages" size="small" variant="outlined" color="info" />
                     )}
                     
                     {/* Super Admin Only */}
@@ -1092,11 +1092,11 @@ const AdminUsers = () => {
                     control={
                       <Switch
                         size="small"
-                        checked={formData.permissions?.contentManagement}
-                        onChange={(e) => handlePermissionChange('contentManagement', e.target.checked)}
+                        checked={formData.permissions?.countryPageManagement}
+                        onChange={(e) => handlePermissionChange('countryPageManagement', e.target.checked)}
                       />
                     }
-                    label="Page Management"
+                    label="Country Page Management"
                   />
                 </Grid>
               </Grid>
