@@ -31,6 +31,8 @@ import {
   Category,
   Inventory
 } from '@mui/icons-material';
+import { collection, addDoc, updateDoc, doc } from 'firebase/firestore';
+import { db } from '../firebase/config';
 import useCountryFilter from '../hooks/useCountryFilter.jsx';
 import { DataLookupService } from '../services/DataLookupService.js';
 
@@ -56,16 +58,16 @@ const CountryProductManagement = () => {
       setLoading(true);
       setError(null);
 
-      // Get all products (global data)
-      const allProducts = await DataLookupService.getAllProducts();
+      // Get all products (global data) - use master_products like super admin
+      const allProducts = await getFilteredData('master_products', adminData) || [];
       
       // Get country-specific product activations
       const countryActivations = await getFilteredData('country_products', adminData) || [];
       
-      setProducts(allProducts || []);
+      setProducts(allProducts);
       setCountryProducts(countryActivations);
       
-      console.log(`📦 Loaded ${allProducts?.length || 0} products for country management`);
+      console.log(`📦 Loaded ${allProducts.length} products for country management`);
       console.log(`🎯 Found ${countryActivations.length} country-specific activations`);
     } catch (err) {
       console.error('Error loading products:', err);
@@ -118,7 +120,7 @@ const CountryProductManagement = () => {
 
       if (existingRecord) {
         // Update existing record
-        await DataLookupService.updateDocument('country_products', existingRecord.id, updateData);
+        await updateDoc(doc(db, 'country_products', existingRecord.id), updateData);
         
         setCountryProducts(prev => prev.map(cp => 
           cp.id === existingRecord.id ? { ...cp, ...updateData } : cp
@@ -129,9 +131,9 @@ const CountryProductManagement = () => {
         updateData.createdBy = adminData.uid;
         updateData.createdByName = adminData.displayName || adminData.email;
         
-        const newId = await DataLookupService.addDocument('country_products', updateData);
+        const docRef = await addDoc(collection(db, 'country_products'), updateData);
         
-        setCountryProducts(prev => [...prev, { id: newId, ...updateData }]);
+        setCountryProducts(prev => [...prev, { id: docRef.id, ...updateData }]);
       }
 
       console.log(`✅ Product ${productName} ${newStatus ? 'activated' : 'deactivated'} for ${userCountry}`);

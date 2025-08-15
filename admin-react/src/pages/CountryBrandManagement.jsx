@@ -56,7 +56,7 @@ const CountryBrandManagement = () => {
       setError(null);
 
       // Get all brands (global data)
-      const allBrands = await DataLookupService.getAllBrands();
+      const allBrands = await getFilteredData('brands', adminData) || [];
       
       // Get country-specific brand activations
       const countryActivations = await getFilteredData('country_brands', adminData) || [];

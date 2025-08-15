@@ -59,8 +59,8 @@ const CountrySubcategoryManagement = () => {
 
       // Get all subcategories and categories (global data)
       const [allSubcategories, allCategories] = await Promise.all([
-        DataLookupService.getAllSubcategories(),
-        DataLookupService.getAllCategories()
+        getFilteredData('subcategories', adminData),
+        getFilteredData('categories', adminData)
       ]);
       
       // Get country-specific subcategory activations
@@ -95,7 +95,7 @@ const CountrySubcategoryManagement = () => {
   // Get parent category name
   const getCategoryName = (categoryId) => {
     const category = categories.find(cat => cat.id === categoryId);
-    return category?.name || category?.title || 'Unknown Category';
+    return category?.name || category?.category || category?.title || 'Unknown Category';
   };
 
   // Toggle subcategory activation for the country
@@ -150,6 +150,7 @@ const CountrySubcategoryManagement = () => {
   // Filter subcategories based on search term
   const filteredSubcategories = subcategories.filter(subcategory =>
     subcategory.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    subcategory.subcategory?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     subcategory.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     subcategory.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     getCategoryName(subcategory.categoryId)?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -294,7 +295,7 @@ const CountrySubcategoryManagement = () => {
                       )}
                       <Box>
                         <Typography variant="subtitle2">
-                          {subcategory.name || subcategory.title || 'Unnamed Subcategory'}
+                          {subcategory.name || subcategory.subcategory || subcategory.title || 'Unnamed Subcategory'}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
                           ID: {subcategory.id}
@@ -338,7 +339,7 @@ const CountrySubcategoryManagement = () => {
                           control={
                             <Switch
                               checked={isSubcategoryActive(subcategory.id)}
-                              onChange={() => toggleSubcategoryActivation(subcategory.id, subcategory.name)}
+                              onChange={() => toggleSubcategoryActivation(subcategory.id, subcategory.name || subcategory.subcategory || subcategory.title || 'Unnamed Subcategory')}
                               disabled={isSuperAdmin || updating.has(subcategory.id)}
                               color="primary"
                             />

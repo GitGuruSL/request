@@ -132,7 +132,7 @@ export class DataLookupService {
   // Get all products
   static async getAllProducts() {
     try {
-      const productsSnapshot = await getDocs(collection(db, 'products'));
+      const productsSnapshot = await getDocs(collection(db, 'master_products'));
       return productsSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()

@@ -55,16 +55,16 @@ const CountryCategoryManagement = () => {
       setLoading(true);
       setError(null);
 
-      // Get all categories (global data)
-      const allCategories = await DataLookupService.getAllCategories();
+      // Get all categories (global data) - use same method as super admin
+      const allCategories = await getFilteredData('categories', adminData) || [];
       
       // Get country-specific category activations
       const countryActivations = await getFilteredData('country_categories', adminData) || [];
       
-      setCategories(allCategories || []);
+      setCategories(allCategories);
       setCountryCategories(countryActivations);
       
-      console.log(`📁 Loaded ${allCategories?.length || 0} categories for country management`);
+      console.log(`📁 Loaded ${allCategories.length} categories for country management`);
       console.log(`🎯 Found ${countryActivations.length} country-specific activations`);
     } catch (err) {
       console.error('Error loading categories:', err);
@@ -138,6 +138,7 @@ const CountryCategoryManagement = () => {
   // Filter categories based on search term
   const filteredCategories = categories.filter(category =>
     category.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    category.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     category.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     category.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -280,7 +281,7 @@ const CountryCategoryManagement = () => {
                       )}
                       <Box>
                         <Typography variant="subtitle2">
-                          {category.name || category.title || 'Unnamed Category'}
+                          {category.name || category.category || category.title || 'Unnamed Category'}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
                           ID: {category.id}
@@ -317,7 +318,7 @@ const CountryCategoryManagement = () => {
                           control={
                             <Switch
                               checked={isCategoryActive(category.id)}
-                              onChange={() => toggleCategoryActivation(category.id, category.name)}
+                              onChange={() => toggleCategoryActivation(category.id, category.name || category.category || category.title || 'Unnamed Category')}
                               disabled={isSuperAdmin || updating.has(category.id)}
                               color="primary"
                             />

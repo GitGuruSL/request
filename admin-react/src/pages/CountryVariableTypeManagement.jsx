@@ -57,7 +57,7 @@ const CountryVariableTypeManagement = () => {
       setError(null);
 
       // Get all variable types (global data)
-      const allVariableTypes = await DataLookupService.getAllVariableTypes();
+      const allVariableTypes = await getFilteredData('custom_product_variables', adminData) || [];
       
       // Get country-specific variable type activations
       const countryActivations = await getFilteredData('country_variable_types', adminData) || [];
