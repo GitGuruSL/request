@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/request_model.dart';
 import '../../models/enhanced_user_model.dart';
-import '../../services/enhanced_request_service.dart';
+import '../../services/centralized_request_service.dart';
 import '../../services/enhanced_user_service.dart';
 import '../../widgets/image_upload_widget.dart';
 import '../../utils/currency_helper.dart';
@@ -17,7 +17,7 @@ class UnifiedResponseCreateScreen extends StatefulWidget {
 
 class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScreen> {
   final _formKey = GlobalKey<FormState>();
-  final EnhancedRequestService _requestService = EnhancedRequestService();
+  final CentralizedRequestService _requestService = CentralizedRequestService();
   final EnhancedUserService _userService = EnhancedUserService();
 
   // Common controllers
@@ -1607,10 +1607,9 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
         message: _messageController.text.trim(),
         price: price,
         currency: _selectedCurrency,
-        availableFrom: _availableFrom,
-        availableUntil: _availableUntil,
+        availableDate: _availableFrom,
         images: _uploadedImages,
-        additionalInfo: additionalInfo,
+        additionalData: additionalInfo,
       );
 
       if (mounted) {

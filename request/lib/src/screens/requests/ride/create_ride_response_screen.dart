@@ -7,7 +7,7 @@ import 'dart:math' as math;
 import '../../../models/request_model.dart';
 import '../../../models/enhanced_user_model.dart';
 import '../../../models/vehicle_type_model.dart';
-import '../../../services/enhanced_request_service.dart';
+import '../../../services/centralized_request_service.dart';
 import '../../../services/enhanced_user_service.dart';
 import '../../../services/vehicle_service.dart';
 import '../../../utils/address_utils.dart';
@@ -31,7 +31,7 @@ class CreateRideResponseScreen extends StatefulWidget {
 
 class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
   final _formKey = GlobalKey<FormState>();
-  final EnhancedRequestService _requestService = EnhancedRequestService();
+  final CentralizedRequestService _requestService = CentralizedRequestService();
   final EnhancedUserService _userService = EnhancedUserService();
   final VehicleService _vehicleService = VehicleService();
 
@@ -325,19 +325,18 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
 
       if (_isEditMode && _existingResponseId != null) {
         // Update existing response
-        await _requestService.updateResponse(
-          responseId: _existingResponseId!,
-          message: _messageController.text,
-          price: double.parse(_priceController.text.trim()),
-          images: _imageUrls,
-          additionalInfo: {
+        await _requestService.updateResponse(_existingResponseId!, {
+          'message': _messageController.text,
+          'price': double.parse(_priceController.text.trim()),
+          'images': _imageUrls,
+          'additionalInfo': {
             'vehicleType': _vehicleType,
             'passengers': widget.request.typeSpecificData['passengers'] ?? 1,
             'departureTime': _departureTime?.toIso8601String(),
             'smokingAllowed': _smokingAllowed,
             'petsAllowed': _petsAllowed,
           },
-        );
+        });
       } else {
         // Create new response
         await _requestService.createResponse(
@@ -345,7 +344,7 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
           message: _messageController.text,
           price: double.parse(_priceController.text.trim()),
           images: _imageUrls,
-          additionalInfo: {
+          additionalData: {
             'vehicleType': _vehicleType,
             'passengers': widget.request.typeSpecificData['passengers'] ?? 1,
             'departureTime': _departureTime?.toIso8601String(),
