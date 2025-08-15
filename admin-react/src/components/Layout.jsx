@@ -46,7 +46,8 @@ import {
   Lock,
   Logout,
   Settings,
-  PriceCheck
+  PriceCheck,
+  Article
 } from '@mui/icons-material';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -160,6 +161,7 @@ const Layout = () => {
     { text: 'Divider' },
     { text: 'Users', icon: <Person />, path: '/users', access: 'all', permission: 'userManagement' },
     { text: 'Privacy Policy', icon: <PrivacyTip />, path: '/privacy-policy', access: 'all', permission: 'legalDocumentManagement' },
+    { text: 'Page Management', icon: <Article />, path: '/pages', access: 'all', permission: 'contentManagement' },
     { text: 'Divider' },
     { text: 'Country Data', icon: <Public />, path: '/country-data', access: 'super_admin' },
     { text: 'City Management', icon: <LocationCity />, path: '/cities', access: 'super_admin' },

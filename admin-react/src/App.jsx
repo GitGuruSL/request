@@ -29,6 +29,7 @@ import DriverVerificationModule from './pages/DriverVerificationModule';
 import VehiclesModule from './pages/VehiclesModule';
 import VariablesModule from './pages/VariablesModule';
 import SubcategoriesModule from './pages/SubcategoriesModule';
+import PagesModule from './pages/PagesModule';
 import DebugAuth from './components/DebugAuth';
 
 const theme = createTheme({
@@ -86,7 +87,9 @@ function App() {
               <Route path="requests" element={<RequestsModule />} />
               <Route path="responses" element={<ResponsesModule />} />
               <Route path="price-listings" element={<PriceListingsModule />} />
+              <Route path="pages" element={<PagesModule />} />
               <Route path="privacy-terms" element={<PrivacyTerms />} />
+              <Route path="privacy-policy" element={<PrivacyTerms />} />
               {/* Add more protected routes here */}
             </Route>
           </Routes>
