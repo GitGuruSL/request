@@ -91,6 +91,7 @@ const AdminUsers = () => {
       
       // Data Management
       userManagement: true,
+      subscriptionManagement: true,
       
       // Module Management
       moduleManagement: true,
@@ -98,6 +99,7 @@ const AdminUsers = () => {
       // Legal & Payment
       paymentMethodManagement: true, // Now available for country admin
       legalDocumentManagement: true, // Now available for country admin
+      contentManagement: true, // Page management available for country admin
       
       // Admin Management
       adminUsersManagement: false // Only super admins should have this by default
@@ -258,11 +260,13 @@ const AdminUsers = () => {
             
             // User & Module Management
             userManagement: formData.permissions?.userManagement !== undefined ? formData.permissions.userManagement : true,
+            subscriptionManagement: formData.permissions?.subscriptionManagement !== undefined ? formData.permissions.subscriptionManagement : true,
             moduleManagement: formData.permissions?.moduleManagement !== undefined ? formData.permissions.moduleManagement : true,
             
             // Legal & Payment (Super Admin Only)
             paymentMethodManagement: formData.permissions?.paymentMethodManagement !== undefined ? formData.permissions.paymentMethodManagement : false,
             legalDocumentManagement: formData.permissions?.legalDocumentManagement !== undefined ? formData.permissions.legalDocumentManagement : false,
+            contentManagement: formData.permissions?.contentManagement !== undefined ? formData.permissions.contentManagement : true,
             
             // Admin Management
             adminUsersManagement: formData.permissions?.adminUsersManagement !== undefined ? formData.permissions.adminUsersManagement : false
@@ -319,11 +323,13 @@ const AdminUsers = () => {
             
             // User & Module Management
             userManagement: formData.permissions?.userManagement !== undefined ? formData.permissions.userManagement : true,
+            subscriptionManagement: formData.permissions?.subscriptionManagement !== undefined ? formData.permissions.subscriptionManagement : true,
             moduleManagement: formData.permissions?.moduleManagement !== undefined ? formData.permissions.moduleManagement : true,
             
             // Legal & Payment (Super Admin Only)
             paymentMethodManagement: formData.permissions?.paymentMethodManagement !== undefined ? formData.permissions.paymentMethodManagement : false,
             legalDocumentManagement: formData.permissions?.legalDocumentManagement !== undefined ? formData.permissions.legalDocumentManagement : false,
+            contentManagement: formData.permissions?.contentManagement !== undefined ? formData.permissions.contentManagement : true,
             
             // Admin Management
             adminUsersManagement: formData.permissions?.adminUsersManagement !== undefined ? formData.permissions.adminUsersManagement : false
@@ -418,11 +424,13 @@ const AdminUsers = () => {
         
         // User & Module Management
         userManagement: user.permissions?.userManagement !== undefined ? user.permissions.userManagement : true,
+        subscriptionManagement: user.permissions?.subscriptionManagement !== undefined ? user.permissions.subscriptionManagement : true,
         moduleManagement: user.permissions?.moduleManagement !== undefined ? user.permissions.moduleManagement : true,
         
         // Legal & Payment (backward compatibility)
         paymentMethodManagement: user.permissions?.paymentMethodManagement !== undefined ? user.permissions.paymentMethodManagement : (user.permissions?.paymentMethods !== undefined ? user.permissions.paymentMethods : false),
         legalDocumentManagement: user.permissions?.legalDocumentManagement !== undefined ? user.permissions.legalDocumentManagement : (user.permissions?.legalDocuments !== undefined ? user.permissions.legalDocuments : false),
+        contentManagement: user.permissions?.contentManagement !== undefined ? user.permissions.contentManagement : true,
         
         // Admin Management
         adminUsersManagement: user.permissions?.adminUsersManagement !== undefined ? user.permissions.adminUsersManagement : false
@@ -974,6 +982,18 @@ const AdminUsers = () => {
                       />
                     }
                     label="Payment Methods"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={formData.permissions?.subscriptionManagement}
+                        onChange={(e) => handlePermissionChange('subscriptionManagement', e.target.checked)}
+                      />
+                    }
+                    label="Subscription Management"
                   />
                 </Grid>
                 <Grid item xs={12} sm={6} md={4}>

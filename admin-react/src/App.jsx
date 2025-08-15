@@ -30,6 +30,7 @@ import VariablesModule from './pages/VariablesModule';
 import SubcategoriesModule from './pages/SubcategoriesModule';
 import PagesModule from './pages/PagesModule';
 import CentralizedPagesModule from './pages/CentralizedPagesModule';
+import SubscriptionsModule from './pages/Subscriptions';
 import DebugAuth from './components/DebugAuth';
 
 const theme = createTheme({
@@ -87,6 +88,7 @@ function App() {
               <Route path="requests" element={<RequestsModule />} />
               <Route path="responses" element={<ResponsesModule />} />
               <Route path="price-listings" element={<PriceListingsModule />} />
+              <Route path="subscriptions" element={<SubscriptionsModule />} />
               <Route path="pages" element={<PagesModule />} />
               <Route path="centralized-pages" element={<CentralizedPagesModule />} />
               {/* Add more protected routes here */}

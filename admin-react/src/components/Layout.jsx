@@ -46,7 +46,8 @@ import {
   Logout,
   Settings,
   PriceCheck,
-  Article
+  Article,
+  Subscriptions
 } from '@mui/icons-material';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -159,6 +160,7 @@ const Layout = () => {
     { text: 'Variable Types', icon: <Tune />, path: '/variable-types', access: 'super_admin' },
     { text: 'Divider' },
     { text: 'Users', icon: <Person />, path: '/users', access: 'all', permission: 'userManagement' },
+    { text: 'Subscriptions', icon: <Subscriptions />, path: '/subscriptions', access: 'all', permission: 'subscriptionManagement' },
     { text: 'Page Management', icon: <Article />, path: '/pages', access: 'all', permission: 'contentManagement' },
     { text: 'Global Pages', icon: <Public />, path: '/centralized-pages', access: 'all', permission: 'contentManagement' },
     { text: 'Divider' },
