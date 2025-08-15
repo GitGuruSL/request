@@ -162,6 +162,7 @@ const Layout = () => {
     { text: 'Users', icon: <Person />, path: '/users', access: 'all', permission: 'userManagement' },
     { text: 'Privacy Policy', icon: <PrivacyTip />, path: '/privacy-policy', access: 'all', permission: 'legalDocumentManagement' },
     { text: 'Page Management', icon: <Article />, path: '/pages', access: 'all', permission: 'contentManagement' },
+    { text: 'Global Pages', icon: <Public />, path: '/centralized-pages', access: 'all', permission: 'contentManagement' },
     { text: 'Divider' },
     { text: 'Country Data', icon: <Public />, path: '/country-data', access: 'super_admin' },
     { text: 'City Management', icon: <LocationCity />, path: '/cities', access: 'super_admin' },

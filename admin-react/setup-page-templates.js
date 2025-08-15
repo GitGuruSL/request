@@ -2,7 +2,7 @@
 // Run this once to create initial page templates
 
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../src/firebase/config.js';
+import { db } from './src/firebase/config.js';
 
 const pageTemplates = [
   // Legal & Compliance Templates
