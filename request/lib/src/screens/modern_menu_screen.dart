@@ -8,6 +8,8 @@ import 'my_activities_screen.dart';
 import 'settings_privacy_screen.dart';
 import 'help_support_screen.dart';
 import 'about_request_screen.dart';
+import 'notification_screen.dart';
+import 'driver_subscription_screen.dart';
 
 class ModernMenuScreen extends StatefulWidget {
   const ModernMenuScreen({super.key});
@@ -305,6 +307,12 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
         color: Colors.red,
         route: '/notifications',
       ),
+      _MenuItem(
+        title: 'Ride Alerts',
+        icon: Icons.directions_car,
+        color: Colors.blue,
+        route: '/driver-subscriptions',
+      ),
     ];
 
     return Container(
@@ -319,8 +327,8 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 3.2,
+            crossAxisCount: 3,
+            childAspectRatio: 2.0,
             crossAxisSpacing: 8,
             mainAxisSpacing: 8,
           ),
@@ -334,6 +342,16 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => const MyActivitiesScreen()),
+                    );
+                  } else if (item.route == '/notifications') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const NotificationScreen()),
+                    );
+                  } else if (item.route == '/driver-subscriptions') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const DriverSubscriptionScreen()),
                     );
                   } else {
                     Navigator.pushNamed(context, item.route!);

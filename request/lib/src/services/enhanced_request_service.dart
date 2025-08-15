@@ -4,13 +4,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/request_model.dart';
 import '../models/enhanced_user_model.dart';
 import 'enhanced_user_service.dart';
-import 'notification_service.dart';
+import 'comprehensive_notification_service.dart';
 import 'country_service.dart';
 
 class EnhancedRequestService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final EnhancedUserService _userService = EnhancedUserService();
+  final ComprehensiveNotificationService _notificationService = ComprehensiveNotificationService();
 
   static const String _requestsCollection = 'requests';
   static const String _responsesCollection = 'responses';
@@ -74,6 +75,15 @@ class EnhancedRequestService {
           .doc(requestId)
           .set(request.toMap());
 
+      // Send notifications based on request type
+      try {
+        if (type == RequestType.ride) {
+          await _sendRideRequestNotifications(requestId, request);
+        }
+      } catch (e) {
+        print('Failed to send request notifications: $e');
+      }
+
       return requestId;
     } catch (e) {
       throw Exception('Failed to create request: $e');
@@ -98,23 +108,44 @@ class EnhancedRequestService {
     String? contactMethod,
     bool? isPublic,
     String? assignedTo,
+    bool sendNotifications = true,
   }) async {
     try {
       final updateData = <String, dynamic>{
         'updatedAt': DateTime.now().toIso8601String(),
       };
 
-      if (title != null) updateData['title'] = title;
-      if (description != null) updateData['description'] = description;
+      bool hasSignificantChanges = false;
+      if (title != null) {
+        updateData['title'] = title;
+        hasSignificantChanges = true;
+      }
+      if (description != null) {
+        updateData['description'] = description;
+        hasSignificantChanges = true;
+      }
       if (status != null) updateData['status'] = status.name;
-      if (priority != null) updateData['priority'] = priority.name;
-      if (location != null) updateData['location'] = location.toMap();
+      if (priority != null) {
+        updateData['priority'] = priority.name;
+        hasSignificantChanges = true;
+      }
+      if (location != null) {
+        updateData['location'] = location.toMap();
+        hasSignificantChanges = true;
+      }
       if (destinationLocation != null) {
         updateData['destinationLocation'] = destinationLocation.toMap();
+        hasSignificantChanges = true;
       }
-      if (budget != null) updateData['budget'] = budget;
+      if (budget != null) {
+        updateData['budget'] = budget;
+        hasSignificantChanges = true;
+      }
       if (currency != null) updateData['currency'] = currency;
-      if (deadline != null) updateData['deadline'] = deadline.toIso8601String();
+      if (deadline != null) {
+        updateData['deadline'] = deadline.toIso8601String();
+        hasSignificantChanges = true;
+      }
       if (images != null) updateData['images'] = images;
       if (typeSpecificData != null) updateData['typeSpecificData'] = typeSpecificData;
       if (tags != null) updateData['tags'] = tags;
@@ -126,8 +157,90 @@ class EnhancedRequestService {
           .collection(_requestsCollection)
           .doc(requestId)
           .update(updateData);
+
+      // Send notifications to responders if significant changes were made
+      if (sendNotifications && hasSignificantChanges) {
+        try {
+          await _sendRequestEditNotifications(requestId, title);
+        } catch (e) {
+          print('Failed to send request edit notifications: $e');
+        }
+      }
     } catch (e) {
       throw Exception('Failed to update request: $e');
+    }
+  }
+
+  // Send notifications to all responders when request is edited
+  Future<void> _sendRequestEditNotifications(String requestId, String? newTitle) async {
+    try {
+      final request = await getRequestById(requestId);
+      if (request == null) return;
+
+      final user = _auth.currentUser;
+      if (user == null) return;
+
+      final userModel = await _userService.getCurrentUserModel();
+      if (userModel == null) return;
+
+      // Get all responses for this request
+      final responses = await getResponsesForRequest(requestId);
+      
+      // Create a set to avoid duplicate notifications to the same user
+      final notifiedUsers = <String>{};
+      
+      for (final response in responses) {
+        if (notifiedUsers.contains(response.responderId)) continue;
+        
+        await _notificationService.notifyRequestEdited(
+          requestId: requestId,
+          requestTitle: newTitle ?? request.title,
+          requesterId: user.uid,
+          requesterName: userModel.name,
+          responderId: response.responderId,
+          changes: _getSignificantChangesDescription(newTitle, request.title),
+        );
+        
+        notifiedUsers.add(response.responderId);
+      }
+    } catch (e) {
+      print('Error sending request edit notifications: $e');
+    }
+  }
+
+  String _getSignificantChangesDescription(String? newTitle, String oldTitle) {
+    if (newTitle != null && newTitle != oldTitle) {
+      return 'Request title and details have been updated';
+    }
+    return 'Request details have been updated';
+  }
+
+  // Send ride request notifications to subscribed drivers
+  Future<void> _sendRideRequestNotifications(String requestId, RequestModel request) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return;
+
+      final userModel = await _userService.getCurrentUserModel();
+      if (userModel == null) return;
+
+      // Extract ride-specific data
+      final rideData = request.typeSpecificData;
+      final vehicleType = rideData['vehicleType'] as String? ?? 'car';
+      final pickupLocation = request.location?.address ?? 'Unknown location';
+      final destination = request.destinationLocation?.address ?? 'Not specified';
+
+      await _notificationService.notifyNewRideRequest(
+        requestId: requestId,
+        requestTitle: request.title,
+        requesterId: user.uid,
+        requesterName: userModel.name,
+        vehicleType: vehicleType.toLowerCase(),
+        pickupLocation: pickupLocation,
+        destination: destination,
+      );
+    } catch (e) {
+      print('Error sending ride request notifications: $e');
     }
   }
 
@@ -412,12 +525,14 @@ class EnhancedRequestService {
 
       // Send notification to the requester
       try {
-        await NotificationService.instance.sendNewResponseNotification(
+        await _notificationService.notifyNewResponse(
           requestId: requestId,
           requestTitle: request.title,
           requesterId: request.requesterId,
+          responderId: user.uid,
           responderName: userModel.name,
-          responsePrice: price,
+          message: message,
+          price: price,
           currency: currency ?? 'LKR',
         );
       } catch (e) {
@@ -536,14 +651,33 @@ class EnhancedRequestService {
         final userModel = await _userService.getCurrentUserModel();
         
         if (userModel != null) {
-          await NotificationService.instance.sendResponseAcceptedNotification(
-            requestId: response.requestId,
-            requestTitle: request.title,
-            responderId: response.responderId,
-            requesterName: userModel.name,
-            responsePrice: response.price,
-            currency: response.currency ?? 'LKR',
-          );
+          if (request.type == RequestType.ride) {
+            // Send ride-specific notification
+            final pickupLocation = request.location?.address ?? 'Unknown location';
+            final destination = request.destinationLocation?.address ?? 'Not specified';
+            
+            await _notificationService.notifyRideResponseAccepted(
+              requestId: response.requestId,
+              requesterId: user.uid,
+              requesterName: userModel.name,
+              driverId: response.responderId,
+              driverName: '', // We'll get this from the responder's data
+              pickupLocation: pickupLocation,
+              destination: destination,
+            );
+          } else {
+            // Send general response acceptance notification
+            await _notificationService.notifyResponseAccepted(
+              requestId: response.requestId,
+              requestTitle: request.title,
+              requesterId: user.uid,
+              requesterName: userModel.name,
+              responderId: response.responderId,
+              message: response.message,
+              price: response.price,
+              currency: response.currency ?? 'LKR',
+            );
+          }
         }
       } catch (e) {
         print('Failed to send response accepted notification: $e');
@@ -710,12 +844,14 @@ class EnhancedRequestService {
         final userModel = await _userService.getCurrentUserModel();
         
         if (request != null && userModel != null) {
-          await NotificationService.instance.sendResponseUpdateNotification(
+          await _notificationService.notifyResponseEdited(
             requestId: response.requestId,
             requestTitle: request.title,
             requesterId: request.requesterId,
+            responderId: user.uid,
             responderName: userModel.name,
-            responsePrice: price ?? response.price,
+            message: message ?? response.message,
+            price: price ?? response.price,
             currency: currency ?? response.currency ?? 'LKR',
           );
         }
@@ -770,11 +906,13 @@ class EnhancedRequestService {
         final userModel = await _userService.getCurrentUserModel();
         
         if (userModel != null) {
-          await NotificationService.instance.sendResponseRejectedNotification(
+          await _notificationService.notifyResponseRejected(
             requestId: response.requestId,
             requestTitle: request.title,
-            responderId: response.responderId,
+            requesterId: user.uid,
             requesterName: userModel.name,
+            responderId: response.responderId,
+            message: response.message,
             rejectionReason: reason,
           );
         }

@@ -5,6 +5,7 @@ import '../../models/master_product.dart';
 import '../../models/price_listing.dart';
 import '../../services/pricing_service.dart';
 import '../../services/enhanced_user_service.dart';
+import '../../services/comprehensive_notification_service.dart';
 import '../../theme/app_theme.dart';
 import 'add_price_listing_screen.dart';
 import 'business_profile_modal.dart';
@@ -24,12 +25,14 @@ class PriceComparisonScreen extends StatefulWidget {
 class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
   final PricingService _pricingService = PricingService();
   final EnhancedUserService _userService = EnhancedUserService();
+  final ComprehensiveNotificationService _notificationService = ComprehensiveNotificationService();
   
   List<PriceListing> _priceListings = [];
   bool _isLoading = true;
   bool _canAddListing = false;
   String? _currentUserId;
   Map<String, String> _availableAttributes = {};
+  Set<String> _notifiedBusinesses = {}; // Track which businesses we've already notified
 
   @override
   void initState() {
@@ -60,6 +63,9 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
             _priceListings = listings;
             _isLoading = false;
           });
+          
+          // Send product inquiry notifications for newly visible listings
+          _sendProductInquiryNotifications(listings);
         }
       }, onError: (error) {
         print('DEBUG: Error in price listings stream: $error');
@@ -619,5 +625,36 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
         ),
       ),
     );
+  }
+
+  // Send product inquiry notifications to businesses
+  Future<void> _sendProductInquiryNotifications(List<PriceListing> listings) async {
+    try {
+      final userId = _currentUserId;
+      if (userId == null) return;
+
+      final userModel = await _userService.getCurrentUserModel();
+      if (userModel == null) return;
+
+      for (final listing in listings) {
+        // Don't notify the same business multiple times
+        if (_notifiedBusinesses.contains(listing.businessId)) continue;
+        
+        // Don't notify if the user is viewing their own listing
+        if (listing.businessId == userId) continue;
+
+        await _notificationService.notifyProductInquiry(
+          businessId: listing.businessId,
+          businessName: listing.businessName,
+          productName: listing.productName,
+          inquirerId: userId,
+          inquirerName: userModel.name,
+        );
+
+        _notifiedBusinesses.add(listing.businessId);
+      }
+    } catch (e) {
+      print('Error sending product inquiry notifications: $e');
+    }
   }
 }

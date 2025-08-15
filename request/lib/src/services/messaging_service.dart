@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/message_model.dart';
 import '../models/request_model.dart';
+import 'comprehensive_notification_service.dart';
+import 'enhanced_user_service.dart';
 
 class MessagingService {
   static final MessagingService _instance = MessagingService._internal();
@@ -10,6 +12,8 @@ class MessagingService {
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final ComprehensiveNotificationService _notificationService = ComprehensiveNotificationService();
+  final EnhancedUserService _userService = EnhancedUserService();
 
   // Create or get existing conversation for a request
   Future<ConversationModel> getOrCreateConversation({
@@ -106,12 +110,55 @@ class MessagingService {
     required String text,
     Map<String, dynamic>? metadata,
   }) async {
-    return _sendMessage(
-      conversationId: conversationId,
-      text: text,
-      type: MessageType.text,
-      metadata: metadata,
-    );
+    try {
+      await _sendMessage(
+        conversationId: conversationId,
+        text: text,
+        type: MessageType.text,
+        metadata: metadata,
+      );
+
+      // Send notification to other participants
+      await _sendMessageNotifications(conversationId, text);
+    } catch (e) {
+      print('Error sending message with notifications: $e');
+      rethrow;
+    }
+  }
+
+  // Send message notifications to other participants
+  Future<void> _sendMessageNotifications(String conversationId, String messageText) async {
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) return;
+
+      final userModel = await _userService.getCurrentUserModel();
+      if (userModel == null) return;
+
+      // Get conversation details
+      final conversationDoc = await _firestore.collection('conversations').doc(conversationId).get();
+      if (!conversationDoc.exists) return;
+
+      final conversationData = conversationDoc.data()!;
+      final participantIds = List<String>.from(conversationData['participantIds'] ?? []);
+      final requestTitle = conversationData['requestTitle'] as String?;
+
+      // Send notification to other participants
+      for (final participantId in participantIds) {
+        if (participantId != currentUser.uid) {
+          await _notificationService.notifyNewMessage(
+            conversationId: conversationId,
+            requestTitle: requestTitle ?? 'Message',
+            senderId: currentUser.uid,
+            senderName: userModel.name,
+            recipientId: participantId,
+            messageText: messageText,
+          );
+        }
+      }
+    } catch (e) {
+      print('Error sending message notifications: $e');
+    }
   }
 
   // Get messages for a conversation
