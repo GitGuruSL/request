@@ -490,14 +490,22 @@ class _BrowseScreenState extends State<BrowseScreen> {
   }
 
   Widget _buildRequestCard(RequestModel request) {
+    final iconData = _getIconForRequestType(request.type);
+    
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: Colors.grey[200],
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: iconData['color'].withOpacity(0.15),
+            shape: BoxShape.circle,
+          ),
           child: Icon(
-            _getIconForRequestType(request.type),
-            color: Colors.grey[600],
+            iconData['icon'],
+            color: iconData['color'],
+            size: 22,
           ),
         ),
         title: Text(
@@ -649,20 +657,38 @@ class _BrowseScreenState extends State<BrowseScreen> {
     }
   }
 
-  IconData _getIconForRequestType(RequestType type) {
+  Map<String, dynamic> _getIconForRequestType(RequestType type) {
     switch (type) {
       case RequestType.item:
-        return Icons.shopping_bag_outlined;
+        return {
+          'icon': Icons.shopping_bag,
+          'color': Colors.orange,
+        };
       case RequestType.service:
-        return Icons.build_outlined;
+        return {
+          'icon': Icons.build,
+          'color': Colors.teal,
+        };
       case RequestType.ride:
-        return Icons.directions_car_outlined;
+        return {
+          'icon': Icons.directions_car,
+          'color': Colors.yellow.shade700,
+        };
       case RequestType.delivery:
-        return Icons.local_shipping_outlined;
+        return {
+          'icon': Icons.local_shipping,
+          'color': Colors.green,
+        };
       case RequestType.rental:
-        return Icons.vpn_key_outlined;
+        return {
+          'icon': Icons.key,
+          'color': Colors.blue,
+        };
       case RequestType.price:
-        return Icons.compare_arrows_outlined;
+        return {
+          'icon': Icons.trending_up,
+          'color': Colors.purple,
+        };
     }
   }
 }
