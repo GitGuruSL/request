@@ -22,7 +22,14 @@ export class CountryDataService {
 
     // Apply country filter for country admins
     if (adminData?.role === 'country_admin' && adminData?.country) {
-      baseQuery = query(baseQuery, where('country', '==', adminData.country));
+      // Different collections use different field names for country
+      let countryField = 'country'; // default
+      
+      if (collectionName === 'cities') {
+        countryField = 'countryCode';
+      }
+      
+      baseQuery = query(baseQuery, where(countryField, '==', adminData.country));
     }
 
     // Apply additional filters

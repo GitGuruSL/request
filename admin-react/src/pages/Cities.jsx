@@ -89,14 +89,32 @@ const Cities = () => {
   const loadCities = async () => {
     try {
       setLoading(true);
+      console.log('Loading cities for admin:', { 
+        role: adminData?.role, 
+        country: adminData?.country, 
+        userCountry 
+      });
+      
       const data = await getFilteredData('cities', adminData);
-      const citiesData = (data || []).sort((a, b) => {
+      console.log('Cities data received:', data);
+      
+      // Manual client-side filtering as backup for country admins
+      let filteredData = data || [];
+      if (!isSuperAdmin && userCountry) {
+        console.log('Applying client-side filter for country:', userCountry);
+        filteredData = filteredData.filter(city => city.countryCode === userCountry);
+        console.log('Cities after client-side filtering:', filteredData.length);
+      }
+      
+      const citiesData = filteredData.sort((a, b) => {
         const aName = a.name || '';
         const bName = b.name || '';
         return aName.localeCompare(bName);
       });
       setCities(citiesData);
       setFilteredCities(citiesData);
+      
+      console.log('Cities after processing:', citiesData.length);
       
       // If no cities exist for this country, suggest adding default cities
       if (citiesData.length === 0 && userCountry === 'LK') {
