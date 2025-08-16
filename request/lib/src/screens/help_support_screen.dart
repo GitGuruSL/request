@@ -52,433 +52,378 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Help & Support'),
+        title: const Text(
+          'Help & Support',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         backgroundColor: Colors.blue[600],
-        foregroundColor: Colors.white,
         elevation: 0,
-      ),
-      body: Column(
-        children: [
-          // Tab bar
-          Container(
-            margin: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: TabBar(
-              controller: _tabController,
-              labelColor: Colors.blue[600],
-              unselectedLabelColor: Colors.grey[600],
-              indicatorColor: Colors.blue[600],
-              indicator: BoxDecoration(
-                color: Colors.blue[50],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              tabs: const [
-                Tab(text: 'FAQ', icon: Icon(Icons.help_outline, size: 20)),
-                Tab(text: 'Guides', icon: Icon(Icons.book, size: 20)),
-                Tab(text: 'Contact', icon: Icon(Icons.support_agent, size: 20)),
-              ],
-            ),
-          ),
-          // Tab content
-          Expanded(
-            child: _isLoading 
-                ? const Center(child: CircularProgressIndicator())
-                : TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildFAQTab(),
-                      _buildGuidesTab(),
-                      _buildContactTab(),
-                    ],
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-                      controller: _tabController,
-                      children: [
-                        _buildFAQTab(),
-                        _buildGuidesTab(),
-                        _buildContactTab(),
-                      ],
-                    ),
-            ),
+        iconTheme: const IconThemeData(color: Colors.white),
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          indicatorColor: Colors.white,
+          tabs: const [
+            Tab(text: 'FAQ'),
+            Tab(text: 'Guides'),
+            Tab(text: 'Contact'),
           ],
         ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildFAQTab(),
+          _buildGuidesTab(),
+          _buildContactTab(),
+        ],
       ),
     );
   }
 
   Widget _buildFAQTab() {
-    final faqs = [
-      {
-        'question': 'How do I create a new request?',
-        'answer': 'To create a new request, tap the "+" button on the home screen, fill in the details about what you need, set your budget, and publish your request. Service providers will then respond with offers.',
-      },
-      {
-        'question': 'How do I find service providers?',
-        'answer': 'You can browse service providers by category, search for specific services, or post a request and let providers come to you. Use filters to narrow down results by location, price, and ratings.',
-      },
-      {
-        'question': 'How does payment work?',
-        'answer': 'Payments are processed securely through our platform. You can pay using credit cards, debit cards, or digital wallets. Payment is held in escrow until the service is completed to your satisfaction.',
-      },
-      {
-        'question': 'What if I\'m not satisfied with the service?',
-        'answer': 'If you\'re not satisfied with the service, you can contact our support team within 24 hours. We offer dispute resolution and refund policies to ensure customer satisfaction.',
-      },
-      {
-        'question': 'How do I become a service provider?',
-        'answer': 'To become a service provider, go to your profile settings and apply for provider status. You\'ll need to verify your identity, provide relevant certifications, and complete our screening process.',
-      },
-      {
-        'question': 'Is my personal information safe?',
-        'answer': 'Yes, we take privacy seriously. Your personal information is encrypted and protected. We never share your data with third parties without your consent.',
-      },
-      {
-        'question': 'How do I cancel a request or booking?',
-        'answer': 'You can cancel a request from your activities page. Cancellation policies vary depending on how far in advance you cancel and the specific service provider\'s terms.',
-      },
-      {
-        'question': 'How do reviews and ratings work?',
-        'answer': 'After completing a service, both customers and providers can leave reviews and ratings. These help build trust and help others make informed decisions.',
-      },
-    ];
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: faqs.length,
-      itemBuilder: (context, index) {
-        final faq = faqs[index];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: ExpansionTile(
-            title: Text(
-              faq['question']!,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Dynamic Help Pages
+          if (_isLoading)
+            const Center(child: CircularProgressIndicator())
+          else if (_helpPages.isNotEmpty) ...[
+            Text(
+              'Help Articles',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[800],
               ),
             ),
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  faq['answer']!,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[700],
-                    height: 1.5,
+            const SizedBox(height: 15),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _helpPages.length,
+              itemBuilder: (context, index) {
+                final page = _helpPages[index];
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  child: ListTile(
+                    leading: Icon(Icons.article, color: Colors.blue[600]),
+                    title: Text(page.title),
+                    subtitle: Text(page.category),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ContentPageScreen(
+                            slug: page.slug,
+                            title: page.title,
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildGuidesTab() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // Quick Start Guide
-        _buildGuideCard(
-          title: 'Getting Started',
-          description: 'Learn the basics of using Request Marketplace',
-          icon: Icons.rocket_launch,
-          color: Colors.blue,
-          onTap: () => _showGuideDialog('Getting Started'),
-        ),
-        
-        // User Guides
-        _buildGuideCard(
-          title: 'How to Post a Request',
-          description: 'Step-by-step guide to creating effective requests',
-          icon: Icons.add_circle_outline,
-          color: Colors.green,
-          onTap: () => _showGuideDialog('How to Post a Request'),
-        ),
-        
-        _buildGuideCard(
-          title: 'Finding Service Providers',
-          description: 'Tips for finding the right provider for your needs',
-          icon: Icons.search,
-          color: Colors.orange,
-          onTap: () => _showGuideDialog('Finding Service Providers'),
-        ),
-        
-        _buildGuideCard(
-          title: 'Payment & Billing',
-          description: 'Understanding payments, fees, and billing cycles',
-          icon: Icons.payment,
-          color: Colors.purple,
-          onTap: () => _showGuideDialog('Payment & Billing'),
-        ),
-
-        // Help Pages from Admin
-        if (_helpPages.isNotEmpty) ...[
-          const SizedBox(height: 16),
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+          ],
+          
+          // Static FAQ Items
           Text(
-            'Additional Resources',
+            'Frequently Asked Questions',
             style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.primary,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[800],
             ),
           ),
-          const SizedBox(height: 12),
-          ..._helpPages.map((page) => _buildGuideCard(
-            title: page.title,
-            description: 'Learn more about ${page.title.toLowerCase()}',
-            icon: Icons.article,
-            color: Colors.teal,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ContentPageScreen(
-                  slug: page.slug,
-                  title: page.title,
-                ),
-              ),
-            ),
-          )),
+          const SizedBox(height: 15),
+          
+          _buildFAQItem(
+            'How do I create a request?',
+            'Go to the Browse screen, select a category, and tap "Create Request". Fill in the details and submit.',
+          ),
+          
+          _buildFAQItem(
+            'How do I respond to a request?',
+            'Find the request you want to respond to and tap "Respond". Provide your offer details and contact information.',
+          ),
+          
+          _buildFAQItem(
+            'How does pricing work?',
+            'You can compare prices from different businesses and contact them directly for the best deals.',
+          ),
+          
+          _buildFAQItem(
+            'Is my information secure?',
+            'Yes, we take privacy seriously. Your personal information is encrypted and protected.',
+          ),
+          
+          _buildFAQItem(
+            'How do I verify my business?',
+            'Go to Account > Role Management and submit your business verification documents.',
+          ),
         ],
-      ],
-    );
-  }
-
-  Widget _buildContactTab() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // Contact Options
-        _buildContactCard(
-          icon: Icons.chat,
-          title: 'Live Chat',
-          description: 'Chat with our support team in real-time',
-          subtitle: 'Available 24/7',
-          color: Colors.blue,
-          onTap: () => _startLiveChat(),
-        ),
-        
-        _buildContactCard(
-          icon: Icons.email,
-          title: 'Email Support',
-          description: 'Send us an email and we\'ll respond within 24 hours',
-          subtitle: 'support@requestmarketplace.com',
-          color: Colors.green,
-          onTap: () => _sendEmail(),
-        ),
-        
-        _buildContactCard(
-          icon: Icons.phone,
-          title: 'Phone Support',
-          description: 'Call us for immediate assistance',
-          subtitle: '+1 (555) 123-4567',
-          color: Colors.orange,
-          onTap: () => _callSupport(),
-        ),
-        
-        _buildContactCard(
-          icon: Icons.bug_report,
-          title: 'Report a Bug',
-          description: 'Found an issue? Let us know so we can fix it',
-          subtitle: 'Help us improve the app',
-          color: Colors.red,
-          onTap: () => _reportBug(),
-        ),
-
-        const SizedBox(height: 24),
-        
-        // Contact Form
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.grey[50],
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Send us a message',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Subject',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                maxLines: 4,
-                decoration: const InputDecoration(
-                  labelText: 'Message',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => _sendMessage(),
-                  child: const Text('Send Message'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildGuideCard({
-    required String title,
-    required String description,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  icon,
-                  color: color,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      description,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: Colors.grey[400],
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
 
-  Widget _buildContactCard({
-    required IconData icon,
-    required String title,
-    required String description,
-    required String subtitle,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
+  Widget _buildGuidesTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'User Guides',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[800],
+            ),
+          ),
+          const SizedBox(height: 15),
+          
+          _buildGuideItem(
+            Icons.person_add,
+            'Getting Started',
+            'Learn how to set up your account and start using the app',
+          ),
+          
+          _buildGuideItem(
+            Icons.search,
+            'Creating Requests',
+            'Step-by-step guide on how to create and manage requests',
+          ),
+          
+          _buildGuideItem(
+            Icons.business,
+            'Business Features',
+            'How to use business features and manage your listings',
+          ),
+          
+          _buildGuideItem(
+            Icons.price_check,
+            'Price Comparison',
+            'How to compare prices and find the best deals',
+          ),
+          
+          _buildGuideItem(
+            Icons.car_rental,
+            'Ride Requests',
+            'Guide for creating and responding to ride requests',
+          ),
+          
+          _buildGuideItem(
+            Icons.delivery_dining,
+            'Delivery Services',
+            'How to use delivery and logistics features',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContactTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Contact Support',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[800],
+            ),
+          ),
+          const SizedBox(height: 15),
+          
+          _buildContactOption(
+            Icons.chat,
+            'Live Chat',
+            'Get instant help from our support team',
+            _startLiveChat,
+          ),
+          
+          _buildContactOption(
+            Icons.email,
+            'Email Support',
+            'Send us a detailed message',
+            _sendEmail,
+          ),
+          
+          _buildContactOption(
+            Icons.phone,
+            'Phone Support',
+            'Call our support hotline',
+            _callSupport,
+          ),
+          
+          _buildContactOption(
+            Icons.bug_report,
+            'Report a Bug',
+            'Help us improve by reporting issues',
+            _reportBug,
+          ),
+          
+          const SizedBox(height: 30),
+          
+          // Contact Form
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(15),
+              border: Border.all(color: Colors.grey[200]!),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Send us a message',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[800],
+                  ),
                 ),
-                child: Icon(
-                  icon,
-                  color: color,
-                  size: 24,
+                const SizedBox(height: 15),
+                
+                TextField(
+                  decoration: InputDecoration(
+                    labelText: 'Subject',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: Colors.blue[600]!),
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
+                
+                const SizedBox(height: 15),
+                
+                TextField(
+                  maxLines: 5,
+                  decoration: InputDecoration(
+                    labelText: 'Message',
+                    alignLabelWithHint: true,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: Colors.blue[600]!),
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 20),
+                
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _sendMessage,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue[600],
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text(
+                      'Send Message',
+                      style: TextStyle(
+                        color: Colors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      description,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: color,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFAQItem(String question, String answer) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: ExpansionTile(
+        title: Text(
+          question,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
           ),
         ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              answer,
+              style: TextStyle(
+                color: Colors.grey[700],
+                height: 1.5,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGuideItem(IconData icon, String title, String description) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: ListTile(
+        leading: Icon(icon, color: Colors.blue[600], size: 28),
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        subtitle: Text(description),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        onTap: () => _showGuideDialog(title),
+      ),
+    );
+  }
+
+  Widget _buildContactOption(IconData icon, String title, String description, VoidCallback onTap) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.blue[50],
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: Colors.blue[600]),
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        subtitle: Text(description),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        onTap: onTap,
       ),
     );
   }
