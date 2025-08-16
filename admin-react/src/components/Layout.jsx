@@ -48,7 +48,8 @@ import {
   PriceCheck,
   Article,
   Subscriptions,
-  LocalOffer
+  LocalOffer,
+  Message
 } from '@mui/icons-material';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -177,6 +178,7 @@ const Layout = () => {
     { text: 'City Management', icon: <LocationCity />, path: '/cities', access: 'all', permission: 'cityManagement' },
     { text: 'Module Management', icon: <Settings />, path: '/modules', access: 'all', permission: 'moduleManagement' },
     { text: 'Payment Methods', icon: <Payment />, path: '/payment-methods', access: 'all', permission: 'paymentMethodManagement' },
+    { text: 'SMS Configuration', icon: <Message />, path: '/sms-config', access: 'all', permission: 'smsConfiguration' },
     { text: 'Divider' },
     { text: 'Admin Management', icon: <AdminPanelSettings />, path: '/admin-management', access: 'super_admin', permission: 'adminUsersManagement' },
   ];

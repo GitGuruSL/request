@@ -106,6 +106,9 @@ const AdminUsers = () => {
       // Module Management
       moduleManagement: true,
       
+      // SMS Configuration
+      smsConfiguration: true, // Country admins can configure SMS providers
+      
       // Legal & Payment
       paymentMethodManagement: true, // Now available for country admin
       legalDocumentManagement: true, // Now available for country admin
@@ -288,6 +291,9 @@ const AdminUsers = () => {
             legalDocumentManagement: formData.permissions?.legalDocumentManagement !== undefined ? formData.permissions.legalDocumentManagement : false,
             countryPageManagement: formData.permissions?.countryPageManagement !== undefined ? formData.permissions.countryPageManagement : true,
             
+            // SMS Configuration
+            smsConfiguration: formData.permissions?.smsConfiguration !== undefined ? formData.permissions.smsConfiguration : true,
+            
             // Admin Management
             adminUsersManagement: formData.permissions?.adminUsersManagement !== undefined ? formData.permissions.adminUsersManagement : false
           },
@@ -360,6 +366,9 @@ const AdminUsers = () => {
             paymentMethodManagement: formData.permissions?.paymentMethodManagement !== undefined ? formData.permissions.paymentMethodManagement : false,
             legalDocumentManagement: formData.permissions?.legalDocumentManagement !== undefined ? formData.permissions.legalDocumentManagement : false,
             countryPageManagement: formData.permissions?.countryPageManagement !== undefined ? formData.permissions.countryPageManagement : true,
+            
+            // SMS Configuration
+            smsConfiguration: formData.permissions?.smsConfiguration !== undefined ? formData.permissions.smsConfiguration : true,
             
             // Admin Management
             adminUsersManagement: formData.permissions?.adminUsersManagement !== undefined ? formData.permissions.adminUsersManagement : false
@@ -471,6 +480,9 @@ const AdminUsers = () => {
         paymentMethodManagement: user.permissions?.paymentMethodManagement !== undefined ? user.permissions.paymentMethodManagement : (user.permissions?.paymentMethods !== undefined ? user.permissions.paymentMethods : false),
         legalDocumentManagement: user.permissions?.legalDocumentManagement !== undefined ? user.permissions.legalDocumentManagement : (user.permissions?.legalDocuments !== undefined ? user.permissions.legalDocuments : false),
         countryPageManagement: user.permissions?.countryPageManagement !== undefined ? user.permissions.countryPageManagement : (user.permissions?.contentManagement !== undefined ? user.permissions.contentManagement : true),
+        
+        // SMS Configuration
+        smsConfiguration: user.permissions?.smsConfiguration !== undefined ? user.permissions.smsConfiguration : true,
         
         // Admin Management
         adminUsersManagement: user.permissions?.adminUsersManagement !== undefined ? user.permissions.adminUsersManagement : false
@@ -1156,6 +1168,25 @@ const AdminUsers = () => {
                       />
                     }
                     label="Country Page Management"
+                  />
+                </Grid>
+              </Grid>
+
+              {/* SMS Configuration Section */}
+              <Typography variant="body2" color="primary" gutterBottom sx={{ fontWeight: 'bold' }}>
+                💬 SMS Configuration
+              </Typography>
+              <Grid container spacing={1} sx={{ ml: 2, mb: 2 }}>
+                <Grid item xs={12} sm={6} md={4}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={formData.permissions?.smsConfiguration}
+                        onChange={(e) => handlePermissionChange('smsConfiguration', e.target.checked)}
+                      />
+                    }
+                    label="SMS Configuration Management"
                   />
                 </Grid>
               </Grid>

@@ -93,10 +93,18 @@ const Vehicles = () => {
 
   useEffect(() => {
     fetchVehicles();
+  }, [isSuperAdmin]);
+
+  useEffect(() => {
     if (!isSuperAdmin && adminData?.country) {
       fetchCountryVehicles();
     }
-  }, [isSuperAdmin, adminData]);
+  }, [isSuperAdmin, adminData?.country]); // Only depend on country, not entire adminData object
+
+  // Debug: Track countryVehicles changes
+  useEffect(() => {
+    console.log('🔄 countryVehicles state updated:', countryVehicles);
+  }, [countryVehicles]);
 
   const fetchVehicles = async () => {
     try {
@@ -245,12 +253,17 @@ const Vehicles = () => {
         await updateDoc(doc(db, 'country_vehicles', snapshot.docs[0].id), countryData);
       }
 
+      // Update local state only after successful database update
       setCountryVehicles(updatedVehicles);
       showSnackbar(`Vehicle ${enabled ? 'enabled' : 'disabled'} for ${adminData.country}`);
+      
     } catch (error) {
       console.error('Error updating country vehicles:', error);
       console.error('AdminData:', adminData);
       showSnackbar(`Error updating country vehicles: ${error.message}`, 'error');
+      
+      // Revert UI state on error by refetching
+      fetchCountryVehicles();
     }
   };
 

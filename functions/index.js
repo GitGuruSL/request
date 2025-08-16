@@ -11,6 +11,9 @@ const db = admin.firestore();
 // Import auto-activation triggers
 const autoActivateTriggers = require('./auto-activate-triggers');
 
+// Import SMS service
+const smsService = require('./smsService');
+
 // Export auto-activation functions
 exports.autoActivateNewVariableType = autoActivateTriggers.autoActivateNewVariableType;
 exports.autoActivateNewCategory = autoActivateTriggers.autoActivateNewCategory;
@@ -18,6 +21,12 @@ exports.autoActivateNewSubcategory = autoActivateTriggers.autoActivateNewSubcate
 exports.autoActivateNewBrand = autoActivateTriggers.autoActivateNewBrand;
 exports.autoActivateNewProduct = autoActivateTriggers.autoActivateNewProduct;
 exports.autoActivateNewVehicleType = autoActivateTriggers.autoActivateNewVehicleType;
+
+// Export SMS authentication functions
+exports.sendOTP = smsService.sendOTP;
+exports.verifyOTP = smsService.verifyOTP;
+exports.testSMSConfig = smsService.testSMSConfig;
+exports.getSMSStatistics = smsService.getSMSStatistics;
 exports.autoActivateForNewCountry = autoActivateTriggers.autoActivateForNewCountry;
 
 // Business modules configuration (same as frontend)
