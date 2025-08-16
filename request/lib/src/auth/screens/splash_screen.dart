@@ -99,6 +99,13 @@ class _SplashScreenState extends State<SplashScreen>
           },
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.of(context).pushNamed('/api-test');
+        },
+        child: const Icon(Icons.api),
+        tooltip: 'Test API',
+      ),
     );
   }
 }

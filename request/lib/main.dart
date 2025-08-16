@@ -25,6 +25,7 @@ import 'src/screens/role_management_screen.dart';
 import 'src/screens/modern_menu_screen.dart';
 import 'src/screens/content_page_screen.dart';
 import 'src/screens/content_test_screen.dart';
+import 'src/screens/api_test_screen.dart';                       // API test screen
 import 'src/models/master_product.dart';
 import 'src/services/country_service.dart';
 import 'src/theme/app_theme.dart';
@@ -119,6 +120,8 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (context) => const DriverDocumentsViewScreen());
           case '/role-management':
             return MaterialPageRoute(builder: (context) => const RoleManagementScreen());
+          case '/api-test':
+            return MaterialPageRoute(builder: (context) => const ApiTestScreen());
           case '/main-dashboard':
           case '/home':
             return MaterialPageRoute(builder: (context) => const MainNavigationScreen());
