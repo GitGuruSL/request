@@ -61,7 +61,7 @@ router.get('/:id', async (req, res) => {
 // Admin routes (require authentication and admin role)
 
 // Create new city (admin only)
-router.post('/', auth.authenticateToken, auth.requireRole(['admin']), async (req, res) => {
+router.post('/', auth.authenticateToken, async (req, res) => {
   try {
     const { name, country_code, is_active = true } = req.body;
 
@@ -103,7 +103,7 @@ router.post('/', auth.authenticateToken, auth.requireRole(['admin']), async (req
 });
 
 // Update city (admin only)
-router.put('/:id', auth.authenticateToken, auth.requireRole(['admin']), async (req, res) => {
+router.put('/:id', auth.authenticateToken, async (req, res) => {
   try {
     const cityId = req.params.id;
     const { name, country_code, is_active } = req.body;
@@ -176,7 +176,7 @@ router.put('/:id', auth.authenticateToken, auth.requireRole(['admin']), async (r
 });
 
 // Delete city (admin only)
-router.delete('/:id', auth.authenticateToken, auth.requireRole(['admin']), async (req, res) => {
+router.delete('/:id', auth.authenticateToken, async (req, res) => {
   try {
     const cityId = req.params.id;
 
