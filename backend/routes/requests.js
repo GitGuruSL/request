@@ -20,9 +20,9 @@ router.get('/', async (req, res) => {
     } = req.query;
 
     // Build dynamic query
-    const conditions = ['r.is_active = true'];
-    const values = [];
-    let paramCounter = 1;
+    const conditions = ['r.status = $1'];
+    const values = ['active'];
+    let paramCounter = 2;
 
     if (category_id) {
       conditions.push(`r.category_id = $${paramCounter++}`);
