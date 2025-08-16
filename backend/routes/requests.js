@@ -33,7 +33,7 @@ router.get('/', async (req, res) => {
       values.push(subcategory_id);
     }
     if (city_id) {
-      conditions.push(`r.city_id = $${paramCounter++}`);
+      conditions.push(`r.location_city_id = $${paramCounter++}`);
       values.push(city_id);
     }
     if (country_code) {
@@ -66,7 +66,7 @@ router.get('/', async (req, res) => {
       LEFT JOIN users u ON r.user_id = u.id
       LEFT JOIN categories c ON r.category_id = c.id
       LEFT JOIN subcategories sc ON r.subcategory_id = sc.id
-      LEFT JOIN cities ct ON r.city_id = ct.id
+      LEFT JOIN cities ct ON r.location_city_id = ct.id
       WHERE ${conditions.join(' AND ')}
       ORDER BY r.${finalSortBy} ${finalSortOrder}
       LIMIT $${paramCounter++} OFFSET $${paramCounter++}
@@ -126,7 +126,7 @@ router.get('/:id', async (req, res) => {
       LEFT JOIN users u ON r.user_id = u.id
       LEFT JOIN categories c ON r.category_id = c.id
       LEFT JOIN subcategories sc ON r.subcategory_id = sc.id
-      LEFT JOIN cities ct ON r.city_id = ct.id
+      LEFT JOIN cities ct ON r.location_city_id = ct.id
       WHERE r.id = $1
     `, [requestId]);
 
@@ -456,7 +456,7 @@ router.get('/user/my-requests', auth.authMiddleware(), async (req, res) => {
       FROM requests r
       LEFT JOIN categories c ON r.category_id = c.id
       LEFT JOIN subcategories sc ON r.subcategory_id = sc.id
-      LEFT JOIN cities ct ON r.city_id = ct.id
+      LEFT JOIN cities ct ON r.location_city_id = ct.id
       WHERE ${conditions.join(' AND ')}
       ORDER BY r.created_at DESC
       LIMIT $${paramCounter++} OFFSET $${paramCounter++}
