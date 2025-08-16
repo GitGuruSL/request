@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import '../services/enhanced_auth_service.dart';
 import '../services/enhanced_user_service.dart';
 import '../models/enhanced_user_model.dart';
-import 'settings_privacy_screen.dart';
+import 'settings_privacy_screen.dart' as settings;
 import 'help_support_screen.dart';
 import 'notification_screen.dart';
-import 'edit_profile_screen.dart';
+import 'account/edit_profile_screen.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
@@ -379,7 +379,7 @@ class _AccountScreenState extends State<AccountScreen> {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => const SettingsPrivacyScreen(),
+                builder: (context) => const settings.SettingsPrivacyScreen(),
               ),
             ),
           ),

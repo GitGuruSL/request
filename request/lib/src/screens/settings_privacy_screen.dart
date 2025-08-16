@@ -214,91 +214,6 @@ class _SettingsPrivacyScreenState extends State<SettingsPrivacyScreen> {
       ],
     );
   }
-              onTap: () => _showPrivacyDialog('Profile Visibility'),
-            ),
-            _buildSettingsTile(
-              icon: Icons.location_on,
-              title: 'Location Sharing',
-              subtitle: 'Manage location privacy settings',
-              onTap: () => _showPrivacyDialog('Location Sharing'),
-            ),
-            _buildSettingsTile(
-              icon: Icons.message,
-              title: 'Message Privacy',
-              subtitle: 'Control who can message you',
-              onTap: () => _showPrivacyDialog('Message Privacy'),
-            ),
-          ],
-        ),
-
-        // Data & Privacy
-        _buildSection(
-          title: 'Data & Privacy',
-          children: [
-            _buildSettingsTile(
-              icon: Icons.download,
-              title: 'Download Your Data',
-              subtitle: 'Get a copy of your information',
-              onTap: () => _showDataDialog('Download Data'),
-            ),
-            _buildSettingsTile(
-              icon: Icons.delete_forever,
-              title: 'Delete Account',
-              subtitle: 'Permanently delete your account',
-              onTap: () => _showDeleteAccountDialog(),
-            ),
-          ],
-        ),
-
-        // Legal & Policies
-        if (_policyPages.isNotEmpty)
-          _buildSection(
-            title: 'Legal & Policies',
-            children: _policyPages.map((page) => _buildSettingsTile(
-              icon: Icons.article,
-              title: page.title,
-              subtitle: 'Last updated: ${_formatDate(page.updatedAt)}',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ContentPageScreen(
-                    slug: page.slug,
-                    title: page.title,
-                  ),
-                ),
-              ),
-            )).toList(),
-          ),
-
-        // App Settings
-        _buildSection(
-          title: 'App Settings',
-          children: [
-            _buildSettingsTile(
-              icon: Icons.language,
-              title: 'Language',
-              subtitle: 'English (US)',
-              onTap: () => _showLanguageDialog(),
-            ),
-            _buildSettingsTile(
-              icon: Icons.dark_mode,
-              title: 'Dark Mode',
-              subtitle: 'System default',
-              onTap: () => _showThemeDialog(),
-            ),
-            _buildSettingsTile(
-              icon: Icons.storage,
-              title: 'Storage',
-              subtitle: 'Manage app storage and cache',
-              onTap: () => _showStorageDialog(),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 32),
-      ],
-    );
-  }
 
   Widget _buildSection({required String title, required List<Widget> children}) {
     return Container(
@@ -333,76 +248,41 @@ class _SettingsPrivacyScreenState extends State<SettingsPrivacyScreen> {
       ),
     );
   }
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(children: children),
-        ),
-      ],
-    );
-  }
 
   Widget _buildSettingsTile({
     required IconData icon,
     required String title,
-    required String subtitle,
     required VoidCallback onTap,
+    String? subtitle,
+    Color? textColor,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                icon,
-                color: Colors.grey[700],
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: Colors.grey[400],
-            ),
-            ],
-          ),
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: textColor ?? Colors.grey[700],
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: textColor ?? Colors.black87,
+          fontWeight: FontWeight.w500,
         ),
       ),
+      subtitle: subtitle != null
+          ? Text(
+              subtitle,
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 12,
+              ),
+            )
+          : null,
+      trailing: Icon(
+        Icons.arrow_forward_ios,
+        size: 16,
+        color: Colors.grey[400],
+      ),
+      onTap: onTap,
     );
   }
 
@@ -484,7 +364,7 @@ class _SettingsPrivacyScreenState extends State<SettingsPrivacyScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Delete Account'),
         content: const Text(
-          'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.',
+          'This action cannot be undone. All your data will be permanently deleted.',
         ),
         actions: [
           TextButton(
@@ -492,9 +372,31 @@ class _SettingsPrivacyScreenState extends State<SettingsPrivacyScreen> {
             child: const Text('Cancel'),
           ),
           TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _showComingSoon('Account Deletion');
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showStorageDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Storage'),
+        content: const Text('Clear app cache and temporary files?'),
+        actions: [
+          TextButton(
             onPressed: () => Navigator.pop(context),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete Account'),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Clear'),
           ),
         ],
       ),
@@ -509,19 +411,31 @@ class _SettingsPrivacyScreenState extends State<SettingsPrivacyScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            'English (US)',
-            'Spanish',
-            'French',
-            'German',
-            'Arabic',
-          ].map((lang) => ListTile(
-            title: Text(lang),
-            leading: Radio<String>(
-              value: lang,
-              groupValue: 'English (US)',
-              onChanged: (value) {},
+            ListTile(
+              title: const Text('English (US)'),
+              leading: Radio<String>(
+                value: 'en',
+                groupValue: 'en',
+                onChanged: (value) {},
+              ),
             ),
-          )).toList(),
+            ListTile(
+              title: const Text('Sinhala'),
+              leading: Radio<String>(
+                value: 'si',
+                groupValue: 'en',
+                onChanged: (value) {},
+              ),
+            ),
+            ListTile(
+              title: const Text('Tamil'),
+              leading: Radio<String>(
+                value: 'ta',
+                groupValue: 'en',
+                onChanged: (value) {},
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -541,21 +455,35 @@ class _SettingsPrivacyScreenState extends State<SettingsPrivacyScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Theme'),
+        title: const Text('Choose Theme'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            'System default',
-            'Light',
-            'Dark',
-          ].map((theme) => ListTile(
-            title: Text(theme),
-            leading: Radio<String>(
-              value: theme,
-              groupValue: 'System default',
-              onChanged: (value) {},
+            ListTile(
+              title: const Text('System Default'),
+              leading: Radio<String>(
+                value: 'system',
+                groupValue: 'system',
+                onChanged: (value) {},
+              ),
             ),
-          )).toList(),
+            ListTile(
+              title: const Text('Light'),
+              leading: Radio<String>(
+                value: 'light',
+                groupValue: 'system',
+                onChanged: (value) {},
+              ),
+            ),
+            ListTile(
+              title: const Text('Dark'),
+              leading: Radio<String>(
+                value: 'dark',
+                groupValue: 'system',
+                onChanged: (value) {},
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -569,41 +497,6 @@ class _SettingsPrivacyScreenState extends State<SettingsPrivacyScreen> {
         ],
       ),
     );
-  }
-
-  void _showStorageDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Storage'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('App storage: 45.2 MB'),
-            const SizedBox(height: 8),
-            const Text('Cache: 12.8 MB'),
-            const SizedBox(height: 8),
-            const Text('Documents: 2.1 MB'),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {},
-              child: const Text('Clear Cache'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
   }
 
   void _showNotificationSettings() {
@@ -633,5 +526,9 @@ class _SettingsPrivacyScreenState extends State<SettingsPrivacyScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('$feature - Coming Soon')),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
   }
 }
