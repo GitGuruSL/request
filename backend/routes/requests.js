@@ -89,7 +89,7 @@ router.get('/', async (req, res) => {
     res.json({
       success: true,
       data: {
-        requests,
+        requests: requests.rows,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
@@ -139,7 +139,7 @@ router.get('/:id', async (req, res) => {
     }
 
     // Get request variables if any
-    const variables = await database.query(`
+    const variablesResult = await database.query(`
       SELECT rv.*, vt.name as variable_name, vt.type as variable_type
       FROM request_variables rv
       LEFT JOIN variable_types vt ON rv.variable_type_id = vt.id
@@ -151,7 +151,7 @@ router.get('/:id', async (req, res) => {
       success: true,
       data: {
         ...request,
-        variables
+        variables: variablesResult.rows
       }
     });
   } catch (error) {
@@ -480,7 +480,7 @@ router.get('/user/my-requests', auth.authMiddleware(), async (req, res) => {
     res.json({
       success: true,
       data: {
-        requests,
+        requests: requests.rows,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
