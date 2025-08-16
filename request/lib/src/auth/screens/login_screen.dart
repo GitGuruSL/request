@@ -109,8 +109,14 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       // Check if user exists using new SMS auth service
       final userCheck = await SMSAuthService().checkUserExists(emailOrPhone);
       
+      print('🔍 User check result for $emailOrPhone:');
+      print('  - exists: ${userCheck['exists']}');
+      print('  - isEmail: ${userCheck['isEmail']}');
+      print('  - userId: ${userCheck['userId']}');
+      
       if (userCheck['exists']) {
         // Existing user - navigate to password screen
+        print('📝 Navigating to password screen for existing user');
         setState(() {
           _isLoading = false;
         });
@@ -128,6 +134,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         );
       } else {
         // New user - send OTP for registration
+        print('📧 Sending OTP for new user registration');
         await _sendRegistrationOTP(emailOrPhone, isEmail);
       }
       

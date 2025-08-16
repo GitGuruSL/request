@@ -44,25 +44,25 @@ class DefaultFirebaseOptions {
     apiKey: 'AIzaSyC5hb6Ydkp__EZgX-kRjJgtOKZKg8TNkJg',
     appId: '1:635550436472:web:72ee20ad95cdcf65c1c86a',
     messagingSenderId: '635550436472',
-    projectId: 'request-marketplace-45a59',
-    authDomain: 'request-marketplace-45a59.firebaseapp.com',
-    storageBucket: 'request-marketplace-45a59.firebasestorage.app',
+    projectId: 'request-marketplace',
+    authDomain: 'request-marketplace.firebaseapp.com',
+    storageBucket: 'request-marketplace.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyC5hb6Ydkp__EZgX-kRjJgtOKZKg8TNkJg',
     appId: '1:635550436472:android:placeholder',
     messagingSenderId: '635550436472',
-    projectId: 'request-marketplace-45a59',
-    storageBucket: 'request-marketplace-45a59.firebasestorage.app',
+    projectId: 'request-marketplace',
+    storageBucket: 'request-marketplace.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyC5hb6Ydkp__EZgX-kRjJgtOKZKg8TNkJg',
     appId: '1:635550436472:ios:placeholder',
     messagingSenderId: '635550436472',
-    projectId: 'request-marketplace-45a59',
-    storageBucket: 'request-marketplace-45a59.firebasestorage.app',
+    projectId: 'request-marketplace',
+    storageBucket: 'request-marketplace.firebasestorage.app',
     iosBundleId: 'lk.alphabet.request',
   );
 
@@ -70,8 +70,8 @@ class DefaultFirebaseOptions {
     apiKey: 'AIzaSyC5hb6Ydkp__EZgX-kRjJgtOKZKg8TNkJg',
     appId: '1:635550436472:macos:placeholder',
     messagingSenderId: '635550436472',
-    projectId: 'request-marketplace-45a59',
-    storageBucket: 'request-marketplace-45a59.firebasestorage.app',
+    projectId: 'request-marketplace',
+    storageBucket: 'request-marketplace.firebasestorage.app',
     iosBundleId: 'lk.mac.app',
   );
 
@@ -79,7 +79,7 @@ class DefaultFirebaseOptions {
     apiKey: 'AIzaSyC5hb6Ydkp__EZgX-kRjJgtOKZKg8TNkJg',
     appId: '1:635550436472:windows:placeholder',
     messagingSenderId: '635550436472',
-    projectId: 'request-marketplace-45a59',
-    storageBucket: 'request-marketplace-45a59.firebasestorage.app',
+    projectId: 'request-marketplace',
+    storageBucket: 'request-marketplace.firebasestorage.app',
   );
 }

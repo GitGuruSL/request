@@ -7,7 +7,7 @@ class SMSAuthService {
   factory SMSAuthService() => _instance;
   SMSAuthService._internal();
 
-  final FirebaseFunctions _functions = FirebaseFunctions.instance;
+  final FirebaseFunctions _functions = FirebaseFunctions.instanceFor(region: 'us-central1');
 
   /// Check if user exists by email or phone
   Future<Map<String, dynamic>> checkUserExists(String emailOrPhone) async {
@@ -19,8 +19,8 @@ class SMSAuthService {
       
       return {
         'exists': result.data['exists'] ?? false,
-        'isEmail': result.data['isEmail'] ?? false,
-        'isPhone': result.data['isPhone'] ?? false,
+        'isEmail': result.data['inputType'] == 'email',
+        'isPhone': result.data['inputType'] == 'phone',
         'userId': result.data['userId'],
       };
     } catch (e) {
