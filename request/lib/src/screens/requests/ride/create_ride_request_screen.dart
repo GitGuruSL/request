@@ -77,7 +77,17 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
   Future<void> _loadVehicleTypes() async {
     try {
       setState(() => _isLoading = true);
-      final vehicles = await _vehicleService.getAvailableVehicles();
+      
+      // Debug: Check country setup
+      final countryService = CountryService.instance;
+      print('🏁 Loading vehicles...');
+      print('   Country Code: ${countryService.countryCode}');
+      print('   Country Name: ${countryService.countryName}');
+      
+      // Force refresh vehicles to bypass cache
+      final vehicles = await _vehicleService.refreshVehicles();
+      print('🚗 Loaded ${vehicles.length} vehicles');
+      
       setState(() {
         _vehicleTypes = vehicles;
         // Set first vehicle as default selection if available
@@ -688,36 +698,41 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
-                    color: isSelected ? Theme.of(context).primaryColor.withOpacity(0.1) : Colors.transparent,
+                    color: isSelected ? Colors.grey[100] : Colors.transparent,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Row(
                         children: [
                           Icon(
                             _getVehicleIcon(vehicle.icon),
                             size: 24,
-                            color: isSelected ? Theme.of(context).primaryColor : Colors.grey[600],
+                            color: Colors.grey[800],
                           ),
                           const Spacer(),
                           Text(
                             '${vehicle.passengerCapacity}',
                             style: TextStyle(
                               fontSize: 10,
-                              color: Colors.grey[600],
+                              color: Colors.grey[800],
                               fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        vehicle.name,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: isSelected ? Theme.of(context).primaryColor : Colors.grey[800],
+                      const SizedBox(height: 4),
+                      Flexible(
+                        child: Text(
+                          vehicle.name,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[800],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],

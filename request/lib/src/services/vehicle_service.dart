@@ -11,48 +11,89 @@ class VehicleService {
   List<VehicleTypeModel>? _cachedVehicles;
   String? _cachedCountry;
 
-  /// Get available vehicles for the user's country
+  /// Get available vehicles for the user's country with two-level filtering
   Future<List<VehicleTypeModel>> getAvailableVehicles() async {
     try {
-      final country = CountryService.instance.getUserCountry();
+      final countryCode = CountryService.instance.countryCode;
       
       // If no country is set, initialize and try again
-      if (country == null || country.isEmpty) {
-        print('No country found, returning fallback vehicles');
+      if (countryCode == null || countryCode.isEmpty) {
+        print('No country code found, returning fallback vehicles');
         return _getFallbackVehicles();
       }
       
       // Return cached vehicles if same country
-      if (_cachedVehicles != null && _cachedCountry == country) {
+      if (_cachedVehicles != null && _cachedCountry == countryCode) {
         return _cachedVehicles!;
       }
 
-      // Get all active vehicle types
+      print('🚗 Starting two-level vehicle filtering for country code: $countryCode');
+
+      // STEP 1: Get country-enabled vehicle types
+      final countryVehiclesSnapshot = await _firestore
+          .collection('country_vehicles')
+          .where('countryCode', isEqualTo: countryCode)
+          .get();
+
+      if (countryVehiclesSnapshot.docs.isEmpty) {
+        print('❌ No country vehicle configuration found for $countryCode');
+        return [];
+      }
+
+      final enabledVehicleIds = List<String>.from(
+        countryVehiclesSnapshot.docs.first.data()['enabledVehicles'] ?? []
+      );
+
+      if (enabledVehicleIds.isEmpty) {
+        print('❌ No vehicles enabled for $countryCode');
+        return [];
+      }
+
+      print('✅ Country-enabled vehicles: ${enabledVehicleIds.length}');
+
+      // STEP 2: Get vehicle types with registered drivers
+      final driversSnapshot = await _firestore
+          .collection('new_driver_verifications')
+          .where('country', isEqualTo: countryCode)
+          .where('status', isEqualTo: 'approved')
+          .where('availability', isEqualTo: true)
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      // Count drivers by vehicle type
+      final vehicleDriverCounts = <String, int>{};
+      for (final doc in driversSnapshot.docs) {
+        final vehicleType = doc.data()['vehicleType'] as String?;
+        if (vehicleType != null) {
+          vehicleDriverCounts[vehicleType] = (vehicleDriverCounts[vehicleType] ?? 0) + 1;
+        }
+      }
+
+      print('✅ Found ${driversSnapshot.docs.length} approved drivers');
+      print('🔢 Driver counts by vehicle type: $vehicleDriverCounts');
+
+      // STEP 3: Apply two-level filtering
+      final availableVehicleIds = enabledVehicleIds
+          .where((vehicleId) => vehicleDriverCounts.containsKey(vehicleId))
+          .toList();
+
+      print('🎯 Vehicles after two-level filtering: ${availableVehicleIds.length}');
+
+      if (availableVehicleIds.isEmpty) {
+        print('❌ No vehicles available (no registered drivers)');
+        return [];
+      }
+
+      // STEP 4: Get vehicle type details
       final vehicleTypesSnapshot = await _firestore
           .collection('vehicle_types')
           .where('isActive', isEqualTo: true)
           .orderBy('displayOrder')
           .get();
 
-      if (vehicleTypesSnapshot.docs.isEmpty) {
-        print('No active vehicle types found');
-        return [];
-      }
-
-      // Get country-specific vehicles
-      final countryVehiclesSnapshot = await _firestore
-          .collection('country_vehicles')
-          .where('country', isEqualTo: country)
-          .where('isEnabled', isEqualTo: true)
-          .get();
-
-      final enabledVehicleIds = countryVehiclesSnapshot.docs
-          .map((doc) => doc.data()['vehicleTypeId'] as String)
-          .toSet();
-
-      // Filter vehicles that are enabled in this country
+      // Filter and build available vehicles
       final availableVehicles = vehicleTypesSnapshot.docs
-          .where((doc) => enabledVehicleIds.contains(doc.id))
+          .where((doc) => availableVehicleIds.contains(doc.id))
           .map((doc) => VehicleTypeModel.fromMap({
                 'id': doc.id,
                 ...doc.data(),
@@ -61,12 +102,17 @@ class VehicleService {
 
       // Cache the results
       _cachedVehicles = availableVehicles;
-      _cachedCountry = country;
+      _cachedCountry = countryCode;
 
-      print('Found ${availableVehicles.length} available vehicles for $country');
+      print('✅ Final result: ${availableVehicles.length} vehicle types available');
+      for (final vehicle in availableVehicles) {
+        final driverCount = vehicleDriverCounts[vehicle.id] ?? 0;
+        print('  - ${vehicle.name}: $driverCount drivers');
+      }
+
       return availableVehicles;
     } catch (e) {
-      print('Error fetching available vehicles: $e');
+      print('❌ Error fetching available vehicles: $e');
       return _getFallbackVehicles();
     }
   }
@@ -75,6 +121,13 @@ class VehicleService {
   void clearCache() {
     _cachedVehicles = null;
     _cachedCountry = null;
+    print('🗑️ Vehicle cache cleared');
+  }
+
+  /// Force refresh vehicles by clearing cache and fetching fresh data
+  Future<List<VehicleTypeModel>> refreshVehicles() async {
+    clearCache();
+    return await getAvailableVehicles();
   }
 
   /// Fallback vehicles if database fetch fails
