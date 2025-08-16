@@ -272,6 +272,7 @@ const CountryCategoryManagement = () => {
             <TableHead>
               <TableRow>
                 <TableCell>Category</TableCell>
+                <TableCell>Type</TableCell>
                 <TableCell>Description</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell align="center">Active in {getCountryDisplayName(userCountry)}</TableCell>
@@ -301,6 +302,19 @@ const CountryCategoryManagement = () => {
                         </Typography>
                       </Box>
                     </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={category.type || 'item'}
+                      color={
+                        category.type === 'service' ? 'primary' :
+                        category.type === 'delivery' ? 'secondary' :
+                        category.type === 'ride' ? 'warning' :
+                        'default'
+                      }
+                      size="small"
+                      variant="outlined"
+                    />
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" noWrap sx={{ maxWidth: 200 }}>

@@ -424,7 +424,7 @@ class CountryFilteredDataService {
       final activeCategories = <Map<String, dynamic>>[];
       for (final doc in categoriesSnapshot.docs) {
         final categoryId = doc.id;
-        final isActive = countryActivations[categoryId] ?? false; // Default to inactive - only show explicitly activated
+        final isActive = countryActivations[categoryId] ?? true; // Temporarily back to default active
         
         if (isActive) {
           activeCategories.add({...doc.data(), 'id': categoryId});
@@ -466,7 +466,7 @@ class CountryFilteredDataService {
       final activeSubcategories = <Map<String, dynamic>>[];
       for (final doc in subcategoriesSnapshot.docs) {
         final subcategoryId = doc.id;
-        final isActive = countryActivations[subcategoryId] ?? false; // Default to inactive - only show explicitly activated
+        final isActive = countryActivations[subcategoryId] ?? true; // Temporarily back to default active
         
         if (isActive) {
           activeSubcategories.add({...doc.data(), 'id': subcategoryId});
@@ -504,7 +504,7 @@ class CountryFilteredDataService {
       final activeProducts = <Map<String, dynamic>>[];
       for (final doc in productsSnapshot.docs) {
         final productId = doc.id;
-        final isActive = countryActivations[productId] ?? false; // Default to inactive - only show explicitly activated
+        final isActive = countryActivations[productId] ?? true; // Temporarily back to default active
         
         if (isActive) {
           activeProducts.add({...doc.data(), 'id': productId});
@@ -542,7 +542,7 @@ class CountryFilteredDataService {
       final activeBrands = <Map<String, dynamic>>[];
       for (final doc in brandsSnapshot.docs) {
         final brandId = doc.id;
-        final isActive = countryActivations[brandId] ?? false; // Default to inactive - only show explicitly activated
+        final isActive = countryActivations[brandId] ?? true; // Temporarily back to default active
         
         if (isActive) {
           activeBrands.add({...doc.data(), 'id': brandId});
@@ -580,7 +580,7 @@ class CountryFilteredDataService {
       final activeVariableTypes = <Map<String, dynamic>>[];
       for (final doc in variableTypesSnapshot.docs) {
         final variableTypeId = doc.id;
-        final isActive = countryActivations[variableTypeId] ?? false; // Default to inactive - only show explicitly activated
+        final isActive = countryActivations[variableTypeId] ?? true; // Temporarily back to default active
         
         if (isActive) {
           activeVariableTypes.add({...doc.data(), 'id': variableTypeId});

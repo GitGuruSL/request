@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/price_listing.dart';
 import '../models/master_product.dart';
+import 'country_filtered_data_service.dart';
 
 class PricingService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final CountryFilteredDataService _countryDataService = CountryFilteredDataService.instance;
 
   // Collections
   final String _priceListingsCollection = 'price_listings';
@@ -285,7 +287,7 @@ class PricingService {
     }
   }
 
-  // Search products with advanced filters
+  // Search products with advanced filters - now uses country filtering
   Future<List<MasterProduct>> searchProducts({
     required String query,
     String? category,
@@ -296,28 +298,63 @@ class PricingService {
     try {
       print('DEBUG: Searching products with query: "$query", category: $category, brand: $brand');
       
-      // Start with basic query
-      Query masterQuery = _firestore.collection(_masterProductsCollection)
-          .where('isActive', isEqualTo: true);
-
-      if (category != null) {
-        masterQuery = masterQuery.where('category', isEqualTo: category);
-        print('DEBUG: Added category filter: $category');
-      }
-
-      print('DEBUG: Executing Firestore query...');
-      final masterResults = await masterQuery.get();
-      print('DEBUG: Got ${masterResults.docs.length} documents from Firestore');
+      // Get country-filtered active products instead of direct Firestore query
+      final activeProductsData = await _countryDataService.getActiveProducts();
+      print('DEBUG: Got ${activeProductsData.length} active products from country service');
       
       List<MasterProduct> products = [];
-      for (final doc in masterResults.docs) {
+      for (final productData in activeProductsData) {
         try {
-          final product = MasterProduct.fromFirestore(doc);
-          products.add(product);
-          print('DEBUG: Successfully parsed product: ${product.name}');
+          // Parse available variables
+          Map<String, ProductVariable> availableVariables = {};
+          final variablesData = productData['availableVariables'];
+          if (variablesData is Map<String, dynamic>) {
+            variablesData.forEach((key, value) {
+              if (value is Map<String, dynamic>) {
+                availableVariables[key] = ProductVariable.fromMap(value);
+              } else if (value is List) {
+                availableVariables[key] = ProductVariable(
+                  name: key,
+                  type: 'select',
+                  required: false,
+                  values: List<String>.from(value),
+                );
+              }
+            });
+          }
+          
+          // Convert Map to MasterProduct
+          final product = MasterProduct(
+            id: productData['id'] as String,
+            name: productData['name'] as String,
+            brand: productData['brand'] as String,
+            category: productData['category'] as String,
+            subcategory: productData['subcategory'] as String? ?? '',
+            description: productData['description'] as String,
+            images: List<String>.from(productData['images'] ?? []),
+            isActive: productData['isActive'] as bool? ?? true,
+            createdAt: productData['createdAt'] as DateTime? ?? DateTime.now(),
+            updatedAt: productData['updatedAt'] as DateTime? ?? DateTime.now(),
+            availableVariables: availableVariables,
+          );
+          
+          // Apply additional filters
+          bool shouldInclude = true;
+          
+          if (category != null && product.category != category) {
+            shouldInclude = false;
+          }
+          
+          if (brand != null && product.brand != brand) {
+            shouldInclude = false;
+          }
+          
+          if (shouldInclude) {
+            products.add(product);
+            print('DEBUG: Added product: ${product.name}');
+          }
         } catch (e) {
-          print('DEBUG: Error parsing product ${doc.id}: $e');
-          print('DEBUG: Document data: ${doc.data()}');
+          print('DEBUG: Error parsing product data: $e');
         }
       }
 
@@ -338,14 +375,6 @@ class PricingService {
           return matches;
         }).toList();
         print('DEBUG: After search filter: ${products.length}/$originalCount products');
-      }
-
-      // Filter by brand
-      if (brand != null) {
-        print('DEBUG: Filtering by brand: $brand');
-        final originalCount = products.length;
-        products = products.where((product) => product.brand == brand).toList();
-        print('DEBUG: After brand filter: ${products.length}/$originalCount products');
       }
 
       // Filter by price range if specified
@@ -391,18 +420,16 @@ class PricingService {
     }
   }
 
-  // Get categories for filter
+  // Get categories for filter - now uses country filtering
   Future<List<String>> getCategories() async {
     try {
-      print('DEBUG: Getting categories from master_products collection');
-      final snapshot = await _firestore.collection(_masterProductsCollection)
-          .where('isActive', isEqualTo: true)
-          .get();
-
-      print('DEBUG: Got ${snapshot.docs.length} documents for categories');
+      print('DEBUG: Getting categories from country-active products');
+      final activeProductsData = await _countryDataService.getActiveProducts();
+      
+      print('DEBUG: Got ${activeProductsData.length} active products for categories');
       final categories = <String>{};
-      for (final doc in snapshot.docs) {
-        final category = doc.data()['category'] as String?;
+      for (final productData in activeProductsData) {
+        final category = productData['category'] as String?;
         if (category != null && category.isNotEmpty) {
           categories.add(category);
           print('DEBUG: Found category: $category');
@@ -418,18 +445,16 @@ class PricingService {
     }
   }
 
-  // Get brands for filter
+  // Get brands for filter - now uses country filtering
   Future<List<String>> getBrands() async {
     try {
-      print('DEBUG: Getting brands from master_products collection');
-      final snapshot = await _firestore.collection(_masterProductsCollection)
-          .where('isActive', isEqualTo: true)
-          .get();
+      print('DEBUG: Getting brands from country-active products');
+      final activeProductsData = await _countryDataService.getActiveProducts();
 
-      print('DEBUG: Got ${snapshot.docs.length} documents for brands');
+      print('DEBUG: Got ${activeProductsData.length} active products for brands');
       final brands = <String>{};
-      for (final doc in snapshot.docs) {
-        final brand = doc.data()['brand'] as String?;
+      for (final productData in activeProductsData) {
+        final brand = productData['brand'] as String?;
         if (brand != null && brand.isNotEmpty) {
           brands.add(brand);
           print('DEBUG: Found brand: $brand');
