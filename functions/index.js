@@ -14,6 +14,12 @@ const autoActivateTriggers = require('./auto-activate-triggers');
 // Import SMS service
 const smsService = require('./smsService');
 
+// Import Email service
+const emailService = require('./emailService');
+
+// Import Unified Authentication service
+const unifiedAuthService = require('./unifiedAuthService');
+
 // Export auto-activation functions
 exports.autoActivateNewVariableType = autoActivateTriggers.autoActivateNewVariableType;
 exports.autoActivateNewCategory = autoActivateTriggers.autoActivateNewCategory;
@@ -22,11 +28,27 @@ exports.autoActivateNewBrand = autoActivateTriggers.autoActivateNewBrand;
 exports.autoActivateNewProduct = autoActivateTriggers.autoActivateNewProduct;
 exports.autoActivateNewVehicleType = autoActivateTriggers.autoActivateNewVehicleType;
 
-// Export SMS authentication functions
+// Export SMS functions
 exports.sendOTP = smsService.sendOTP;
 exports.verifyOTP = smsService.verifyOTP;
 exports.testSMSConfig = smsService.testSMSConfig;
 exports.getSMSStatistics = smsService.getSMSStatistics;
+
+// Export Email functions
+exports.sendEmailOTP = emailService.sendEmailOTP;
+exports.verifyEmailOTP = emailService.verifyEmailOTP;
+exports.testEmailConfig = emailService.testEmailConfig;
+exports.getEmailStatistics = emailService.getEmailStatistics;
+
+// Export Unified Authentication functions
+exports.checkUserExists = unifiedAuthService.checkUserExists;
+exports.sendRegistrationOTP = unifiedAuthService.sendRegistrationOTP;
+exports.sendPasswordResetOTP = unifiedAuthService.sendPasswordResetOTP;
+exports.verifyUnifiedOTP = unifiedAuthService.verifyOTP;
+exports.loginWithPassword = unifiedAuthService.loginWithPassword;
+exports.completeProfile = unifiedAuthService.completeProfile;
+exports.resetPassword = unifiedAuthService.resetPassword;
+
 exports.autoActivateForNewCountry = autoActivateTriggers.autoActivateForNewCountry;
 
 // Business modules configuration (same as frontend)
