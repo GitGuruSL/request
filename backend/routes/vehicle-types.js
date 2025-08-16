@@ -8,7 +8,7 @@ router.get('/', async (req, res) => {
     const countryCode = req.query.country || 'LK';
     
     const result = await database.query(`
-      SELECT vt.*, cvt.is_active as country_active
+      SELECT vt.*, cvt.is_enabled as country_enabled
       FROM vehicle_types vt
       LEFT JOIN country_vehicle_types cvt ON vt.id = cvt.vehicle_type_id AND cvt.country_code = $1
       WHERE vt.is_active = true
