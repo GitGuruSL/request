@@ -190,45 +190,26 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       });
     }
 
-    await database.beginTransaction();
-
-    try {
-      // Create the request
-      const request = await database.queryOne(`
-        INSERT INTO requests (
-          user_id, title, description, category_id, subcategory_id, city_id,
-          budget_min, budget_max, currency_code, urgency_level, country_code,
-          status, is_active, created_at, updated_at
-        ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'open', true,
-          CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-        ) RETURNING *
-      `, [
+    // Create the request
+    const request = await database.queryOne(`
+      INSERT INTO requests (
         user_id, title, description, category_id, subcategory_id, city_id,
-        budget_min, budget_max, currency_code, urgency_level, country_code
-      ]);
+        budget_min, budget_max, currency_code, urgency_level, country_code,
+        status, is_active, created_at, updated_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'open', true,
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+      ) RETURNING *
+    `, [
+      user_id, title, description, category_id, subcategory_id, city_id,
+      budget_min, budget_max, currency_code, urgency_level, country_code
+    ]);
 
-      // Add variables if provided
-      if (variables && variables.length > 0) {
-        for (const variable of variables) {
-          await database.query(`
-            INSERT INTO request_variables (request_id, variable_type_id, value, created_at)
-            VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
-          `, [request.id, variable.variable_type_id, variable.value]);
-        }
-      }
-
-      await database.commitTransaction();
-
-      res.status(201).json({
-        success: true,
-        message: 'Request created successfully',
-        data: request
-      });
-    } catch (error) {
-      await database.rollbackTransaction();
-      throw error;
-    }
+    res.status(201).json({
+      success: true,
+      message: 'Request created successfully',
+      data: request
+    });
   } catch (error) {
     console.error('Error creating request:', error);
     res.status(500).json({

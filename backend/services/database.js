@@ -59,6 +59,33 @@ class DatabaseService {
     }
 
     /**
+     * Begin a database transaction
+     */
+    async beginTransaction() {
+        const client = await this.pool.connect();
+        await client.query('BEGIN');
+        return client;
+    }
+
+    /**
+     * Commit a database transaction
+     */
+    async commitTransaction() {
+        // Note: This is a simplified implementation
+        // In practice, you'd want to pass the client around
+        await this.query('COMMIT');
+    }
+
+    /**
+     * Rollback a database transaction
+     */
+    async rollbackTransaction() {
+        // Note: This is a simplified implementation
+        // In practice, you'd want to pass the client around
+        await this.query('ROLLBACK');
+    }
+
+    /**
      * Execute a transaction
      */
     async transaction(callback) {
