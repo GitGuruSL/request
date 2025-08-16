@@ -408,6 +408,28 @@ router.delete('/:id', auth.authMiddleware(), async (req, res) => {
   }
 });
 
+// Test endpoint for debugging
+router.post('/test', auth.authMiddleware(), async (req, res) => {
+  try {
+    console.log('Test endpoint hit with user:', req.user);
+    console.log('Request body:', req.body);
+    
+    res.json({
+      success: true,
+      message: 'Test endpoint working',
+      user: req.user,
+      body: req.body
+    });
+  } catch (error) {
+    console.error('Test endpoint error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Test endpoint error',
+      error: error.message
+    });
+  }
+});
+
 // Get user's own requests
 router.get('/user/my-requests', auth.authMiddleware(), async (req, res) => {
   try {
