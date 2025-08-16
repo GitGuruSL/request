@@ -81,8 +81,18 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(
               builder: (context) => OTPScreen(
                 verificationId: args?['verificationId'],
-                emailOrPhone: args?['phoneNumber'],
-                isEmail: false,
+                sessionId: args?['sessionId'],
+                otpId: args?['otpId'],
+                purpose: args?['purpose'],
+                isNewUser: args?['isNewUser'] ?? false,
+                emailOrPhone: args?['emailOrPhone'] ?? args?['phoneNumber'],
+                phoneNumber: args?['phoneNumber'],
+                email: args?['email'],
+                isEmail: args?['isEmail'] ?? false,
+                isLogin: args?['isLogin'] ?? false,
+                isCustomOTP: args?['isCustomOTP'] ?? false,
+                countryCode: args?['countryCode'],
+                expiresIn: args?['expiresIn'],
               ),
             );
           case '/password':
