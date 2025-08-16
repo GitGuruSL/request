@@ -38,6 +38,7 @@ import CountrySubcategoryManagement from './pages/CountrySubcategoryManagement';
 import CountryBrandManagement from './pages/CountryBrandManagement';
 import CountryVariableTypeManagement from './pages/CountryVariableTypeManagement';
 import SMSConfigurationModule from './pages/SMSConfigurationModule';
+import SuperAdminSMSManagement from './pages/SuperAdminSMSManagement';
 import DebugAuth from './components/DebugAuth';
 
 const theme = createTheme({
@@ -108,6 +109,7 @@ function App() {
               <Route path="country-brands" element={<CountryBrandManagement />} />
               <Route path="country-variable-types" element={<CountryVariableTypeManagement />} />
               <Route path="sms-config" element={<SMSConfigurationModule />} />
+              <Route path="sms-management" element={<SuperAdminSMSManagement />} />
               
               {/* Add more protected routes here */}
             </Route>

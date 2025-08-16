@@ -191,9 +191,15 @@ const SMSConfigurationModule = () => {
 
   // === LIFECYCLE MANAGEMENT ===
   useEffect(() => {
+    // Redirect super admin to SMS Management dashboard
+    if (isSuperAdmin) {
+      window.location.href = '/sms-management';
+      return;
+    }
+    
     loadSMSConfiguration();
     loadStatistics();
-  }, [adminData]);
+  }, [adminData, isSuperAdmin]);
 
   // === DATA LOADING FUNCTIONS ===
   /**

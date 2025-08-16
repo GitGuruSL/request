@@ -178,7 +178,8 @@ const Layout = () => {
     { text: 'City Management', icon: <LocationCity />, path: '/cities', access: 'all', permission: 'cityManagement' },
     { text: 'Module Management', icon: <Settings />, path: '/modules', access: 'all', permission: 'moduleManagement' },
     { text: 'Payment Methods', icon: <Payment />, path: '/payment-methods', access: 'all', permission: 'paymentMethodManagement' },
-    { text: 'SMS Configuration', icon: <Message />, path: '/sms-config', access: 'all', permission: 'smsConfiguration' },
+    { text: 'SMS Management', icon: <Message />, path: '/sms-management', access: 'super_admin' },
+    { text: 'SMS Configuration', icon: <Message />, path: '/sms-config', access: 'country_admin', permission: 'smsConfiguration' },
     { text: 'Divider' },
     { text: 'Admin Management', icon: <AdminPanelSettings />, path: '/admin-management', access: 'super_admin', permission: 'adminUsersManagement' },
   ];
@@ -196,10 +197,7 @@ const Layout = () => {
             // For super admin - show super_admin and all access items
             if (isSuperAdmin) {
               if (item.access === 'super_admin' || item.access === 'all') {
-                // Check permissions if required
-                if (item.permission) {
-                  return adminData?.permissions?.[item.permission] === true;
-                }
+                // Super admins have access to everything, no permission check needed
                 return true;
               }
               return false;
