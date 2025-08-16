@@ -318,7 +318,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.grey[50],
         borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
@@ -327,10 +327,10 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            childAspectRatio: 2.0,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
+            crossAxisCount: 2,
+            childAspectRatio: 3.0,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
           ),
           itemCount: accountItems.length,
           itemBuilder: (context, index) {
@@ -358,31 +358,28 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                   }
                 }
               },
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
               child: Container(
-                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: item.color.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Icon(
-                        item.icon,
-                        color: item.color,
-                        size: 18,
-                      ),
+                    Icon(
+                      item.icon,
+                      color: item.color,
+                      size: 24,
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         item.title,
                         style: const TextStyle(
-                          fontSize: 14,
+                          fontSize: 16,
                           fontWeight: FontWeight.w500,
+                          color: Colors.black87,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
