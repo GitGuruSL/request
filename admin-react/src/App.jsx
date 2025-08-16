@@ -87,6 +87,7 @@ function App() {
               <Route path="business-management" element={<BusinessVerificationEnhanced />} />
               <Route path="drivers" element={<DriverVerificationEnhanced />} />
               <Route path="vehicles" element={<Vehicles />} />
+              <Route path="country-vehicle-types" element={<Vehicles />} />
               <Route path="vehicles-module" element={<VehiclesModule />} />
               <Route path="cars" element={<VehiclesModule />} />
               <Route path="bikes" element={<VehiclesModule />} />

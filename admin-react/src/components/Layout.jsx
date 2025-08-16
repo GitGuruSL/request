@@ -165,6 +165,7 @@ const Layout = () => {
     { text: 'Subcategories', icon: <Category />, path: '/country-subcategories', access: 'country_admin', permission: 'countrySubcategoryManagement' },
     { text: 'Brands', icon: <BrandingWatermark />, path: '/country-brands', access: 'country_admin', permission: 'countryBrandManagement' },
     { text: 'Variable Types', icon: <Tune />, path: '/country-variable-types', access: 'country_admin', permission: 'countryVariableTypeManagement' },
+    { text: 'Vehicle Types', icon: <Settings />, path: '/country-vehicle-types', access: 'country_admin', permission: 'countryVehicleTypeManagement' },
     { text: 'Divider' },
     { text: 'Users', icon: <Person />, path: '/users', access: 'all', permission: 'userManagement' },
     { text: 'Subscriptions', icon: <Subscriptions />, path: '/subscriptions', access: 'all', permission: 'subscriptionManagement' },
@@ -200,8 +201,6 @@ const Layout = () => {
             if (item.access === 'all') {
               // For 'all' access items, check permissions
               if (item.permission) {
-                // Special case for vehicle management - only super admins
-                if (item.permission === 'vehicleManagement' && item.text === 'Vehicle Management') return false;
                 return adminData?.permissions?.[item.permission] === true;
               }
               return true;
