@@ -209,12 +209,14 @@ class _OTPScreenState extends State<OTPScreen> with TickerProviderStateMixin {
   }
   
   Future<void> _handleCustomOTPVerification() async {
-    final isValid = await CustomOTPService.instance.verifyCustomOTP(
-      sessionId: widget.sessionId!,
+    final result = await SMSAuthService().verifyOTP(
+      emailOrPhone: widget.emailOrPhone!,
       otp: _otpCode,
+      otpId: widget.otpId ?? widget.sessionId ?? '',
+      purpose: widget.isNewUser ? 'registration' : 'password_reset',
     );
     
-    if (isValid) {
+    if (result['success']) {
       if (widget.isNewUser) {
         // New user registration - create temp account and go to profile
         await _createTempUserAccount();

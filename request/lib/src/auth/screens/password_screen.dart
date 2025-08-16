@@ -105,60 +105,6 @@ class _PasswordScreenState extends State<PasswordScreen> with TickerProviderStat
       }
     }
   }
-      
-      String errorMessage;
-      switch (e.code) {
-        case 'wrong-password':
-          errorMessage = 'Incorrect password. Please try again.';
-          break;
-        case 'user-not-found':
-          errorMessage = 'No account found with this email.';
-          break;
-        case 'invalid-email':
-          errorMessage = 'Invalid email address.';
-          break;
-        case 'user-disabled':
-          errorMessage = 'This account has been disabled.';
-          break;
-        case 'too-many-requests':
-          errorMessage = 'Too many failed attempts. Please try again later.';
-          break;
-        case 'invalid-credential':
-          errorMessage = 'Invalid email or password. Please try again.';
-          break;
-        default:
-          errorMessage = 'Login failed: ${e.message}';
-      }
-      
-      _showErrorSnackBar(errorMessage);
-    } catch (e) {
-      print("Unexpected error in password screen: $e");
-      
-      if (e.toString().contains("PigeonUserDetails") || e.toString().contains("List<Object?>")) {
-        print("PigeonUserDetails error detected, checking Firebase auth state...");
-        
-        await Future.delayed(const Duration(milliseconds: 500));
-        
-        if (FirebaseAuth.instance.currentUser != null) {
-          print("User is authenticated despite error, navigating to home");
-          if (mounted) {
-            Navigator.pushNamedAndRemoveUntil(
-              context,
-              '/home',
-              (route) => false,
-            );
-          }
-          return;
-        }
-      }
-      
-      _showErrorSnackBar('An unexpected error occurred. Please try again.');
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
 
   void _handleForgotPassword() async {
     setState(() {
