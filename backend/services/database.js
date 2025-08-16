@@ -51,6 +51,14 @@ class DatabaseService {
     }
 
     /**
+     * Execute a query and return only the first row
+     */
+    async queryOne(text, params = []) {
+        const result = await this.query(text, params);
+        return result.rows[0] || null;
+    }
+
+    /**
      * Execute a transaction
      */
     async transaction(callback) {

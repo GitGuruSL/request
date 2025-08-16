@@ -164,7 +164,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create new request (requires authentication)
-router.post('/', auth.authenticateToken, async (req, res) => {
+router.post('/', auth.authMiddleware(), async (req, res) => {
   try {
     const {
       title,
@@ -240,7 +240,7 @@ router.post('/', auth.authenticateToken, async (req, res) => {
 });
 
 // Update request (requires authentication and ownership)
-router.put('/:id', auth.authenticateToken, async (req, res) => {
+router.put('/:id', auth.authMiddleware(), async (req, res) => {
   try {
     const requestId = req.params.id;
     const userId = req.user.userId;
@@ -366,7 +366,7 @@ router.put('/:id', auth.authenticateToken, async (req, res) => {
 });
 
 // Delete request (requires authentication and ownership)
-router.delete('/:id', auth.authenticateToken, async (req, res) => {
+router.delete('/:id', auth.authMiddleware(), async (req, res) => {
   try {
     const requestId = req.params.id;
     const userId = req.user.userId;
@@ -414,7 +414,7 @@ router.delete('/:id', auth.authenticateToken, async (req, res) => {
 });
 
 // Get user's own requests
-router.get('/user/my-requests', auth.authenticateToken, async (req, res) => {
+router.get('/user/my-requests', auth.authMiddleware(), async (req, res) => {
   try {
     const userId = req.user.userId;
     const { status, page = 1, limit = 20 } = req.query;

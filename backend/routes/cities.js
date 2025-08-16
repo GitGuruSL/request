@@ -8,14 +8,14 @@ router.get('/', async (req, res) => {
   try {
     const countryCode = req.query.country || 'LK';
     
-    const cities = await database.query(
+    const result = await database.query(
       'SELECT * FROM cities WHERE country_code = $1 ORDER BY name',
       [countryCode]
     );
 
     res.json({
       success: true,
-      data: cities
+      data: result.rows
     });
   } catch (error) {
     console.error('Error fetching cities:', error);
@@ -61,7 +61,7 @@ router.get('/:id', async (req, res) => {
 // Admin routes (require authentication and admin role)
 
 // Create new city (admin only)
-router.post('/', auth.authenticateToken, async (req, res) => {
+router.post('/', auth.authMiddleware(), async (req, res) => {
   try {
     const { name, country_code, is_active = true } = req.body;
 
@@ -103,7 +103,7 @@ router.post('/', auth.authenticateToken, async (req, res) => {
 });
 
 // Update city (admin only)
-router.put('/:id', auth.authenticateToken, async (req, res) => {
+router.put('/:id', auth.authMiddleware(), async (req, res) => {
   try {
     const cityId = req.params.id;
     const { name, country_code, is_active } = req.body;
@@ -176,7 +176,7 @@ router.put('/:id', auth.authenticateToken, async (req, res) => {
 });
 
 // Delete city (admin only)
-router.delete('/:id', auth.authenticateToken, async (req, res) => {
+router.delete('/:id', auth.authMiddleware(), async (req, res) => {
   try {
     const cityId = req.params.id;
 
