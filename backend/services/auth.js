@@ -378,6 +378,13 @@ class AuthService {
             next();
         };
     }
+
+    /**
+     * Alias for roleMiddleware for convenience
+     */
+    requireRole(requiredRoles) {
+        return this.roleMiddleware(requiredRoles);
+    }
 }
 
 module.exports = new AuthService();
