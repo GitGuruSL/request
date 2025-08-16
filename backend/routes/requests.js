@@ -182,6 +182,19 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
     const user_id = req.user.userId;
     const country_code = req.user.country_code || 'LK';
 
+    console.log('Request creation data:', {
+      user_id,
+      country_code,
+      title,
+      description,
+      category_id,
+      city_id,
+      budget_min,
+      budget_max,
+      currency_code,
+      urgency_level
+    });
+
     // Validate required fields
     if (!title || !description || !category_id || !city_id) {
       return res.status(400).json({
@@ -212,6 +225,7 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
     });
   } catch (error) {
     console.error('Error creating request:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Error creating request',
