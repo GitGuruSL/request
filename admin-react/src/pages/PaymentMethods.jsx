@@ -89,7 +89,7 @@ const PaymentMethods = () => {
   const fetchPaymentMethods = async () => {
     try {
       let q;
-      if (userRole === 'super_admin') {
+      if (isSuperAdmin) {
         q = query(collection(db, 'payment_methods'), orderBy('createdAt', 'desc'));
       } else {
         // Country admin can only see their country's payment methods
@@ -152,10 +152,10 @@ const PaymentMethods = () => {
       const methodData = {
         ...formData,
         imageUrl,
-        country: userRole === 'super_admin' ? formData.country : userCountry,
+        country: isSuperAdmin ? formData.country : userCountry,
         createdAt: new Date(),
         updatedAt: new Date(),
-        createdBy: user.uid
+        createdBy: adminData?.email || adminData?.uid || 'admin'
       };
 
       if (editingMethod) {
@@ -232,7 +232,7 @@ const PaymentMethods = () => {
         </Button>
       </Box>
 
-      {userRole !== 'super_admin' && (
+      {!isSuperAdmin && (
         <Alert severity="info" sx={{ mb: 3 }}>
           You are managing payment methods for: <strong>{userCountry}</strong>
         </Alert>
@@ -314,7 +314,7 @@ const PaymentMethods = () => {
               />
             </Grid>
             
-            {userRole === 'super_admin' && (
+            {isSuperAdmin && (
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth required>
                   <InputLabel>Country</InputLabel>
