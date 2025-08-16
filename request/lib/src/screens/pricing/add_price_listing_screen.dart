@@ -77,8 +77,8 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
             'id': data['id'] ?? '',
             'name': data['name'] ?? '',
             'type': data['type'] ?? 'select',
-            'required': data['required'] ?? false,
-            'possibleValues': List<String>.from(data['possibleValues'] ?? []),
+            'required': data['required'] ?? data['isRequired'] ?? false,
+            'possibleValues': List<String>.from(data['possibleValues'] ?? data['options'] ?? []),
             'description': data['description'] ?? '',
           };
         }).toList();
