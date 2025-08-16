@@ -103,8 +103,8 @@ await smsAuthService.verifyOTP('+1234567890', '123456', 'US');
 {
   "provider": "twilio",
   "configuration": {
-    "accountSid": "AC1234567890abcdef1234567890abcdef",
-    "authToken": "your-auth-token",
+    "accountSid": "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "authToken": "your-auth-token-here",
     "fromNumber": "+1234567890"
   }
 }
