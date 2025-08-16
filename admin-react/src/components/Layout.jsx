@@ -199,7 +199,13 @@ const Layout = () => {
           // For country admin - show only country_admin and all access items (excluding super_admin items)
           if (!isSuperAdmin) {
             if (item.access === 'super_admin') return false; // Explicitly exclude super admin items
-            if (item.access === 'country_admin') return true;
+            if (item.access === 'country_admin') {
+              // For country admin items, check permissions
+              if (item.permission) {
+                return adminData?.permissions?.[item.permission] === true;
+              }
+              return true;
+            }
             if (item.access === 'all') {
               // For 'all' access items, check permissions
               if (item.permission) {
