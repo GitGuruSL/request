@@ -323,18 +323,18 @@ class PricingService {
             });
           }
           
-          // Convert Map to MasterProduct
+          // Convert Map to MasterProduct with robust error handling
           final product = MasterProduct(
-            id: productData['id'] as String? ?? '',
-            name: productData['name'] as String? ?? '',
-            brand: productData['brand'] as String? ?? '',
-            category: productData['category'] as String? ?? '',
-            subcategory: productData['subcategory'] as String? ?? '',
-            description: productData['description'] as String? ?? '',
+            id: (productData['id'] as String?) ?? '',
+            name: (productData['name'] as String?) ?? '',
+            brand: (productData['brand'] as String?) ?? '',
+            category: (productData['category'] as String?) ?? '',
+            subcategory: (productData['subcategory'] as String?) ?? '',
+            description: (productData['description'] as String?) ?? '',
             images: List<String>.from(productData['images'] ?? []),
-            isActive: productData['isActive'] as bool? ?? true,
-            createdAt: (productData['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-            updatedAt: (productData['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+            isActive: (productData['isActive'] as bool?) ?? true,
+            createdAt: _safeParseTimestamp(productData['createdAt']) ?? DateTime.now(),
+            updatedAt: _safeParseTimestamp(productData['updatedAt']) ?? DateTime.now(),
             availableVariables: availableVariables,
           );
           
@@ -467,6 +467,27 @@ class PricingService {
     } catch (e) {
       print('Error getting brands: $e');
       return [];
+    }
+  }
+
+  /// Safely parse timestamp from Firestore data
+  DateTime? _safeParseTimestamp(dynamic timestampData) {
+    try {
+      if (timestampData == null) return null;
+      if (timestampData is Timestamp) {
+        return timestampData.toDate();
+      }
+      if (timestampData is DateTime) {
+        return timestampData;
+      }
+      // If it's a string, try to parse it
+      if (timestampData is String) {
+        return DateTime.tryParse(timestampData);
+      }
+      return null;
+    } catch (e) {
+      print('DEBUG: Error parsing timestamp: $e');
+      return null;
     }
   }
 }

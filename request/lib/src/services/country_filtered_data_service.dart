@@ -475,23 +475,35 @@ class CountryFilteredDataService {
         print('$_tag getActiveSubcategories: No active subcategories found');
         return [];
       }
+
+      // Split IDs into chunks of 30 (Firestore whereIn limit)
+      final activeSubcategories = <Map<String, dynamic>>[];
+      const int chunkSize = 30;
       
-      // Get subcategories that are active in this country
-      Query<Map<String, dynamic>> subcategoriesQuery = _firestore
-          .collection('subcategories')
-          .where(FieldPath.documentId, whereIn: activeSubcategoryIds);
-      
-      // Apply category filter if specified
-      if (categoryId != null) {
-        subcategoriesQuery = subcategoriesQuery.where('categoryId', isEqualTo: categoryId);
+      for (int i = 0; i < activeSubcategoryIds.length; i += chunkSize) {
+        final chunk = activeSubcategoryIds.skip(i).take(chunkSize).toList();
+        
+        print('$_tag getActiveSubcategories: Processing chunk ${(i ~/ chunkSize) + 1} with ${chunk.length} IDs');
+        
+        // Get subcategories that are active in this country
+        Query<Map<String, dynamic>> subcategoriesQuery = _firestore
+            .collection('subcategories')
+            .where(FieldPath.documentId, whereIn: chunk);
+        
+        // Apply category filter if specified
+        if (categoryId != null) {
+          subcategoriesQuery = subcategoriesQuery.where('categoryId', isEqualTo: categoryId);
+        }
+        
+        final subcategoriesSnapshot = await subcategoriesQuery.get();
+        print('$_tag getActiveSubcategories: Found ${subcategoriesSnapshot.docs.length} subcategories in chunk ${(i ~/ chunkSize) + 1}');
+        
+        final chunkSubcategories = subcategoriesSnapshot.docs
+            .map((doc) => {...doc.data(), 'id': doc.id})
+            .toList();
+            
+        activeSubcategories.addAll(chunkSubcategories);
       }
-      
-      final subcategoriesSnapshot = await subcategoriesQuery.get();
-      print('$_tag getActiveSubcategories: Found ${subcategoriesSnapshot.docs.length} filtered subcategories');
-      
-      final activeSubcategories = subcategoriesSnapshot.docs
-          .map((doc) => {...doc.data(), 'id': doc.id})
-          .toList();
       
       print('$_tag getActiveSubcategories: Returning ${activeSubcategories.length} active subcategories');
       return activeSubcategories;
