@@ -1,14 +1,21 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../../services/sms_auth_service.dart';
 
 class PasswordScreen extends StatefulWidget {
   final bool isNewUser;
   final String emailOrPhone;
+  final bool isEmail;
+  final String? countryCode;
+  final String? userId;
   
   const PasswordScreen({
     super.key, 
     required this.isNewUser,
     required this.emailOrPhone,
+    this.isEmail = false,
+    this.countryCode,
+    this.userId,
   });
 
   @override
@@ -57,14 +64,14 @@ class _PasswordScreenState extends State<PasswordScreen> with TickerProviderStat
     print("Password length: ${_passwordController.text.trim().length}");
     
     try {
-      final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: widget.emailOrPhone,
+      final result = await SMSAuthService().loginWithPassword(
+        emailOrPhone: widget.emailOrPhone,
         password: _passwordController.text.trim(),
       );
 
-      print("Login result: ${userCredential.user != null ? 'SUCCESS' : 'NULL'}");
+      print("Login result: ${result['success'] ? 'SUCCESS' : 'FAILED'}");
       
-      if (userCredential.user != null) {
+      if (result['success']) {
         print("Navigating to home screen...");
         if (mounted) {
           Navigator.pushNamedAndRemoveUntil(
@@ -74,23 +81,30 @@ class _PasswordScreenState extends State<PasswordScreen> with TickerProviderStat
           );
         }
       } else {
-        print("UserCredential is null, checking current user...");
-        if (FirebaseAuth.instance.currentUser != null) {
-          print("User is authenticated despite null return, navigating to home");
-          if (mounted) {
-            Navigator.pushNamedAndRemoveUntil(
-              context,
-              '/home',
-              (route) => false,
-            );
-          }
-        } else {
-          print("UserCredential is null and no current user - login failed");
-          _showErrorSnackBar('Login failed. Unexpected error occurred.');
-        }
+        print("Login failed: ${result['message']}");
+        _showErrorSnackBar(result['message'] ?? 'Login failed. Please check your credentials.');
       }
-    } on FirebaseAuthException catch (e) {
-      print("FirebaseAuthException caught in password screen: ${e.code} - ${e.message}");
+    } catch (e) {
+      print("Exception caught in password screen: $e");
+      String errorMessage = 'Login failed. Please try again.';
+      
+      if (e.toString().contains('wrong-password')) {
+        errorMessage = 'Incorrect password. Please try again.';
+      } else if (e.toString().contains('user-not-found')) {
+        errorMessage = 'No account found with this email/phone.';
+      } else if (e.toString().contains('too-many-requests')) {
+        errorMessage = 'Too many failed attempts. Please try again later.';
+      }
+      
+      _showErrorSnackBar(errorMessage);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
       
       String errorMessage;
       switch (e.code) {
@@ -147,11 +161,39 @@ class _PasswordScreenState extends State<PasswordScreen> with TickerProviderStat
   }
 
   void _handleForgotPassword() async {
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
-      await FirebaseAuth.instance.sendPasswordResetEmail(email: widget.emailOrPhone);
-      _showSuccessSnackBar('Password reset email sent to ${widget.emailOrPhone}');
+      final result = await SMSAuthService().sendPasswordResetOTP(widget.emailOrPhone);
+      
+      if (result['success']) {
+        setState(() {
+          _isLoading = false;
+        });
+        
+        Navigator.pushNamed(
+          context,
+          '/otp',
+          arguments: {
+            'emailOrPhone': widget.emailOrPhone,
+            'isNewUser': false,
+            'isEmail': widget.isEmail,
+            'countryCode': widget.countryCode,
+            'otpId': result['otpId'],
+            'purpose': 'password_reset',
+            'expiresIn': result['expiresIn'],
+          },
+        );
+      } else {
+        throw Exception(result['message'] ?? 'Failed to send OTP');
+      }
     } catch (e) {
-      _showErrorSnackBar('Failed to send reset email. Please try again.');
+      setState(() {
+        _isLoading = false;
+      });
+      _showErrorSnackBar('Failed to send reset OTP. Please try again.');
     }
   }
 

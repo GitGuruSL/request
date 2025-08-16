@@ -3,11 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/auth_service.dart';
 import '../../services/country_service.dart';
-import '../../services/custom_otp_service.dart';
+import '../../services/sms_auth_service.dart';
 
 class OTPScreen extends StatefulWidget {
-  final String? verificationId;  // Firebase verification ID
-  final String? sessionId;       // Custom OTP session ID
+  final String? verificationId;  // Legacy Firebase verification ID
+  final String? sessionId;       // Legacy Custom OTP session ID
+  final String? otpId;           // New SMS OTP ID
+  final String? purpose;         // 'registration' or 'password_reset'
   final bool isNewUser;
   final String? emailOrPhone;
   final String? phoneNumber;
@@ -16,11 +18,14 @@ class OTPScreen extends StatefulWidget {
   final bool isLogin;
   final bool isCustomOTP;
   final String? countryCode;
+  final int? expiresIn;
 
   const OTPScreen({
     super.key,
     this.verificationId,
     this.sessionId,
+    this.otpId,
+    this.purpose,
     this.isNewUser = false,
     this.emailOrPhone,
     this.phoneNumber,
@@ -29,6 +34,7 @@ class OTPScreen extends StatefulWidget {
     this.isLogin = false,
     this.isCustomOTP = false,
     this.countryCode,
+    this.expiresIn,
   });
 
   @override
@@ -94,11 +100,14 @@ class _OTPScreenState extends State<OTPScreen> with TickerProviderStateMixin {
     });
 
     try {
-      if (widget.isCustomOTP) {
-        // Custom OTP verification (for email registration, business verification, etc.)
+      if (widget.otpId != null && widget.purpose != null) {
+        // New SMS authentication system
+        await _handleSMSAuthentication();
+      } else if (widget.isCustomOTP) {
+        // Legacy custom OTP verification
         await _handleCustomOTPVerification();
       } else {
-        // Firebase OTP verification (for phone auth)
+        // Legacy Firebase OTP verification
         await _handleFirebaseOTPVerification();
       }
     } catch (e) {
@@ -109,6 +118,45 @@ class _OTPScreenState extends State<OTPScreen> with TickerProviderStateMixin {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _handleSMSAuthentication() async {
+    final result = await SMSAuthService().verifyOTP(
+      emailOrPhone: widget.emailOrPhone!,
+      otp: _otpCode,
+      otpId: widget.otpId!,
+      purpose: widget.purpose!,
+    );
+
+    if (result['success']) {
+      if (widget.purpose == 'registration') {
+        // New user registration - go to profile completion
+        Navigator.pushNamed(
+          context,
+          '/profile',
+          arguments: {
+            'emailOrPhone': widget.emailOrPhone,
+            'isEmail': widget.isEmail,
+            'countryCode': widget.countryCode,
+            'otpId': widget.otpId,
+          },
+        );
+      } else if (widget.purpose == 'password_reset') {
+        // Password reset - go to new password screen
+        Navigator.pushNamed(
+          context,
+          '/reset-password',
+          arguments: {
+            'emailOrPhone': widget.emailOrPhone,
+            'isEmail': widget.isEmail,
+            'otpId': widget.otpId,
+          },
+        );
+      }
+    } else {
+      _showErrorSnackBar(result['message'] ?? 'Invalid OTP. Please try again.');
+      _clearOtp();
     }
   }
   

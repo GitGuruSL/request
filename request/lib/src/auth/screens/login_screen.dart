@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import '../../services/auth_service.dart';
-import '../../services/custom_otp_service.dart';
+import '../../services/sms_auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   final String countryCode;
@@ -93,46 +93,42 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     });
 
     try {
+      String emailOrPhone;
+      bool isEmail;
+      
       if (_isPhoneLogin) {
-        // Phone login flow
-        final phoneNumber = completePhoneNumber ?? '${phoneCode}${_phoneController.text}';
-        
-        // Check if phone number is already registered
-        final userCheck = await AuthService.instance.checkUserExists(phoneNumber: phoneNumber);
-        
-        if (userCheck.exists) {
-          // Existing user - send Firebase OTP for login
-          await _sendLoginOTP(phoneNumber);
-        } else {
-          // New user - send Firebase OTP for registration
-          await _sendRegistrationOTP(phoneNumber);
-        }
-        
+        // Format phone number properly
+        emailOrPhone = completePhoneNumber ?? '${phoneCode}${_phoneController.text}';
+        emailOrPhone = SMSAuthService().formatPhoneNumber(emailOrPhone);
+        isEmail = false;
       } else {
-        // Email login flow
-        final email = _emailController.text.trim();
+        emailOrPhone = _emailController.text.trim();
+        isEmail = true;
+      }
+
+      // Check if user exists using new SMS auth service
+      final userCheck = await SMSAuthService().checkUserExists(emailOrPhone);
+      
+      if (userCheck['exists']) {
+        // Existing user - navigate to password screen
+        setState(() {
+          _isLoading = false;
+        });
         
-        // Check if email is already registered
-        final userCheck = await AuthService.instance.checkUserExists(email: email);
-        
-        if (userCheck.exists) {
-          // Existing user - navigate to password screen
-          setState(() {
-            _isLoading = false;
-          });
-          
-          Navigator.pushNamed(
-            context,
-            '/password',
-            arguments: {
-              'isNewUser': false,
-              'emailOrPhone': email,
-            },
-          );
-        } else {
-          // New user - send OTP for registration
-          await _sendEmailRegistrationOTP(email);
-        }
+        Navigator.pushNamed(
+          context,
+          '/password',
+          arguments: {
+            'isNewUser': false,
+            'emailOrPhone': emailOrPhone,
+            'isEmail': isEmail,
+            'countryCode': widget.countryCode,
+            'userId': userCheck['userId'],
+          },
+        );
+      } else {
+        // New user - send OTP for registration
+        await _sendRegistrationOTP(emailOrPhone, isEmail);
       }
       
     } catch (e) {
@@ -145,115 +141,37 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     }
   }
 
-  Future<void> _sendLoginOTP(String phoneNumber) async {
-    await AuthService.instance.sendLoginOTP(
-      phoneNumber: phoneNumber,
-      onCodeSent: (verificationId) {
-        setState(() {
-          _isLoading = false;
-        });
-        Navigator.pushNamed(
-          context,
-          '/otp',
-          arguments: {
-            'verificationId': verificationId,
-            'phoneNumber': phoneNumber,
-            'isNewUser': false,
-            'isLogin': true,
-          },
-        );
-      },
-      onError: (error) {
-        setState(() {
-          _isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error)),
-        );
-      },
-      onAutoVerified: (user) async {
-        setState(() {
-          _isLoading = false;
-        });
-        
-        // Check if user profile is complete before navigating to home
-        final isProfileComplete = await AuthService.instance.isCurrentUserProfileComplete();
-        
-        if (isProfileComplete) {
-          Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
-        } else {
-          // Profile not complete, redirect to registration flow
-          Navigator.pushNamedAndRemoveUntil(context, '/register', (route) => false);
-        }
-      },
-    );
-  }
-  
-  Future<void> _sendRegistrationOTP(String phoneNumber) async {
-    await AuthService.instance.sendRegistrationOTP(
-      phoneNumber: phoneNumber,
-      onCodeSent: (verificationId) {
-        setState(() {
-          _isLoading = false;
-        });
-        Navigator.pushNamed(
-          context,
-          '/otp',
-          arguments: {
-            'verificationId': verificationId,
-            'phoneNumber': phoneNumber,
-            'isNewUser': true,
-            'isLogin': false,
-          },
-        );
-      },
-      onError: (error) {
-        setState(() {
-          _isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error)),
-        );
-      },
-      onAutoVerified: (user) {
-        setState(() {
-          _isLoading = false;
-        });
-        // New user - go to profile completion
-        Navigator.pushNamed(context, '/profile');
-      },
-    );
-  }
-  
-  Future<void> _sendEmailRegistrationOTP(String email) async {
+  Future<void> _sendRegistrationOTP(String emailOrPhone, bool isEmail) async {
     try {
-      // For email registration, we'll use a custom OTP system
-      final sessionId = await CustomOTPService.instance.sendCustomOTP(
-        identifier: email,
-        purpose: 'email_registration',
-      );
+      final result = await SMSAuthService().sendRegistrationOTP(emailOrPhone);
       
-      setState(() {
-        _isLoading = false;
-      });
-      
-      Navigator.pushNamed(
-        context,
-        '/otp',
-        arguments: {
-          'sessionId': sessionId,
-          'email': email,
-          'isNewUser': true,
-          'isLogin': false,
-          'isCustomOTP': true,
-        },
-      );
+      if (result['success']) {
+        setState(() {
+          _isLoading = false;
+        });
+        
+        Navigator.pushNamed(
+          context,
+          '/otp',
+          arguments: {
+            'emailOrPhone': emailOrPhone,
+            'isNewUser': true,
+            'isEmail': isEmail,
+            'countryCode': widget.countryCode,
+            'otpId': result['otpId'],
+            'purpose': 'registration',
+            'expiresIn': result['expiresIn'],
+          },
+        );
+      } else {
+        throw Exception(result['message'] ?? 'Failed to send OTP');
+      }
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to send OTP: $e')),
+        SnackBar(content: Text('Error sending OTP: $e')),
       );
     }
   }

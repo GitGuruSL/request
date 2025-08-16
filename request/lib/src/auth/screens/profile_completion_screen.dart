@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/auth_service.dart';
 import '../../services/country_service.dart';
+import '../../services/sms_auth_service.dart';
 
 class ProfileCompletionScreen extends StatefulWidget {
   const ProfileCompletionScreen({super.key});
@@ -12,14 +13,20 @@ class ProfileCompletionScreen extends StatefulWidget {
 
 class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
+  bool _isPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -28,51 +35,44 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
       return;
     }
 
+    // Validate password confirmation
+    if (_passwordController.text != _confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Passwords do not match')),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        // Update Firebase user display name
-        await user.updateDisplayName(_nameController.text.trim());
-        
-        // Get country data from CountryService
-        final countryService = CountryService.instance;
-        
-        // Get arguments passed from previous screen
-        final arguments = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-        final emailOrPhone = arguments?['emailOrPhone'];
-        final isEmail = arguments?['isEmail'] ?? false;
-        final countryCode = arguments?['countryCode'];
-        
-        // Create comprehensive user profile
-        final success = await AuthService.instance.createUserProfile(
-          userId: user.uid,
-          name: _nameController.text.trim(),
-          email: isEmail ? emailOrPhone : (_emailController.text.isNotEmpty ? _emailController.text.trim() : null),
-          phoneNumber: !isEmail ? emailOrPhone : null,
-          countryCode: countryService.countryCode ?? countryCode,
-          countryName: countryService.countryName,
-          phoneCode: countryService.phoneCode,
-          additionalData: {
-            'authMethod': isEmail ? 'email' : 'phone',
-            'registrationDate': DateTime.now().toIso8601String(),
-            'profileVersion': '1.0',
-          },
+      // Get arguments passed from previous screen
+      final arguments = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      final emailOrPhone = arguments?['emailOrPhone'];
+      final isEmail = arguments?['isEmail'] ?? false;
+      final countryCode = arguments?['countryCode'];
+      final otpId = arguments?['otpId'];
+      
+      // Complete profile using SMS auth service
+      final result = await SMSAuthService().completeProfile(
+        firstName: _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
+        password: _passwordController.text.trim(),
+        emailOrPhone: emailOrPhone,
+        otpId: otpId,
+      );
+      
+      if (result['success']) {
+        // Profile completed successfully
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/home',
+          (route) => false,
         );
-        
-        if (success) {
-          // Profile created successfully
-          Navigator.pushNamedAndRemoveUntil(
-            context,
-            '/home',
-            (route) => false,
-          );
-        } else {
-          throw Exception('Failed to create user profile');
-        }
+      } else {
+        throw Exception(result['message'] ?? 'Failed to complete profile');
       }
     } catch (e) {
       setState(() {
@@ -124,31 +124,110 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                 
                 const SizedBox(height: 40),
                 
-                // Name field
+                // First Name field
                 TextFormField(
-                  controller: _nameController,
+                  controller: _firstNameController,
                   decoration: const InputDecoration(
-                    labelText: 'Full Name',
-                    prefixIcon: Icon(Icons.person),
+                    labelText: 'First Name',
+                    prefixIcon: Icon(Icons.person_outline),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                    ),
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Please enter your full name';
+                      return 'Please enter your first name';
                     }
                     return null;
                   },
                 ),
                 
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
                 
-                // Email field (optional)
+                // Last Name field
                 TextFormField(
-                  controller: _emailController,
+                  controller: _lastNameController,
                   decoration: const InputDecoration(
-                    labelText: 'Email (Optional)',
-                    prefixIcon: Icon(Icons.email),
+                    labelText: 'Last Name',
+                    prefixIcon: Icon(Icons.person),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                    ),
                   ),
-                  keyboardType: TextInputType.emailAddress,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter your last name';
+                    }
+                    return null;
+                  },
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Password field
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: !_isPasswordVisible,
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _isPasswordVisible = !_isPasswordVisible;
+                        });
+                      },
+                    ),
+                    border: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter a password';
+                    }
+                    if (value.length < 6) {
+                      return 'Password must be at least 6 characters';
+                    }
+                    return null;
+                  },
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Confirm Password field
+                TextFormField(
+                  controller: _confirmPasswordController,
+                  obscureText: !_isConfirmPasswordVisible,
+                  decoration: InputDecoration(
+                    labelText: 'Confirm Password',
+                    prefixIcon: const Icon(Icons.lock),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _isConfirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+                        });
+                      },
+                    ),
+                    border: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please confirm your password';
+                    }
+                    if (value != _passwordController.text) {
+                      return 'Passwords do not match';
+                    }
+                    return null;
+                  },
                 ),
                 
                 const SizedBox(height: 40),
