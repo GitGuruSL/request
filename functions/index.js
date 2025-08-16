@@ -8,6 +8,18 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
+// Import auto-activation triggers
+const autoActivateTriggers = require('./auto-activate-triggers');
+
+// Export auto-activation functions
+exports.autoActivateNewVariableType = autoActivateTriggers.autoActivateNewVariableType;
+exports.autoActivateNewCategory = autoActivateTriggers.autoActivateNewCategory;
+exports.autoActivateNewSubcategory = autoActivateTriggers.autoActivateNewSubcategory;
+exports.autoActivateNewBrand = autoActivateTriggers.autoActivateNewBrand;
+exports.autoActivateNewProduct = autoActivateTriggers.autoActivateNewProduct;
+exports.autoActivateNewVehicleType = autoActivateTriggers.autoActivateNewVehicleType;
+exports.autoActivateForNewCountry = autoActivateTriggers.autoActivateForNewCountry;
+
 // Business modules configuration (same as frontend)
 const BUSINESS_MODULES = {
   ITEM: {

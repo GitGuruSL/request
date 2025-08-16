@@ -72,7 +72,7 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
       final activeVariableTypesData = await countryService.getActiveVariableTypes();
       
       setState(() {
-        _availableAttributes = activeVariableTypesData.where((data) => data['isActive'] == true).map((data) {
+        _availableAttributes = activeVariableTypesData.map((data) {
           return {
             'id': data['id'] ?? '',
             'name': data['name'] ?? '',
