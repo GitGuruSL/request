@@ -974,6 +974,18 @@ const AdminUsers = () => {
                     label="Vehicle Management"
                   />
                 </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={formData.permissions?.countryVehicleTypeManagement}
+                        onChange={(e) => handlePermissionChange('countryVehicleTypeManagement', e.target.checked)}
+                      />
+                    }
+                    label="Vehicle Types"
+                  />
+                </Grid>
               </Grid>
 
               {/* City Management Section */}
