@@ -174,8 +174,8 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       city_id,
       budget_min,
       budget_max,
-      currency_code = 'LKR',
-      urgency_level = 'medium',
+      currency = 'LKR',
+      priority = 'normal',
       variables = []
     } = req.body;
 
@@ -191,8 +191,8 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       city_id,
       budget_min,
       budget_max,
-      currency_code,
-      urgency_level
+      currency,
+      priority
     });
 
     // Validate required fields
@@ -206,16 +206,16 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
     // Create the request
     const request = await database.queryOne(`
       INSERT INTO requests (
-        user_id, title, description, category_id, subcategory_id, city_id,
-        budget_min, budget_max, currency_code, urgency_level, country_code,
-        status, is_active, created_at, updated_at
+        user_id, title, description, category_id, subcategory_id, location_city_id,
+        budget_min, budget_max, currency, priority, country_code,
+        status, created_at, updated_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'open', true,
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'active',
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
       ) RETURNING *
     `, [
       user_id, title, description, category_id, subcategory_id, city_id,
-      budget_min, budget_max, currency_code, urgency_level, country_code
+      budget_min, budget_max, currency, priority, country_code
     ]);
 
     res.status(201).json({
@@ -229,7 +229,7 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error creating request',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      error: error.message // Always show error message for debugging
     });
   }
 });
