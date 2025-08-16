@@ -25,7 +25,7 @@
 
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
-const AWS = require('aws-sdk');
+const { SESClient, SendEmailCommand } = require('@aws-sdk/client-ses');
 const crypto = require('crypto');
 
 // Initialize Firebase Admin if not already done
@@ -46,12 +46,13 @@ class AWSEmailProvider {
     this.fromEmail = config.fromEmail;
     this.fromName = config.fromName || 'Request Marketplace';
     
-    // Initialize AWS SES
-    this.ses = new AWS.SES({
-      accessKeyId: this.accessKeyId,
-      secretAccessKey: this.secretAccessKey,
+    // Initialize AWS SES Client (v3)
+    this.sesClient = new SESClient({
       region: this.region,
-      apiVersion: '2010-12-01'
+      credentials: {
+        accessKeyId: this.accessKeyId,
+        secretAccessKey: this.secretAccessKey
+      }
     });
   }
 
@@ -84,7 +85,8 @@ class AWSEmailProvider {
         ReplyToAddresses: [this.fromEmail]
       };
 
-      const result = await this.ses.sendEmail(params).promise();
+      const command = new SendEmailCommand(params);
+      const result = await this.sesClient.send(command);
       
       return {
         success: true,
