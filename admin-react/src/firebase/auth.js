@@ -93,7 +93,7 @@ export const createAdminUser = async (adminData) => {
         driverVerification: true,
         
         // Vehicle Management
-        vehicleManagement: adminData.role === 'super_admin', // Super admin only
+        vehicleManagement: true, // Both super admin and country admin can access
         
         // User & Module Management
         userManagement: true,

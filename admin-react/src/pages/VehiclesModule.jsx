@@ -107,42 +107,35 @@ const VehiclesModule = () => {
         const vehiclesWithDrivers = driversData.map(driver => {
           return {
             id: driver.id,
-            // Driver info
-            driverName: driver.name || driver.driverName || 'N/A',
-            driverPhone: driver.phone || driver.phoneNumber || 'N/A', 
+            // Driver info - using correct field names
+            driverName: driver.fullName || `${driver.firstName || ''} ${driver.lastName || ''}`.trim() || 'N/A',
+            driverPhone: driver.phoneNumber || driver.phone || 'N/A', 
             driverEmail: driver.email || 'N/A',
             status: driver.status || 'pending',
             country: driver.country || userCountry,
-            // Vehicle info 
-            vehicleNumber: driver.vehicleNumber || driver.vehicle_number || 'N/A',
+            // Vehicle info - using correct field names
+            vehicleNumber: driver.vehicleNumber || 'N/A',
             vehicleType: typesMap[driver.vehicleType] || driver.vehicleType || 'Unknown',
             vehicleTypeId: driver.vehicleType, // Keep original ID for filtering
-            vehicleBrand: driver.vehicleBrand || driver.vehicle_brand || 'N/A',
-            vehicleModel: driver.vehicleModel || driver.vehicle_model || '',
-            vehicleColor: driver.vehicleColor || driver.vehicle_color || 'N/A',
-            vehicleYear: driver.vehicleYear || driver.vehicle_year || 'N/A',
-            vehicleImages: driver.vehicleImages || driver.vehicle_images || []
+            vehicleBrand: driver.vehicleBrand || 'N/A', // No brand field found, using model
+            vehicleModel: driver.vehicleModel || '',
+            vehicleColor: driver.vehicleColor || 'N/A',
+            vehicleYear: driver.vehicleYear || 'N/A',
+            vehicleImages: driver.vehicleImageUrls ? Object.values(driver.vehicleImageUrls) : []
           };
         });
         
         setVehicles(vehiclesWithDrivers);
         
-        // Calculate stats
-        const total = vehiclesWithDrivers.length;
-        const active = vehiclesWithDrivers.filter(v => v.status === 'approved').length;
-        const available = vehiclesWithDrivers.filter(v => v.status === 'approved').length;
-        
-        setStats({ total, active, available });
+        setVehicles(vehiclesWithDrivers);
       } else {
         setVehicles([]);
-        setStats({ total: 0, active: 0, available: 0 });
       }
       
     } catch (error) {
       console.error('Error loading vehicles:', error);
       setError('Failed to load vehicles');
       setVehicles([]);
-      setStats({ total: 0, active: 0, available: 0 });
     } finally {
       setLoading(false);
     }
@@ -396,7 +389,7 @@ const VehiclesModule = () => {
                 </TableCell>
                 <TableCell>
                   <Typography variant="body2">
-                    {vehicle.vehicleBrand || 'N/A'} {vehicle.vehicleModel || ''}
+                    {vehicle.vehicleModel || 'N/A'}
                   </Typography>
                 </TableCell>
                 <TableCell>
