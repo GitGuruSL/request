@@ -12,9 +12,16 @@ class SMSAuthService {
   /// Check if user exists by email or phone
   Future<Map<String, dynamic>> checkUserExists(String emailOrPhone) async {
     try {
+      // Validate input
+      if (emailOrPhone.isEmpty || emailOrPhone.trim().isEmpty) {
+        throw Exception('Email or phone number cannot be empty');
+      }
+      
+      final cleanInput = emailOrPhone.trim();
+      
       final callable = _functions.httpsCallable('checkUserExists');
       final result = await callable.call({
-        'emailOrPhone': emailOrPhone,
+        'emailOrPhone': cleanInput,
       });
       
       return {
@@ -31,9 +38,20 @@ class SMSAuthService {
   /// Send OTP for new user registration
   Future<Map<String, dynamic>> sendRegistrationOTP(String emailOrPhone) async {
     try {
+      // Validate input
+      if (emailOrPhone.isEmpty || emailOrPhone.trim().isEmpty) {
+        return {
+          'success': false,
+          'message': 'Email or phone number cannot be empty',
+          'error': 'invalid_input',
+        };
+      }
+      
+      final cleanInput = emailOrPhone.trim();
+      
       final callable = _functions.httpsCallable('sendRegistrationOTP');
       final result = await callable.call({
-        'emailOrPhone': emailOrPhone,
+        'emailOrPhone': cleanInput,
       });
       
       return {
@@ -236,8 +254,18 @@ class SMSAuthService {
 
   /// Format phone number
   String formatPhoneNumber(String phone) {
+    // Validate input
+    if (phone.isEmpty || phone.trim().isEmpty) {
+      return '';
+    }
+    
     // Remove all non-digit characters except +
     String cleaned = phone.replaceAll(RegExp(r'[^\d+]'), '');
+    
+    // If after cleaning there's nothing left, return empty
+    if (cleaned.isEmpty) {
+      return '';
+    }
     
     // Ensure it starts with +
     if (!cleaned.startsWith('+')) {

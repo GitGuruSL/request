@@ -101,10 +101,40 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         emailOrPhone = completePhoneNumber ?? '${phoneCode}${_phoneController.text}';
         emailOrPhone = SMSAuthService().formatPhoneNumber(emailOrPhone);
         isEmail = false;
+        
+        // Additional validation for phone
+        if (emailOrPhone.isEmpty || _phoneController.text.trim().isEmpty) {
+          setState(() {
+            _isLoading = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Please enter a valid phone number'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
       } else {
         emailOrPhone = _emailController.text.trim();
         isEmail = true;
+        
+        // Additional validation for email
+        if (emailOrPhone.isEmpty) {
+          setState(() {
+            _isLoading = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Please enter a valid email address'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
       }
+
+      print('🔍 Checking user existence for: $emailOrPhone');
 
       // Check if user exists using new SMS auth service
       final userCheck = await SMSAuthService().checkUserExists(emailOrPhone);
