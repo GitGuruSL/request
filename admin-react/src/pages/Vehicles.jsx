@@ -93,13 +93,10 @@ const Vehicles = () => {
 
   useEffect(() => {
     fetchVehicles();
-  }, [isSuperAdmin]);
-
-  useEffect(() => {
     if (!isSuperAdmin && adminData?.country) {
       fetchCountryVehicles();
     }
-  }, [isSuperAdmin, adminData?.country]); // Only depend on country, not entire adminData object
+  }, [isSuperAdmin, adminData?.country]);
 
   // Debug: Track countryVehicles changes
   useEffect(() => {
@@ -210,6 +207,14 @@ const Vehicles = () => {
   };
 
   const handleToggleCountryVehicle = async (vehicleId, enabled) => {
+    console.log('🔄 TOGGLE DEBUG:', {
+      vehicleId,
+      vehicleIdType: typeof vehicleId,
+      enabled,
+      currentCountryVehicles: countryVehicles,
+      countryVehiclesTypes: countryVehicles.map(id => typeof id)
+    });
+    
     try {
       // Validate adminData
       if (!adminData?.country) {
@@ -253,17 +258,13 @@ const Vehicles = () => {
         await updateDoc(doc(db, 'country_vehicles', snapshot.docs[0].id), countryData);
       }
 
-      // Update local state only after successful database update
-      setCountryVehicles(updatedVehicles);
+      // Refetch country vehicles to get fresh data from database
+      await fetchCountryVehicles();
       showSnackbar(`Vehicle ${enabled ? 'enabled' : 'disabled'} for ${adminData.country}`);
       
     } catch (error) {
       console.error('Error updating country vehicles:', error);
-      console.error('AdminData:', adminData);
       showSnackbar(`Error updating country vehicles: ${error.message}`, 'error');
-      
-      // Revert UI state on error by refetching
-      fetchCountryVehicles();
     }
   };
 
@@ -551,6 +552,10 @@ const Vehicles = () => {
           <Grid container spacing={3}>
             {vehicles.map((vehicle) => {
               const isEnabled = countryVehicles.includes(vehicle.id);
+              
+              // Debug: Log the comparison
+              console.log(`Vehicle ${vehicle.name}: ID=${vehicle.id} (type: ${typeof vehicle.id}), countryVehicles=`, countryVehicles, `isEnabled=${isEnabled}`);
+              
               return (
                 <Grid item xs={12} sm={6} md={4} key={vehicle.id}>
                   <Card 

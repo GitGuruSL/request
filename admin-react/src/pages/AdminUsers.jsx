@@ -88,6 +88,7 @@ const AdminUsers = () => {
       
       // Vehicle Management
       vehicleManagement: false, // Only super admins by default
+      countryVehicleTypeManagement: true, // Country admins can manage vehicle types in their country
       
       // City Management
       cityManagement: true, // Country admins can manage cities in their country
@@ -270,6 +271,7 @@ const AdminUsers = () => {
             
             // Vehicle Management
             vehicleManagement: formData.permissions?.vehicleManagement !== undefined ? formData.permissions.vehicleManagement : false,
+            countryVehicleTypeManagement: formData.permissions?.countryVehicleTypeManagement !== undefined ? formData.permissions.countryVehicleTypeManagement : true,
             
             // City Management  
             cityManagement: formData.permissions?.cityManagement !== undefined ? formData.permissions.cityManagement : true,
@@ -346,6 +348,7 @@ const AdminUsers = () => {
             
             // Vehicle Management
             vehicleManagement: formData.permissions?.vehicleManagement !== undefined ? formData.permissions.vehicleManagement : false,
+            countryVehicleTypeManagement: formData.permissions?.countryVehicleTypeManagement !== undefined ? formData.permissions.countryVehicleTypeManagement : true,
             
             // City Management
             cityManagement: formData.permissions?.cityManagement !== undefined ? formData.permissions.cityManagement : true,
@@ -460,6 +463,7 @@ const AdminUsers = () => {
         
         // Vehicle Management
         vehicleManagement: user.permissions?.vehicleManagement !== undefined ? user.permissions.vehicleManagement : false,
+        countryVehicleTypeManagement: user.permissions?.countryVehicleTypeManagement !== undefined ? user.permissions.countryVehicleTypeManagement : true,
         
         // City Management
         cityManagement: user.permissions?.cityManagement !== undefined ? user.permissions.cityManagement : true,
