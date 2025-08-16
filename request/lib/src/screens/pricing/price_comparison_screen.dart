@@ -409,27 +409,47 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                 // Business logo
                 GestureDetector(
                   onTap: () => _showBusinessProfile(listing.businessId),
-                  child: CircleAvatar(
-                    radius: 20,
-                    backgroundColor: Colors.grey[100],
+                  child: Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey[300]!),
+                    ),
                     child: listing.businessLogo.isNotEmpty
-                        ? ClipOval(
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
                             child: Image.network(
                               listing.businessLogo,
-                              width: 40,
-                              height: 40,
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) =>
-                                  Text(listing.businessName[0].toUpperCase()),
+                                  Center(
+                                    child: Text(
+                                      listing.businessName[0].toUpperCase(),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18,
+                                      ),
+                                    ),
+                                  ),
                             ),
                           )
-                        : Text(listing.businessName[0].toUpperCase()),
+                        : Center(
+                            child: Text(
+                              listing.businessName[0].toUpperCase(),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
+                          ),
                   ),
                 ),
                 
                 const SizedBox(width: 12),
                 
-                // Business name
+                // Business info
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -442,12 +462,15 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                             fontWeight: FontWeight.w600,
                             fontSize: 16,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      const SizedBox(height: 2),
                       if (listing.rating > 0)
                         Row(
                           children: [
-                            Icon(Icons.star, size: 14, color: Colors.orange[600]),
+                            Icon(Icons.star_rounded, size: 16, color: Colors.orange[600]),
                             const SizedBox(width: 4),
                             Text(
                               '${listing.rating.toStringAsFixed(1)} (${listing.reviewCount})',
@@ -462,10 +485,27 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                   ),
                 ),
                 
-                // Price and badge
+                // Price section
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
+                    if (isLowest)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        margin: const EdgeInsets.only(bottom: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'BEST PRICE',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     Text(
                       '${listing.currency} ${listing.price.toStringAsFixed(2)}',
                       style: const TextStyle(
@@ -474,22 +514,6 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                         color: AppTheme.primaryColor,
                       ),
                     ),
-                    if (isLowest)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.green,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Text(
-                          'BEST PRICE',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
                   ],
                 ),
               ],
@@ -539,35 +563,53 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
               ),
             ],
             
-            // Stock info
+            // Stock and interaction info
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(
-                  listing.stockQuantity > 0 ? Icons.check_circle : Icons.info,
-                  size: 16,
-                  color: listing.stockQuantity > 0 ? Colors.green : Colors.orange,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  listing.stockQuantity > 0
-                      ? 'Stock: ${listing.stockQuantity}'
-                      : 'Contact for availability',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    listing.stockQuantity > 0 ? Icons.inventory_2_rounded : Icons.info_outline,
+                    size: 16,
+                    color: listing.stockQuantity > 0 ? Colors.green : Colors.orange,
                   ),
-                ),
-                const Spacer(),
-                if (listing.clickCount > 0)
-                  Text(
-                    '${listing.clickCount} clicks',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[500],
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      listing.stockQuantity > 0
+                          ? 'In Stock: ${listing.stockQuantity} units'
+                          : 'Contact for availability',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[700],
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
-              ],
+                  if (listing.clickCount > 0) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${listing.clickCount} views',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.blue[700],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
             
             // Action buttons
@@ -577,16 +619,25 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                 // Contact WhatsApp
                 if (listing.whatsappNumber?.isNotEmpty == true)
                   Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _launchWhatsApp(
-                        listing.whatsappNumber!,
-                        listing.productName,
-                      ),
-                      icon: const Icon(Icons.message, size: 16),
-                      label: const Text('WhatsApp'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.green,
-                        side: const BorderSide(color: Colors.green),
+                    child: Container(
+                      height: 40,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _launchWhatsApp(
+                          listing.whatsappNumber!,
+                          listing.productName,
+                        ),
+                        icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                        label: const Text(
+                          'WhatsApp',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.green[600],
+                          side: BorderSide(color: Colors.green[600]!),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -598,13 +649,24 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                 // Visit store
                 if (listing.productLink?.isNotEmpty == true)
                   Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () => _trackAndLaunchUrl(listing.productLink!, listing),
-                      icon: const Icon(Icons.open_in_new, size: 16),
-                      label: const Text('Visit Store'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryColor,
-                        foregroundColor: Colors.white,
+                    child: Container(
+                      height: 40,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _trackAndLaunchUrl(listing.productLink!, listing),
+                        icon: const Icon(Icons.storefront_rounded, size: 18),
+                        label: const Text(
+                          'Visit Store',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryColor,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
                       ),
                     ),
                   ),

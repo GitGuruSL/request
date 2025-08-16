@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import '../services/enhanced_auth_service.dart';
 import '../services/enhanced_user_service.dart';
 import '../models/enhanced_user_model.dart';
+import 'settings_privacy_screen.dart';
+import 'help_support_screen.dart';
+import 'notification_screen.dart';
+import 'edit_profile_screen.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
@@ -335,7 +339,12 @@ class _AccountScreenState extends State<AccountScreen> {
           _buildMenuItem(
             icon: Icons.edit,
             title: 'Edit Profile',
-            onTap: () => _showComingSoon('Edit Profile'),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const EditProfileScreen(),
+              ),
+            ),
           ),
           _buildDivider(),
           _buildMenuItem(
@@ -361,19 +370,29 @@ class _AccountScreenState extends State<AccountScreen> {
           _buildMenuItem(
             icon: Icons.notifications,
             title: 'Notifications',
-            onTap: () => _showComingSoon('Notifications'),
+            onTap: () => Navigator.pushNamed(context, '/notifications'),
           ),
           _buildDivider(),
           _buildMenuItem(
             icon: Icons.privacy_tip,
             title: 'Privacy & Security',
-            onTap: () => _showComingSoon('Privacy & Security'),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const SettingsPrivacyScreen(),
+              ),
+            ),
           ),
           _buildDivider(),
           _buildMenuItem(
             icon: Icons.help,
             title: 'Help & Support',
-            onTap: () => _showComingSoon('Help & Support'),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const HelpSupportScreen(),
+              ),
+            ),
           ),
           _buildDivider(),
           _buildMenuItem(

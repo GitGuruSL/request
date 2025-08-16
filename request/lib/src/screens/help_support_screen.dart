@@ -50,54 +50,62 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Custom header
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  const Text(
-                    'Help & Support',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text('Help & Support'),
+        backgroundColor: Colors.blue[600],
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: Column(
+        children: [
+          // Tab bar
+          Container(
+            margin: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-            // Tab bar
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
+            child: TabBar(
+              controller: _tabController,
+              labelColor: Colors.blue[600],
+              unselectedLabelColor: Colors.grey[600],
+              indicatorColor: Colors.blue[600],
+              indicator: BoxDecoration(
+                color: Colors.blue[50],
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: TabBar(
-                controller: _tabController,
-                labelColor: Colors.blue,
-                unselectedLabelColor: Colors.grey,
-                indicatorColor: Colors.blue,
-                tabs: const [
-                  Tab(text: 'FAQ', icon: Icon(Icons.help_outline, size: 20)),
-                  Tab(text: 'Guides', icon: Icon(Icons.book, size: 20)),
-                  Tab(text: 'Contact', icon: Icon(Icons.support_agent, size: 20)),
-                ],
-              ),
+              tabs: const [
+                Tab(text: 'FAQ', icon: Icon(Icons.help_outline, size: 20)),
+                Tab(text: 'Guides', icon: Icon(Icons.book, size: 20)),
+                Tab(text: 'Contact', icon: Icon(Icons.support_agent, size: 20)),
+              ],
             ),
-            const SizedBox(height: 16),
-            // Tab content
-            Expanded(
-              child: _isLoading 
-                  ? const Center(child: CircularProgressIndicator())
-                  : TabBarView(
+          ),
+          // Tab content
+          Expanded(
+            child: _isLoading 
+                ? const Center(child: CircularProgressIndicator())
+                : TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildFAQTab(),
+                      _buildGuidesTab(),
+                      _buildContactTab(),
+                    ],
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
                       controller: _tabController,
                       children: [
                         _buildFAQTab(),
