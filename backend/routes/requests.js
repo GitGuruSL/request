@@ -100,10 +100,11 @@ router.get('/', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching requests:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Error fetching requests',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      error: error.message
     });
   }
 });
