@@ -1,3 +1,40 @@
+/**
+ * VehiclesModule - Administrative Panel for Vehicle Management
+ * 
+ * @description
+ * This component provides a comprehensive interface for managing registered vehicles
+ * in the Request Marketplace platform. It displays driver verification data that includes
+ * vehicle information, allowing administrators to view, filter, and manage vehicles
+ * across different countries and vehicle types.
+ * 
+ * @features
+ * - Country-based filtering (Super Admin sees all, Country Admin sees only their country)
+ * - Vehicle type filtering and search functionality
+ * - Real-time statistics dashboard (Total, Active, Available vehicles)
+ * - Detailed vehicle and driver information display
+ * - Responsive table with vehicle images and driver avatars
+ * - Modal dialog for detailed vehicle/driver view
+ * - Permission-based access control
+ * 
+ * @data_sources
+ * - `new_driver_verifications` collection: Contains driver data with embedded vehicle info
+ * - `vehicle_types` collection: Vehicle type definitions and configurations
+ * 
+ * @permissions
+ * - Super Admin: Full access to all vehicles across all countries
+ * - Country Admin: Access only to vehicles in their assigned country
+ * - Read-only access for viewing, editing reserved for super admins
+ * 
+ * @dependencies
+ * - useCountryFilter: Custom hook for country-based data filtering
+ * - Firebase Firestore: Backend database for vehicle and driver data
+ * - Material-UI: UI component library for consistent design
+ * 
+ * @author Request Marketplace Team
+ * @version 2.0.0
+ * @since 2025-08-16
+ */
+
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -45,34 +82,58 @@ import {
 } from '@mui/icons-material';
 import useCountryFilter from '../hooks/useCountryFilter.jsx';
 
+/**
+ * VehiclesModule Component
+ * 
+ * Main React component for vehicle management interface
+ * Handles vehicle display, filtering, and management operations
+ */
 const VehiclesModule = () => {
+  // === HOOKS AND CONTEXT ===
+  /**
+   * Country filtering hook - provides country-based data access control
+   * @returns {Object} Country filtering utilities and admin data
+   */
   const {
-    getFilteredData,
-    adminData,
-    isSuperAdmin,
-    getCountryDisplayName,
-    userCountry
+    getFilteredData,    // Function to get country-filtered data
+    adminData,          // Current admin user data
+    isSuperAdmin,       // Boolean: true if super admin
+    getCountryDisplayName, // Function to format country names
+    userCountry         // Current user's assigned country
   } = useCountryFilter();
 
-  const [vehicles, setVehicles] = useState([]);
-  const [vehicleTypes, setVehicleTypes] = useState([]);
-  const [vehicleTypesMap, setVehicleTypesMap] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterAnchorEl, setFilterAnchorEl] = useState(null);
-  const [selectedType, setSelectedType] = useState('all');
-  const [selectedVehicle, setSelectedVehicle] = useState(null);
-  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  // === STATE MANAGEMENT ===
+  /**
+   * Component state variables for managing UI and data
+   */
+  const [vehicles, setVehicles] = useState([]);              // Array of vehicle data with driver info
+  const [vehicleTypes, setVehicleTypes] = useState([]);      // Array of available vehicle types
+  const [vehicleTypesMap, setVehicleTypesMap] = useState({}); // ID-to-name mapping for vehicle types
+  const [loading, setLoading] = useState(true);              // Loading state for async operations
+  const [error, setError] = useState(null);                  // Error state for error handling
+  const [searchTerm, setSearchTerm] = useState('');          // Search input value
+  const [filterAnchorEl, setFilterAnchorEl] = useState(null); // Anchor element for filter menu
+  const [selectedType, setSelectedType] = useState('all');   // Currently selected vehicle type filter
+  const [selectedVehicle, setSelectedVehicle] = useState(null); // Vehicle selected for detail view
+  const [viewDialogOpen, setViewDialogOpen] = useState(false); // Dialog open/close state
 
+  // === UI CONFIGURATION ===
+  /**
+   * Color scheme mapping for different vehicle types
+   * Used for consistent visual representation across the interface
+   */
   const typeColors = {
     car: 'primary',
-    bike: 'success',
+    bike: 'success', 
     truck: 'warning',
     van: 'info',
     bus: 'secondary'
   };
 
+  /**
+   * Icon mapping for different vehicle types
+   * Provides visual cues for quick vehicle type identification
+   */
   const typeIcons = {
     car: <DirectionsCar />,
     bike: <TwoWheeler />,
@@ -81,16 +142,40 @@ const VehiclesModule = () => {
     bus: <LocalShipping />
   };
 
+  // === CORE DATA LOADING FUNCTION ===
+  /**
+   * Loads vehicles and vehicle types data from Firebase
+   * 
+   * @async
+   * @function loadVehicles
+   * @description
+   * This function performs a two-step data loading process:
+   * 1. Load vehicle types to create a mapping for display names
+   * 2. Load driver verification data that contains embedded vehicle information
+   * 
+   * The function implements country-based filtering through the useCountryFilter hook,
+   * ensuring admins only see data relevant to their permissions.
+   * 
+   * @data_structure
+   * Vehicle data is extracted from driver verification documents with the following mapping:
+   * - Driver Info: fullName, phoneNumber, email, status, country
+   * - Vehicle Info: vehicleNumber, vehicleType, vehicleModel, vehicleColor, vehicleYear, vehicleImageUrls
+   * 
+   * @error_handling
+   * Comprehensive error handling with user-friendly error messages and retry functionality
+   */
   const loadVehicles = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Load vehicle types first
+      // === STEP 1: Load Vehicle Types ===
+      // Load vehicle types first to create ID-to-name mapping
       const vehicleTypesData = await getFilteredData('vehicle_types', adminData);
       setVehicleTypes(vehicleTypesData || []);
       
-      // Create a mapping of vehicle type IDs to names
+      // Create a mapping of vehicle type IDs to display names
+      // This allows us to show user-friendly names instead of IDs
       const typesMap = {};
       if (vehicleTypesData) {
         vehicleTypesData.forEach(type => {
@@ -99,29 +184,38 @@ const VehiclesModule = () => {
       }
       setVehicleTypesMap(typesMap);
 
-      // Load driver verifications (contains vehicle data)
+      // === STEP 2: Load Driver Verification Data ===
+      // Driver verifications contain embedded vehicle information
+      // This is the primary source of vehicle data in the system
       const driversData = await getFilteredData('new_driver_verifications', adminData);
       
       if (driversData) {
-        // Extract vehicle information from driver verification data
+        // === DATA TRANSFORMATION ===
+        // Transform driver verification data into vehicle-centric format
+        // This mapping ensures we have all necessary information for display
         const vehiclesWithDrivers = driversData.map(driver => {
           return {
+            // === UNIQUE IDENTIFIER ===
             id: driver.id,
-            // Driver info - using correct field names
+            
+            // === DRIVER INFORMATION ===
+            // Using correct field names based on Firebase schema analysis
             driverName: driver.fullName || `${driver.firstName || ''} ${driver.lastName || ''}`.trim() || 'N/A',
             driverPhone: driver.phoneNumber || driver.phone || 'N/A', 
             driverEmail: driver.email || 'N/A',
             status: driver.status || 'pending',
             country: driver.country || userCountry,
-            // Vehicle info - using correct field names
-            vehicleNumber: driver.vehicleNumber || 'N/A',
-            vehicleType: typesMap[driver.vehicleType] || driver.vehicleType || 'Unknown',
-            vehicleTypeId: driver.vehicleType, // Keep original ID for filtering
-            vehicleBrand: driver.vehicleBrand || 'N/A', // No brand field found, using model
-            vehicleModel: driver.vehicleModel || '',
-            vehicleColor: driver.vehicleColor || 'N/A',
-            vehicleYear: driver.vehicleYear || 'N/A',
-            vehicleImages: driver.vehicleImageUrls ? Object.values(driver.vehicleImageUrls) : []
+            
+            // === VEHICLE INFORMATION ===
+            // Mapping vehicle fields from driver verification data
+            vehicleNumber: driver.vehicleNumber || 'N/A',                    // License plate number
+            vehicleType: typesMap[driver.vehicleType] || driver.vehicleType || 'Unknown', // Human-readable type name
+            vehicleTypeId: driver.vehicleType,                               // Keep original ID for filtering
+            vehicleBrand: driver.vehicleBrand || 'N/A',                     // Vehicle manufacturer
+            vehicleModel: driver.vehicleModel || '',                         // Vehicle model
+            vehicleColor: driver.vehicleColor || 'N/A',                     // Vehicle color
+            vehicleYear: driver.vehicleYear || 'N/A',                       // Manufacturing year
+            vehicleImages: driver.vehicleImageUrls ? Object.values(driver.vehicleImageUrls) : [] // Array of image URLs
           };
         });
         
@@ -129,39 +223,72 @@ const VehiclesModule = () => {
         
         setVehicles(vehiclesWithDrivers);
       } else {
+        // No data available - set empty array
         setVehicles([]);
       }
       
     } catch (error) {
+      // === ERROR HANDLING ===
       console.error('Error loading vehicles:', error);
       setError('Failed to load vehicles');
       setVehicles([]);
     } finally {
+      // === CLEANUP ===
+      // Always stop loading regardless of success/failure
       setLoading(false);
     }
   };
 
+  // === LIFECYCLE MANAGEMENT ===
+  /**
+   * Effect hook to load data when admin data changes
+   * Ensures data is refreshed when user permissions or country assignments change
+   */
   useEffect(() => {
     loadVehicles();
   }, [adminData]);
 
+  // === EVENT HANDLERS ===
+  /**
+   * Opens the vehicle detail dialog
+   * @param {Object} vehicle - The vehicle object to display in detail
+   */
   const handleViewVehicle = (vehicle) => {
     setSelectedVehicle(vehicle);
     setViewDialogOpen(true);
   };
 
+  /**
+   * Handles vehicle type filter selection
+   * @param {string} type - The vehicle type ID or 'all' for no filter
+   */
   const handleTypeFilter = (type) => {
     setSelectedType(type);
     setFilterAnchorEl(null);
   };
 
+  // === FILTERING LOGIC ===
+  /**
+   * Applies search and type filters to the vehicle list
+   * 
+   * @returns {Array} Filtered array of vehicles based on current search and filter criteria
+   * 
+   * @filtering_criteria
+   * - Search: Matches driver name, vehicle model, vehicle number, or vehicle color
+   * - Type: Filters by vehicle type ID or type name (case-insensitive)
+   * - Both filters work together (AND operation)
+   */
   const filteredVehicles = vehicles.filter(vehicle => {
+    // === SEARCH FILTER ===
+    // Check if search term matches any of the searchable fields
     const matchesSearch = !searchTerm || 
                          vehicle.driverName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          vehicle.vehicleModel?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          vehicle.vehicleNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          vehicle.vehicleColor?.toLowerCase().includes(searchTerm.toLowerCase());
 
+    // === TYPE FILTER ===
+    // Check if vehicle matches selected type (exact ID match or name contains filter)
     const matchesType = selectedType === 'all' || 
                        vehicle.vehicleTypeId === selectedType ||
                        vehicle.vehicleType?.toLowerCase().includes(selectedType.toLowerCase());
@@ -169,23 +296,43 @@ const VehiclesModule = () => {
     return matchesSearch && matchesType;
   });
 
+  // === UTILITY FUNCTIONS ===
+  /**
+   * Formats timestamp for display
+   * @param {Object|string|number} timestamp - Firebase timestamp or Date string/number
+   * @returns {string} Formatted date and time string
+   */
   const formatDate = (timestamp) => {
     if (!timestamp) return 'N/A';
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
   };
 
+  // === STATISTICS CALCULATION ===
+  /**
+   * Calculates vehicle statistics for dashboard display
+   * 
+   * @returns {Object} Statistics object containing vehicle counts and type breakdown
+   * 
+   * @statistics_included
+   * - total: Total number of filtered vehicles
+   * - active: Number of approved/active vehicles
+   * - available: Number of currently available vehicles
+   * - vehicleTypeStats: Array of type-specific counts with colors
+   */
   const getVehicleStats = () => {
     const totalVehicles = filteredVehicles.length;
     const activeVehicles = filteredVehicles.filter(v => v.isActive).length;
     const availableVehicles = filteredVehicles.filter(v => v.availability).length;
     
-    // Get vehicle type counts
+    // === VEHICLE TYPE BREAKDOWN ===
+    // Calculate count for each vehicle type with appropriate colors
     const vehicleTypeStats = vehicleTypes.map(vType => {
       const matchingVehicles = vehicles.filter(v => v.vehicleType === vType.id);
       return {
         name: vType.name,
         count: matchingVehicles.length,
+        // Dynamic color assignment based on vehicle type name
         color: vType.name.toLowerCase().includes('car') ? 'primary' : 
                vType.name.toLowerCase().includes('bike') ? 'success' : 
                vType.name.toLowerCase().includes('van') ? 'info' : 
@@ -201,8 +348,13 @@ const VehiclesModule = () => {
     };
   };
 
+  // Calculate current statistics
   const stats = getVehicleStats();
 
+  // === LOADING STATE ===
+  /**
+   * Loading spinner display while data is being fetched
+   */
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -211,6 +363,10 @@ const VehiclesModule = () => {
     );
   }
 
+  // === ERROR STATE ===
+  /**
+   * Error display with retry functionality
+   */
   if (error) {
     return (
       <Alert severity="error" action={
@@ -223,9 +379,11 @@ const VehiclesModule = () => {
     );
   }
 
+  // === MAIN COMPONENT RENDER ===
   return (
     <Box>
-      {/* Header */}
+      {/* === HEADER SECTION === */}
+      {/* Page title and description with permission-based messaging */}
       <Box mb={3}>
         <Typography variant="h4" gutterBottom>
           Vehicle Management
@@ -235,8 +393,10 @@ const VehiclesModule = () => {
         </Typography>
       </Box>
 
-      {/* Stats Cards */}
+      {/* === STATISTICS DASHBOARD === */}
+      {/* Three-card layout showing key vehicle metrics */}
       <Grid container spacing={3} mb={3}>
+        {/* Total Vehicles Card */}
         <Grid item xs={12} sm={6} md={4}>
           <Card>
             <CardContent>
@@ -254,6 +414,8 @@ const VehiclesModule = () => {
             </CardContent>
           </Card>
         </Grid>
+        
+        {/* Active Vehicles Card */}
         <Grid item xs={12} sm={6} md={4}>
           <Card>
             <CardContent>
@@ -271,6 +433,8 @@ const VehiclesModule = () => {
             </CardContent>
           </Card>
         </Grid>
+        
+        {/* Available Vehicles Card */}
         <Grid item xs={12} sm={6} md={4}>
           <Card>
             <CardContent>
@@ -290,9 +454,11 @@ const VehiclesModule = () => {
         </Grid>
       </Grid>
 
-      {/* Controls */}
+      {/* === CONTROLS SECTION === */}
+      {/* Search, filter, and action controls */}
       <Paper sx={{ p: 2, mb: 3 }}>
         <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
+          {/* Search Input */}
           <TextField
             placeholder="Search vehicles..."
             value={searchTerm}
@@ -306,18 +472,21 @@ const VehiclesModule = () => {
             }}
             sx={{ minWidth: 300 }}
           />
+          {/* Filter Button */}
           <Button
             startIcon={<FilterList />}
             onClick={(e) => setFilterAnchorEl(e.currentTarget)}
           >
             FILTERS ({selectedType === 'all' ? 'NONE' : selectedType.toUpperCase()})
           </Button>
+          {/* Refresh Button */}
           <Button
             startIcon={<Refresh />}
             onClick={loadVehicles}
           >
             REFRESH
           </Button>
+          {/* Add Vehicle Button (Super Admin Only) */}
           {isSuperAdmin && (
             <Button
               variant="contained"
@@ -329,7 +498,8 @@ const VehiclesModule = () => {
         </Box>
       </Paper>
 
-      {/* Vehicles Table */}
+      {/* === VEHICLES DATA TABLE === */}
+      {/* Main table displaying vehicle and driver information */}
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -348,6 +518,7 @@ const VehiclesModule = () => {
           <TableBody>
             {filteredVehicles.map((vehicle) => (
               <TableRow key={vehicle.id} hover>
+                {/* Driver Information Column */}
                 <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Avatar sx={{ bgcolor: 'primary.main' }}>
@@ -363,8 +534,11 @@ const VehiclesModule = () => {
                     </Box>
                   </Box>
                 </TableCell>
+                
+                {/* Vehicle Information Column */}
                 <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    {/* Vehicle Image or Default Icon */}
                     {vehicle.vehicleImages?.[0] ? (
                       <Avatar
                         src={vehicle.vehicleImages[0]}
@@ -387,11 +561,15 @@ const VehiclesModule = () => {
                     </Box>
                   </Box>
                 </TableCell>
+                
+                {/* Vehicle Model Column */}
                 <TableCell>
                   <Typography variant="body2">
                     {vehicle.vehicleModel || 'N/A'}
                   </Typography>
                 </TableCell>
+                
+                {/* Vehicle Type Column */}
                 <TableCell>
                   <Chip
                     label={vehicle.vehicleType || 'Unknown'}
@@ -400,16 +578,22 @@ const VehiclesModule = () => {
                     color="primary"
                   />
                 </TableCell>
+                
+                {/* Vehicle Color Column */}
                 <TableCell>
                   <Typography variant="body2">
                     {vehicle.vehicleColor || 'N/A'}
                   </Typography>
                 </TableCell>
+                
+                {/* Vehicle Year Column */}
                 <TableCell>
                   <Typography variant="body2">
                     {vehicle.vehicleYear || 'N/A'}
                   </Typography>
                 </TableCell>
+                
+                {/* Status Column */}
                 <TableCell>
                   <Chip
                     label={vehicle.status === 'approved' ? 'Active' : 'Pending'}
@@ -418,6 +602,8 @@ const VehiclesModule = () => {
                     variant="outlined"
                   />
                 </TableCell>
+                
+                {/* Country Column */}
                 <TableCell>
                   <Chip
                     label={vehicle.country || userCountry}
@@ -425,13 +611,17 @@ const VehiclesModule = () => {
                     variant="outlined"
                   />
                 </TableCell>
+                
+                {/* Actions Column */}
                 <TableCell>
                   <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    {/* View Details Button */}
                     <Tooltip title="View Details">
                       <IconButton size="small" onClick={() => handleViewVehicle(vehicle)}>
                         <Visibility />
                       </IconButton>
                     </Tooltip>
+                    {/* Edit/Delete Buttons (Super Admin Only) */}
                     {isSuperAdmin && (
                       <>
                         <Tooltip title="Edit">
@@ -454,7 +644,8 @@ const VehiclesModule = () => {
         </Table>
       </TableContainer>
 
-      {/* Filter Menu */}
+      {/* === FILTER MENU === */}
+      {/* Dropdown menu for vehicle type filtering */}
       <Menu
         anchorEl={filterAnchorEl}
         open={Boolean(filterAnchorEl)}
@@ -468,7 +659,8 @@ const VehiclesModule = () => {
         ))}
       </Menu>
 
-      {/* View Dialog */}
+      {/* === VEHICLE DETAIL DIALOG === */}
+      {/* Modal for detailed vehicle and driver information */}
       <Dialog
         open={viewDialogOpen}
         onClose={() => setViewDialogOpen(false)}
@@ -482,6 +674,7 @@ const VehiclesModule = () => {
             </DialogTitle>
             <DialogContent>
               <Grid container spacing={3}>
+                {/* === LEFT COLUMN: DRIVER INFORMATION === */}
                 <Grid item xs={12} sm={6}>
                   <Typography variant="h6" gutterBottom color="primary">Driver Information</Typography>
                   
@@ -514,6 +707,7 @@ const VehiclesModule = () => {
                   />
                 </Grid>
                 
+                {/* === RIGHT COLUMN: VEHICLE INFORMATION === */}
                 <Grid item xs={12} sm={6}>
                   <Typography variant="h6" gutterBottom color="primary">Vehicle Information</Typography>
                   
@@ -540,6 +734,7 @@ const VehiclesModule = () => {
                     {selectedVehicle.vehicleYear || 'N/A'} • {selectedVehicle.vehicleColor || 'N/A'}
                   </Typography>
 
+                  {/* Vehicle Images Gallery */}
                   {selectedVehicle.vehicleImages && selectedVehicle.vehicleImages.length > 0 && (
                     <>
                       <Typography variant="subtitle2" gutterBottom>Vehicle Images</Typography>
@@ -571,7 +766,8 @@ const VehiclesModule = () => {
         )}
       </Dialog>
 
-      {/* Floating Action Button */}
+      {/* === FLOATING ACTION BUTTON === */}
+      {/* Quick add vehicle button for super admins */}
       {isSuperAdmin && (
         <Fab
           color="primary"
