@@ -188,37 +188,75 @@ const Layout = () => {
       <Toolbar />
       <Divider />
       <List>
-        {menuItems.filter(item => {
-          if (item.text === 'Divider') return true;
-          
-          // For super admin - show super_admin and all access items
-          if (isSuperAdmin) {
-            return item.access === 'super_admin' || item.access === 'all';
-          }
-          
-          // For country admin - show only country_admin and all access items (excluding super_admin items)
-          if (!isSuperAdmin) {
-            if (item.access === 'super_admin') return false; // Explicitly exclude super admin items
-            if (item.access === 'country_admin') {
-              // For country admin items, check permissions
-              if (item.permission) {
-                return adminData?.permissions?.[item.permission] === true;
+        {(() => {
+          // First filter menu items based on permissions
+          const filteredItems = menuItems.filter(item => {
+            if (item.text === 'Divider') return false; // Initially exclude dividers
+            
+            // For super admin - show super_admin and all access items
+            if (isSuperAdmin) {
+              if (item.access === 'super_admin' || item.access === 'all') {
+                // Check permissions if required
+                if (item.permission) {
+                  return adminData?.permissions?.[item.permission] === true;
+                }
+                return true;
               }
-              return true;
+              return false;
             }
-            if (item.access === 'all') {
-              // For 'all' access items, check permissions
-              if (item.permission) {
-                return adminData?.permissions?.[item.permission] === true;
+            
+            // For country admin - show only country_admin and all access items (excluding super_admin items)
+            if (!isSuperAdmin) {
+              if (item.access === 'super_admin') return false; // Explicitly exclude super admin items
+              if (item.access === 'country_admin') {
+                // For country admin items, check permissions
+                if (item.permission) {
+                  return adminData?.permissions?.[item.permission] === true;
+                }
+                return true;
               }
-              return true;
+              if (item.access === 'all') {
+                // For 'all' access items, check permissions
+                if (item.permission) {
+                  return adminData?.permissions?.[item.permission] === true;
+                }
+                return true;
+              }
             }
-          }
+            
+            return false;
+          });
+
+          // Now intelligently add dividers only where needed
+          const finalItems = [];
+          let lastDividerIndex = -1;
           
-          return false;
-        }).map((item, index) => 
+          menuItems.forEach((item, originalIndex) => {
+            if (item.text === 'Divider') {
+              lastDividerIndex = originalIndex;
+              return;
+            }
+            
+            // Check if this item should be included
+            const shouldInclude = filteredItems.some(filteredItem => 
+              filteredItem.text === item.text && filteredItem.path === item.path
+            );
+            
+            if (shouldInclude) {
+              // Add divider if there were items before this section and we haven't added a divider yet
+              if (lastDividerIndex > -1 && finalItems.length > 0 && 
+                  finalItems[finalItems.length - 1].text !== 'Divider') {
+                finalItems.push({ text: 'Divider' });
+              }
+              finalItems.push(item);
+              lastDividerIndex = -1; // Reset after adding items
+            }
+          });
+
+          return finalItems;
+        })().map((item, index) => 
           item.text === 'Divider' ? (
-            <Divider key={index} sx={{ my: 1 }} />
+            <Divider key={`divider-${index}`} sx={{ my: 1 }} />
           ) : (
             <ListItem key={item.text} disablePadding>
               <ListItemButton
