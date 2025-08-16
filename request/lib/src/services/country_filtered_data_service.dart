@@ -398,39 +398,44 @@ class CountryFilteredDataService {
 
   /// Get active categories for user's country
   Future<List<Map<String, dynamic>>> getActiveCategories({String? type}) async {
-    _validateUserCountry();
-    
     try {
+      // Check if user country is set, fallback to 'LK' for development
+      final country = userCountry ?? 'LK';
+      print('$_tag getActiveCategories: Using country = $country, type = $type');
+      
       // Get all categories
       Query<Map<String, dynamic>> categoriesQuery = _firestore.collection('categories');
       if (type != null) {
         categoriesQuery = categoriesQuery.where('type', isEqualTo: type);
       }
       final categoriesSnapshot = await categoriesQuery.get();
+      print('$_tag getActiveCategories: Found ${categoriesSnapshot.docs.length} total categories');
       
       // Get country-specific activations
       final countryActivationsSnapshot = await _firestore
           .collection('country_categories')
-          .where('country', isEqualTo: userCountry)
+          .where('country', isEqualTo: country)
           .get();
+      print('$_tag getActiveCategories: Found ${countryActivationsSnapshot.docs.length} activation records');
       
       final countryActivations = <String, bool>{};
       for (final doc in countryActivationsSnapshot.docs) {
         final data = doc.data();
-        countryActivations[data['categoryId']] = data['isActive'] ?? true;
+        countryActivations[data['categoryId']] = data['isActive'] ?? false;
       }
       
       // Filter active categories
       final activeCategories = <Map<String, dynamic>>[];
       for (final doc in categoriesSnapshot.docs) {
         final categoryId = doc.id;
-        final isActive = countryActivations[categoryId] ?? true; // Temporarily back to default active
+        final isActive = countryActivations[categoryId] ?? false; // Now using strict filtering
         
         if (isActive) {
           activeCategories.add({...doc.data(), 'id': categoryId});
         }
       }
       
+      print('$_tag getActiveCategories: Returning ${activeCategories.length} active categories');
       return activeCategories;
     } catch (e) {
       print('$_tag Error getting active categories: $e');
@@ -440,39 +445,55 @@ class CountryFilteredDataService {
 
   /// Get active subcategories for user's country
   Future<List<Map<String, dynamic>>> getActiveSubcategories({String? categoryId}) async {
-    _validateUserCountry();
-    
     try {
-      // Get all subcategories
-      Query<Map<String, dynamic>> subcategoriesQuery = _firestore.collection('subcategories');
-      if (categoryId != null) {
-        subcategoriesQuery = subcategoriesQuery.where('categoryId', isEqualTo: categoryId);
-      }
-      final subcategoriesSnapshot = await subcategoriesQuery.get();
+      // Check if user country is set, fallback to 'LK' for development
+      final country = userCountry ?? 'LK';
+      print('$_tag getActiveSubcategories: Using country = $country, categoryId = $categoryId');
       
-      // Get country-specific activations
+      // Get country-specific activations first
       final countryActivationsSnapshot = await _firestore
           .collection('country_subcategories')
-          .where('country', isEqualTo: userCountry)
+          .where('country', isEqualTo: country)
           .get();
+      print('$_tag getActiveSubcategories: Found ${countryActivationsSnapshot.docs.length} activation records');
       
       final countryActivations = <String, bool>{};
       for (final doc in countryActivationsSnapshot.docs) {
         final data = doc.data();
-        countryActivations[data['subcategoryId']] = data['isActive'] ?? true;
+        countryActivations[data['subcategoryId']] = data['isActive'] ?? false;
       }
       
-      // Filter active subcategories
-      final activeSubcategories = <Map<String, dynamic>>[];
-      for (final doc in subcategoriesSnapshot.docs) {
-        final subcategoryId = doc.id;
-        final isActive = countryActivations[subcategoryId] ?? true; // Temporarily back to default active
-        
-        if (isActive) {
-          activeSubcategories.add({...doc.data(), 'id': subcategoryId});
-        }
+      // Get the IDs of active subcategories
+      final activeSubcategoryIds = countryActivations.entries
+          .where((entry) => entry.value == true)
+          .map((entry) => entry.key)
+          .toList();
+      
+      print('$_tag getActiveSubcategories: Found ${activeSubcategoryIds.length} active subcategory IDs');
+      
+      if (activeSubcategoryIds.isEmpty) {
+        print('$_tag getActiveSubcategories: No active subcategories found');
+        return [];
       }
       
+      // Get subcategories that are active in this country
+      Query<Map<String, dynamic>> subcategoriesQuery = _firestore
+          .collection('subcategories')
+          .where(FieldPath.documentId, whereIn: activeSubcategoryIds);
+      
+      // Apply category filter if specified
+      if (categoryId != null) {
+        subcategoriesQuery = subcategoriesQuery.where('categoryId', isEqualTo: categoryId);
+      }
+      
+      final subcategoriesSnapshot = await subcategoriesQuery.get();
+      print('$_tag getActiveSubcategories: Found ${subcategoriesSnapshot.docs.length} filtered subcategories');
+      
+      final activeSubcategories = subcategoriesSnapshot.docs
+          .map((doc) => {...doc.data(), 'id': doc.id})
+          .toList();
+      
+      print('$_tag getActiveSubcategories: Returning ${activeSubcategories.length} active subcategories');
       return activeSubcategories;
     } catch (e) {
       print('$_tag Error getting active subcategories: $e');
@@ -482,35 +503,50 @@ class CountryFilteredDataService {
 
   /// Get active products for user's country
   Future<List<Map<String, dynamic>>> getActiveProducts() async {
-    _validateUserCountry();
-    
     try {
-      // Get all products
-      final productsSnapshot = await _firestore.collection('master_products').get();
+      // Check if user country is set, fallback to 'LK' for development
+      final country = userCountry ?? 'LK';
+      print('$_tag getActiveProducts: Using country = $country');
       
-      // Get country-specific activations
+      // Get country-specific activations first
       final countryActivationsSnapshot = await _firestore
           .collection('country_products')
-          .where('country', isEqualTo: userCountry)
+          .where('country', isEqualTo: country)
           .get();
+      print('$_tag getActiveProducts: Found ${countryActivationsSnapshot.docs.length} activation records');
       
       final countryActivations = <String, bool>{};
       for (final doc in countryActivationsSnapshot.docs) {
         final data = doc.data();
-        countryActivations[data['productId']] = data['isActive'] ?? true;
+        countryActivations[data['productId']] = data['isActive'] ?? false;
       }
       
-      // Filter active products
-      final activeProducts = <Map<String, dynamic>>[];
-      for (final doc in productsSnapshot.docs) {
-        final productId = doc.id;
-        final isActive = countryActivations[productId] ?? true; // Temporarily back to default active
-        
-        if (isActive) {
-          activeProducts.add({...doc.data(), 'id': productId});
-        }
+      // Get the IDs of active products
+      final activeProductIds = countryActivations.entries
+          .where((entry) => entry.value == true)
+          .map((entry) => entry.key)
+          .toList();
+      
+      print('$_tag getActiveProducts: Found ${activeProductIds.length} active product IDs');
+      
+      if (activeProductIds.isEmpty) {
+        print('$_tag getActiveProducts: No active products found');
+        return [];
       }
       
+      // Get products that are active in this country
+      final productsQuery = await _firestore
+          .collection('master_products')
+          .where(FieldPath.documentId, whereIn: activeProductIds)
+          .get();
+      
+      print('$_tag getActiveProducts: Found ${productsQuery.docs.length} active products');
+      
+      final activeProducts = productsQuery.docs
+          .map((doc) => {'id': doc.id, ...doc.data()})
+          .toList();
+      
+      print('$_tag getActiveProducts: Returning ${activeProducts.length} active products');
       return activeProducts;
     } catch (e) {
       print('$_tag Error getting active products: $e');
@@ -520,35 +556,40 @@ class CountryFilteredDataService {
 
   /// Get active brands for user's country
   Future<List<Map<String, dynamic>>> getActiveBrands() async {
-    _validateUserCountry();
-    
     try {
+      // Check if user country is set, fallback to 'LK' for development
+      final country = userCountry ?? 'LK';
+      print('$_tag getActiveBrands: Using country = $country');
+      
       // Get all brands
       final brandsSnapshot = await _firestore.collection('brands').get();
+      print('$_tag getActiveBrands: Found ${brandsSnapshot.docs.length} total brands');
       
       // Get country-specific activations
       final countryActivationsSnapshot = await _firestore
           .collection('country_brands')
-          .where('country', isEqualTo: userCountry)
+          .where('country', isEqualTo: country)
           .get();
+      print('$_tag getActiveBrands: Found ${countryActivationsSnapshot.docs.length} activation records');
       
       final countryActivations = <String, bool>{};
       for (final doc in countryActivationsSnapshot.docs) {
         final data = doc.data();
-        countryActivations[data['brandId']] = data['isActive'] ?? true;
+        countryActivations[data['brandId']] = data['isActive'] ?? false;
       }
       
       // Filter active brands
       final activeBrands = <Map<String, dynamic>>[];
       for (final doc in brandsSnapshot.docs) {
         final brandId = doc.id;
-        final isActive = countryActivations[brandId] ?? true; // Temporarily back to default active
+        final isActive = countryActivations[brandId] ?? false; // Now using strict filtering
         
         if (isActive) {
           activeBrands.add({...doc.data(), 'id': brandId});
         }
       }
       
+      print('$_tag getActiveBrands: Returning ${activeBrands.length} active brands');
       return activeBrands;
     } catch (e) {
       print('$_tag Error getting active brands: $e');
@@ -556,37 +597,42 @@ class CountryFilteredDataService {
     }
   }
 
-  /// Get active variable types for user's country
+    /// Get active variable types for user's country
   Future<List<Map<String, dynamic>>> getActiveVariableTypes() async {
-    _validateUserCountry();
-    
     try {
+      // Check if user country is set, fallback to 'LK' for development
+      final country = userCountry ?? 'LK';
+      print('$_tag getActiveVariableTypes: Using country = $country');
+      
       // Get all variable types
-      final variableTypesSnapshot = await _firestore.collection('custom_product_variables').get();
+      final variableTypesSnapshot = await _firestore.collection('variable_types').get();
+      print('$_tag getActiveVariableTypes: Found ${variableTypesSnapshot.docs.length} total variable types');
       
       // Get country-specific activations
       final countryActivationsSnapshot = await _firestore
           .collection('country_variable_types')
-          .where('country', isEqualTo: userCountry)
+          .where('country', isEqualTo: country)
           .get();
+      print('$_tag getActiveVariableTypes: Found ${countryActivationsSnapshot.docs.length} activation records');
       
       final countryActivations = <String, bool>{};
       for (final doc in countryActivationsSnapshot.docs) {
         final data = doc.data();
-        countryActivations[data['variableTypeId']] = data['isActive'] ?? true;
+        countryActivations[data['variableTypeId']] = data['isActive'] ?? false;
       }
       
       // Filter active variable types
       final activeVariableTypes = <Map<String, dynamic>>[];
       for (final doc in variableTypesSnapshot.docs) {
         final variableTypeId = doc.id;
-        final isActive = countryActivations[variableTypeId] ?? true; // Temporarily back to default active
+        final isActive = countryActivations[variableTypeId] ?? false; // Now using strict filtering
         
         if (isActive) {
           activeVariableTypes.add({...doc.data(), 'id': variableTypeId});
         }
       }
       
+      print('$_tag getActiveVariableTypes: Returning ${activeVariableTypes.length} active variable types');
       return activeVariableTypes;
     } catch (e) {
       print('$_tag Error getting active variable types: $e');

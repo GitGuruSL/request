@@ -325,16 +325,16 @@ class PricingService {
           
           // Convert Map to MasterProduct
           final product = MasterProduct(
-            id: productData['id'] as String,
-            name: productData['name'] as String,
-            brand: productData['brand'] as String,
-            category: productData['category'] as String,
+            id: productData['id'] as String? ?? '',
+            name: productData['name'] as String? ?? '',
+            brand: productData['brand'] as String? ?? '',
+            category: productData['category'] as String? ?? '',
             subcategory: productData['subcategory'] as String? ?? '',
-            description: productData['description'] as String,
+            description: productData['description'] as String? ?? '',
             images: List<String>.from(productData['images'] ?? []),
             isActive: productData['isActive'] as bool? ?? true,
-            createdAt: productData['createdAt'] as DateTime? ?? DateTime.now(),
-            updatedAt: productData['updatedAt'] as DateTime? ?? DateTime.now(),
+            createdAt: (productData['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+            updatedAt: (productData['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
             availableVariables: availableVariables,
           );
           
