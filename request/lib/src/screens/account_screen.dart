@@ -4,7 +4,6 @@ import '../services/enhanced_user_service.dart';
 import '../models/enhanced_user_model.dart';
 import 'settings_privacy_screen.dart' as settings;
 import 'help_support_screen.dart';
-import 'notification_screen.dart';
 import 'account/edit_profile_screen.dart';
 
 class AccountScreen extends StatefulWidget {
@@ -199,7 +198,7 @@ class _AccountScreenState extends State<AccountScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -328,7 +327,7 @@ class _AccountScreenState extends State<AccountScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
