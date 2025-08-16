@@ -29,6 +29,162 @@ The SMS API Configuration System is a comprehensive, cost-effective alternative 
 └─────────────────────────────────────────────────────────┘
 ```
 
+## 🔄 Authentication Flow & User Experience
+
+### 📱 Current Firebase Auth vs New Custom SMS Auth
+
+#### **Current Firebase Authentication Flow:**
+```
+User Registration/Login:
+1. User enters phone number in mobile app
+2. Firebase Auth sends SMS via Google's SMS service
+3. User enters OTP code received via SMS
+4. Firebase validates OTP automatically
+5. User gets authenticated and can use app
+💰 Cost: ~$0.01-0.02 per verification + monthly Firebase Auth fees
+```
+
+#### **New Custom SMS Authentication Flow:**
+```
+Enhanced Registration/Login Process:
+1. User enters phone number in mobile app
+2. App calls: POST /api/auth/send-otp
+   └── System detects country from phone prefix (+94 = Sri Lanka)
+   └── Backend fetches country-specific SMS configuration
+   └── Custom SMS service generates 6-digit OTP (expires in 5 min)
+   └── SMS sent via configured provider (Twilio/AWS/Vonage/Local)
+   └── OTP hash stored in Firestore with expiry
+3. User receives SMS with OTP code
+4. User enters OTP code in mobile app
+5. App calls: POST /api/auth/verify-otp
+   └── Backend validates OTP against stored hash
+   └── Creates Firebase Custom Token for authenticated user
+   └── Returns auth token + user profile data
+6. App signs in user with Firebase Custom Auth token
+7. User is fully authenticated and can access app features
+💰 Cost: ~$0.003-0.0075 per SMS (50-80% savings!)
+```
+
+### 🎯 Detailed Technical Implementation Flow
+
+#### **Phase 1: Admin Configuration (One-time setup)**
+```
+Admin Panel Configuration:
+1. Country admin logs into Request Marketplace admin panel
+2. Navigates to "SMS Configuration" from sidebar menu
+3. Selects preferred SMS provider:
+   - Twilio (Global, reliable, $0.0075/SMS)
+   - AWS SNS (Scalable, $0.0075/SMS)
+   - Vonage (Competitive pricing, $0.005/SMS)
+   - Local Provider (Cheapest, $0.001-0.003/SMS)
+4. Enters provider credentials:
+   - API keys, tokens, phone numbers
+   - All credentials encrypted before storage
+5. Tests configuration:
+   - Sends real test SMS to admin's phone
+   - Verifies delivery and response time
+6. Saves configuration for country
+7. System activates SMS provider for all users in that country
+```
+
+#### **Phase 2: Mobile App Integration**
+```
+Mobile App Authentication Endpoints:
+```
+
+**Send OTP Endpoint:**
+```javascript
+// POST /api/auth/send-otp
+{
+  "phoneNumber": "+94771234567",
+  "countryCode": "LK"  // Optional, auto-detected from phone
+}
+
+// Response:
+{
+  "success": true,
+  "message": "OTP sent successfully",
+  "otpId": "otp_12345",
+  "expiresIn": 300,  // 5 minutes
+  "provider": "twilio"
+}
+```
+
+**Verify OTP Endpoint:**
+```javascript
+// POST /api/auth/verify-otp
+{
+  "phoneNumber": "+94771234567",
+  "otp": "123456",
+  "otpId": "otp_12345"
+}
+
+// Response:
+{
+  "success": true,
+  "customToken": "firebase_custom_token_here",
+  "user": {
+    "uid": "user_123",
+    "phoneNumber": "+94771234567",
+    "country": "LK",
+    "isNewUser": false
+  }
+}
+```
+
+#### **Phase 3: User Experience (Mobile App)**
+```
+User Authentication Journey:
+1. User opens Request Marketplace mobile app
+2. Taps "Sign In" or "Register"
+3. Enters phone number: +94 77 123 4567
+4. Taps "Send Code"
+   └── App shows loading: "Sending verification code..."
+   └── Backend detects Sri Lankan number
+   └── Uses LK SMS configuration (e.g., local provider)
+   └── SMS sent within 2-3 seconds
+5. User receives SMS: "Your Request Marketplace code: 123456"
+6. User enters code: 1-2-3-4-5-6
+7. Taps "Verify"
+   └── App validates OTP with backend
+   └── Backend creates Firebase Custom Token
+   └── App signs in user automatically
+8. User lands on home screen, fully authenticated
+9. All app features accessible immediately
+
+✅ Same user experience as before
+✅ Faster SMS delivery (local providers)
+✅ 50-80% cost savings for business
+✅ Better reliability with fallback providers
+```
+
+### 📊 Cost Comparison & Benefits
+
+| Authentication Method | Cost per SMS | Monthly Cost (10K users) | Annual Savings |
+|----------------------|-------------|-------------------------|----------------|
+| **Firebase Auth (Current)** | $0.015 | $150 | $0 (baseline) |
+| **Twilio** | $0.0075 | $75 | $900/year |
+| **AWS SNS** | $0.0075 | $75 | $900/year |
+| **Vonage** | $0.005 | $50 | $1,200/year |
+| **Local Provider (LK)** | $0.003 | $30 | $1,440/year |
+
+### 🔒 Security & Reliability Features
+
+#### **Security Measures:**
+- **Encrypted Credentials**: All SMS provider API keys encrypted in Firestore
+- **OTP Expiry**: Codes expire in 5 minutes for security
+- **Rate Limiting**: Max 3 OTP requests per phone per hour
+- **Attempt Limiting**: Max 3 verification attempts per OTP
+- **IP Whitelisting**: Optional IP restrictions for API access
+- **Audit Logging**: Complete log of all authentication attempts
+
+#### **Reliability Features:**
+- **Fallback Providers**: Secondary SMS provider if primary fails
+- **Health Monitoring**: Automatic provider health checks
+- **Retry Logic**: Smart retry with exponential backoff
+- **Provider Rotation**: Automatic switching based on success rates
+- **Real-time Monitoring**: Dashboard showing delivery rates and costs
+
 ### 📊 Database Structure
 
 #### SMS Configuration Collection
