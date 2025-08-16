@@ -21,25 +21,25 @@
   "author": "Request Marketplace Team",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2",
-    "pg": "^8.11.3",
+    "aws-sdk": "^2.1449.0",
     "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2",
     "cors": "^2.8.5",
-    "helmet": "^7.0.0",
-    "morgan": "^1.10.0",
-    "express-rate-limit": "^6.10.0",
-    "dotenv": "^16.3.1",
+    "dotenv": "^16.6.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^6.11.2",
+    "helmet": "^7.2.0",
     "joi": "^17.9.2",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.1",
     "nodemailer": "^6.9.4",
-    "aws-sdk": "^2.1449.0"
+    "pg": "^8.11.3"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1",
-    "jest": "^29.6.2",
-    "supertest": "^6.3.3",
+    "@babel/preset-env": "^7.22.9",
     "eslint": "^8.46.0",
-    "@babel/preset-env": "^7.22.9"
+    "jest": "^29.6.2",
+    "nodemon": "^3.0.1",
+    "supertest": "^6.3.3"
   },
   "engines": {
     "node": ">=16.0.0",
