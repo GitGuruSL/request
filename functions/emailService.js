@@ -321,7 +321,7 @@ async function getEmailConfig(countryCode = 'LK') {
           accessKeyId: functions.config().aws?.access_key_id,
           secretAccessKey: functions.config().aws?.secret_access_key,
           region: functions.config().aws?.region || 'us-east-1',
-          fromEmail: functions.config().aws?.from_email || 'noreply@requestmarketplace.com',
+          fromEmail: functions.config().aws?.from_email || 'cyber.sec.expert@outlook.com',
           fromName: 'Request Marketplace'
         }
       };

@@ -44,7 +44,27 @@ class SMSAuthService {
         'expiresIn': result.data['expiresIn'] ?? 300,
       };
     } catch (e) {
-      throw Exception('Failed to send registration OTP: $e');
+      // Handle specific AWS SES verification error
+      String errorMessage = e.toString();
+      if (errorMessage.contains('Email address is not verified')) {
+        return {
+          'success': false,
+          'message': 'Email verification required. This email address needs to be verified in AWS SES before we can send emails to it. Please contact support or try with a verified email address.',
+          'error': 'email_not_verified',
+        };
+      } else if (errorMessage.contains('phone number is not verified')) {
+        return {
+          'success': false,
+          'message': 'Phone number verification required. Please contact support or try with a verified phone number.',
+          'error': 'phone_not_verified',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': 'Failed to send OTP. Please check your internet connection and try again.',
+          'error': 'network_error',
+        };
+      }
     }
   }
 
@@ -64,7 +84,27 @@ class SMSAuthService {
         'expiresIn': result.data['expiresIn'] ?? 300,
       };
     } catch (e) {
-      throw Exception('Failed to send password reset OTP: $e');
+      // Handle specific AWS SES verification error
+      String errorMessage = e.toString();
+      if (errorMessage.contains('Email address is not verified')) {
+        return {
+          'success': false,
+          'message': 'Email verification required. This email address needs to be verified in AWS SES before we can send emails to it. Please contact support or try with a verified email address.',
+          'error': 'email_not_verified',
+        };
+      } else if (errorMessage.contains('phone number is not verified')) {
+        return {
+          'success': false,
+          'message': 'Phone number verification required. Please contact support or try with a verified phone number.',
+          'error': 'phone_not_verified',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': 'Failed to send OTP. Please check your internet connection and try again.',
+          'error': 'network_error',
+        };
+      }
     }
   }
 

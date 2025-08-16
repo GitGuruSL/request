@@ -171,7 +171,25 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
           },
         );
       } else {
-        throw Exception(result['message'] ?? 'Failed to send OTP');
+        setState(() {
+          _isLoading = false;
+        });
+        
+        // Show user-friendly error message
+        String errorMessage = result['message'] ?? 'Failed to send OTP';
+        String errorType = result['error'] ?? '';
+        
+        if (errorType == 'email_not_verified') {
+          _showEmailVerificationDialog(emailOrPhone);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
       }
     } catch (e) {
       setState(() {
@@ -442,6 +460,81 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
           ),
         ),
       ),
+    );
+  }
+
+  void _showEmailVerificationDialog(String email) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.warning_amber, color: Colors.orange, size: 28),
+              SizedBox(width: 12),
+              Text('Email Verification Required'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'The email address "$email" needs to be verified before we can send emails to it.',
+                style: TextStyle(fontSize: 16),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'This is because our email service (AWS SES) is currently in sandbox mode. To resolve this:',
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              ),
+              SizedBox(height: 12),
+              Text(
+                '• Use a verified email address\n• Contact our support team\n• Try using phone number instead',
+                style: TextStyle(fontSize: 14),
+              ),
+              SizedBox(height: 16),
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Verified Test Email:',
+                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue[800]),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'cyber.sec.expert@outlook.com',
+                      style: TextStyle(fontFamily: 'monospace', color: Colors.blue[700]),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('OK'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                setState(() {
+                  _isPhoneLogin = true; // Switch to phone login
+                });
+              },
+              child: Text('Use Phone Instead'),
+            ),
+          ],
+        );
+      },
     );
   }
 }
