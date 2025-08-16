@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/master_product.dart';
 import '../../models/price_listing.dart';
 import '../../services/pricing_service.dart';
@@ -665,8 +664,6 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                      ),
-                    ),
                       ),
                     ),
                   ),
