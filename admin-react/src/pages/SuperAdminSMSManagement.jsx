@@ -117,7 +117,7 @@ const SuperAdminSMSManagement = () => {
   const loadSMSData = async () => {
     setLoading(true);
     try {
-      // Simulate API calls - replace with actual Firebase calls
+      // Load all SMS configurations from Firestore
       const configs = await fetchAllSMSConfigurations();
       const pending = await fetchPendingRequests();
       const usage = await fetchUsageStatistics();
@@ -134,100 +134,81 @@ const SuperAdminSMSManagement = () => {
     }
   };
 
-  // Mock data functions - replace with actual Firebase calls
+  // Fetch all SMS configurations from Firestore
   const fetchAllSMSConfigurations = async () => {
-    return [
-      {
-        id: 'lk_config',
-        countryCode: 'LK',
-        countryName: 'Sri Lanka',
-        provider: 'local',
-        status: 'active',
-        monthlyUsage: 1250,
-        monthlyCost: 37.50,
-        costPerSMS: 0.03,
-        successRate: 98.5,
-        lastUpdated: '2025-08-15',
-        adminEmail: 'admin@requestlk.com'
-      },
-      {
-        id: 'my_config',
-        countryCode: 'MY',
-        countryName: 'Malaysia',
-        provider: 'twilio',
-        status: 'active',
-        monthlyUsage: 2100,
-        monthlyCost: 157.50,
-        costPerSMS: 0.075,
-        successRate: 99.2,
-        lastUpdated: '2025-08-14',
-        adminEmail: 'admin@requestmy.com'
-      },
-      {
-        id: 'sg_config',
-        countryCode: 'SG',
-        countryName: 'Singapore',
-        provider: 'aws',
-        status: 'pending_approval',
-        monthlyUsage: 0,
-        monthlyCost: 0,
-        costPerSMS: 0.075,
-        successRate: 0,
-        lastUpdated: '2025-08-16',
-        adminEmail: 'admin@requestsg.com'
-      }
-    ];
+    try {
+      // TODO: Replace with actual Firestore query
+      // const configsSnapshot = await db.collection('sms_configurations').get();
+      // return configsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Return empty array until Firebase integration is complete
+      return [];
+    } catch (error) {
+      console.error('Error fetching SMS configurations:', error);
+      return [];
+    }
   };
 
   const fetchPendingRequests = async () => {
-    return [
-      {
-        id: 'req_001',
-        countryCode: 'SG',
-        countryName: 'Singapore',
-        provider: 'aws',
-        requestedBy: 'admin@requestsg.com',
-        requestDate: '2025-08-16',
-        estimatedCost: 0.075,
-        reason: 'Setting up AWS SNS for Singapore operations with better local delivery rates'
-      },
-      {
-        id: 'req_002',
-        countryCode: 'TH',
-        countryName: 'Thailand',
-        provider: 'local',
-        requestedBy: 'admin@requestth.com',
-        requestDate: '2025-08-15',
-        estimatedCost: 0.02,
-        reason: 'Local Thai SMS provider for cost optimization - 70% cheaper than Twilio'
-      }
-    ];
+    try {
+      // TODO: Replace with actual Firestore query
+      // const pendingSnapshot = await db.collection('sms_configuration_requests')
+      //   .where('status', '==', 'pending')
+      //   .get();
+      // return pendingSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Return empty array until Firebase integration is complete
+      return [];
+    } catch (error) {
+      console.error('Error fetching pending requests:', error);
+      return [];
+    }
   };
 
   const fetchUsageStatistics = async () => {
-    return {
-      totalCountries: 3,
-      activeConfigurations: 2,
-      pendingApprovals: 2,
-      totalMonthlySMS: 3350,
-      totalMonthlyCost: 195.00,
-      averageCostPerSMS: 0.058,
-      avgSuccessRate: 98.85
-    };
+    try {
+      // TODO: Replace with actual Firestore aggregation
+      // Calculate stats from all countries' SMS configurations
+      
+      return {
+        totalCountries: 0,
+        activeConfigurations: 0,
+        pendingApprovals: 0,
+        totalMonthlySMS: 0,
+        totalMonthlyCost: 0,
+        averageCostPerSMS: 0,
+        avgSuccessRate: 0
+      };
+    } catch (error) {
+      console.error('Error fetching usage statistics:', error);
+      return {
+        totalCountries: 0,
+        activeConfigurations: 0,
+        pendingApprovals: 0,
+        totalMonthlySMS: 0,
+        totalMonthlyCost: 0,
+        averageCostPerSMS: 0,
+        avgSuccessRate: 0
+      };
+    }
   };
 
   const fetchCostAnalytics = async () => {
-    return {
-      monthlyTrend: [
-        { month: 'Jan', cost: 180, volume: 3200 },
-        { month: 'Feb', cost: 165, volume: 2950 },
-        { month: 'Mar', cost: 195, volume: 3350 }
-      ],
-      providerBreakdown: [
-        { provider: 'Local', cost: 37.50, percentage: 19.2 },
-        { provider: 'Twilio', cost: 157.50, percentage: 80.8 }
-      ]
-    };
+    try {
+      // TODO: Replace with actual Firestore aggregation
+      // Calculate cost trends and provider breakdown
+      
+      return {
+        monthlyTrend: [],
+        providerBreakdown: []
+      };
+    } catch (error) {
+      console.error('Error fetching cost analytics:', error);
+      return {
+        monthlyTrend: [],
+        providerBreakdown: []
+      };
+    }
   };
 
   // Handle approval/rejection
@@ -256,13 +237,37 @@ const SuperAdminSMSManagement = () => {
   };
 
   const approveSMSConfiguration = async (configId, comments) => {
-    // Implementation for approving SMS configuration
-    console.log('Approving SMS config:', configId, comments);
+    try {
+      // TODO: Implement actual Firebase function call
+      // await httpsCallable(functions, 'approveSMSConfiguration')({
+      //   configId,
+      //   comments,
+      //   approvedBy: adminData.email
+      // });
+      
+      console.log('Approving SMS config:', configId, comments);
+      // Placeholder for actual implementation
+    } catch (error) {
+      console.error('Error approving SMS configuration:', error);
+      throw error;
+    }
   };
 
   const rejectSMSConfiguration = async (configId, comments) => {
-    // Implementation for rejecting SMS configuration
-    console.log('Rejecting SMS config:', configId, comments);
+    try {
+      // TODO: Implement actual Firebase function call
+      // await httpsCallable(functions, 'rejectSMSConfiguration')({
+      //   configId,
+      //   comments,
+      //   rejectedBy: adminData.email
+      // });
+      
+      console.log('Rejecting SMS config:', configId, comments);
+      // Placeholder for actual implementation
+    } catch (error) {
+      console.error('Error rejecting SMS configuration:', error);
+      throw error;
+    }
   };
 
   const handleViewConfig = (config) => {
@@ -286,8 +291,19 @@ const SuperAdminSMSManagement = () => {
   };
 
   const disableSMSConfiguration = async (configId) => {
-    // Implementation for disabling SMS configuration
-    console.log('Disabling SMS config:', configId);
+    try {
+      // TODO: Implement actual Firebase function call
+      // await httpsCallable(functions, 'disableSMSConfiguration')({
+      //   configId,
+      //   disabledBy: adminData.email
+      // });
+      
+      console.log('Disabling SMS config:', configId);
+      // Placeholder for actual implementation
+    } catch (error) {
+      console.error('Error disabling SMS configuration:', error);
+      throw error;
+    }
   };
 
   // Render tab content
@@ -393,24 +409,24 @@ const SuperAdminSMSManagement = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                <TableRow>
-                  <TableCell>Singapore</TableCell>
-                  <TableCell>Configuration Request</TableCell>
-                  <TableCell>AWS SNS</TableCell>
-                  <TableCell>2025-08-16</TableCell>
-                  <TableCell>
-                    <Chip label="Pending" color="warning" size="small" />
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>Sri Lanka</TableCell>
-                  <TableCell>Cost Optimization</TableCell>
-                  <TableCell>Local Provider</TableCell>
-                  <TableCell>2025-08-15</TableCell>
-                  <TableCell>
-                    <Chip label="Active" color="success" size="small" />
-                  </TableCell>
-                </TableRow>
+                {smsConfigurations.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center">
+                      <Typography color="textSecondary">
+                        No SMS configuration activity yet
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  // TODO: Replace with actual recent activity data
+                  <TableRow>
+                    <TableCell colSpan={5} align="center">
+                      <Typography color="textSecondary">
+                        Recent activity will appear here
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </TableContainer>
@@ -634,22 +650,38 @@ const SuperAdminSMSManagement = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                <TableRow>
-                  <TableCell>Sri Lanka</TableCell>
-                  <TableCell>Local Provider</TableCell>
-                  <TableCell>$0.030</TableCell>
-                  <TableCell>$0.015</TableCell>
-                  <TableCell style={{ color: 'red' }}>-$18.75</TableCell>
-                  <TableCell style={{ color: 'red' }}>-$225</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>Malaysia</TableCell>
-                  <TableCell>Twilio</TableCell>
-                  <TableCell>$0.075</TableCell>
-                  <TableCell>$0.015</TableCell>
-                  <TableCell style={{ color: 'green' }}>+$126.00</TableCell>
-                  <TableCell style={{ color: 'green' }}>+$1,512</TableCell>
-                </TableRow>
+                {smsConfigurations.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center">
+                      <Typography color="textSecondary">
+                        No SMS configurations to analyze yet
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  smsConfigurations.map((config) => {
+                    const firebaseAuthCost = 0.015; // Standard Firebase Auth cost
+                    const monthlySavings = (firebaseAuthCost - config.costPerSMS) * config.monthlyUsage;
+                    const annualSavings = monthlySavings * 12;
+                    
+                    return (
+                      <TableRow key={config.id}>
+                        <TableCell>{config.countryName}</TableCell>
+                        <TableCell>
+                          {config.provider.charAt(0).toUpperCase() + config.provider.slice(1)}
+                        </TableCell>
+                        <TableCell>${config.costPerSMS?.toFixed(4)}</TableCell>
+                        <TableCell>$0.0150</TableCell>
+                        <TableCell style={{ color: monthlySavings > 0 ? 'green' : 'red' }}>
+                          ${monthlySavings > 0 ? '+' : ''}{monthlySavings.toFixed(2)}
+                        </TableCell>
+                        <TableCell style={{ color: annualSavings > 0 ? 'green' : 'red' }}>
+                          ${annualSavings > 0 ? '+' : ''}{annualSavings.toFixed(0)}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
               </TableBody>
             </Table>
           </TableContainer>
