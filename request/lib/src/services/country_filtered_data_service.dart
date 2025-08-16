@@ -471,6 +471,11 @@ class CountryFilteredDataService {
       
       print('$_tag getActiveSubcategories: Found ${activeSubcategoryIds.length} active subcategory IDs');
       
+      // Debug: Print first 5 subcategory IDs
+      if (activeSubcategoryIds.isNotEmpty) {
+        print('$_tag getActiveSubcategories: First 5 subcategory IDs: ${activeSubcategoryIds.take(5).toList()}');
+      }
+      
       if (activeSubcategoryIds.isEmpty) {
         print('$_tag getActiveSubcategories: No active subcategories found');
         return [];
@@ -484,6 +489,7 @@ class CountryFilteredDataService {
         final chunk = activeSubcategoryIds.skip(i).take(chunkSize).toList();
         
         print('$_tag getActiveSubcategories: Processing chunk ${(i ~/ chunkSize) + 1} with ${chunk.length} IDs');
+        print('$_tag getActiveSubcategories: Chunk IDs: ${chunk.take(3).toList()}... (showing first 3)');
         
         // Get subcategories that are active in this country
         Query<Map<String, dynamic>> subcategoriesQuery = _firestore
@@ -492,7 +498,7 @@ class CountryFilteredDataService {
         
         // Apply category filter if specified
         if (categoryId != null) {
-          subcategoriesQuery = subcategoriesQuery.where('categoryId', isEqualTo: categoryId);
+          subcategoriesQuery = subcategoriesQuery.where('category_id', isEqualTo: categoryId);
         }
         
         final subcategoriesSnapshot = await subcategoriesQuery.get();
