@@ -1,0 +1,44 @@
+[
+  {
+    "id": "+94720565859",
+    "maxAttempts": 3,
+    "otp": "437187",
+    "attempts": 0,
+    "expiresAt": "2025-08-09T10:45:37.187Z",
+    "createdAt": "2025-08-09T10:35:37.187Z",
+    "context": {
+      "businessId": "Qfv1l8tvsB0jIOhywues",
+      "action": "business_phone_verification"
+    },
+    "userType": "business",
+    "phoneNumber": "+94720565859"
+  },
+  {
+    "id": "+94750222222",
+    "otp": "773270",
+    "createdAt": "2025-08-02T14:26:13.271Z",
+    "attempts": 0,
+    "phoneNumber": "+94750222222",
+    "userType": "business",
+    "expiresAt": "2025-08-02T14:36:13.271Z",
+    "maxAttempts": 3,
+    "context": {
+      "action": "business_phone_verification",
+      "businessId": "XxqcgeunTW677l5Izn4c"
+    }
+  },
+  {
+    "id": "+94765696433",
+    "maxAttempts": 3,
+    "context": {
+      "action": "business_phone_verification",
+      "businessId": "E9eFwCFChYiAENTIGjM8"
+    },
+    "phoneNumber": "+94765696433",
+    "attempts": 0,
+    "userType": "business",
+    "otp": "833990",
+    "createdAt": "2025-08-03T08:12:13.990Z",
+    "expiresAt": "2025-08-03T08:22:13.990Z"
+  }
+]

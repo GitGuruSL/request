@@ -1,28 +1,24 @@
-const admin = require('firebase-admin');
+// Alternative Firebase export using web SDK instead of Admin SDK
+const { initializeApp } = require('firebase/app');
+const { getFirestore, collection, getDocs } = require('firebase/firestore');
 const fs = require('fs').promises;
 const path = require('path');
 
-// Initialize Firebase Admin SDK
-if (!admin.apps.length) {
-    try {
-        // Initialize with project ID from the Flutter configuration
-        admin.initializeApp({
-            projectId: 'request-marketplace'
-        });
-        console.log('✅ Firebase Admin initialized for project: request-marketplace');
-    } catch (error) {
-        console.error('❌ Failed to initialize Firebase Admin:', error.message);
-        console.error('\nPossible solutions:');
-        console.error('1. Make sure you are logged in to Firebase CLI: firebase login');
-        console.error('2. Set GOOGLE_APPLICATION_CREDENTIALS environment variable');
-        console.error('3. Check if project "request-marketplace" exists and you have access');
-        process.exit(1);
-    }
-}
+// Firebase configuration from your Flutter app
+const firebaseConfig = {
+    apiKey: 'AIzaSyC5hb6Ydkp__EZgX-kRjJgtOKZKg8TNkJg',
+    authDomain: 'request-marketplace.firebaseapp.com',
+    projectId: 'request-marketplace',
+    storageBucket: 'request-marketplace.firebasestorage.app',
+    messagingSenderId: '635550436472',
+    appId: '1:635550436472:web:72ee20ad95cdcf65c1c86a'
+};
 
-const db = admin.firestore();
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-// Collections to export based on your Firebase structure
+// Collections to export
 const COLLECTIONS = [
     'users',
     'categories',
@@ -61,10 +57,10 @@ async function exportCollection(collectionName) {
     try {
         console.log(`📦 Exporting collection: ${collectionName}`);
         
-        const snapshot = await db.collection(collectionName).get();
+        const querySnapshot = await getDocs(collection(db, collectionName));
         const documents = [];
         
-        snapshot.forEach(doc => {
+        querySnapshot.forEach((doc) => {
             const data = doc.data();
             
             // Convert Firestore Timestamps to ISO strings
@@ -98,8 +94,9 @@ function convertTimestamps(obj) {
         return obj;
     }
     
-    if (obj instanceof admin.firestore.Timestamp) {
-        return obj.toDate().toISOString();
+    // Handle Firestore Timestamp objects
+    if (obj && typeof obj === 'object' && obj.seconds !== undefined && obj.nanoseconds !== undefined) {
+        return new Date(obj.seconds * 1000 + obj.nanoseconds / 1000000).toISOString();
     }
     
     if (obj instanceof Date) {
@@ -122,8 +119,8 @@ function convertTimestamps(obj) {
 }
 
 async function exportAllCollections() {
-    console.log('🚀 Starting Firebase data export...');
-    console.log('=====================================');
+    console.log('🚀 Starting Firebase data export (Web SDK)...');
+    console.log('===============================================');
     
     const exportSummary = {
         startTime: new Date().toISOString(),
@@ -132,15 +129,15 @@ async function exportAllCollections() {
         errors: []
     };
     
-    for (const collection of COLLECTIONS) {
+    for (const collectionName of COLLECTIONS) {
         try {
-            const count = await exportCollection(collection);
-            exportSummary.collections[collection] = count;
+            const count = await exportCollection(collectionName);
+            exportSummary.collections[collectionName] = count;
             exportSummary.totalDocuments += count;
         } catch (error) {
-            console.error(`❌ Failed to export ${collection}:`, error.message);
+            console.error(`❌ Failed to export ${collectionName}:`, error.message);
             exportSummary.errors.push({
-                collection,
+                collection: collectionName,
                 error: error.message
             });
         }
@@ -149,13 +146,14 @@ async function exportAllCollections() {
     exportSummary.endTime = new Date().toISOString();
     
     // Save export summary
-    const summaryPath = path.join(__dirname, 'firebase-export', '_export_summary.json');
+    const exportDir = path.join(__dirname, 'firebase-export');
+    const summaryPath = path.join(exportDir, '_export_summary.json');
     await fs.writeFile(summaryPath, JSON.stringify(exportSummary, null, 2));
     
     // Display summary
-    console.log('\n=====================================');
+    console.log('\n===============================================');
     console.log('📊 Export Summary');
-    console.log('=====================================');
+    console.log('===============================================');
     console.log(`Total Collections: ${COLLECTIONS.length}`);
     console.log(`Total Documents: ${exportSummary.totalDocuments}`);
     console.log(`Export Duration: ${new Date(exportSummary.endTime) - new Date(exportSummary.startTime)} ms`);
@@ -167,73 +165,24 @@ async function exportAllCollections() {
         });
     }
     
-    console.log('\n📁 Export files saved to: ./migration/firebase-export/');
+    console.log('\n📁 Export files saved to: ./firebase-export/');
     console.log('✅ Firebase export complete!');
     
-    // Create data validation script
-    await createValidationScript(exportSummary);
-}
-
-async function createValidationScript(summary) {
-    const validationScript = `
-const fs = require('fs');
-const path = require('path');
-
-// Export summary from Firebase
-const EXPORT_SUMMARY = ${JSON.stringify(summary, null, 2)};
-
-async function validateExport() {
-    console.log('🔍 Validating Firebase export...');
-    
-    const exportDir = path.join(__dirname, 'firebase-export');
-    let isValid = true;
-    
-    for (const [collection, expectedCount] of Object.entries(EXPORT_SUMMARY.collections)) {
-        const filePath = path.join(exportDir, \`\${collection}.json\`);
-        
-        try {
-            const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-            const actualCount = data.length;
-            
-            if (actualCount === expectedCount) {
-                console.log(\`✅ \${collection}: \${actualCount} documents\`);
-            } else {
-                console.log(\`❌ \${collection}: Expected \${expectedCount}, got \${actualCount}\`);
-                isValid = false;
-            }
-        } catch (error) {
-            console.log(\`❌ \${collection}: File not found or invalid JSON\`);
-            isValid = false;
-        }
-    }
-    
-    if (isValid) {
-        console.log('\\n✅ All export files validated successfully!');
-        console.log('🔜 Ready for Phase 3: Data Transformation');
-    } else {
-        console.log('\\n❌ Export validation failed. Please re-export missing collections.');
-    }
-    
-    return isValid;
-}
-
-if (require.main === module) {
-    validateExport();
-}
-
-module.exports = { validateExport, EXPORT_SUMMARY };
-`;
-    
-    const scriptPath = path.join(__dirname, 'validate-export.js');
-    await fs.writeFile(scriptPath, validationScript);
-    console.log('📝 Created validation script: validate-export.js');
+    return exportSummary;
 }
 
 // Run the export
 if (require.main === module) {
     exportAllCollections()
-        .then(() => {
-            console.log('🎉 Export process completed successfully!');
+        .then((summary) => {
+            console.log('\n🎉 Export process completed successfully!');
+            console.log(`📊 Exported ${summary.totalDocuments} documents from ${Object.keys(summary.collections).length} collections`);
+            
+            console.log('\n🔜 Next Steps:');
+            console.log('   1. Review exported data in ./firebase-export/');
+            console.log('   2. Transform data: node transform-data.js');
+            console.log('   3. Import to PostgreSQL: node import-data.js');
+            
             process.exit(0);
         })
         .catch(error => {

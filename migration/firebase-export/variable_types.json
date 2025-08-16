@@ -1,0 +1,91 @@
+[
+  {
+    "id": "99NQS2E1YLLIMEZIWF",
+    "name": "RAM",
+    "type": "select",
+    "updatedAt": "2025-08-16T09:12:20.743Z",
+    "createdAt": "2025-08-16T09:12:20.743Z",
+    "options": [
+      "4GB",
+      "8GB",
+      "16GB",
+      "32GB",
+      "64GB"
+    ],
+    "updatedBy": "system",
+    "description": "Memory capacity",
+    "createdBy": "system",
+    "isRequired": false
+  },
+  {
+    "id": "LPb5kFIbjaEvvnrhhUDv",
+    "isRequired": false,
+    "updatedBy": "system",
+    "options": [
+      "64GB",
+      "128GB",
+      "256GB",
+      "512GB",
+      "1TB"
+    ],
+    "type": "dropdown",
+    "updatedAt": "2025-08-16T09:05:27.464Z",
+    "createdAt": "2025-08-16T09:05:27.464Z",
+    "name": "Storage Capacity",
+    "createdBy": "system"
+  },
+  {
+    "id": "WexvQH8AG34TR1sAHalq",
+    "updatedAt": "2025-08-16T09:12:21.747Z",
+    "description": "Product size options",
+    "type": "select",
+    "createdAt": "2025-08-16T09:12:21.747Z",
+    "createdBy": "system",
+    "name": "Size",
+    "isRequired": false,
+    "updatedBy": "system",
+    "options": [
+      "Small",
+      "Medium",
+      "Large",
+      "XL",
+      "XXL"
+    ]
+  },
+  {
+    "id": "YVIIMOBKnkezaZ5bibOX",
+    "name": "Color",
+    "options": [
+      "Black",
+      "White",
+      "Red",
+      "Blue",
+      "Green",
+      "Silver",
+      "Gold"
+    ],
+    "description": "Product color options",
+    "createdBy": "system",
+    "type": "select",
+    "isRequired": false,
+    "createdAt": "2025-08-16T09:12:22.052Z",
+    "updatedAt": "2025-08-16T09:12:22.052Z",
+    "updatedBy": "system"
+  },
+  {
+    "id": "iiYSRvNv2TbkYAlavVlS",
+    "createdAt": "2025-08-16T09:05:28.197Z",
+    "type": "dropdown",
+    "isRequired": false,
+    "updatedBy": "system",
+    "name": "Screen Size",
+    "options": [
+      "5.4\"",
+      "6.1\"",
+      "6.7\"",
+      "6.9\""
+    ],
+    "updatedAt": "2025-08-16T09:05:28.197Z",
+    "createdBy": "system"
+  }
+]

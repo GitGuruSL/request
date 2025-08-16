@@ -1,0 +1,74 @@
+[
+  {
+    "id": "1aIcxhCLWoVwH1GvjF6E",
+    "senderId": "Ey0iESw9nQfhfWoaflQmpTsBHZC3",
+    "type": "system",
+    "timestamp": "2025-08-11T18:57:24.844Z",
+    "metadata": null,
+    "conversationId": "TCWHJZGY5ZDooZjPqrQj",
+    "text": "Conversation started about \"Need a camera\""
+  },
+  {
+    "id": "1yFT3rxhg6Rb0lgEimRd",
+    "metadata": null,
+    "conversationId": "xZuwaPuy69KyYVJjiw8n",
+    "text": "Hi",
+    "senderId": "f7Ne4wl6vsZTaumyFYKO9Lz22x43",
+    "type": "text",
+    "timestamp": "2025-08-11T19:21:05.755Z"
+  },
+  {
+    "id": "7ICoYeuN8Yeq8gBYdL1b",
+    "metadata": null,
+    "text": "Conversation started about \"Phone\"",
+    "timestamp": "2025-08-11T19:21:01.114Z",
+    "conversationId": "xZuwaPuy69KyYVJjiw8n",
+    "senderId": "f7Ne4wl6vsZTaumyFYKO9Lz22x43",
+    "type": "system"
+  },
+  {
+    "id": "UsYtT0YxHyD0wwNZSYkL",
+    "type": "text",
+    "timestamp": "2025-08-11T19:38:47.306Z",
+    "text": "hi",
+    "conversationId": "WuisRZi0IvM5HWc568r9",
+    "senderId": "G68WKHAnd8WuIlYlx8iHBO6urDy2",
+    "metadata": null
+  },
+  {
+    "id": "ZQVj0zCTgYgWOhKSU3GO",
+    "conversationId": "pooD9sqQhgqWqf1mvsOP",
+    "text": "Conversation started about \"Bike Service\"",
+    "timestamp": "2025-08-11T16:16:26.885Z",
+    "metadata": null,
+    "senderId": "Ey0iESw9nQfhfWoaflQmpTsBHZC3",
+    "type": "system"
+  },
+  {
+    "id": "ca0YgDxIHgNU1mOq4mvT",
+    "metadata": null,
+    "type": "text",
+    "conversationId": "TCWHJZGY5ZDooZjPqrQj",
+    "senderId": "Ey0iESw9nQfhfWoaflQmpTsBHZC3",
+    "timestamp": "2025-08-11T18:57:33.379Z",
+    "text": "we have few cameras"
+  },
+  {
+    "id": "eGXwxMgGoNkwvU3HwA7H",
+    "type": "text",
+    "text": "hi",
+    "timestamp": "2025-08-11T16:16:30.006Z",
+    "senderId": "Ey0iESw9nQfhfWoaflQmpTsBHZC3",
+    "conversationId": "pooD9sqQhgqWqf1mvsOP",
+    "metadata": null
+  },
+  {
+    "id": "f7OLro0rxDujlxAOs8ly",
+    "type": "system",
+    "senderId": "f7Ne4wl6vsZTaumyFYKO9Lz22x43",
+    "metadata": null,
+    "text": "Conversation started about \"Need a camera\"",
+    "timestamp": "2025-08-11T17:32:00.295Z",
+    "conversationId": "WuisRZi0IvM5HWc568r9"
+  }
+]

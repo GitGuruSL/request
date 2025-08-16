@@ -1,0 +1,119 @@
+[
+  {
+    "id": "3vtWaU2ST2NnC4LPCZXF",
+    "features": [
+      "Browse all service requests",
+      "Unlimited responses per month",
+      "Priority listing in search results",
+      "Instant rider request notifications",
+      "Advanced profile features",
+      "Analytics and insights"
+    ],
+    "planId": "rider_premium",
+    "createdAt": "2025-08-15T18:01:05.463Z",
+    "countries": [
+      "LK"
+    ],
+    "planType": "monthly",
+    "isActive": true,
+    "defaultPrice": 10,
+    "type": "rider",
+    "name": "Rider Premium Plan",
+    "createdBy": "superadmin@request.lk",
+    "limitations": {
+      "maxResponsesPerMonth": -1,
+      "unlimitedResponses": true,
+      "riderRequestNotifications": true
+    },
+    "pricingByCountry": {
+      "LK": {
+        "isActive": true,
+        "addedAt": "2025-08-15T18:10:16.310Z",
+        "approvalStatus": "approved",
+        "currencySymbol": "Rs",
+        "approvedBy": "superadmin@request.lk",
+        "currency": "LKR",
+        "addedBy": "rimaz.m.flyil@gmail.com",
+        "price": 10000,
+        "approvedAt": "2025-08-15T18:28:06.269Z"
+      }
+    },
+    "description": "Unlimited plan for active riders",
+    "requiresCountryPricing": true,
+    "isGlobal": true,
+    "updatedAt": "2025-08-15T18:28:06.269Z",
+    "isDefaultPlan": true
+  },
+  {
+    "id": "DAIsHVXbaDSJuA5Vq021",
+    "limitations": {
+      "unlimitedRequests": true,
+      "payPerResponse": true
+    },
+    "type": "business",
+    "isGlobal": true,
+    "countries": [
+      "LK"
+    ],
+    "requiresCountryPricing": true,
+    "planType": "pay_per_click",
+    "createdBy": "superadmin@request.lk",
+    "isDefaultPlan": true,
+    "defaultPrice": 2,
+    "isActive": true,
+    "description": "Pay only when someone responds to your requests",
+    "planId": "business_pay_per_click",
+    "pricingByCountry": {
+      "LK": {
+        "currencySymbol": "Rs",
+        "price": 100,
+        "approvalStatus": "approved",
+        "approvedBy": "superadmin@request.lk",
+        "currency": "LKR",
+        "approvedAt": "2025-08-15T18:28:09.390Z",
+        "isActive": true,
+        "addedAt": "2025-08-15T18:08:08.617Z",
+        "addedBy": "rimaz.m.flyil@gmail.com"
+      }
+    },
+    "name": "Business Pay Per Click",
+    "createdAt": "2025-08-15T18:01:05.722Z",
+    "updatedAt": "2025-08-15T18:28:09.390Z",
+    "features": [
+      "Post unlimited service requests",
+      "Pay only for responses received",
+      "Business profile verification",
+      "Priority customer support",
+      "Request analytics and reporting"
+    ]
+  },
+  {
+    "id": "fRV7fbjUHwW3atg0ih7R",
+    "planId": "rider_free",
+    "createdAt": "2025-08-15T18:01:04.625Z",
+    "isGlobal": true,
+    "defaultPrice": 0,
+    "isActive": true,
+    "type": "rider",
+    "createdBy": "superadmin@request.lk",
+    "countries": [],
+    "isDefaultPlan": true,
+    "planType": "monthly",
+    "features": [
+      "Browse service requests",
+      "Up to 2 responses per month",
+      "Basic profile creation",
+      "View contact information after selection"
+    ],
+    "limitations": {
+      "unlimitedResponses": false,
+      "riderRequestNotifications": false,
+      "maxResponsesPerMonth": 2
+    },
+    "requiresCountryPricing": false,
+    "updatedAt": "2025-08-15T18:01:04.625Z",
+    "name": "Rider Free Plan",
+    "pricingByCountry": {},
+    "description": "Limited free plan for riders with basic features"
+  }
+]

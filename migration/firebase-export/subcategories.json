@@ -1,0 +1,242 @@
+[
+  {
+    "id": "1eKYR4jZ2PGpL8g9HLJW",
+    "subcategory": "Cameras",
+    "category_id": "LL8ebIAi3nk2zlik06Px"
+  },
+  {
+    "id": "2g9z52jTfoEy6Iobelfu",
+    "description": "",
+    "category_id": "8uHSsZkIca3jxmF1SgbA",
+    "updatedAt": "2025-08-11T04:51:26.111Z",
+    "isActive": true,
+    "createdAt": "2025-08-11T04:50:57.573Z",
+    "subcategory": "Cameras & Lenses"
+  },
+  {
+    "id": "2gU3eDa9x61rj3AR8hVX",
+    "category_id": "R00hg1PfNqSfLRkHb7CM",
+    "subcategory": "Tools"
+  },
+  {
+    "id": "2ov19TewkzWGpotgotVd",
+    "subcategory": "Garden",
+    "category_id": "R00hg1PfNqSfLRkHb7CM"
+  },
+  {
+    "id": "3hHlA8hCaJ4CCCPxITkS",
+    "subcategory": "Tutoring",
+    "category_id": "6blWayrfZF9lgiLKPL8k"
+  },
+  {
+    "id": "3ohLM0Zc5b7ml7vSSP2o",
+    "description": "",
+    "subcategory": "Mail/Post",
+    "updatedAt": "2025-08-10T15:32:42.336Z",
+    "isActive": true,
+    "category_id": "ZDXu3cVgcQxPnE4dtZxM",
+    "createdAt": "2025-08-10T15:32:42.336Z"
+  },
+  {
+    "id": "3ok4RGGpOLMmvZ0PwVAs",
+    "subcategory": "Phone Repair",
+    "category_id": "mtczdtdeVn6Qal0HPjxg"
+  },
+  {
+    "id": "40fSWaBkwzEecN0sT8O2",
+    "subcategory": "Plumbing",
+    "category_id": "oJRI1SNHHJOZo1PoRfse"
+  },
+  {
+    "id": "6BmcxlHdBYjp6H3au4aT",
+    "category_id": "mtczdtdeVn6Qal0HPjxg",
+    "subcategory": "Computer Repair"
+  },
+  {
+    "id": "71FoHCDW4dql4dA3CPcS",
+    "subcategory": "Software Development",
+    "category_id": "mtczdtdeVn6Qal0HPjxg"
+  },
+  {
+    "id": "7pobZApMre35SaCjTB4o",
+    "category_id": "LL8ebIAi3nk2zlik06Px",
+    "subcategory": "Accessories"
+  },
+  {
+    "id": "8fIyX1dW1gZhMRgR9fPj",
+    "subcategory": "TV & Audio",
+    "category_id": "LL8ebIAi3nk2zlik06Px"
+  },
+  {
+    "id": "D2ftMKM3S5oiX5udI4EM",
+    "subcategory": "Shoes",
+    "category_id": "7kHPGwWVZDp3GJIkjBdg"
+  },
+  {
+    "id": "DsQkHODURPZEmY90CTAG",
+    "category_id": "oJRI1SNHHJOZo1PoRfse",
+    "subcategory": "Painting"
+  },
+  {
+    "id": "I88n5o9Z36fSDOjGhg2q",
+    "category_id": "6blWayrfZF9lgiLKPL8k",
+    "subcategory": "Design"
+  },
+  {
+    "id": "IIH8BVvsIqzZQwo0kdH6",
+    "subcategory": "Moving Services",
+    "category_id": "w1kSImZP4OsVH71FAkYf"
+  },
+  {
+    "id": "KZnWz4RZm4HaTAaFJ5E7",
+    "subcategory": "IT Support",
+    "category_id": "mtczdtdeVn6Qal0HPjxg"
+  },
+  {
+    "id": "NKV1M0AtbG6VQ6Zjvakp",
+    "category_id": "a160g6mDP8tcM4pW8lNy",
+    "subcategory": "Parts & Accessories"
+  },
+  {
+    "id": "Osj6NHQPlJDHD06AXeK9",
+    "category_id": "7kHPGwWVZDp3GJIkjBdg",
+    "subcategory": "Watches"
+  },
+  {
+    "id": "VDJgSyImVxCI6SU8vR1m",
+    "isActive": true,
+    "createdAt": "2025-08-10T15:32:31.725Z",
+    "category_id": "ZDXu3cVgcQxPnE4dtZxM",
+    "updatedAt": "2025-08-10T15:32:31.725Z",
+    "subcategory": "Passports & ID",
+    "description": ""
+  },
+  {
+    "id": "VMrLxmXE9QAGGKMMAnxE",
+    "createdAt": "2025-08-10T15:32:02.479Z",
+    "subcategory": "Letters & Envelopes",
+    "isActive": true,
+    "updatedAt": "2025-08-10T15:32:02.479Z",
+    "category_id": "ZDXu3cVgcQxPnE4dtZxM",
+    "description": ""
+  },
+  {
+    "id": "Vg7hgl9lRQZoUFt5AhPV",
+    "subcategory": "Writing",
+    "category_id": "6blWayrfZF9lgiLKPL8k"
+  },
+  {
+    "id": "Xs7VvmWnPhC39oTRMslv",
+    "subcategory": "Vehicle Repair",
+    "category_id": "w1kSImZP4OsVH71FAkYf"
+  },
+  {
+    "id": "ZOHCtgH9GAPHbNkdfvmW",
+    "subcategory": "Bags",
+    "category_id": "7kHPGwWVZDp3GJIkjBdg"
+  },
+  {
+    "id": "dwl0NWulnrOeJ3lQWjig",
+    "category_id": "LL8ebIAi3nk2zlik06Px",
+    "subcategory": "Mobile Phones"
+  },
+  {
+    "id": "fDHnj2HW4s87bjhokDmU",
+    "subcategory": "Delivery",
+    "category_id": "w1kSImZP4OsVH71FAkYf"
+  },
+  {
+    "id": "fRRte3KSf4wY3vqtpoKq",
+    "subcategory": "Legal",
+    "category_id": "6blWayrfZF9lgiLKPL8k"
+  },
+  {
+    "id": "gQVSdrOSlIbuoymAMbvX",
+    "subcategory": "Appliances",
+    "category_id": "R00hg1PfNqSfLRkHb7CM"
+  },
+  {
+    "id": "jZVIfAzQBxA7CzO9AOFZ",
+    "subcategory": "Carpentry",
+    "category_id": "oJRI1SNHHJOZo1PoRfse"
+  },
+  {
+    "id": "jdSmtfTeISIbEB7krefS",
+    "subcategory": "Taxi/Ride",
+    "category_id": "w1kSImZP4OsVH71FAkYf"
+  },
+  {
+    "id": "kCNjYzKPjC5sE4b762wl",
+    "subcategory": "Photography",
+    "category_id": "6blWayrfZF9lgiLKPL8k"
+  },
+  {
+    "id": "mZ84rcfAEnFUN72Bgc3J",
+    "subcategory": "Gaming Consoles",
+    "category_id": "LL8ebIAi3nk2zlik06Px"
+  },
+  {
+    "id": "n0bmpJA2dJ6h3Jdknh4U",
+    "subcategory": "Jewelry",
+    "category_id": "7kHPGwWVZDp3GJIkjBdg"
+  },
+  {
+    "id": "nL7ROS2TLwAFFxUpQCpE",
+    "subcategory": "Bicycles",
+    "category_id": "a160g6mDP8tcM4pW8lNy"
+  },
+  {
+    "id": "oFQ7mni3R4jixFAsLRtu",
+    "subcategory": "Cleaning",
+    "category_id": "oJRI1SNHHJOZo1PoRfse"
+  },
+  {
+    "id": "pAt1h5TfupSAMux7OPwB",
+    "category_id": "a160g6mDP8tcM4pW8lNy",
+    "subcategory": "Cars"
+  },
+  {
+    "id": "qCgC9vLB0p7LpWZTzP4f",
+    "subcategory": "Furniture",
+    "category_id": "R00hg1PfNqSfLRkHb7CM"
+  },
+  {
+    "id": "rRAF1GSjJdfSlHXPQlyJ",
+    "subcategory": "Gardening",
+    "category_id": "oJRI1SNHHJOZo1PoRfse"
+  },
+  {
+    "id": "vk361Jy0TYsChXS6Yb2O",
+    "category_id": "7kHPGwWVZDp3GJIkjBdg",
+    "subcategory": "Clothing"
+  },
+  {
+    "id": "wGf18gDEz5Am6jAmBpXk",
+    "category_id": "LL8ebIAi3nk2zlik06Px",
+    "subcategory": "Laptops & Computers"
+  },
+  {
+    "id": "xj3p1aryBCLDyL34hVoF",
+    "createdAt": "2025-08-10T15:32:19.219Z",
+    "subcategory": "Legal Documents",
+    "description": "",
+    "category_id": "ZDXu3cVgcQxPnE4dtZxM",
+    "updatedAt": "2025-08-10T15:32:19.219Z",
+    "isActive": true
+  },
+  {
+    "id": "xunZ54D7bAUC0SCzFRYA",
+    "subcategory": "Electrical",
+    "category_id": "oJRI1SNHHJOZo1PoRfse"
+  },
+  {
+    "id": "y297Txr1Vo31hmaypEoA",
+    "subcategory": "Kitchen Items",
+    "category_id": "R00hg1PfNqSfLRkHb7CM"
+  },
+  {
+    "id": "ydh0l0UX3HLMeeXCe6zU",
+    "subcategory": "Motorcycles",
+    "category_id": "a160g6mDP8tcM4pW8lNy"
+  }
+]

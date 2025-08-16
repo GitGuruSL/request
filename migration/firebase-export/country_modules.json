@@ -1,0 +1,22 @@
+[
+  {
+    "id": "LK",
+    "coreDependencies": {
+      "messaging": true,
+      "driver": true,
+      "payment": true,
+      "location": true
+    },
+    "modules": {
+      "item": true,
+      "ride": true,
+      "rent": true,
+      "service": true,
+      "price": true,
+      "delivery": true
+    },
+    "updatedBy": "rimaz.m.flyil@gmail.com",
+    "updatedAt": "2025-08-15T20:02:59.752Z",
+    "countryCode": "LK"
+  }
+]

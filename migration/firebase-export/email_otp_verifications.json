@@ -1,0 +1,48 @@
+[
+  {
+    "id": "imas@alphabet.lk",
+    "email": "imas@alphabet.lk",
+    "verified": false,
+    "expiresAt": "2025-08-09T12:14:41.610Z",
+    "otp": "951464",
+    "createdAt": "2025-08-09T12:04:42.528Z",
+    "attempts": 0
+  },
+  {
+    "id": "info@alphabet.lk",
+    "createdAt": "2025-08-07T14:36:42.942Z",
+    "attempts": 1,
+    "email": "info@alphabet.lk",
+    "verified": false,
+    "expiresAt": "2025-08-07T14:46:41.826Z",
+    "otp": "669198"
+  },
+  {
+    "id": "rimas@alphabet.lk",
+    "createdAt": "2025-07-22T13:24:16.599Z",
+    "attempts": 0,
+    "expiresAt": "2025-07-22T13:34:15.503Z",
+    "otp": "166886",
+    "verifiedAt": "2025-07-22T13:24:28.326Z",
+    "email": "rimas@alphabet.lk",
+    "verified": true
+  },
+  {
+    "id": "rimas@aphabet.lk",
+    "attempts": 0,
+    "otp": "839314",
+    "verified": false,
+    "createdAt": "2025-08-09T12:44:51.734Z",
+    "expiresAt": "2025-08-09T12:54:51.183Z",
+    "email": "rimas@aphabet.lk"
+  },
+  {
+    "id": "rimaz@alphabet.lk",
+    "createdAt": "2025-08-09T10:31:47.857Z",
+    "expiresAt": "2025-08-09T10:41:46.969Z",
+    "verified": false,
+    "otp": "909804",
+    "attempts": 0,
+    "email": "rimaz@alphabet.lk"
+  }
+]

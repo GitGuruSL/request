@@ -1,0 +1,354 @@
+[
+  {
+    "id": "0kAG6XNG2pJ1s3SyP4Z1",
+    "country": "LK",
+    "subcategoryId": "xj3p1aryBCLDyL34hVoF",
+    "createdAt": "2025-08-16T08:14:45.055Z",
+    "isActive": true,
+    "updatedAt": "2025-08-16T08:14:45.055Z"
+  },
+  {
+    "id": "1QTE8x6H13B99T0mjXGA",
+    "subcategoryId": "40fSWaBkwzEecN0sT8O2",
+    "createdAt": "2025-08-16T08:14:41.220Z",
+    "country": "LK",
+    "updatedAt": "2025-08-16T08:14:41.220Z",
+    "isActive": true
+  },
+  {
+    "id": "3WU3EtgWkXTp9hQqdaDk",
+    "createdAt": "2025-08-16T08:14:42.975Z",
+    "subcategoryId": "Xs7VvmWnPhC39oTRMslv",
+    "isActive": true,
+    "country": "LK",
+    "updatedAt": "2025-08-16T08:14:42.975Z"
+  },
+  {
+    "id": "5adO36rCW0fCs2PIPe7r",
+    "updatedAt": "2025-08-16T08:14:45.168Z",
+    "createdAt": "2025-08-16T08:14:45.168Z",
+    "subcategoryId": "xunZ54D7bAUC0SCzFRYA",
+    "isActive": true,
+    "country": "LK"
+  },
+  {
+    "id": "8GuTa4LKqsxiMn2pJy1z",
+    "country": "LK",
+    "updatedAt": "2025-08-16T08:14:44.128Z",
+    "createdAt": "2025-08-16T08:14:44.128Z",
+    "isActive": true,
+    "subcategoryId": "n0bmpJA2dJ6h3Jdknh4U"
+  },
+  {
+    "id": "9KGsv2Y7LhUZmfldtt6y",
+    "subcategoryId": "1eKYR4jZ2PGpL8g9HLJW",
+    "updatedAt": "2025-08-16T08:14:40.401Z",
+    "createdAt": "2025-08-16T08:14:40.401Z",
+    "isActive": true,
+    "country": "LK"
+  },
+  {
+    "id": "9M9UfggPbjrVgY9M8pIY",
+    "subcategoryId": "3ohLM0Zc5b7ml7vSSP2o",
+    "country": "LK",
+    "updatedAt": "2025-08-16T08:14:40.989Z",
+    "isActive": true,
+    "createdAt": "2025-08-16T08:14:40.989Z"
+  },
+  {
+    "id": "AJzabBMcpI6eEFuaiHoF",
+    "subcategoryId": "I88n5o9Z36fSDOjGhg2q",
+    "createdAt": "2025-08-16T08:14:42.033Z",
+    "isActive": true,
+    "updatedAt": "2025-08-16T08:14:42.033Z",
+    "country": "LK"
+  },
+  {
+    "id": "AyYuE3qY7BY4jir1VHon",
+    "country": "LK",
+    "createdAt": "2025-08-16T08:14:40.867Z",
+    "updatedAt": "2025-08-16T08:14:40.867Z",
+    "isActive": true,
+    "subcategoryId": "3hHlA8hCaJ4CCCPxITkS"
+  },
+  {
+    "id": "C46YpDPlAyPkJX9f3qMk",
+    "updatedAt": "2025-08-16T08:14:41.568Z",
+    "country": "LK",
+    "isActive": true,
+    "subcategoryId": "7pobZApMre35SaCjTB4o",
+    "createdAt": "2025-08-16T08:14:41.568Z"
+  },
+  {
+    "id": "H144AG51FOlqeof6uPIC",
+    "subcategoryId": "NKV1M0AtbG6VQ6Zjvakp",
+    "isActive": true,
+    "updatedAt": "2025-08-16T08:14:42.388Z",
+    "country": "LK",
+    "createdAt": "2025-08-16T08:14:42.388Z"
+  },
+  {
+    "id": "HFI7XH0Coj6H7MF89lYT",
+    "updatedAt": "2025-08-16T08:14:41.801Z",
+    "country": "LK",
+    "subcategoryId": "D2ftMKM3S5oiX5udI4EM",
+    "createdAt": "2025-08-16T08:14:41.801Z",
+    "isActive": true
+  },
+  {
+    "id": "Ir4as2tllSoF31KRvone",
+    "country": "LK",
+    "isActive": true,
+    "subcategoryId": "dwl0NWulnrOeJ3lQWjig",
+    "createdAt": "2025-08-16T08:14:43.205Z",
+    "updatedAt": "2025-08-16T08:14:43.205Z"
+  },
+  {
+    "id": "JQBq4Y5Aqcphr9XXMYqR",
+    "country": "LK",
+    "createdAt": "2025-08-16T08:14:40.633Z",
+    "isActive": true,
+    "updatedAt": "2025-08-16T08:14:40.633Z",
+    "subcategoryId": "2gU3eDa9x61rj3AR8hVX"
+  },
+  {
+    "id": "JUTG6bSDuTtFqU6Hiy8q",
+    "updatedAt": "2025-08-16T08:14:44.362Z",
+    "subcategoryId": "oFQ7mni3R4jixFAsLRtu",
+    "country": "LK",
+    "createdAt": "2025-08-16T08:14:44.362Z",
+    "isActive": true
+  },
+  {
+    "id": "N9MSnlUKf4qpeGBRhxDm",
+    "createdAt": "2025-08-16T08:14:42.624Z",
+    "updatedAt": "2025-08-16T08:14:42.624Z",
+    "country": "LK",
+    "subcategoryId": "VDJgSyImVxCI6SU8vR1m",
+    "isActive": true
+  },
+  {
+    "id": "PLebWuCwGyfXD49acLdN",
+    "country": "LK",
+    "createdAt": "2025-08-16T08:14:45.406Z",
+    "isActive": true,
+    "updatedAt": "2025-08-16T08:14:45.406Z",
+    "subcategoryId": "ydh0l0UX3HLMeeXCe6zU"
+  },
+  {
+    "id": "SrmrWLsvBKpqRFFnbxjB",
+    "updatedAt": "2025-08-16T08:14:41.686Z",
+    "subcategoryId": "8fIyX1dW1gZhMRgR9fPj",
+    "country": "LK",
+    "createdAt": "2025-08-16T08:14:41.686Z",
+    "isActive": true
+  },
+  {
+    "id": "TOx6eWdAwd8JTmxu3EQg",
+    "updatedAt": "2025-08-16T08:14:44.592Z",
+    "createdAt": "2025-08-16T08:14:44.592Z",
+    "isActive": true,
+    "country": "LK",
+    "subcategoryId": "qCgC9vLB0p7LpWZTzP4f"
+  },
+  {
+    "id": "XCICK8EkvXfctqOcJmlp",
+    "subcategoryId": "ZOHCtgH9GAPHbNkdfvmW",
+    "createdAt": "2025-08-16T08:14:43.091Z",
+    "isActive": true,
+    "country": "LK",
+    "updatedAt": "2025-08-16T08:14:43.091Z"
+  },
+  {
+    "id": "Xi1u4W0ucgAUUzQPMsSs",
+    "country": "LK",
+    "createdAt": "2025-08-16T08:14:43.552Z",
+    "subcategoryId": "gQVSdrOSlIbuoymAMbvX",
+    "updatedAt": "2025-08-16T08:14:43.552Z",
+    "isActive": true
+  },
+  {
+    "id": "YliHsBEiW3MALazgDjGB",
+    "subcategoryId": "KZnWz4RZm4HaTAaFJ5E7",
+    "updatedAt": "2025-08-16T08:14:42.275Z",
+    "createdAt": "2025-08-16T08:14:42.275Z",
+    "country": "LK",
+    "isActive": true
+  },
+  {
+    "id": "ZCJWRW2B0iqmFTlISA6f",
+    "country": "LK",
+    "subcategoryId": "y297Txr1Vo31hmaypEoA",
+    "isActive": true,
+    "createdAt": "2025-08-16T08:14:45.288Z",
+    "updatedAt": "2025-08-16T08:14:45.288Z"
+  },
+  {
+    "id": "ax5WGJcUjylovbSVsDAQ",
+    "createdAt": "2025-08-16T08:14:43.439Z",
+    "subcategoryId": "fRRte3KSf4wY3vqtpoKq",
+    "isActive": true,
+    "country": "LK",
+    "updatedAt": "2025-08-16T08:14:43.439Z"
+  },
+  {
+    "id": "b8LKFfjHLMOG72M1ZDez",
+    "createdAt": "2025-08-16T08:14:44.709Z",
+    "country": "LK",
+    "isActive": true,
+    "subcategoryId": "rRAF1GSjJdfSlHXPQlyJ",
+    "updatedAt": "2025-08-16T08:14:44.709Z"
+  },
+  {
+    "id": "dDoEoqKWYDNPd6qJZANo",
+    "isActive": true,
+    "subcategoryId": "6BmcxlHdBYjp6H3au4aT",
+    "country": "LK",
+    "createdAt": "2025-08-16T08:14:41.338Z",
+    "updatedAt": "2025-08-16T08:14:41.338Z"
+  },
+  {
+    "id": "fqoEURkylnJ8U8gMUQ5g",
+    "country": "LK",
+    "isActive": true,
+    "subcategoryId": "nL7ROS2TLwAFFxUpQCpE",
+    "updatedAt": "2025-08-16T08:14:44.246Z",
+    "createdAt": "2025-08-16T08:14:44.246Z"
+  },
+  {
+    "id": "gkUy132JlRBTDzu5U2ub",
+    "createdAt": "2025-08-16T08:14:44.940Z",
+    "isActive": true,
+    "country": "LK",
+    "updatedAt": "2025-08-16T08:14:44.940Z",
+    "subcategoryId": "wGf18gDEz5Am6jAmBpXk"
+  },
+  {
+    "id": "gl5KdRtcIpQV31R1eLui",
+    "subcategoryId": "mZ84rcfAEnFUN72Bgc3J",
+    "country": "LK",
+    "isActive": true,
+    "createdAt": "2025-08-16T08:14:44.015Z",
+    "updatedAt": "2025-08-16T08:14:44.015Z"
+  },
+  {
+    "id": "kdikQWrIrPTelX9ZiZ4W",
+    "isActive": true,
+    "country": "LK",
+    "subcategoryId": "kCNjYzKPjC5sE4b762wl",
+    "createdAt": "2025-08-16T08:14:43.902Z",
+    "updatedAt": "2025-08-16T08:14:43.902Z"
+  },
+  {
+    "id": "oYxX4pjbNRBQ2YSiATMD",
+    "isActive": true,
+    "subcategoryId": "Vg7hgl9lRQZoUFt5AhPV",
+    "createdAt": "2025-08-16T08:14:42.857Z",
+    "updatedAt": "2025-08-16T08:14:42.857Z",
+    "country": "LK"
+  },
+  {
+    "id": "oaGht3i0f0s34pEZDIJF",
+    "isActive": true,
+    "createdAt": "2025-08-16T08:14:40.517Z",
+    "country": "LK",
+    "updatedAt": "2025-08-16T08:14:40.517Z",
+    "subcategoryId": "2g9z52jTfoEy6Iobelfu"
+  },
+  {
+    "id": "rAxkPPqbYYhX8NhP5g9r",
+    "updatedAt": "2025-08-16T08:14:41.453Z",
+    "isActive": true,
+    "createdAt": "2025-08-16T08:14:41.453Z",
+    "country": "LK",
+    "subcategoryId": "71FoHCDW4dql4dA3CPcS"
+  },
+  {
+    "id": "rjRXgY3f6sOt74htOlhv",
+    "subcategoryId": "Osj6NHQPlJDHD06AXeK9",
+    "isActive": true,
+    "createdAt": "2025-08-16T08:14:42.507Z",
+    "country": "LK",
+    "updatedAt": "2025-08-16T08:14:42.507Z"
+  },
+  {
+    "id": "rssMH2l5tOuEqS4jLOBe",
+    "updatedAt": "2025-08-16T08:14:44.824Z",
+    "country": "LK",
+    "subcategoryId": "vk361Jy0TYsChXS6Yb2O",
+    "isActive": true,
+    "createdAt": "2025-08-16T08:14:44.824Z"
+  },
+  {
+    "id": "sUlt91he1GLCxCNT3FRv",
+    "createdAt": "2025-08-16T08:14:44.477Z",
+    "subcategoryId": "pAt1h5TfupSAMux7OPwB",
+    "country": "LK",
+    "updatedAt": "2025-08-16T08:14:44.477Z",
+    "isActive": true
+  },
+  {
+    "id": "sh8KY8tNLO5jxvCpqntq",
+    "subcategoryId": "VMrLxmXE9QAGGKMMAnxE",
+    "isActive": true,
+    "updatedAt": "2025-08-16T08:14:42.741Z",
+    "createdAt": "2025-08-16T08:14:42.741Z",
+    "country": "LK"
+  },
+  {
+    "id": "uHhD6jXG40Z3a6HiFMk3",
+    "country": "LK",
+    "subcategoryId": "jZVIfAzQBxA7CzO9AOFZ",
+    "updatedAt": "2025-08-16T08:14:43.669Z",
+    "isActive": true,
+    "createdAt": "2025-08-16T08:14:43.669Z"
+  },
+  {
+    "id": "w4WMI775Oq19ZSaGBlWs",
+    "country": "LK",
+    "subcategoryId": "2ov19TewkzWGpotgotVd",
+    "createdAt": "2025-08-16T08:14:40.749Z",
+    "updatedAt": "2025-08-16T08:14:40.749Z",
+    "isActive": true
+  },
+  {
+    "id": "wlihstw2g86hpvd43aE0",
+    "country": "LK",
+    "subcategoryId": "3ok4RGGpOLMmvZ0PwVAs",
+    "isActive": true,
+    "updatedAt": "2025-08-16T08:14:41.104Z",
+    "createdAt": "2025-08-16T08:14:41.104Z"
+  },
+  {
+    "id": "xr67ZPMenO3uH2buOs9s",
+    "createdAt": "2025-08-16T08:14:43.319Z",
+    "isActive": true,
+    "subcategoryId": "fDHnj2HW4s87bjhokDmU",
+    "country": "LK",
+    "updatedAt": "2025-08-16T08:14:43.319Z"
+  },
+  {
+    "id": "yMoHC6dRfztTc3dM8kCi",
+    "updatedAt": "2025-08-16T08:14:43.785Z",
+    "createdAt": "2025-08-16T08:14:43.785Z",
+    "isActive": true,
+    "country": "LK",
+    "subcategoryId": "jdSmtfTeISIbEB7krefS"
+  },
+  {
+    "id": "zUkT3zx7tcLDtOA7XnpG",
+    "isActive": true,
+    "country": "LK",
+    "createdAt": "2025-08-16T08:14:41.917Z",
+    "subcategoryId": "DsQkHODURPZEmY90CTAG",
+    "updatedAt": "2025-08-16T08:14:41.917Z"
+  },
+  {
+    "id": "ze2uAKMdaN1TAPZJzv4C",
+    "country": "LK",
+    "createdAt": "2025-08-16T08:14:42.154Z",
+    "isActive": true,
+    "subcategoryId": "IIH8BVvsIqzZQwo0kdH6",
+    "updatedAt": "2025-08-16T08:14:42.154Z"
+  }
+]

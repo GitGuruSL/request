@@ -1,0 +1,242 @@
+[
+  {
+    "id": "0z5bVfkqwh8upEqrDyIo",
+    "population": 58209,
+    "createdBy": "country_admin",
+    "description": "Matara city in Sri Lanka",
+    "updatedBy": "country_admin",
+    "countryCode": "LK",
+    "coordinates": {
+      "lng": null,
+      "lat": null
+    },
+    "isActive": true,
+    "updatedAt": "2025-08-14T15:21:53.457Z",
+    "createdAt": "2025-08-14T15:21:53.457Z",
+    "name": "Matara"
+  },
+  {
+    "id": "7jCG58CFCEGQFD1Vzv1D",
+    "updatedBy": "country_admin",
+    "createdAt": "2025-08-14T15:21:53.086Z",
+    "population": 95489,
+    "createdBy": "country_admin",
+    "description": "Batticaloa city in Sri Lanka",
+    "countryCode": "LK",
+    "isActive": true,
+    "coordinates": {
+      "lat": null,
+      "lng": null
+    },
+    "updatedAt": "2025-08-14T15:21:53.086Z",
+    "name": "Batticaloa"
+  },
+  {
+    "id": "CW4Q83vbSGQ8HPRshx7i",
+    "countryCode": "LK",
+    "population": 52170,
+    "description": "Ratnapura city in Sri Lanka",
+    "name": "Ratnapura",
+    "updatedBy": "country_admin",
+    "coordinates": {
+      "lng": null,
+      "lat": null
+    },
+    "createdAt": "2025-08-14T15:21:52.966Z",
+    "updatedAt": "2025-08-14T15:21:52.966Z",
+    "isActive": true,
+    "createdBy": "country_admin"
+  },
+  {
+    "id": "I7YlwMUCIDLicyK2uXu5",
+    "population": 99478,
+    "updatedAt": "2025-08-14T15:21:52.443Z",
+    "updatedBy": "country_admin",
+    "description": "Galle city in Sri Lanka",
+    "name": "Galle",
+    "countryCode": "LK",
+    "createdBy": "country_admin",
+    "coordinates": {
+      "lng": null,
+      "lat": null
+    },
+    "createdAt": "2025-08-14T15:21:52.443Z",
+    "isActive": true
+  },
+  {
+    "id": "L32ym4lEPmYeyZya3q1v",
+    "isActive": true,
+    "name": "Jaffna",
+    "updatedBy": "country_admin",
+    "population": 88138,
+    "updatedAt": "2025-08-14T15:40:13.951Z",
+    "createdAt": "2025-08-14T15:40:13.951Z",
+    "createdBy": "country_admin",
+    "coordinates": {
+      "lng": null,
+      "lat": null
+    },
+    "countryCode": "LK",
+    "description": "Jaffna city in Sri Lanka"
+  },
+  {
+    "id": "MeEGfcoV6j9X8qUefxLk",
+    "isActive": true,
+    "name": "Colombo",
+    "coordinates": {
+      "lng": null,
+      "lat": null
+    },
+    "updatedBy": "country_admin",
+    "population": 752993,
+    "updatedAt": "2025-08-14T15:40:12.572Z",
+    "countryCode": "LK",
+    "createdAt": "2025-08-14T15:40:12.572Z",
+    "createdBy": "country_admin",
+    "description": "Colombo city in Sri Lanka"
+  },
+  {
+    "id": "NHjI5tzEaZ8A51SOd1Vc",
+    "updatedBy": "country_admin",
+    "coordinates": {
+      "lng": null,
+      "lat": null
+    },
+    "population": 125400,
+    "name": "Kandy",
+    "isActive": true,
+    "countryCode": "LK",
+    "updatedAt": "2025-08-14T15:40:13.676Z",
+    "createdBy": "country_admin",
+    "description": "Kandy city in Sri Lanka",
+    "createdAt": "2025-08-14T15:40:13.676Z"
+  },
+  {
+    "id": "NyFEpaenljaRbrL9nDq6",
+    "updatedBy": "country_admin",
+    "countryCode": "LK",
+    "isActive": true,
+    "createdAt": "2025-08-14T15:21:52.844Z",
+    "description": "Anuradhapura city in Sri Lanka",
+    "createdBy": "country_admin",
+    "updatedAt": "2025-08-14T15:21:52.844Z",
+    "name": "Anuradhapura",
+    "coordinates": {
+      "lat": null,
+      "lng": null
+    },
+    "population": 63208
+  },
+  {
+    "id": "Py5pq4SyIYUZcQiIgXbh",
+    "countryCode": "LK",
+    "population": 47587,
+    "description": "Badulla city in Sri Lanka",
+    "name": "Badulla",
+    "coordinates": {
+      "lng": null,
+      "lat": null
+    },
+    "updatedBy": "country_admin",
+    "createdAt": "2025-08-14T15:40:15.026Z",
+    "updatedAt": "2025-08-14T15:40:15.026Z",
+    "createdBy": "country_admin",
+    "isActive": true
+  },
+  {
+    "id": "RiqFRtwmG8gIc60kAWFL",
+    "coordinates": {
+      "lng": null,
+      "lat": null
+    },
+    "createdAt": "2025-08-14T15:40:15.416Z",
+    "name": "Ampara",
+    "updatedBy": "country_admin",
+    "createdBy": "country_admin",
+    "updatedAt": "2025-08-14T15:40:15.416Z",
+    "isActive": true,
+    "population": 20448,
+    "description": "Ampara city in Sri Lanka",
+    "countryCode": "LK"
+  },
+  {
+    "id": "SQNZsBddtztCn9Ed8oiG",
+    "isActive": true,
+    "updatedAt": "2025-08-14T15:21:53.336Z",
+    "createdAt": "2025-08-14T15:21:53.336Z",
+    "coordinates": {
+      "lng": null,
+      "lat": null
+    },
+    "updatedBy": "country_admin",
+    "description": "Trincomalee city in Sri Lanka",
+    "population": 99135,
+    "name": "Trincomalee",
+    "createdBy": "country_admin",
+    "countryCode": "LK"
+  },
+  {
+    "id": "ZrzVNZP1wDti4dwaoYFc",
+    "countryCode": "LK",
+    "coordinates": {
+      "lng": null,
+      "lat": null
+    },
+    "isActive": true,
+    "name": "Kalutara",
+    "createdBy": "country_admin",
+    "updatedAt": "2025-08-14T15:21:53.699Z",
+    "updatedBy": "country_admin",
+    "description": "Kalutara city in Sri Lanka",
+    "createdAt": "2025-08-14T15:21:53.699Z",
+    "population": 42984
+  },
+  {
+    "id": "a1BC9feFp3fIYKBdSmEZ",
+    "coordinates": {
+      "lat": null,
+      "lng": null
+    },
+    "updatedBy": "country_admin",
+    "description": "Vavuniya city in Sri Lanka",
+    "createdAt": "2025-08-14T15:40:15.286Z",
+    "updatedAt": "2025-08-14T15:40:15.286Z",
+    "name": "Vavuniya",
+    "isActive": true,
+    "population": 44548,
+    "createdBy": "country_admin",
+    "countryCode": "LK"
+  },
+  {
+    "id": "f1ZQs0Wd8GisV6g7fmCv",
+    "createdAt": "2025-08-14T15:21:53.207Z",
+    "countryCode": "LK",
+    "updatedAt": "2025-08-14T15:21:53.207Z",
+    "population": 99870,
+    "description": "Kurunegala city in Sri Lanka",
+    "updatedBy": "country_admin",
+    "coordinates": {
+      "lat": null,
+      "lng": null
+    },
+    "isActive": true,
+    "createdBy": "country_admin",
+    "name": "Kurunegala"
+  },
+  {
+    "id": "vk061jCOcMKa9jsvBCdZ",
+    "name": "Negombo",
+    "updatedBy": "country_admin",
+    "isActive": true,
+    "description": "Negombo city in Sri Lanka",
+    "createdAt": "2025-08-14T15:40:14.098Z",
+    "population": 142449,
+    "updatedAt": "2025-08-14T15:40:14.098Z",
+    "countryCode": "LK",
+    "createdBy": "country_admin",
+    "coordinates": {
+      "lat": null,
+      "lng": null
+    }
+  }
+]

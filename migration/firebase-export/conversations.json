@@ -1,0 +1,74 @@
+[
+  {
+    "id": "TCWHJZGY5ZDooZjPqrQj",
+    "readStatus": {
+      "Ey0iESw9nQfhfWoaflQmpTsBHZC3": true,
+      "G68WKHAnd8WuIlYlx8iHBO6urDy2": true
+    },
+    "requestId": "BznDpvxnMFX0ileOqKvB",
+    "requestTitle": "Need a camera",
+    "createdAt": "2025-08-11T18:57:24.619Z",
+    "requesterId": "G68WKHAnd8WuIlYlx8iHBO6urDy2",
+    "lastMessageTime": "2025-08-11T18:57:33.561Z",
+    "participantIds": [
+      "G68WKHAnd8WuIlYlx8iHBO6urDy2",
+      "Ey0iESw9nQfhfWoaflQmpTsBHZC3"
+    ],
+    "lastMessage": "we have few cameras",
+    "responderId": "Ey0iESw9nQfhfWoaflQmpTsBHZC3"
+  },
+  {
+    "id": "WuisRZi0IvM5HWc568r9",
+    "lastMessage": "hi",
+    "requesterId": "G68WKHAnd8WuIlYlx8iHBO6urDy2",
+    "createdAt": "2025-08-11T17:31:59.707Z",
+    "lastMessageTime": "2025-08-11T19:38:47.530Z",
+    "responderId": "f7Ne4wl6vsZTaumyFYKO9Lz22x43",
+    "participantIds": [
+      "G68WKHAnd8WuIlYlx8iHBO6urDy2",
+      "f7Ne4wl6vsZTaumyFYKO9Lz22x43"
+    ],
+    "readStatus": {
+      "f7Ne4wl6vsZTaumyFYKO9Lz22x43": true,
+      "G68WKHAnd8WuIlYlx8iHBO6urDy2": true
+    },
+    "requestId": "BznDpvxnMFX0ileOqKvB",
+    "requestTitle": "Need a camera"
+  },
+  {
+    "id": "pooD9sqQhgqWqf1mvsOP",
+    "lastMessageTime": "2025-08-11T16:16:30.390Z",
+    "createdAt": "2025-08-11T16:16:26.685Z",
+    "participantIds": [
+      "G68WKHAnd8WuIlYlx8iHBO6urDy2",
+      "Ey0iESw9nQfhfWoaflQmpTsBHZC3"
+    ],
+    "responderId": "Ey0iESw9nQfhfWoaflQmpTsBHZC3",
+    "requesterId": "G68WKHAnd8WuIlYlx8iHBO6urDy2",
+    "lastMessage": "hi",
+    "readStatus": {
+      "Ey0iESw9nQfhfWoaflQmpTsBHZC3": true,
+      "G68WKHAnd8WuIlYlx8iHBO6urDy2": true
+    },
+    "requestId": "ho0ZqKt8QOEQz9gTghuS",
+    "requestTitle": "Bike Service"
+  },
+  {
+    "id": "xZuwaPuy69KyYVJjiw8n",
+    "requestId": "mBsuysIwr7HFoEveWWhw",
+    "lastMessage": "Hi",
+    "requesterId": "G68WKHAnd8WuIlYlx8iHBO6urDy2",
+    "responderId": "f7Ne4wl6vsZTaumyFYKO9Lz22x43",
+    "requestTitle": "Phone",
+    "lastMessageTime": "2025-08-11T19:21:05.924Z",
+    "readStatus": {
+      "f7Ne4wl6vsZTaumyFYKO9Lz22x43": true,
+      "G68WKHAnd8WuIlYlx8iHBO6urDy2": true
+    },
+    "participantIds": [
+      "G68WKHAnd8WuIlYlx8iHBO6urDy2",
+      "f7Ne4wl6vsZTaumyFYKO9Lz22x43"
+    ],
+    "createdAt": "2025-08-11T19:21:00.907Z"
+  }
+]

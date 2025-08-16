@@ -1,0 +1,27 @@
+[
+  {
+    "id": "Cvb42ckERB3wBD3M9f8J",
+    "pickupVerifiedAt": null,
+    "isRequesterReviewed": false,
+    "driverNotes": null,
+    "finalAmount": null,
+    "driverArrivingAt": null,
+    "cancelledAt": null,
+    "requesterNotes": null,
+    "status": "accepted",
+    "paymentCompleted": null,
+    "pickupVerification": null,
+    "isDriverReviewed": false,
+    "driverId": "f7Ne4wl6vsZTaumyFYKO9Lz22x43",
+    "dropoffVerifiedAt": null,
+    "dropoffVerification": null,
+    "createdAt": "2025-07-30T13:03:13.484Z",
+    "cancellationReason": null,
+    "acceptedAt": "2025-07-30T13:03:13.484Z",
+    "requesterId": "FdE5zHibfRQFAP8lwPx8p4Ze06q1",
+    "completedAt": null,
+    "tripStartedAt": null,
+    "responseId": "VjqQIP7oJXJozZSC3gdI",
+    "requestId": "QelfKYWSwwm1HayWcFpU"
+  }
+]

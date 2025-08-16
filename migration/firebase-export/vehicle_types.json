@@ -1,0 +1,59 @@
+[
+  {
+    "id": "3eBOTrVk1dunEk0pdOT9",
+    "updatedAt": "2025-08-14T19:03:33.118Z",
+    "createdAt": "2025-08-14T10:49:08.835Z",
+    "name": "Car",
+    "createdBy": "superadmin@request.lk",
+    "isActive": true,
+    "icon": "DirectionsCar",
+    "passengerCapacity": 4,
+    "displayOrder": 3,
+    "updatedBy": "superadmin@request.lk",
+    "description": ""
+  },
+  {
+    "id": "NJ5nYgeYHLzwaYkd31h8",
+    "createdBy": "superadmin@request.lk",
+    "updatedAt": "2025-08-14T19:03:23.521Z",
+    "icon": "LocalTaxi",
+    "displayOrder": 2,
+    "passengerCapacity": 3,
+    "createdAt": "2025-08-14T10:49:08.687Z",
+    "description": "",
+    "isActive": true,
+    "name": "Three Wheeler",
+    "updatedBy": "superadmin@request.lk"
+  },
+  {
+    "id": "PqsvqfPrXH0DjkaJmjVp",
+    "passengerCapacity": 6,
+    "name": "Van",
+    "createdAt": "2025-08-14T10:49:08.974Z",
+    "description": "",
+    "updatedAt": "2025-08-14T19:03:40.835Z",
+    "createdBy": "superadmin@request.lk",
+    "icon": "AirportShuttle",
+    "displayOrder": 4,
+    "isActive": true,
+    "updatedBy": "superadmin@request.lk"
+  },
+  {
+    "id": "jy2GkOGRIDpWoSi5ACuF",
+    "icon": "TwoWheeler",
+    "displayOrder": 1,
+    "name": "Bike",
+    "createdBy": "superadmin@request.lk",
+    "isActive": true,
+    "createdAt": "2025-08-14T10:49:08.538Z"
+  },
+  {
+    "id": "lYnHRWWgQ55YVbxD03XC",
+    "createdBy": "superadmin@request.lk",
+    "name": "Shared Ride",
+    "isActive": true,
+    "icon": "People",
+    "displayOrder": 5,
+    "createdAt": "2025-08-14T10:49:09.102Z"
+  }
+]

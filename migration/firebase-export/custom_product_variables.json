@@ -1,0 +1,106 @@
+[
+  {
+    "id": "99NQS2E1YLlMEfZIWFmi",
+    "type": "select",
+    "updatedBy": "superadmin@request.lk",
+    "categoryIds": [],
+    "name": "RAM",
+    "isActive": true,
+    "createdAt": "2025-08-05T08:18:44.044Z",
+    "possibleValues": [
+      "4GB",
+      "6GB",
+      "8GB",
+      "12GB",
+      "16GB",
+      "32GB"
+    ],
+    "isRequired": false,
+    "description": "Memory capacity",
+    "unit": "",
+    "updatedAt": "2025-08-13T17:52:17.693Z",
+    "usageCount": 0
+  },
+  {
+    "id": "LPb5kFIbjaEvvnrhhUDv",
+    "isRequired": false,
+    "unit": "",
+    "isActive": true,
+    "usageCount": 0,
+    "updatedAt": "2025-08-13T17:52:38.975Z",
+    "type": "select",
+    "description": "Device storage capacity",
+    "updatedBy": "superadmin@request.lk",
+    "categoryIds": [],
+    "possibleValues": [
+      "128GB",
+      "256GB",
+      "512GB",
+      "1TB"
+    ],
+    "name": "Storage Capacity",
+    "createdAt": "2025-08-05T08:18:44.044Z"
+  },
+  {
+    "id": "WexvQH8AG34TR1sAHaIq",
+    "usageCount": 0,
+    "createdAt": "2025-08-05T08:18:44.044Z",
+    "description": "Product size options",
+    "unit": "",
+    "updatedBy": "superadmin@request.lk",
+    "type": "select",
+    "updatedAt": "2025-08-13T17:52:32.520Z",
+    "isActive": true,
+    "name": "Size",
+    "categoryIds": [],
+    "possibleValues": [
+      "Small",
+      "Medium",
+      "Large",
+      "XL"
+    ],
+    "isRequired": false
+  },
+  {
+    "id": "YVltM0BKnkszaZ5btbOX",
+    "updatedBy": "superadmin@request.lk",
+    "description": "Product color options",
+    "type": "select",
+    "createdAt": "2025-08-05T08:18:44.044Z",
+    "name": "Color",
+    "categoryIds": [],
+    "isRequired": false,
+    "possibleValues": [
+      "Black",
+      "White",
+      "Blue",
+      "Red",
+      "Gold",
+      "Yellow"
+    ],
+    "unit": "",
+    "updatedAt": "2025-08-13T17:51:24.302Z",
+    "isActive": true,
+    "usageCount": 0
+  },
+  {
+    "id": "iiYSRvNv2TbkYAlavVlS",
+    "updatedBy": "superadmin@request.lk",
+    "type": "select",
+    "categoryIds": [],
+    "name": "Screen Size",
+    "isActive": true,
+    "createdAt": "2025-08-05T08:18:44.044Z",
+    "description": "Display screen size",
+    "possibleValues": [
+      "5.5\"",
+      "6.1\"",
+      "6.7\"",
+      "7.2\""
+    ],
+    "isRequired": false,
+    "unit": "",
+    "usageCount": 0,
+    "updatedAt": "2025-08-13T17:52:26.573Z"
+  }
+]

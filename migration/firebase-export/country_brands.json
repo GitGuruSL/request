@@ -1,0 +1,26 @@
+[
+  {
+    "id": "LNcpQiuE9KOBmW0O3OID",
+    "brandId": "SidBtYJqol2EP78bfGTA",
+    "createdAt": "2025-08-16T08:14:46.003Z",
+    "updatedAt": "2025-08-16T08:14:46.003Z",
+    "country": "LK",
+    "isActive": true
+  },
+  {
+    "id": "okl7oMTBGKVsk18tv5xW",
+    "isActive": true,
+    "brandId": "FslnOmhZpeped9CPGpZu",
+    "updatedAt": "2025-08-16T08:14:45.765Z",
+    "country": "LK",
+    "createdAt": "2025-08-16T08:14:45.765Z"
+  },
+  {
+    "id": "yJYjmaQMtkvjkFwNGuwR",
+    "country": "LK",
+    "isActive": true,
+    "createdAt": "2025-08-16T08:14:45.883Z",
+    "updatedAt": "2025-08-16T08:14:45.883Z",
+    "brandId": "FwOmNvnwyJMz0hl3GOud"
+  }
+]

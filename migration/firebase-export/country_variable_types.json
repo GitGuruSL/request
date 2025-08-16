@@ -1,0 +1,72 @@
+[
+  {
+    "id": "3qaQxgvPqxOSPQSgv5Lj",
+    "updatedAt": "2025-08-16T09:12:21.565Z",
+    "createdByName": "System",
+    "variableTypeId": "99NQS2E1YLLIMEZIWF",
+    "createdBy": "system",
+    "createdAt": "2025-08-16T09:12:21.565Z",
+    "updatedByName": "System",
+    "isActive": true,
+    "countryName": "LK",
+    "variableTypeName": "RAM",
+    "country": "LK",
+    "updatedBy": "system"
+  },
+  {
+    "id": "C56mdNB1Cq6vNSv61w1B",
+    "isActive": true,
+    "createdBy": "Q6W97aE62aUYpK9XOU8vZvzFAqh2",
+    "updatedAt": "2025-08-16T08:59:39.726Z",
+    "country": "LK",
+    "updatedByName": "Rimas",
+    "createdAt": "2025-08-16T08:59:37.581Z",
+    "countryName": "LK",
+    "variableTypeName": "Storage Capacity",
+    "updatedBy": "Q6W97aE62aUYpK9XOU8vZvzFAqh2",
+    "variableTypeId": "LPb5kFIbjaEvvnrhhUDv",
+    "createdByName": "Rimas"
+  },
+  {
+    "id": "G17R5U4IGZd4ImBrWPWg",
+    "variableTypeId": "WexvQH8AG34TR1sAHalq",
+    "createdBy": "system",
+    "variableTypeName": "Size",
+    "countryName": "LK",
+    "country": "LK",
+    "updatedAt": "2025-08-16T09:12:21.910Z",
+    "updatedBy": "system",
+    "updatedByName": "System",
+    "isActive": true,
+    "createdAt": "2025-08-16T09:12:21.910Z",
+    "createdByName": "System"
+  },
+  {
+    "id": "lY4W9V1QfTOQc6klpKi7",
+    "createdBy": "system",
+    "createdAt": "2025-08-16T09:12:22.209Z",
+    "countryName": "LK",
+    "variableTypeId": "YVIIMOBKnkezaZ5bibOX",
+    "country": "LK",
+    "isActive": true,
+    "updatedAt": "2025-08-16T09:12:22.209Z",
+    "updatedByName": "System",
+    "createdByName": "System",
+    "variableTypeName": "Color",
+    "updatedBy": "system"
+  },
+  {
+    "id": "oFvvStiDMOuzX0vjP2Qk",
+    "isActive": true,
+    "createdAt": "2025-08-16T08:59:40.877Z",
+    "updatedBy": "Q6W97aE62aUYpK9XOU8vZvzFAqh2",
+    "country": "LK",
+    "createdByName": "Rimas",
+    "updatedByName": "Rimas",
+    "createdBy": "Q6W97aE62aUYpK9XOU8vZvzFAqh2",
+    "updatedAt": "2025-08-16T09:39:02.764Z",
+    "variableTypeId": "iiYSRvNv2TbkYAlavVlS",
+    "countryName": "LK",
+    "variableTypeName": "Screen Size"
+  }
+]

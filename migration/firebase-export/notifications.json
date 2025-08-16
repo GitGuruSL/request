@@ -1,0 +1,62 @@
+[
+  {
+    "id": "58X7Y9rpe94psYJQbAi1",
+    "data": {
+      "responsePrice": 1500,
+      "currency": "LKR",
+      "requestId": "VZsMAH9ezArGS4qdDy48",
+      "responderName": "Niros Flyil"
+    },
+    "createdAt": "2025-08-12T08:39:51.058Z",
+    "title": "New Response Received",
+    "message": "Niros Flyil has responded to your request \"Ride from 8JF7+2MG, Kondadeniya Rd, Katugastota, Sri Lanka to 7JQJ+WCH, Kandy, Sri Lanka\" with an offer of LKR 1500.00",
+    "isRead": false,
+    "type": "new_response",
+    "userId": "G68WKHAnd8WuIlYlx8iHBO6urDy2"
+  },
+  {
+    "id": "7ZEHRUx5ZPheDUPWF4z8",
+    "type": "new_response",
+    "userId": "G68WKHAnd8WuIlYlx8iHBO6urDy2",
+    "message": "John Wick has responded to your request \"Need a camera\" with an offer of LKR 1000.00",
+    "createdAt": "2025-08-13T17:37:39.387Z",
+    "title": "New Response Received",
+    "isRead": false,
+    "data": {
+      "requestId": "BznDpvxnMFX0ileOqKvB",
+      "responsePrice": 1000,
+      "currency": "LKR",
+      "responderName": "John Wick"
+    }
+  },
+  {
+    "id": "oQxYuXuz5cvOIY0IniEP",
+    "title": "New Response Received",
+    "data": {
+      "requestId": "2D4PSpmE2qkOfDMtC29k",
+      "responderName": "Niros Flyil",
+      "currency": "LKR",
+      "responsePrice": 500
+    },
+    "isRead": false,
+    "userId": "G68WKHAnd8WuIlYlx8iHBO6urDy2",
+    "type": "new_response",
+    "createdAt": "2025-08-12T17:51:14.563Z",
+    "message": "Niros Flyil has responded to your request \"Document\" with an offer of LKR 500.00"
+  },
+  {
+    "id": "vTR5uiYXF5bYXXJe3sFN",
+    "userId": "G68WKHAnd8WuIlYlx8iHBO6urDy2",
+    "isRead": false,
+    "data": {
+      "currency": "LKR",
+      "responderName": "John Wick",
+      "requestId": "aezPbm1rVHBP9dBo08gY",
+      "responsePrice": 12500
+    },
+    "title": "New Response Received",
+    "createdAt": "2025-08-13T17:38:39.385Z",
+    "type": "new_response",
+    "message": "John Wick has responded to your request \"Bike Service\" with an offer of LKR 12500.00"
+  }
+]

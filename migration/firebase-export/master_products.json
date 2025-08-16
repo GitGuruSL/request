@@ -1,0 +1,195 @@
+[
+  {
+    "id": "3Road16S12xFNT2qmwaj",
+    "keywords": [],
+    "subcategoryId": "dwl0NWulnrOeJ3lQWjig",
+    "name": "Samsung S25 Ultra",
+    "updatedBy": "superadmin@request.lk",
+    "createdBy": "superadmin@request.lk",
+    "availableVariables": {},
+    "businessListingsCount": 1,
+    "updatedAt": "2025-08-15T16:33:36.996Z",
+    "brand": "",
+    "description": "Samsung s25 Ultra",
+    "images": [
+      "https://firebasestorage.googleapis.com/v0/b/request-marketplace.firebasestorage.app/o/products%2F1755109624263_1kx4nwmdv.jpg?alt=media&token=8d15a2c5-5bbb-4144-aa3f-57d93114f910"
+    ],
+    "categoryId": "LL8ebIAi3nk2zlik06Px",
+    "isActive": true,
+    "createdAt": "2025-08-13T18:27:10.480Z"
+  },
+  {
+    "id": "6kfYtDtp7V9dixQ8hNqy",
+    "businessListingsCount": 1,
+    "updatedAt": "2025-08-13T17:26:16.784Z",
+    "name": "iPhone 15 Pro",
+    "isActive": true,
+    "subcategoryId": "",
+    "specifications": {},
+    "updatedBy": "superadmin@request.lk",
+    "description": "Latest Apple smartphone with advanced feature",
+    "subcategory": "",
+    "category": "Electronics",
+    "brand": "Apple",
+    "categoryId": "undefined",
+    "createdAt": "2025-08-03T06:03:55.865Z",
+    "keywords": [
+      "smartphone",
+      "apple",
+      "iphone"
+    ],
+    "images": [
+      "https://firebasestorage.googleapis.com/v0/b/request-marketplace.firebasestorage.app/o/products%2F1755105973577_89yy2sw8o.jpeg?alt=media&token=29609771-3afe-4034-ae8f-791a422a2ff7"
+    ],
+    "availableVariables": {},
+    "imageUrls": [],
+    "active": true
+  },
+  {
+    "id": "dGXDLrOyZz0s4n08UVn7",
+    "isActive": true,
+    "active": true,
+    "name": "Soccer Ball",
+    "createdAt": "2025-08-03T06:03:55.866Z",
+    "brand": "Adidas",
+    "description": "Official size soccer ball",
+    "category": "Sports & Recreation",
+    "imageUrls": [],
+    "subcategory": "",
+    "updatedAt": "2025-08-05T06:12:32.184Z",
+    "keywords": [
+      "soccer",
+      "ball",
+      "sports"
+    ],
+    "specifications": {},
+    "subcategoryId": "",
+    "categoryId": "sports"
+  },
+  {
+    "id": "dell-xps-13",
+    "availableVariables": {},
+    "metadata": {},
+    "brand": "Dell",
+    "images": [],
+    "subcategoryId": "wGf18gDEz5Am6jAmBpXk",
+    "categoryId": "LL8ebIAi3nk2zlik06Px",
+    "updatedBy": "superadmin@request.lk",
+    "specifications": {
+      "screen": "13.4 inch",
+      "ram": "16GB",
+      "processor": "Intel Core i7",
+      "storage": "512GB SSD"
+    },
+    "updatedAt": "2025-08-13T17:25:14.003Z",
+    "imageUrls": [
+      "https://example.com/dell-xps-13.jpg"
+    ],
+    "name": "Dell XPS 13",
+    "createdAt": "2025-08-03T07:06:44.277Z",
+    "isActive": true,
+    "description": "Premium Windows laptop with InfinityEdge display",
+    "keywords": [
+      "dell",
+      "xps",
+      "laptop",
+      "windows",
+      "ultrabook",
+      "premium"
+    ]
+  },
+  {
+    "id": "huMYoTRbI2wqJ4qLI1H8",
+    "imageUrls": [],
+    "categoryId": "fashion",
+    "createdAt": "2025-08-03T06:03:55.866Z",
+    "keywords": [
+      "shoes",
+      "nike",
+      "running"
+    ],
+    "name": "Nike Air Max",
+    "updatedAt": "2025-08-03T06:03:55.866Z",
+    "brand": "Nike",
+    "isActive": true,
+    "specifications": {},
+    "subcategoryId": "",
+    "description": "Comfortable running shoes"
+  },
+  {
+    "id": "macbook-air-m3",
+    "name": "MacBook Air M3",
+    "brand": "Apple",
+    "description": "Ultra-thin laptop with M3 chip and all-day battery life",
+    "updatedAt": "2025-08-03T07:06:44.277Z",
+    "imageUrls": [
+      "https://example.com/macbook-air-m3.jpg"
+    ],
+    "categoryId": "electronics",
+    "metadata": {},
+    "subcategoryId": "computers",
+    "keywords": [
+      "macbook",
+      "air",
+      "laptop",
+      "apple",
+      "m3",
+      "ultrabook"
+    ],
+    "specifications": {
+      "ram": "8GB",
+      "storage": "256GB SSD",
+      "screen": "13.6 inch",
+      "processor": "M3"
+    },
+    "isActive": true,
+    "createdAt": "2025-08-03T07:06:44.277Z"
+  },
+  {
+    "id": "nike-air-jordan-1",
+    "categoryId": "fashion",
+    "brand": "Nike",
+    "metadata": {},
+    "updatedAt": "2025-08-03T07:06:44.277Z",
+    "specifications": {
+      "type": "Basketball",
+      "material": "Leather",
+      "sizes": "US 7-13",
+      "color": "Chicago"
+    },
+    "isActive": true,
+    "createdAt": "2025-08-03T07:06:44.277Z",
+    "imageUrls": [
+      "https://example.com/air-jordan-1.jpg"
+    ],
+    "name": "Nike Air Jordan 1",
+    "description": "Classic basketball shoes with timeless design",
+    "subcategoryId": "shoes",
+    "keywords": [
+      "nike",
+      "jordan",
+      "basketball",
+      "shoes",
+      "sneakers",
+      "classic"
+    ]
+  },
+  {
+    "id": "qEjiJGCD8TEk7EML4fnp",
+    "isActive": true,
+    "keywords": [
+      "smartphone",
+      "samsung",
+      "android"
+    ],
+    "imageUrls": [],
+    "brand": "Samsung",
+    "subcategoryId": "Mobile Phones",
+    "description": "Premium Android smartphone",
+    "name": "Samsung Galaxy S24",
+    "specifications": {},
+    "createdAt": "2025-08-03T06:03:55.865Z",
+    "updatedAt": "2025-08-05T17:14:23.899Z",
+    "categoryId": "Electronics"
+  }
+]
