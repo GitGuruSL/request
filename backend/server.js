@@ -14,6 +14,8 @@ const dbService = require('./services/database');
 // Import routes
 const authRoutes = require('./routes/auth');
 const categoryRoutes = require('./routes/categories');
+const cityRoutes = require('./routes/cities');
+const requestRoutes = require('./routes/requests');
 
 const app = express();
 
@@ -64,6 +66,8 @@ app.get('/health', async (req, res) => {
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/cities', cityRoutes);
+app.use('/api/requests', requestRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
