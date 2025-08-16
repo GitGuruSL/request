@@ -12,7 +12,7 @@ DB_USERNAME="request_admin"
 DB_PASSWORD="AWS2025RDS!"
 DB_INSTANCE_CLASS="db.t3.micro"  # Change to db.t3.medium for production
 DB_ENGINE="postgres"
-DB_ENGINE_VERSION="15.4"
+DB_ENGINE_VERSION="15.14"
 DB_ALLOCATED_STORAGE=20
 DB_STORAGE_TYPE="gp2"
 VPC_SECURITY_GROUP_ID=""  # Will be created
@@ -77,15 +77,32 @@ echo -e "${GREEN}✅ DB subnet group created/verified${NC}"
 
 # Create security group for RDS
 echo -e "${YELLOW}🔒 Creating security group for RDS...${NC}"
-SECURITY_GROUP_ID=$(aws ec2 create-security-group \
-    --group-name "request-marketplace-rds-sg" \
-    --description "Security group for Request Marketplace RDS" \
-    --vpc-id "$VPC_ID" \
-    --query "GroupId" \
-    --output text 2>/dev/null || aws ec2 describe-security-groups \
+
+# Check if security group already exists
+EXISTING_SG=$(aws ec2 describe-security-groups \
     --filters "Name=group-name,Values=request-marketplace-rds-sg" "Name=vpc-id,Values=$VPC_ID" \
     --query "SecurityGroups[0].GroupId" \
-    --output text)
+    --output text 2>/dev/null)
+
+if [ "$EXISTING_SG" != "None" ] && [ ! -z "$EXISTING_SG" ]; then
+    SECURITY_GROUP_ID="$EXISTING_SG"
+    echo -e "${YELLOW}⚠️  Using existing security group: $SECURITY_GROUP_ID${NC}"
+else
+    # Create new security group
+    SECURITY_GROUP_ID=$(aws ec2 create-security-group \
+        --group-name "request-marketplace-rds-sg" \
+        --description "Security group for Request Marketplace RDS" \
+        --vpc-id "$VPC_ID" \
+        --query "GroupId" \
+        --output text)
+    
+    if [ -z "$SECURITY_GROUP_ID" ] || [ "$SECURITY_GROUP_ID" = "None" ]; then
+        echo -e "${RED}❌ Failed to create security group${NC}"
+        exit 1
+    fi
+    
+    echo -e "${GREEN}✅ Created new security group: $SECURITY_GROUP_ID${NC}"
+fi
 
 echo -e "${GREEN}✅ Security group ID: $SECURITY_GROUP_ID${NC}"
 
