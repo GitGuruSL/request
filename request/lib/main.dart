@@ -20,19 +20,19 @@ import 'src/screens/business_verification_screen.dart';
 import 'src/screens/business_registration_screen.dart';
 import 'src/screens/delivery_verification_screen.dart';
 import 'src/screens/verification_status_screen.dart';
-import 'src/screens/driver_documents_view_screen.dart';         // Driver documents view
+import 'src/screens/driver_documents_view_screen.dart'; // Driver documents view
 import 'src/screens/role_management_screen.dart';
 import 'src/screens/modern_menu_screen.dart';
 import 'src/screens/content_page_screen.dart';
 import 'src/screens/content_test_screen.dart';
-import 'src/screens/api_test_screen.dart';                       // API test screen
+import 'src/screens/api_test_screen.dart'; // API test screen
 import 'src/models/master_product.dart';
 import 'src/services/country_service.dart';
 import 'src/theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   try {
     // Guard against duplicate initialization during hot restart
     if (Firebase.apps.isEmpty) {
@@ -50,7 +50,7 @@ void main() async {
       debugPrint('Initialization failed: $e');
     }
   }
-  
+
   runApp(const MyApp());
 }
 
@@ -66,9 +66,13 @@ class MyApp extends StatelessWidget {
       onGenerateRoute: (settings) {
         switch (settings.name) {
           case '/':
-            return MaterialPageRoute(builder: (context) => const SplashScreen());
+            return MaterialPageRoute(
+              builder: (context) => const SplashScreen(),
+            );
           case '/welcome':
-            return MaterialPageRoute(builder: (context) => const WelcomeScreen());
+            return MaterialPageRoute(
+              builder: (context) => const WelcomeScreen(),
+            );
           case '/login':
             final args = settings.arguments as Map<String, dynamic>?;
             return MaterialPageRoute(
@@ -105,33 +109,59 @@ class MyApp extends StatelessWidget {
               ),
             );
           case '/profile':
-            return MaterialPageRoute(builder: (context) => const ProfileCompletionScreen());
+            return MaterialPageRoute(
+              builder: (context) => const ProfileCompletionScreen(),
+            );
           case '/driver-verification':
-            return MaterialPageRoute(builder: (context) => const DriverVerificationScreen());
+            return MaterialPageRoute(
+              builder: (context) => const DriverVerificationScreen(),
+            );
           case '/business-verification':
-            return MaterialPageRoute(builder: (context) => const BusinessVerificationScreen());
+            return MaterialPageRoute(
+              builder: (context) => const BusinessVerificationScreen(),
+            );
           case '/business-registration':
-            return MaterialPageRoute(builder: (context) => const BusinessRegistrationScreen());
+            return MaterialPageRoute(
+              builder: (context) => const BusinessRegistrationScreen(),
+            );
           case '/delivery-verification':
-            return MaterialPageRoute(builder: (context) => const DeliveryVerificationScreen());
+            return MaterialPageRoute(
+              builder: (context) => const DeliveryVerificationScreen(),
+            );
           case '/verification-status':
-            return MaterialPageRoute(builder: (context) => const VerificationStatusScreen());
+            return MaterialPageRoute(
+              builder: (context) => const VerificationStatusScreen(),
+            );
           case '/driver-documents-view':
-            return MaterialPageRoute(builder: (context) => const DriverDocumentsViewScreen());
+            return MaterialPageRoute(
+              builder: (context) => const DriverDocumentsViewScreen(),
+            );
           case '/role-management':
-            return MaterialPageRoute(builder: (context) => const RoleManagementScreen());
+            return MaterialPageRoute(
+              builder: (context) => const RoleManagementScreen(),
+            );
           case '/api-test':
-            return MaterialPageRoute(builder: (context) => const ApiTestScreen());
+            return MaterialPageRoute(
+              builder: (context) => const ApiTestScreen(),
+            );
           case '/main-dashboard':
           case '/home':
-            return MaterialPageRoute(builder: (context) => const MainNavigationScreen());
+            return MaterialPageRoute(
+              builder: (context) => const MainNavigationScreen(),
+            );
           case '/browse':
-            return MaterialPageRoute(builder: (context) => const BrowseScreen());
+            return MaterialPageRoute(
+              builder: (context) => const BrowseScreen(),
+            );
           case '/price':
             // Redirect to product search since price comparison needs a specific product
-            return MaterialPageRoute(builder: (context) => const ProductSearchScreen());
+            return MaterialPageRoute(
+              builder: (context) => const ProductSearchScreen(),
+            );
           case '/pricing-search':
-            return MaterialPageRoute(builder: (context) => const ProductSearchScreen());
+            return MaterialPageRoute(
+              builder: (context) => const ProductSearchScreen(),
+            );
           case '/pricing-comparison':
             final args = settings.arguments as Map<String, dynamic>?;
             final product = args?['product'] as MasterProduct?;
@@ -146,11 +176,17 @@ class MyApp extends StatelessWidget {
               );
             }
           case '/business-pricing':
-            return MaterialPageRoute(builder: (context) => const BusinessPricingDashboard());
+            return MaterialPageRoute(
+              builder: (context) => const BusinessPricingDashboard(),
+            );
           case '/account':
-            return MaterialPageRoute(builder: (context) => const AccountScreen());
+            return MaterialPageRoute(
+              builder: (context) => const AccountScreen(),
+            );
           case '/create-ride-request':
-            return MaterialPageRoute(builder: (context) => const CreateRideRequestScreen());
+            return MaterialPageRoute(
+              builder: (context) => const CreateRideRequestScreen(),
+            );
           case '/edit-response':
             final args = settings.arguments as Map<String, dynamic>?;
             return MaterialPageRoute(
@@ -160,7 +196,9 @@ class MyApp extends StatelessWidget {
               ),
             );
           case '/menu':
-            return MaterialPageRoute(builder: (context) => const ModernMenuScreen());
+            return MaterialPageRoute(
+              builder: (context) => const ModernMenuScreen(),
+            );
           case '/content-page':
             final args = settings.arguments as Map<String, dynamic>?;
             return MaterialPageRoute(
@@ -170,7 +208,9 @@ class MyApp extends StatelessWidget {
               ),
             );
           case '/content-test':
-            return MaterialPageRoute(builder: (context) => const ContentTestScreen());
+            return MaterialPageRoute(
+              builder: (context) => const ContentTestScreen(),
+            );
           // Placeholder routes for menu items
           case '/saved':
           case '/marketplace':
@@ -193,14 +233,19 @@ class MyApp extends StatelessWidget {
               builder: (context) => _buildPlaceholderScreen(settings.name!),
             );
           default:
-            return MaterialPageRoute(builder: (context) => const WelcomeScreen());
+            return MaterialPageRoute(
+              builder: (context) => const WelcomeScreen(),
+            );
         }
       },
     );
   }
 
   Widget _buildPlaceholderScreen(String routeName) {
-    final title = routeName.replaceAll('/', '').replaceAll('-', ' ').toUpperCase();
+    final title = routeName
+        .replaceAll('/', '')
+        .replaceAll('-', ' ')
+        .toUpperCase();
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
@@ -211,11 +256,7 @@ class MyApp extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.construction,
-              size: 80,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.construction, size: 80, color: Colors.grey[400]),
             const SizedBox(height: 20),
             Text(
               '$title - Coming Soon!',
@@ -228,10 +269,7 @@ class MyApp extends StatelessWidget {
             const SizedBox(height: 10),
             const Text(
               'This feature is under development',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
           ],
         ),

@@ -1,0 +1,387 @@
+import 'api_client.dart';
+
+class RequestModel {
+  final String id;
+  final String userId;
+  final String? userName;
+  final String? userEmail;
+  final String title;
+  final String description;
+  final String categoryId;
+  final String? categoryName;
+  final String? subcategoryId;
+  final String? subcategoryName;
+  final String? locationCityId;
+  final String? cityName;
+  final String countryCode;
+  final String status;
+  final double? budgetMin;
+  final double? budgetMax;
+  final String? currency;
+  final DateTime? deadline;
+  final List<String>? imageUrls;
+  final Map<String, dynamic>? metadata;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  RequestModel({
+    required this.id,
+    required this.userId,
+    this.userName,
+    this.userEmail,
+    required this.title,
+    required this.description,
+    required this.categoryId,
+    this.categoryName,
+    this.subcategoryId,
+    this.subcategoryName,
+    this.locationCityId,
+    this.cityName,
+    required this.countryCode,
+    required this.status,
+    this.budgetMin,
+    this.budgetMax,
+    this.currency,
+    this.deadline,
+    this.imageUrls,
+    this.metadata,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory RequestModel.fromJson(Map<String, dynamic> json) {
+    return RequestModel(
+      id: json['id'].toString(),
+      userId: json['user_id'].toString(),
+      userName: json['user_name'],
+      userEmail: json['user_email'],
+      title: json['title'] ?? '',
+      description: json['description'] ?? '',
+      categoryId: json['category_id'].toString(),
+      categoryName: json['category_name'],
+      subcategoryId: json['subcategory_id']?.toString(),
+      subcategoryName: json['subcategory_name'],
+      locationCityId: json['location_city_id']?.toString(),
+      cityName: json['city_name'],
+      countryCode: json['country_code'] ?? 'LK',
+      status: json['status'] ?? 'active',
+      budgetMin: json['budget_min']?.toDouble(),
+      budgetMax: json['budget_max']?.toDouble(),
+      currency: json['currency'],
+      deadline: json['deadline'] != null
+          ? DateTime.parse(json['deadline'])
+          : null,
+      imageUrls: json['image_urls'] != null
+          ? List<String>.from(json['image_urls'])
+          : null,
+      metadata: json['metadata'],
+      createdAt: DateTime.parse(json['created_at']),
+      updatedAt: DateTime.parse(json['updated_at']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'user_id': userId,
+      'title': title,
+      'description': description,
+      'category_id': categoryId,
+      'subcategory_id': subcategoryId,
+      'location_city_id': locationCityId,
+      'country_code': countryCode,
+      'status': status,
+      'budget_min': budgetMin,
+      'budget_max': budgetMax,
+      'currency': currency,
+      'deadline': deadline?.toIso8601String(),
+      'image_urls': imageUrls,
+      'metadata': metadata,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+    };
+  }
+}
+
+class RequestsResponse {
+  final List<RequestModel> requests;
+  final PaginationInfo pagination;
+
+  RequestsResponse({required this.requests, required this.pagination});
+
+  factory RequestsResponse.fromJson(Map<String, dynamic> json) {
+    final requestsData = json['requests'] as List? ?? [];
+    final paginationData = json['pagination'] as Map<String, dynamic>? ?? {};
+
+    return RequestsResponse(
+      requests: requestsData
+          .map((item) => RequestModel.fromJson(item))
+          .toList(),
+      pagination: PaginationInfo.fromJson(paginationData),
+    );
+  }
+}
+
+class PaginationInfo {
+  final int page;
+  final int limit;
+  final int total;
+  final int totalPages;
+
+  PaginationInfo({
+    required this.page,
+    required this.limit,
+    required this.total,
+    required this.totalPages,
+  });
+
+  factory PaginationInfo.fromJson(Map<String, dynamic> json) {
+    return PaginationInfo(
+      page: json['page'] ?? 1,
+      limit: json['limit'] ?? 20,
+      total: json['total'] ?? 0,
+      totalPages: json['totalPages'] ?? 0,
+    );
+  }
+}
+
+class CreateRequestData {
+  final String title;
+  final String description;
+  final String categoryId;
+  final String? subcategoryId;
+  final String? locationCityId;
+  final String countryCode;
+  final double? budgetMin;
+  final double? budgetMax;
+  final String? currency;
+  final DateTime? deadline;
+  final List<String>? imageUrls;
+  final Map<String, dynamic>? metadata;
+
+  CreateRequestData({
+    required this.title,
+    required this.description,
+    required this.categoryId,
+    this.subcategoryId,
+    this.locationCityId,
+    this.countryCode = 'LK',
+    this.budgetMin,
+    this.budgetMax,
+    this.currency,
+    this.deadline,
+    this.imageUrls,
+    this.metadata,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'title': title,
+      'description': description,
+      'category_id': categoryId,
+      if (subcategoryId != null) 'subcategory_id': subcategoryId,
+      if (locationCityId != null) 'location_city_id': locationCityId,
+      'country_code': countryCode,
+      if (budgetMin != null) 'budget_min': budgetMin,
+      if (budgetMax != null) 'budget_max': budgetMax,
+      if (currency != null) 'currency': currency,
+      if (deadline != null) 'deadline': deadline!.toIso8601String(),
+      if (imageUrls != null) 'image_urls': imageUrls,
+      if (metadata != null) 'metadata': metadata,
+    };
+  }
+}
+
+class RestRequestService {
+  static RestRequestService? _instance;
+  static RestRequestService get instance =>
+      _instance ??= RestRequestService._();
+
+  RestRequestService._();
+
+  final ApiClient _apiClient = ApiClient.instance;
+
+  /// Get requests with filtering and pagination
+  Future<RequestsResponse?> getRequests({
+    String? categoryId,
+    String? subcategoryId,
+    String? cityId,
+    String countryCode = 'LK',
+    String? status,
+    String? userId,
+    int page = 1,
+    int limit = 20,
+    String sortBy = 'created_at',
+    String sortOrder = 'DESC',
+  }) async {
+    try {
+      final queryParams = <String, String>{
+        'page': page.toString(),
+        'limit': limit.toString(),
+        'sort_by': sortBy,
+        'sort_order': sortOrder,
+        'country_code': countryCode,
+      };
+
+      if (categoryId != null) queryParams['category_id'] = categoryId;
+      if (subcategoryId != null) queryParams['subcategory_id'] = subcategoryId;
+      if (cityId != null) queryParams['city_id'] = cityId;
+      if (status != null) queryParams['status'] = status;
+      if (userId != null) queryParams['user_id'] = userId;
+
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/requests',
+        queryParameters: queryParams,
+      );
+
+      if (response.isSuccess && response.data != null) {
+        final data = response.data!['data'] as Map<String, dynamic>?;
+        if (data != null) {
+          return RequestsResponse.fromJson(data);
+        }
+      }
+
+      return null;
+    } catch (e) {
+      print('Error fetching requests: $e');
+      return null;
+    }
+  }
+
+  /// Get request by ID
+  Future<RequestModel?> getRequestById(String requestId) async {
+    try {
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/requests/$requestId',
+      );
+
+      if (response.isSuccess && response.data != null) {
+        final data = response.data!['data'] as Map<String, dynamic>?;
+        if (data != null) {
+          return RequestModel.fromJson(data);
+        }
+      }
+
+      return null;
+    } catch (e) {
+      print('Error fetching request: $e');
+      return null;
+    }
+  }
+
+  /// Create a new request
+  Future<RequestModel?> createRequest(CreateRequestData requestData) async {
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        '/api/requests',
+        data: requestData.toJson(),
+      );
+
+      if (response.isSuccess && response.data != null) {
+        final data = response.data!['data'] as Map<String, dynamic>?;
+        if (data != null) {
+          return RequestModel.fromJson(data);
+        }
+      }
+
+      return null;
+    } catch (e) {
+      print('Error creating request: $e');
+      return null;
+    }
+  }
+
+  /// Update an existing request
+  Future<RequestModel?> updateRequest(
+    String requestId,
+    Map<String, dynamic> updates,
+  ) async {
+    try {
+      final response = await _apiClient.put<Map<String, dynamic>>(
+        '/api/requests/$requestId',
+        data: updates,
+      );
+
+      if (response.isSuccess && response.data != null) {
+        final data = response.data!['data'] as Map<String, dynamic>?;
+        if (data != null) {
+          return RequestModel.fromJson(data);
+        }
+      }
+
+      return null;
+    } catch (e) {
+      print('Error updating request: $e');
+      return null;
+    }
+  }
+
+  /// Delete a request
+  Future<bool> deleteRequest(String requestId) async {
+    try {
+      final response = await _apiClient.delete<Map<String, dynamic>>(
+        '/api/requests/$requestId',
+      );
+
+      return response.isSuccess;
+    } catch (e) {
+      print('Error deleting request: $e');
+      return false;
+    }
+  }
+
+  /// Get user's own requests
+  Future<RequestsResponse?> getUserRequests({
+    int page = 1,
+    int limit = 20,
+    String sortBy = 'created_at',
+    String sortOrder = 'DESC',
+  }) async {
+    // This will automatically filter by the authenticated user's ID on the backend
+    return await getRequests(
+      page: page,
+      limit: limit,
+      sortBy: sortBy,
+      sortOrder: sortOrder,
+    );
+  }
+
+  /// Search requests by title or description
+  Future<RequestsResponse?> searchRequests({
+    required String query,
+    String? categoryId,
+    String? cityId,
+    String countryCode = 'LK',
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final queryParams = <String, String>{
+        'q': query,
+        'page': page.toString(),
+        'limit': limit.toString(),
+        'country_code': countryCode,
+      };
+
+      if (categoryId != null) queryParams['category_id'] = categoryId;
+      if (cityId != null) queryParams['city_id'] = cityId;
+
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/requests/search',
+        queryParameters: queryParams,
+      );
+
+      if (response.isSuccess && response.data != null) {
+        final data = response.data!['data'] as Map<String, dynamic>?;
+        if (data != null) {
+          return RequestsResponse.fromJson(data);
+        }
+      }
+
+      return null;
+    } catch (e) {
+      print('Error searching requests: $e');
+      return null;
+    }
+  }
+}
