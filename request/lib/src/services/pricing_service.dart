@@ -2,7 +2,7 @@ import 'dart:async';
 
 class PricingService {
   Future<List<dynamic>> searchProducts(
-          [String query = '', int limit = 25]) async =>
+          {String query = '', String? brand, int limit = 25}) async =>
       [];
   Future<bool> isBusinessEligibleForPricing(String? businessUserId) async =>
       true;
@@ -13,7 +13,10 @@ class PricingService {
 
   Future<List<Map<String, dynamic>>> getActiveVariableTypes() async => [];
   Future<void> trackProductClick(
-      {String? listingId, String? masterProductId, String? businessId}) async {}
+      {String? listingId,
+      String? masterProductId,
+      String? businessId,
+      String? userId}) async {}
   Stream<List<dynamic>> getBusinessPriceListings(String? businessId) async* {
     yield const [];
   }
@@ -23,9 +26,12 @@ class PricingService {
       true;
   Stream<List<dynamic>> getMasterProducts(
       {String? category,
+      String? query,
       String? searchQuery,
       String? businessId,
       int limit = 50}) async* {
+    // accept either query or searchQuery (legacy param name)
+    final effectiveQuery = query ?? searchQuery;
     yield const [];
   }
 

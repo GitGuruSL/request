@@ -108,7 +108,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
       // Use centralized service which automatically filters by user's country
       final requestsStream = _dataService.getCountryRequestsStream(
         status: null, // Get all statuses
-        type: _selectedType,
+        type: _selectedType?.name, // pass enum name as string for shim services
         limit: 50,
       );
       

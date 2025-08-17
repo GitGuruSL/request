@@ -58,20 +58,24 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
     _loadBusinessProfile();
     _loadAvailableAttributes();
     _initializeForm();
-    
+
     // Debug: Print available variables
     print('DEBUG: Master Product ID: ${widget.masterProduct.id}');
     print('DEBUG: Master Product Name: ${widget.masterProduct.name}');
-    print('DEBUG: Available Variables: ${widget.masterProduct.availableVariables}');
-    print('DEBUG: Available Variables Length: ${widget.masterProduct.availableVariables.length}');
+    print(
+        'DEBUG: Available Variables: ${widget.masterProduct.availableVariables}');
+    print(
+        'DEBUG: Available Variables Length: ${widget.masterProduct.availableVariables.length}');
   }
 
   Future<void> _loadAvailableAttributes() async {
     try {
       // Use country-filtered data service to get only active variable types
-      final CountryFilteredDataService countryService = CountryFilteredDataService.instance;
-      final activeVariableTypesData = await countryService.getActiveVariableTypes();
-      
+      final CountryFilteredDataService countryService =
+          CountryFilteredDataService.instance;
+      final activeVariableTypesData =
+          await countryService.getActiveVariableTypes();
+
       setState(() {
         _availableAttributes = activeVariableTypesData.map((data) {
           return {
@@ -79,15 +83,18 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
             'name': data['name'] ?? '',
             'type': data['type'] ?? 'select',
             'required': data['required'] ?? data['isRequired'] ?? false,
-            'possibleValues': List<String>.from(data['possibleValues'] ?? data['options'] ?? []),
+            'possibleValues': List<String>.from(
+                data['possibleValues'] ?? data['options'] ?? []),
             'description': data['description'] ?? '',
           };
         }).toList();
       });
-      
-      print('DEBUG: Loaded ${_availableAttributes.length} attributes from database');
+
+      print(
+          'DEBUG: Loaded ${_availableAttributes.length} attributes from database');
       for (var attr in _availableAttributes) {
-        print('DEBUG: Attribute: ${attr['name']} - Type: ${attr['type']} - Values: ${attr['possibleValues']}');
+        print(
+            'DEBUG: Attribute: ${attr['name']} - Type: ${attr['type']} - Values: ${attr['possibleValues']}');
       }
     } catch (e) {
       print('Error loading attributes: $e');
@@ -113,14 +120,15 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
       _currency = listing.currency;
       _isAvailable = listing.isAvailable;
       _selectedVariables = Map.from(listing.selectedVariables);
-      
+
       // Initialize selected attribute IDs based on existing variables
       _selectedAttributeIds = _selectedVariables.keys.toSet();
-      
+
       _existingImageUrls = List.from(listing.productImages);
     } else {
       // Set default WhatsApp from business profile
-      if (_businessProfile != null && _businessProfile!['whatsappNumber'] != null) {
+      if (_businessProfile != null &&
+          _businessProfile!['whatsappNumber'] != null) {
         _whatsappController.text = _businessProfile!['whatsappNumber'];
       }
     }
@@ -159,21 +167,21 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
 
   Future<void> _saveListing() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     // Validate required variables
     final missingVariables = <String>[];
     for (final attribute in _availableAttributes) {
       final attributeId = attribute['id'];
       final attributeName = attribute['name'] ?? '';
       final isRequired = attribute['required'] ?? false;
-      
-      if (isRequired && 
-          (!_selectedVariables.containsKey(attributeId) || 
-           _selectedVariables[attributeId]?.isEmpty == true)) {
+
+      if (isRequired &&
+          (!_selectedVariables.containsKey(attributeId) ||
+              _selectedVariables[attributeId]?.isEmpty == true)) {
         missingVariables.add(attributeName);
       }
     }
-    
+
     if (missingVariables.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -194,11 +202,12 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
 
       // Upload new images
       List<String> imageUrls = List.from(_existingImageUrls);
-      
+
       for (final imageFile in _productImages) {
         final imageUrl = await _fileUploadService.uploadFile(
           imageFile,
-          'price_listings/${widget.masterProduct.id}/${DateTime.now().millisecondsSinceEpoch}',
+          path:
+              'price_listings/${widget.masterProduct.id}/${DateTime.now().millisecondsSinceEpoch}',
         );
         imageUrls.add(imageUrl);
       }
@@ -207,7 +216,7 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
       final countryService = CountryService.instance;
       final userCountryCode = countryService.countryCode ?? 'LK';
       final userCountryName = countryService.countryName ?? 'Sri Lanka';
-      
+
       final priceListing = PriceListing(
         id: widget.existingListing?.id ?? '',
         businessId: userId,
@@ -220,11 +229,16 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
         subcategory: widget.masterProduct.subcategory,
         price: double.parse(_priceController.text),
         currency: _currency,
-        modelNumber: _modelNumberController.text.isEmpty ? null : _modelNumberController.text,
+        modelNumber: _modelNumberController.text.isEmpty
+            ? null
+            : _modelNumberController.text,
         selectedVariables: _selectedVariables,
         productImages: imageUrls,
-        productLink: _productLinkController.text.isEmpty ? null : _productLinkController.text,
-        whatsappNumber: _whatsappController.text.isEmpty ? null : _whatsappController.text,
+        productLink: _productLinkController.text.isEmpty
+            ? null
+            : _productLinkController.text,
+        whatsappNumber:
+            _whatsappController.text.isEmpty ? null : _whatsappController.text,
         isAvailable: _isAvailable,
         stockQuantity: int.tryParse(_stockController.text) ?? 0,
         createdAt: widget.existingListing?.createdAt ?? DateTime.now(),
@@ -241,11 +255,9 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              widget.existingListing == null 
-                  ? 'Price listing added successfully!'
-                  : 'Price listing updated successfully!'
-            ),
+            content: Text(widget.existingListing == null
+                ? 'Price listing added successfully!'
+                : 'Price listing updated successfully!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -270,9 +282,8 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
       appBar: AppBar(
         backgroundColor: AppTheme.backgroundColor,
         foregroundColor: AppTheme.textPrimary,
-        title: Text(
-          widget.existingListing == null ? 'Add Price' : 'Edit Price'
-        ),
+        title:
+            Text(widget.existingListing == null ? 'Add Price' : 'Edit Price'),
         elevation: 0,
       ),
       body: Form(
@@ -366,7 +377,7 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Price and currency
           Row(
             children: [
@@ -411,9 +422,9 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
               ),
             ],
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Stock quantity
           TextFormField(
             controller: _stockController,
@@ -426,9 +437,9 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
             ),
             keyboardType: TextInputType.number,
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Model number
           TextFormField(
             controller: _modelNumberController,
@@ -440,9 +451,9 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
               border: OutlineInputBorder(borderSide: BorderSide.none),
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Availability switch
           Row(
             children: [
@@ -502,7 +513,7 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Step 1: Select which attributes to use
           Container(
             padding: const EdgeInsets.all(16),
@@ -515,9 +526,8 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.check_circle_outline, 
-                         color: AppTheme.textSecondary, 
-                         size: 18),
+                    const Icon(Icons.check_circle_outline,
+                        color: AppTheme.textSecondary, size: 18),
                     const SizedBox(width: 8),
                     const Text(
                       'Step 1: Choose Relevant Attributes',
@@ -536,14 +546,18 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
                   children: _availableAttributes.map((attribute) {
                     final attributeId = attribute['id'];
                     final attributeName = attribute['name'] ?? '';
-                    final isSelected = _selectedAttributeIds.contains(attributeId);
-                    
+                    final isSelected =
+                        _selectedAttributeIds.contains(attributeId);
+
                     return FilterChip(
                       label: Text(
                         attributeName,
                         style: TextStyle(
-                          color: isSelected ? AppTheme.textPrimary : AppTheme.textSecondary,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                          color: isSelected
+                              ? AppTheme.textPrimary
+                              : AppTheme.textSecondary,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.w400,
                         ),
                       ),
                       selected: isSelected,
@@ -573,7 +587,7 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
               ],
             ),
           ),
-          
+
           // Step 2: Fill in values for selected attributes
           if (_selectedAttributeIds.isNotEmpty) ...[
             const SizedBox(height: 20),
@@ -588,9 +602,8 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.edit_outlined, 
-                           color: AppTheme.textSecondary, 
-                           size: 18),
+                      const Icon(Icons.edit_outlined,
+                          color: AppTheme.textSecondary, size: 18),
                       const SizedBox(width: 8),
                       const Text(
                         'Step 2: Fill in the Details',
@@ -603,16 +616,17 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  
                   ..._availableAttributes
-                      .where((attr) => _selectedAttributeIds.contains(attr['id']))
+                      .where(
+                          (attr) => _selectedAttributeIds.contains(attr['id']))
                       .map((attribute) {
                     final attributeId = attribute['id'];
                     final attributeName = attribute['name'] ?? '';
                     final attributeType = attribute['type'] ?? 'select';
-                    final possibleValues = List<String>.from(attribute['possibleValues'] ?? []);
+                    final possibleValues =
+                        List<String>.from(attribute['possibleValues'] ?? []);
                     final description = attribute['description'] ?? '';
-                    
+
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 16),
                       child: Column(
@@ -636,11 +650,12 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
                             ),
                           ],
                           const SizedBox(height: 8),
-                          
-                          if (attributeType == 'select' || attributeType == 'dropdown') ...[
+                          if (attributeType == 'select' ||
+                              attributeType == 'dropdown') ...[
                             Container(
                               decoration: BoxDecoration(
-                                color: AppTheme.backgroundColor, // flat background contrast
+                                color: AppTheme
+                                    .backgroundColor, // flat background contrast
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: DropdownButtonFormField<String>(
@@ -650,7 +665,8 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
                                   style: TextStyle(color: Colors.grey[600]),
                                 ),
                                 decoration: const InputDecoration(
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 12),
                                   border: InputBorder.none,
                                 ),
                                 items: possibleValues.map((option) {
@@ -685,11 +701,13 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
                                 fillColor: Colors.white,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(color: Colors.grey[300]!),
+                                  borderSide:
+                                      BorderSide(color: Colors.grey[300]!),
                                 ),
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(color: Colors.grey[300]!),
+                                  borderSide:
+                                      BorderSide(color: Colors.grey[300]!),
                                 ),
                               ),
                               onChanged: (value) {
@@ -712,17 +730,21 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
                               child: Row(
                                 children: [
                                   Switch(
-                                    value: _selectedVariables[attributeId] == 'true',
+                                    value: _selectedVariables[attributeId] ==
+                                        'true',
                                     onChanged: (value) {
                                       setState(() {
-                                        _selectedVariables[attributeId] = value.toString();
+                                        _selectedVariables[attributeId] =
+                                            value.toString();
                                       });
                                     },
                                     activeColor: Theme.of(context).primaryColor,
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    _selectedVariables[attributeId] == 'true' ? 'Yes' : 'No',
+                                    _selectedVariables[attributeId] == 'true'
+                                        ? 'Yes'
+                                        : 'No',
                                     style: const TextStyle(fontSize: 14),
                                   ),
                                 ],
@@ -771,7 +793,6 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          
           if (_existingImageUrls.isEmpty && _productImages.isEmpty)
             Container(
               height: 100,
@@ -807,7 +828,7 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
                       onRemove: () => _removeImage(index, isExisting: true),
                     );
                   }),
-                  
+
                   // New images
                   ..._productImages.asMap().entries.map((entry) {
                     final index = entry.key;
@@ -844,8 +865,10 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: imageFile != null
-                  ? Image.file(imageFile, fit: BoxFit.cover, width: 100, height: 100)
-                  : Image.network(imageUrl!, fit: BoxFit.cover, width: 100, height: 100),
+                  ? Image.file(imageFile,
+                      fit: BoxFit.cover, width: 100, height: 100)
+                  : Image.network(imageUrl!,
+                      fit: BoxFit.cover, width: 100, height: 100),
             ),
           ),
           Positioned(
@@ -891,7 +914,6 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          
           TextFormField(
             controller: _productLinkController,
             decoration: const InputDecoration(
@@ -903,9 +925,7 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
             ),
             keyboardType: TextInputType.url,
           ),
-          
           const SizedBox(height: 16),
-          
           TextFormField(
             controller: _whatsappController,
             decoration: const InputDecoration(
@@ -946,7 +966,9 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
                 ),
               )
             : Text(
-                widget.existingListing == null ? 'Add Price Listing' : 'Update Price Listing',
+                widget.existingListing == null
+                    ? 'Add Price Listing'
+                    : 'Update Price Listing',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,

@@ -2,62 +2,68 @@
 // TODO: Implement with REST API
 
 class ComprehensiveNotificationService {
-  // Placeholder methods
   Future<List<dynamic>> getNotifications() async => [];
   Future<void> markAsRead(String id) async {}
   Future<void> deleteNotification(String id) async {}
-
-  // Added for notification_screen
   Stream<List<dynamic>> getUserNotifications(String userId) async* {
-    yield const [];
+    yield <dynamic>[];
   }
 
   Future<void> markAllAsRead(String userId) async {}
+
+  // Additional stubs referenced by pricing & subscription screens
+  Future<void> notifyProductInquiry({
+    String? businessId,
+    String? businessName,
+    String? productName,
+    String? inquirerId,
+    String? inquirerName,
+    String? listingId,
+  }) async {}
+  Future<List<dynamic>> getDriverSubscriptions(String? userId) async => [];
+  Future<void> subscribeToRideNotifications(
+      {String? userId, String? city, String? vehicleType}) async {}
+  Future<void> updateSubscriptionStatus(
+      String subscriptionId, bool active) async {}
+  Future<void> deleteSubscription(String subscriptionId) async {}
+  Future<void> extendSubscription(String subscriptionId, int days) async {}
 }
 
 class EnhancedUserService {
-  // Placeholder methods
-  Future<dynamic> getCurrentUser() async {
-    return null;
-  }
-
-  Future<void> updateProfile(Map<String, dynamic> data) async {
-    // TODO: Implement
-  }
+  EnhancedUserService();
+  dynamic _cached;
+  Future<dynamic> getCurrentUser() async => _cached;
+  dynamic get currentUser => _cached; // legacy getter usage
+  Future<void> updateProfile(Map<String, dynamic> data) async {}
+  Future<void> submitBusinessVerification(Map<String, dynamic> data) async {}
+  Future<void> submitDriverVerification(Map<String, dynamic> data) async {}
+  Future<void> updateRoleData(
+      {required String userId,
+      required String role,
+      Map<String, dynamic>? data}) async {}
+  Future<void> submitRoleForVerification(
+      {required String userId, required String role}) async {}
+  Future<void> switchActiveRole(String userId, dynamic role) async {}
 }
 
 class CentralizedRequestService {
-  // Placeholder methods
-  Future<List<dynamic>> getRequests() async {
-    return [];
-  }
-
-  Future<dynamic> createRequest(Map<String, dynamic> data) async {
-    return null;
-  }
-
-  Future<void> updateRequest(String id, Map<String, dynamic> data) async {
-    // TODO: Implement
-  }
-
-  Future<void> deleteRequest(String id) async {
-    // TODO: Implement
-  }
+  Future<List<dynamic>> getRequests() async => [];
+  Future<dynamic> createRequest(Map<String, dynamic> data) async => null;
+  Future<void> updateRequest(String id, Map<String, dynamic> data) async {}
+  Future<void> deleteRequest(String id) async {}
+  Future<void> createResponse(
+      String requestId, Map<String, dynamic> data) async {}
+  Future<void> updateResponse(
+      String responseId, Map<String, dynamic> data) async {}
 }
 
 class EnhancedRequestService {
-  // Placeholder methods
-  Future<List<dynamic>> getRequests() async {
-    return [];
-  }
-
-  Future<dynamic> getRequestById(String id) async {
-    return null;
-  }
-
-  Future<void> updateRequest(String id, Map<String, dynamic> data) async {
-    // TODO: Implement
-  }
+  Future<List<dynamic>> getRequests() async => [];
+  Future<dynamic> getRequestById(String id) async => null;
+  Future<void> updateRequest(String id, Map<String, dynamic> data) async {}
+  Future<List<dynamic>> getResponsesForRequest(String requestId) async => [];
+  Future<void> updateResponse(
+      String responseId, Map<String, dynamic> data) async {}
 }
 
 class MessagingService {
@@ -77,14 +83,9 @@ class MessagingService {
 }
 
 class VehicleService {
-  // Placeholder methods
-  Future<List<dynamic>> getVehicleTypes() async {
-    return [];
-  }
-
-  Future<dynamic> getVehicleById(String id) async {
-    return null;
-  }
+  Future<List<dynamic>> getVehicleTypes() async => [];
+  Future<dynamic> getVehicleById(String id) async => null;
+  Future<List<dynamic>> refreshVehicles() async => [];
 }
 
 class CategoryService {

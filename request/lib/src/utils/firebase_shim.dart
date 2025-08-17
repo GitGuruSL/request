@@ -20,6 +20,7 @@ class DocumentSnapshot {
   final Map<String, dynamic> _data;
   DocumentSnapshot(this.id, [Map<String, dynamic>? data]) : _data = data ?? {};
   Map<String, dynamic> data() => _data;
+  bool get exists => _data.isNotEmpty; // simple heuristic
 }
 
 class QuerySnapshot {
@@ -31,6 +32,7 @@ class _CollectionRef {
   final String path;
   _CollectionRef(this.path);
   _CollectionRef where(String field, {dynamic isEqualTo}) => this;
+  _CollectionRef orderBy(String field, {bool descending = false}) => this;
   _CollectionRef limit(int n) => this;
   Future<QuerySnapshot> get() async => QuerySnapshot(const []);
   _DocRef doc([String? id]) => _DocRef(id ?? 'placeholder');
@@ -63,11 +65,15 @@ class _StorageRef {
   _StorageRef child(String childPath) => _StorageRef('$path/$childPath');
   Future<_UploadTask> putData(List<int> bytes, [dynamic metadata]) async =>
       _UploadTask();
+  Future<_UploadTask> putFile(dynamic file, [dynamic metadata]) async =>
+      _UploadTask();
   Future<String> getDownloadURL() async => 'https://example.com/file.jpg';
 }
 
 class _UploadTask {
   Future<void> whenComplete(Function() fn) async => fn();
+  // Provide ref getter to mimic firebase_storage UploadTask
+  _StorageRef get ref => _StorageRef('');
 }
 
 class _DeleteMarker {

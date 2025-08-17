@@ -5,30 +5,33 @@ import '../theme/app_theme.dart';
 import 'src/utils/firebase_shim.dart'; // Added by migration script
 // REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+// Removed direct firebase_storage dependency; using FileUploadService / stub.
 import 'dart:io';
 
 class BusinessVerificationScreen extends StatefulWidget {
   const BusinessVerificationScreen({Key? key}) : super(key: key);
 
   @override
-  State<BusinessVerificationScreen> createState() => _BusinessVerificationScreenState();
+  State<BusinessVerificationScreen> createState() =>
+      _BusinessVerificationScreenState();
 }
 
-class _BusinessVerificationScreenState extends State<BusinessVerificationScreen> {
+class _BusinessVerificationScreenState
+    extends State<BusinessVerificationScreen> {
   final EnhancedUserService _userService = EnhancedUserService();
-  final ContactVerificationService _contactService = ContactVerificationService.instance;
-  
+  final ContactVerificationService _contactService =
+      ContactVerificationService.instance;
+
   Map<String, dynamic>? _businessData;
   LinkedCredentialsStatus? _credentialsStatus;
   bool _isLoading = true;
   bool _isVerifyingPhone = false;
   bool _isVerifyingEmail = false;
-  
+
   // Phone verification state
   String? _phoneVerificationId;
   TextEditingController _phoneOtpController = TextEditingController();
-  
+
   // Email verification state
   TextEditingController _emailController = TextEditingController();
 
@@ -71,7 +74,8 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
       final currentUser = await _userService.getCurrentUser();
       if (currentUser == null) throw Exception('User not authenticated');
 
-      print('DEBUG: Loading business verification for userId: ${currentUser.uid}');
+      print(
+          'DEBUG: Loading business verification for userId: ${currentUser.uid}');
 
       // Get business data from new_business_verifications collection
 // FIRESTORE_TODO: replace with REST service. Original: final doc = await FirebaseFirestore.instance
@@ -94,7 +98,8 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
           // Pre-populate email field with business email
           _prePopulateEmailField();
         } else {
-          print('DEBUG: No business verification document found for userId: ${currentUser.uid}');
+          print(
+              'DEBUG: No business verification document found for userId: ${currentUser.uid}');
         }
       }
     } catch (e) {
@@ -172,7 +177,8 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: () => Navigator.pushNamed(context, '/business-verification'),
+            onPressed: () =>
+                Navigator.pushNamed(context, '/business-verification'),
             style: AppTheme.primaryButtonStyle,
             child: const Text('Start Verification'),
           ),
@@ -206,13 +212,16 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
             ],
           ),
           const SizedBox(height: 16),
-          _buildInfoRow('Business Name', _businessData!['businessName'] ?? 'N/A'),
+          _buildInfoRow(
+              'Business Name', _businessData!['businessName'] ?? 'N/A'),
           _buildInfoRow('Email', _businessData!['businessEmail'] ?? 'N/A'),
           _buildInfoRow('Phone', _businessData!['businessPhone'] ?? 'N/A'),
           _buildInfoRow('Address', _businessData!['businessAddress'] ?? 'N/A'),
-          _buildInfoRow('License Number', _businessData!['licenseNumber'] ?? 'N/A'),
+          _buildInfoRow(
+              'License Number', _businessData!['licenseNumber'] ?? 'N/A'),
           _buildInfoRow('Tax ID', _businessData!['taxId'] ?? 'N/A'),
-          if (_businessData!['businessDescription'] != null && _businessData!['businessDescription'].toString().isNotEmpty)
+          if (_businessData!['businessDescription'] != null &&
+              _businessData!['businessDescription'].toString().isNotEmpty)
             _buildInfoRow('Description', _businessData!['businessDescription']),
         ],
       ),
@@ -290,7 +299,7 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
     }
 
     final bool isComplete = _credentialsStatus!.isAllVerified;
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -310,18 +319,18 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
 
   Widget _buildPhoneVerificationCard() {
     final businessPhone = _businessData?['businessPhone'] ?? '';
-    
+
     // Enhanced phone verification logic
     bool isVerified = _credentialsStatus?.businessPhoneVerified ?? false;
     String verificationSource = 'manual';
-    
+
     // Check if business phone matches Firebase Auth phone (auto-verify)
     if (!isVerified && businessPhone.isNotEmpty) {
       // TODO: Compare with Firebase Auth user's phone number
       // For now, we'll rely on the existing manual verification
       // This can be enhanced later to auto-verify matching numbers
     }
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -352,7 +361,9 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
           ),
           const SizedBox(height: 8),
           Text(
-            businessPhone.isNotEmpty ? businessPhone : 'No phone number provided',
+            businessPhone.isNotEmpty
+                ? businessPhone
+                : 'No phone number provided',
             style: TextStyle(
               color: AppTheme.textSecondary,
               fontSize: 14,
@@ -374,7 +385,8 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.sms),
-                  label: Text(_isVerifyingPhone ? 'Sending...' : 'Verify Phone'),
+                  label:
+                      Text(_isVerifyingPhone ? 'Sending...' : 'Verify Phone'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryColor,
                     foregroundColor: Colors.white,
@@ -421,7 +433,7 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
   Widget _buildEmailVerificationCard() {
     final businessEmail = _businessData?['businessEmail'] ?? '';
     final isVerified = _credentialsStatus?.businessEmailVerified ?? false;
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -503,9 +515,8 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: _isVerifyingEmail 
-                    ? null
-                    : () => _sendEmailVerification(),
+                onPressed:
+                    _isVerifyingEmail ? null : () => _sendEmailVerification(),
                 icon: _isVerifyingEmail
                     ? const SizedBox(
                         width: 16,
@@ -513,7 +524,9 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.email_outlined),
-                label: Text(_isVerifyingEmail ? 'Sending...' : 'Send Verification Email'),
+                label: Text(_isVerifyingEmail
+                    ? 'Sending...'
+                    : 'Send Verification Email'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor,
                   foregroundColor: Colors.white,
@@ -647,16 +660,21 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
     String displayText;
 
     // Check what's still pending
-    final isContactVerificationComplete = (_credentialsStatus?.businessPhoneVerified ?? false) && 
-                                        (_credentialsStatus?.businessEmailVerified ?? false);
-    
+    final isContactVerificationComplete =
+        (_credentialsStatus?.businessPhoneVerified ?? false) &&
+            (_credentialsStatus?.businessEmailVerified ?? false);
+
     final businessLicenseStatus = _getDocumentStatus('businessLicense');
     final taxCertificateStatus = _getDocumentStatus('taxCertificate');
     final insuranceDocumentStatus = _getDocumentStatus('insuranceDocument');
     final businessLogoStatus = _getDocumentStatus('businessLogo');
-    
-    final allDocsApproved = [businessLicenseStatus, taxCertificateStatus, insuranceDocumentStatus, businessLogoStatus]
-        .every((status) => status.toLowerCase() == 'approved');
+
+    final allDocsApproved = [
+      businessLicenseStatus,
+      taxCertificateStatus,
+      insuranceDocumentStatus,
+      businessLogoStatus
+    ].every((status) => status.toLowerCase() == 'approved');
 
     switch (status.toLowerCase()) {
       case 'approved':
@@ -673,7 +691,7 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
       default:
         backgroundColor = Colors.orange.shade100;
         textColor = Colors.orange.shade800;
-        
+
         // More specific pending message - keep text short to avoid UI overflow
         if (!allDocsApproved && !isContactVerificationComplete) {
           displayText = 'Pending';
@@ -737,12 +755,14 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
     );
   }
 
-  Widget _buildDocumentCard(String title, String? status, String? documentUrl, String description, IconData icon, String documentType) {
-    final rejectionReason = null; // You can add rejection reason from Firebase if needed
-    
+  Widget _buildDocumentCard(String title, String? status, String? documentUrl,
+      String description, IconData icon, String documentType) {
+    final rejectionReason =
+        null; // You can add rejection reason from Firebase if needed
+
     Color statusColor = _getStatusColor(status ?? 'pending');
     String statusText = _getStatusText(status ?? 'pending');
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.only(bottom: 12),
@@ -771,7 +791,8 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
                   color: statusColor,
                 ),
@@ -854,26 +875,26 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
   String _getDocumentStatus(String documentType) {
     // Check both flat fields and nested documentVerification
     String? status;
-    
+
     switch (documentType) {
       case 'businessLicense':
-        status = _businessData!['businessLicenseStatus'] ?? 
-                _businessData!['documentVerification']?['businessLicense'];
+        status = _businessData!['businessLicenseStatus'] ??
+            _businessData!['documentVerification']?['businessLicense'];
         break;
       case 'taxCertificate':
-        status = _businessData!['taxCertificateStatus'] ?? 
-                _businessData!['documentVerification']?['taxCertificate'];
+        status = _businessData!['taxCertificateStatus'] ??
+            _businessData!['documentVerification']?['taxCertificate'];
         break;
       case 'insuranceDocument':
-        status = _businessData!['insuranceDocumentStatus'] ?? 
-                _businessData!['documentVerification']?['insuranceDocument'];
+        status = _businessData!['insuranceDocumentStatus'] ??
+            _businessData!['documentVerification']?['insuranceDocument'];
         break;
       case 'businessLogo':
-        status = _businessData!['businessLogoStatus'] ?? 
-                _businessData!['documentVerification']?['businessLogo'];
+        status = _businessData!['businessLogoStatus'] ??
+            _businessData!['documentVerification']?['businessLogo'];
         break;
     }
-    
+
     return status ?? 'pending';
   }
 
@@ -884,18 +905,28 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
     final businessLogoStatus = _getDocumentStatus('businessLogo');
 
     // Check if contact verification is complete
-    final isContactVerificationComplete = (_credentialsStatus?.businessPhoneVerified ?? false) && 
-                                        (_credentialsStatus?.businessEmailVerified ?? false);
+    final isContactVerificationComplete =
+        (_credentialsStatus?.businessPhoneVerified ?? false) &&
+            (_credentialsStatus?.businessEmailVerified ?? false);
 
     // If any document is rejected, overall status is rejected
-    if ([businessLicenseStatus, taxCertificateStatus, insuranceDocumentStatus, businessLogoStatus]
-        .any((status) => status.toLowerCase() == 'rejected')) {
+    if ([
+      businessLicenseStatus,
+      taxCertificateStatus,
+      insuranceDocumentStatus,
+      businessLogoStatus
+    ].any((status) => status.toLowerCase() == 'rejected')) {
       return 'rejected';
     }
 
     // If all documents are approved AND contact verification is complete, overall status is approved
-    if ([businessLicenseStatus, taxCertificateStatus, insuranceDocumentStatus, businessLogoStatus]
-        .every((status) => status.toLowerCase() == 'approved') && isContactVerificationComplete) {
+    if ([
+          businessLicenseStatus,
+          taxCertificateStatus,
+          insuranceDocumentStatus,
+          businessLogoStatus
+        ].every((status) => status.toLowerCase() == 'approved') &&
+        isContactVerificationComplete) {
       return 'approved';
     }
 
@@ -952,7 +983,8 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
               return Center(
                 child: CircularProgressIndicator(
                   value: loadingProgress.expectedTotalBytes != null
-                      ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                      ? loadingProgress.cumulativeBytesLoaded /
+                          loadingProgress.expectedTotalBytes!
                       : null,
                 ),
               );
@@ -984,12 +1016,13 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
   void _replaceDocument(String documentType) async {
     try {
       final String title = _getDocumentTypeName(documentType);
-      
+
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
           title: Text('Replace $title'),
-          content: const Text('Choose how to upload your replacement document:'),
+          content:
+              const Text('Choose how to upload your replacement document:'),
           actions: [
             TextButton(
               onPressed: () {
@@ -1020,7 +1053,8 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
     }
   }
 
-  Future<void> _pickAndUploadReplacement(String documentType, ImageSource source) async {
+  Future<void> _pickAndUploadReplacement(
+      String documentType, ImageSource source) async {
     try {
       final ImagePicker picker = ImagePicker();
       final XFile? image = await picker.pickImage(
@@ -1041,7 +1075,8 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
     }
   }
 
-  Future<void> _uploadReplacementDocument(String documentType, File imageFile) async {
+  Future<void> _uploadReplacementDocument(
+      String documentType, File imageFile) async {
     try {
       // Show loading indicator
       showDialog(
@@ -1065,7 +1100,7 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
       // Determine URL field based on document type
       String urlField;
       String storagePath;
-      
+
       switch (documentType) {
         case 'businessLicense':
           urlField = 'businessLicenseUrl';
@@ -1106,8 +1141,10 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
       await businessRef.update({
         urlField: downloadUrl,
         'documentVerification.$documentType.status': 'pending',
-        'documentVerification.$documentType.rejectionReason': FieldValue.delete(),
-        'documentVerification.$documentType.uploadedAt': FieldValue.serverTimestamp(),
+        'documentVerification.$documentType.rejectionReason':
+            FieldValue.delete(),
+        'documentVerification.$documentType.uploadedAt':
+            FieldValue.serverTimestamp(),
         '${documentType}Status': 'pending', // Also update flat status field
         'updatedAt': FieldValue.serverTimestamp(),
       });
@@ -1121,14 +1158,15 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
       final docName = _getDocumentTypeName(documentType);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('$docName replaced successfully! Status reset to pending review.'),
+          content: Text(
+              '$docName replaced successfully! Status reset to pending review.'),
           backgroundColor: Colors.green,
         ),
       );
     } catch (e) {
       // Close loading dialog
       Navigator.pop(context);
-      
+
       print('Error uploading replacement document: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1155,7 +1193,7 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
   }
 
   // Contact Verification Methods
-  
+
   Future<void> _startPhoneVerification(String phoneNumber) async {
     print('DEBUG: Starting phone verification for: $phoneNumber');
     setState(() {
@@ -1164,23 +1202,26 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
     });
 
     try {
-      print('DEBUG: Calling ContactVerificationService.startBusinessPhoneVerification');
+      print(
+          'DEBUG: Calling ContactVerificationService.startBusinessPhoneVerification');
       final result = await _contactService.startBusinessPhoneVerification(
         phoneNumber: phoneNumber,
         onCodeSent: (verificationId) {
-          print('DEBUG: SMS code sent successfully. VerificationId: $verificationId');
+          print(
+              'DEBUG: SMS code sent successfully. VerificationId: $verificationId');
           if (mounted) {
             setState(() {
               _phoneVerificationId = verificationId;
               _isVerifyingPhone = false;
             });
-            
+
             // Show different message for development mode
             String message;
             if (verificationId.startsWith('dev_verification_')) {
               message = '🚀 DEVELOPMENT MODE: Use OTP code 123456 to verify';
             } else {
-              message = 'SMS sent to $phoneNumber! Check your messages for the 6-digit code.';
+              message =
+                  'SMS sent to $phoneNumber! Check your messages for the 6-digit code.';
             }
             _showSnackBar(message, isError: false);
           }
@@ -1213,7 +1254,8 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
   }
 
   Future<void> _verifyPhoneOTP() async {
-    if (_phoneVerificationId == null || _phoneOtpController.text.trim().isEmpty) {
+    if (_phoneVerificationId == null ||
+        _phoneOtpController.text.trim().isEmpty) {
       _showSnackBar('Please enter the OTP', isError: true);
       return;
     }
@@ -1262,8 +1304,9 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
   Future<void> _sendEmailVerification() async {
     // Use business email if available, otherwise use the input field
     final businessEmail = _businessData?['businessEmail'] ?? '';
-    final email = businessEmail.isNotEmpty ? businessEmail : _emailController.text.trim();
-    
+    final email =
+        businessEmail.isNotEmpty ? businessEmail : _emailController.text.trim();
+
     if (email.isEmpty) {
       _showSnackBar('Please enter business email address', isError: true);
       return;
@@ -1298,7 +1341,8 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
           }
           await _loadCredentialsStatus();
         } else {
-          _showSnackBar(result.error ?? 'Failed to send verification email', isError: true);
+          _showSnackBar(result.error ?? 'Failed to send verification email',
+              isError: true);
         }
       }
     } catch (e) {
@@ -1313,7 +1357,7 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
 
   void _showSnackBar(String message, {bool isError = false}) {
     if (!mounted) return;
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),

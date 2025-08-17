@@ -6,6 +6,8 @@ import 'rest_auth_service.dart' show RestAuthService;
 /// Enhanced User Service for REST API
 /// Provides user management functionality using REST endpoints
 class EnhancedUserService {
+  factory EnhancedUserService() =>
+      instance; // allow default constructor usage in screens
   static EnhancedUserService? _instance;
   static EnhancedUserService get instance =>
       _instance ??= EnhancedUserService._();
@@ -97,6 +99,20 @@ class EnhancedUserService {
       return false;
     }
   }
+
+  // Legacy alias (screens call updateProfile with a map or named params)
+  Future<bool> updateProfile({
+    String? firstName,
+    String? lastName,
+    String? phoneNumber,
+    String? displayName,
+  }) =>
+      updateUserProfile(
+        firstName: firstName,
+        lastName: lastName,
+        phoneNumber: phoneNumber,
+        displayName: displayName,
+      );
 
   // ---- Stubs to satisfy legacy verification / role management screens ----
 

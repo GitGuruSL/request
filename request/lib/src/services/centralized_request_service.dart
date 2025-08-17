@@ -3,4 +3,8 @@ class CentralizedRequestService {
   Future<dynamic> createRequest(Map<String, dynamic> data) async => null;
   Future<void> updateRequest(String id, Map<String, dynamic> data) async {}
   Future<void> deleteRequest(String id) async {}
+  Future<void> createResponse(
+      String requestId, Map<String, dynamic> data) async {}
+  Future<void> updateResponse(
+      String responseId, Map<String, dynamic> data) async {}
 }

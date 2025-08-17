@@ -13,19 +13,19 @@ class ContactVerificationService {
 
   // Business specific methods expected by screens
   Future<Map<String, dynamic>> startBusinessPhoneVerification(
-          String phone) async =>
+          {String? phoneNumber}) async =>
       {
         'success': true,
         'message': 'OTP sent',
       };
   Future<Map<String, dynamic>> verifyBusinessPhoneOTP(
-          String phone, String code) async =>
+          {String? phoneNumber, String? verificationId}) async =>
       {
         'success': true,
         'verified': true,
       };
   Future<Map<String, dynamic>> sendBusinessEmailVerification(
-          String email) async =>
+          {String? email}) async =>
       {
         'success': true,
       };

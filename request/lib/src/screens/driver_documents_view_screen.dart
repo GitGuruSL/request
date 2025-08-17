@@ -6,13 +6,14 @@ import 'src/utils/firebase_shim.dart'; // Added by migration script
 // REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'package:firebase_storage/firebase_storage.dart';
+// Removed direct firebase_storage dependency; using FileUploadService / stub.
 
 class DriverDocumentsViewScreen extends StatefulWidget {
   const DriverDocumentsViewScreen({Key? key}) : super(key: key);
 
   @override
-  State<DriverDocumentsViewScreen> createState() => _DriverDocumentsViewScreenState();
+  State<DriverDocumentsViewScreen> createState() =>
+      _DriverDocumentsViewScreenState();
 }
 
 class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
@@ -54,12 +55,12 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
 
   Future<String> _resolveCityName(String? cityValue) async {
     if (cityValue == null || cityValue.isEmpty) return 'N/A';
-    
+
     // If it's already a readable city name (not a Firebase ID), return it
     if (!cityValue.contains('_') && cityValue.length < 20) {
       return cityValue;
     }
-    
+
     // If it looks like a Firebase document ID, try to resolve it
     try {
 // FIRESTORE_TODO: replace with REST service. Original: final cityDoc = await FirebaseFirestore.instance
@@ -67,14 +68,14 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
           .collection('cities')
           .doc(cityValue)
           .get();
-      
+
       if (cityDoc.exists && cityDoc.data() != null) {
         return cityDoc.data()!['name'] ?? cityValue;
       }
     } catch (e) {
       print('Error resolving city name: $e');
     }
-    
+
     return cityValue; // Return original value if resolution fails
   }
 
@@ -147,7 +148,8 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: () => Navigator.pushNamed(context, '/driver-verification'),
+            onPressed: () =>
+                Navigator.pushNamed(context, '/driver-verification'),
             style: AppTheme.primaryButtonStyle,
             child: const Text('Start Verification'),
           ),
@@ -181,9 +183,14 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          _buildInfoRow('Full Name', _driverData!['fullName'] ?? _driverData!['name'] ?? 
-                       ((_driverData!['firstName'] ?? '').isNotEmpty && (_driverData!['lastName'] ?? '').isNotEmpty 
-                        ? '${_driverData!['firstName']} ${_driverData!['lastName']}' : 'N/A')),
+          _buildInfoRow(
+              'Full Name',
+              _driverData!['fullName'] ??
+                  _driverData!['name'] ??
+                  ((_driverData!['firstName'] ?? '').isNotEmpty &&
+                          (_driverData!['lastName'] ?? '').isNotEmpty
+                      ? '${_driverData!['firstName']} ${_driverData!['lastName']}'
+                      : 'N/A')),
           _buildInfoRow('Email', _driverData!['email'] ?? 'N/A'),
           _buildInfoRow('Phone', _driverData!['phoneNumber'] ?? 'N/A'),
           if ((_driverData!['secondaryMobile'] ?? '').isNotEmpty)
@@ -191,23 +198,28 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
           if ((_driverData!['gender'] ?? '').isNotEmpty)
             _buildInfoRow('Gender', _driverData!['gender']),
           if (_driverData!['dateOfBirth'] != null)
-            _buildInfoRow('Date of Birth', _formatDate(_driverData!['dateOfBirth'])),
+            _buildInfoRow(
+                'Date of Birth', _formatDate(_driverData!['dateOfBirth'])),
           if ((_driverData!['nicNumber'] ?? '').isNotEmpty)
             _buildInfoRow('NIC Number', _driverData!['nicNumber']),
-          if ((_driverData!['city'] ?? '').isNotEmpty)
-            _buildCityInfoRow(),
-          _buildInfoRow('License Number', _driverData!['licenseNumber'] ?? 'N/A'),
-          _buildInfoRow('License Expiry', _formatDate(_driverData!['licenseExpiry'])),
-          _buildInfoRow('Insurance Number', _driverData!['insuranceNumber'] ?? 'N/A'),
-          _buildInfoRow('Insurance Expiry', _formatDate(_driverData!['insuranceExpiry'])),
+          if ((_driverData!['city'] ?? '').isNotEmpty) _buildCityInfoRow(),
+          _buildInfoRow(
+              'License Number', _driverData!['licenseNumber'] ?? 'N/A'),
+          _buildInfoRow(
+              'License Expiry', _formatDate(_driverData!['licenseExpiry'])),
+          _buildInfoRow(
+              'Insurance Number', _driverData!['insuranceNumber'] ?? 'N/A'),
+          _buildInfoRow(
+              'Insurance Expiry', _formatDate(_driverData!['insuranceExpiry'])),
         ],
       ),
     );
   }
 
   Widget _buildDocumentsSection() {
-    final docVerification = _driverData!['documentVerification'] as Map<String, dynamic>? ?? {};
-    
+    final docVerification =
+        _driverData!['documentVerification'] as Map<String, dynamic>? ?? {};
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -313,7 +325,8 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.directions_car, color: AppTheme.primaryColor, size: 24),
+              Icon(Icons.directions_car,
+                  color: AppTheme.primaryColor, size: 24),
               const SizedBox(width: 12),
               const Text(
                 'Vehicle Information',
@@ -327,21 +340,27 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
           ),
           const SizedBox(height: 16),
           _buildInfoRow('Make & Model', _driverData!['vehicleModel'] ?? 'N/A'),
-          _buildInfoRow('Year', _driverData!['vehicleYear']?.toString() ?? 'N/A'),
+          _buildInfoRow(
+              'Year', _driverData!['vehicleYear']?.toString() ?? 'N/A'),
           _buildInfoRow('Color', _driverData!['vehicleColor'] ?? 'N/A'),
-          _buildInfoRow('License Plate', _driverData!['vehicleNumber'] ?? 'N/A'),
+          _buildInfoRow(
+              'License Plate', _driverData!['vehicleNumber'] ?? 'N/A'),
           _buildInfoRow('Vehicle Type', _driverData!['vehicleType'] ?? 'N/A'),
           if (_driverData!['vehicleOwnership'] != null)
-            _buildInfoRow('Vehicle Ownership', 
-                (_driverData!['vehicleOwnership'] as bool? ?? true) ? 'Owner' : 'Not Owner'),
+            _buildInfoRow(
+                'Vehicle Ownership',
+                (_driverData!['vehicleOwnership'] as bool? ?? true)
+                    ? 'Owner'
+                    : 'Not Owner'),
         ],
       ),
     );
   }
 
   Widget _buildVehicleDocuments() {
-    final docVerification = _driverData!['documentVerification'] as Map<String, dynamic>? ?? {};
-    
+    final docVerification =
+        _driverData!['documentVerification'] as Map<String, dynamic>? ?? {};
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -380,18 +399,21 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
     // Handle vehicleImageUrls safely
     List<dynamic> vehicleImageUrls = [];
     final imageUrlsData = _driverData!['vehicleImageUrls'];
-    
+
     // Handle vehicleImageVerification safely - it could be List or Map
     List<dynamic> imageVerifications = [];
     final verificationData = _driverData!['vehicleImageVerification'];
-    
+
     // Fill vehicleImageUrls from the data
     if (imageUrlsData != null) {
       if (imageUrlsData is List) {
         vehicleImageUrls = imageUrlsData;
       } else if (imageUrlsData is Map) {
         // Convert Map to List maintaining index order
-        final keys = imageUrlsData.keys.map((k) => int.tryParse(k.toString()) ?? 0).toList()..sort();
+        final keys = imageUrlsData.keys
+            .map((k) => int.tryParse(k.toString()) ?? 0)
+            .toList()
+          ..sort();
         for (var key in keys) {
           final value = imageUrlsData[key.toString()];
           if (value != null) {
@@ -400,14 +422,17 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
         }
       }
     }
-    
+
     // Fill imageVerifications from the data
     if (verificationData != null) {
       if (verificationData is List) {
         imageVerifications = verificationData;
       } else if (verificationData is Map) {
         // Convert Map to List maintaining index order
-        final keys = verificationData.keys.map((k) => int.tryParse(k.toString()) ?? 0).toList()..sort();
+        final keys = verificationData.keys
+            .map((k) => int.tryParse(k.toString()) ?? 0)
+            .toList()
+          ..sort();
         final maxIndex = keys.isNotEmpty ? keys.last : 0;
         imageVerifications = List.filled(maxIndex + 1, null);
         verificationData.forEach((key, value) {
@@ -418,16 +443,18 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
         });
       }
     }
-    
+
     // Ensure we have verification entries for all vehicle images
-    if (vehicleImageUrls.isNotEmpty && imageVerifications.length < vehicleImageUrls.length) {
-      print('🔍 DEBUG: Padding imageVerifications to match vehicleImageUrls length');
+    if (vehicleImageUrls.isNotEmpty &&
+        imageVerifications.length < vehicleImageUrls.length) {
+      print(
+          '🔍 DEBUG: Padding imageVerifications to match vehicleImageUrls length');
       while (imageVerifications.length < vehicleImageUrls.length) {
         imageVerifications.add(null);
       }
       print('🔍 DEBUG: Padded imageVerifications list: $imageVerifications');
     }
-    
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -511,7 +538,8 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryColor,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
                     ),
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
@@ -525,17 +553,24 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
                 ],
               ),
             ),
-          ...vehicleImageUrls.asMap().entries.where((entry) => entry.value != null).map((entry) {
+          ...vehicleImageUrls
+              .asMap()
+              .entries
+              .where((entry) => entry.value != null)
+              .map((entry) {
             final index = entry.key;
             final imageUrl = entry.value as String;
-            final verification = imageVerifications.length > index ? imageVerifications[index] : null;
-            
+            final verification = imageVerifications.length > index
+                ? imageVerifications[index]
+                : null;
+
             String title = '';
             String description = '';
             switch (index) {
               case 0:
                 title = '1. Front View with Number Plate';
-                description = 'Clear front view showing number plate (Required)';
+                description =
+                    'Clear front view showing number plate (Required)';
                 break;
               case 1:
                 title = '2. Rear View with Number Plate';
@@ -545,7 +580,7 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
                 title = '${index + 1}. Vehicle Photo';
                 description = 'Additional vehicle photo';
             }
-            
+
             return _buildVehicleImageItem(
               title,
               verification,
@@ -563,7 +598,7 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
     final status = _driverData!['status'] as String? ?? 'pending';
     Color color;
     String text;
-    
+
     switch (status) {
       case 'approved':
         color = Colors.green;
@@ -577,7 +612,7 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
         color = Colors.orange;
         text = 'Pending Review';
     }
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
@@ -594,13 +629,14 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
     );
   }
 
-  Widget _buildDocumentItem(String title, Map<String, dynamic>? verification, String? documentUrl, String description, IconData icon) {
+  Widget _buildDocumentItem(String title, Map<String, dynamic>? verification,
+      String? documentUrl, String description, IconData icon) {
     final status = verification?['status'] as String? ?? 'pending';
     final rejectionReason = verification?['rejectionReason'] as String?;
-    
+
     Color statusColor = _getStatusColor(status);
     String statusText = _getStatusText(status);
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.only(bottom: 12),
@@ -629,7 +665,8 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
                   color: statusColor,
                 ),
@@ -709,13 +746,18 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
     );
   }
 
-  Widget _buildVehicleImageItem(String title, Map<String, dynamic>? verification, String imageUrl, String description, bool isRequired) {
+  Widget _buildVehicleImageItem(
+      String title,
+      Map<String, dynamic>? verification,
+      String imageUrl,
+      String description,
+      bool isRequired) {
     final status = verification?['status'] as String? ?? 'pending';
     final rejectionReason = verification?['rejectionReason'] as String?;
-    
+
     Color statusColor = _getStatusColor(status);
     String statusText = _getStatusText(status);
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.only(bottom: 12),
@@ -744,7 +786,8 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
                   color: statusColor,
                 ),
@@ -805,7 +848,8 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
                     imageUrl,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.image_not_supported, color: Colors.grey);
+                      return const Icon(Icons.image_not_supported,
+                          color: Colors.grey);
                     },
                   ),
                 ),
@@ -930,7 +974,8 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.error, size: 64, color: Colors.white),
+                          const Icon(Icons.error,
+                              size: 64, color: Colors.white),
                           const SizedBox(height: 16),
                           Text(
                             'Failed to load document',
@@ -984,12 +1029,13 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
   void _replaceDocument(String title) async {
     try {
       final ImagePicker picker = ImagePicker();
-      
+
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
           title: Text('Replace $title'),
-          content: const Text('Choose how to upload your replacement document:'),
+          content:
+              const Text('Choose how to upload your replacement document:'),
           actions: [
             TextButton(
               onPressed: () {
@@ -1020,7 +1066,8 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
     }
   }
 
-  Future<void> _pickAndUploadReplacement(String title, ImageSource source) async {
+  Future<void> _pickAndUploadReplacement(
+      String title, ImageSource source) async {
     try {
       final ImagePicker picker = ImagePicker();
       final XFile? image = await picker.pickImage(
@@ -1065,7 +1112,7 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
       // Determine document type based on title
       String documentType;
       String urlField;
-      
+
       switch (title) {
         case 'Driver Photo':
           documentType = 'driverImage';
@@ -1126,8 +1173,10 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
       await driverRef.update({
         urlField: downloadUrl,
         'documentVerification.$documentType.status': 'pending',
-        'documentVerification.$documentType.rejectionReason': FieldValue.delete(),
-        'documentVerification.$documentType.uploadedAt': FieldValue.serverTimestamp(),
+        'documentVerification.$documentType.rejectionReason':
+            FieldValue.delete(),
+        'documentVerification.$documentType.uploadedAt':
+            FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
@@ -1139,14 +1188,15 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('$title replaced successfully! Status reset to pending review.'),
+          content: Text(
+              '$title replaced successfully! Status reset to pending review.'),
           backgroundColor: Colors.green,
         ),
       );
     } catch (e) {
       // Close loading dialog
       Navigator.pop(context);
-      
+
       print('Error uploading replacement document: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1194,7 +1244,8 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
     }
   }
 
-  Future<void> _pickAndUploadVehicleReplacement(String title, ImageSource source) async {
+  Future<void> _pickAndUploadVehicleReplacement(
+      String title, ImageSource source) async {
     try {
       final ImagePicker picker = ImagePicker();
       final XFile? image = await picker.pickImage(
@@ -1215,7 +1266,8 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
     }
   }
 
-  Future<void> _uploadVehicleReplacementPhoto(String title, File imageFile) async {
+  Future<void> _uploadVehicleReplacementPhoto(
+      String title, File imageFile) async {
     try {
       // Show loading indicator
       showDialog(
@@ -1239,8 +1291,9 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
       // Extract image index from title (e.g., "1. Front View with Number Plate" -> index 0)
       final match = RegExp(r'(\d+)\.').firstMatch(title);
       if (match == null) throw Exception('Invalid vehicle photo title: $title');
-      
-      final imageIndex = int.parse(match.group(1)!) - 1; // Convert to 0-based index
+
+      final imageIndex =
+          int.parse(match.group(1)!) - 1; // Convert to 0-based index
 
       // Upload image to Firebase Storage
       final storageRef = FirebaseStorage.instance
@@ -1262,11 +1315,11 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
       // First, get the current document to preserve the structure
       final doc = await driverRef.get();
       final data = doc.data() as Map<String, dynamic>? ?? {};
-      
+
       // Get current vehicleImageUrls and vehicleImageVerification with proper type handling
       Map<String, dynamic> currentUrls = {};
       Map<String, dynamic> currentVerifications = {};
-      
+
       // Handle vehicleImageUrls - could be List or Map
       final urlsData = data['vehicleImageUrls'];
       if (urlsData is Map) {
@@ -1279,7 +1332,7 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
           }
         }
       }
-      
+
       // Handle vehicleImageVerification - could be List or Map
       final verificationsData = data['vehicleImageVerification'];
       if (verificationsData is Map) {
@@ -1292,10 +1345,10 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
           }
         }
       }
-      
+
       // Update the specific index - store as string key to match Firebase structure
       currentUrls[imageIndex.toString()] = downloadUrl;
-      
+
       // Update verification status for this image
       currentVerifications[imageIndex.toString()] = {
         'status': 'pending',
@@ -1316,14 +1369,15 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('$title replaced successfully! Status reset to pending review.'),
+          content: Text(
+              '$title replaced successfully! Status reset to pending review.'),
           backgroundColor: Colors.green,
         ),
       );
     } catch (e) {
       // Close loading dialog
       Navigator.pop(context);
-      
+
       print('Error uploading replacement vehicle photo: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

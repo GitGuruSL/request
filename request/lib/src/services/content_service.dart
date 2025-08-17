@@ -8,6 +8,8 @@ class ContentPage {
   final String? targetCountry;
   final String status; // published | draft
   final DateTime updatedAt;
+  final Map<String, dynamic>? metadata; // arbitrary extra data
+  final String content; // page body / markdown / html
 
   ContentPage({
     required this.id,
@@ -17,6 +19,8 @@ class ContentPage {
     this.category,
     this.targetCountry,
     this.status = 'published',
+    this.metadata,
+    this.content = '',
     DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? DateTime.now();
 }
