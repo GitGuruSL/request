@@ -31,18 +31,18 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  firebase_core: ^3.15.1
-  firebase_auth: ^5.6.2
-  cloud_functions: ^5.1.2
-  google_sign_in: ^6.3.0
-  cloud_firestore: ^5.6.11
+  # Authentication and HTTP
   shared_preferences: ^2.2.2
+  http: ^1.2.0
+  dio: ^5.3.2
+  flutter_secure_storage: ^9.0.0
+  provider: ^6.0.5
+  # UI and utilities
   intl: ^0.19.0
   intl_phone_field: ^3.2.0
   country_picker: ^2.0.20
   pinput: ^5.0.1
   image_picker: ^1.1.2
-  firebase_storage: ^12.4.9
   timeago: ^3.6.0
   location: ^5.0.3
   geolocator: ^12.0.0
@@ -54,17 +54,15 @@ dependencies:
   flutter_svg: ^2.0.7
   crypto: ^3.0.3
   google_places_flutter: ^2.0.9
-  http: ^1.2.0
-  dio: ^5.3.2
-  flutter_secure_storage: ^9.0.0
-  provider: ^6.0.5
   google_polyline_algorithm: ^3.1.0
   flutter_html: ^3.0.0
+  file_picker: ^10.2.0
+  # Google Services (non-Firebase)
+  google_sign_in: ^6.3.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  file_picker: ^10.2.0
 
 dev_dependencies:
   flutter_test:

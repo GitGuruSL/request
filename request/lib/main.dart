@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
+import 'package:flutter/foundation.dart';
+// New service imports for REST API
+import 'src/services/service_manager.dart';
+import 'src/services/api_client.dart';
 import 'src/auth/screens/splash_screen.dart';
 import 'src/auth/screens/welcome_screen.dart';
 import 'src/auth/screens/login_screen.dart';
@@ -34,21 +36,12 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
-    // Guard against duplicate initialization during hot restart
-    if (Firebase.apps.isEmpty) {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-    } else {
-      // No action needed; app already initialized. Avoid duplicate-app noise.
-    }
-    await CountryService.instance.initialize();
+    // Initialize REST API services instead of Firebase
+    await ServiceManager.instance.initialize();
+
+    debugPrint('✅ REST API services initialized successfully');
   } catch (e) {
-    if (e.toString().contains('duplicate-app')) {
-      debugPrint('Firebase already initialized (hot reload)');
-    } else {
-      debugPrint('Initialization failed: $e');
-    }
+    debugPrint('❌ Service initialization failed: $e');
   }
 
   runApp(const MyApp());
@@ -242,10 +235,8 @@ class MyApp extends StatelessWidget {
   }
 
   Widget _buildPlaceholderScreen(String routeName) {
-    final title = routeName
-        .replaceAll('/', '')
-        .replaceAll('-', ' ')
-        .toUpperCase();
+    final title =
+        routeName.replaceAll('/', '').replaceAll('-', ' ').toUpperCase();
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
