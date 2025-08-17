@@ -1,5 +1,15 @@
 import 'api_client.dart';
 
+// Robust converter for numeric fields that may arrive as int, double, String or null.
+double? _asDouble(dynamic v) {
+  if (v == null) return null;
+  if (v is double) return v;
+  if (v is int) return v.toDouble();
+  final s = v.toString().trim();
+  if (s.isEmpty) return null;
+  return double.tryParse(s);
+}
+
 class RequestModel {
   final String id;
   final String userId;
@@ -68,11 +78,13 @@ class RequestModel {
       cityName: json['city_name'],
       countryCode: json['country_code'] ?? 'LK',
       status: json['status'] ?? 'active',
-      budgetMin: json['budget_min']?.toDouble(),
-      budgetMax: json['budget_max']?.toDouble(),
+      budgetMin: _asDouble(json['budget_min']),
+      budgetMax: _asDouble(json['budget_max']),
       currency: json['currency'],
       deadline:
-          json['deadline'] != null ? DateTime.parse(json['deadline']) : null,
+          json['deadline'] != null && json['deadline'].toString().isNotEmpty
+              ? DateTime.tryParse(json['deadline'])
+              : null,
       imageUrls: json['image_urls'] != null
           ? List<String>.from(json['image_urls'])
           : null,
@@ -227,7 +239,7 @@ class ResponseModel {
         userId: json['user_id'].toString(),
         userName: json['user_name'],
         message: json['message'] ?? '',
-        price: json['price']?.toDouble(),
+        price: _asDouble(json['price']),
         currency: json['currency'],
         metadata: json['metadata'],
         imageUrls: json['image_urls'] != null
