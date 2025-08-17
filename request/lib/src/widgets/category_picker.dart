@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/category_service.dart';
-import '../models/category_data.dart';
+import '../services/rest_category_service.dart';
 
 class CategoryPicker extends StatefulWidget {
   final String requestType; // 'item', 'service', 'delivery', or 'rent'
@@ -20,6 +19,8 @@ class _CategoryPickerState extends State<CategoryPicker> {
   String? _selectedMainCategory;
   Map<String, List<String>> _categories = {};
   bool _isLoading = true;
+  final Map<String, String> _categoryNameToId =
+      {}; // Map main category name -> category id
 
   @override
   void initState() {
@@ -33,14 +34,29 @@ class _CategoryPickerState extends State<CategoryPicker> {
         _isLoading = true;
       });
 
-      // Try first method using CategoryService
-      final categoryService = CategoryService();
-      var categories = await categoryService.getCategoriesHierarchyForType(widget.requestType);
+      // Fetch categories via REST service then fetch their real subcategories
+      final rest = RestCategoryService.instance;
+      final allCategories = await rest.getCategoriesWithCache();
 
-      // If no categories found, try CategoryData method
-      if (categories.isEmpty) {
-        print('🔄 CategoryPicker: No categories from CategoryService, trying CategoryData...');
-        categories = await CategoryData.getCategoriesForType(widget.requestType);
+      // Heuristic filter by requestType (until backend supplies explicit field)
+      final t = widget.requestType.toLowerCase();
+      final relevant = allCategories
+          .where((c) =>
+              c.name.toLowerCase().contains(t) ||
+              (c.description?.toLowerCase().contains(t) ?? false))
+          .toList();
+      final source = relevant.isEmpty ? allCategories : relevant;
+
+      Map<String, List<String>> categories = {};
+      for (final cat in source) {
+        _categoryNameToId[cat.name] = cat.id;
+        // Load subcategories from API (cached)
+        final subs = await rest.getSubcategoriesWithCache(categoryId: cat.id);
+        if (subs.isEmpty) {
+          categories.putIfAbsent(cat.name, () => []);
+        } else {
+          categories[cat.name] = subs.map((s) => s.name).toList();
+        }
       }
 
       if (mounted) {
@@ -48,16 +64,17 @@ class _CategoryPickerState extends State<CategoryPicker> {
           _categories = categories;
           _isLoading = false;
         });
-        
+
         if (categories.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('No categories found in Firebase. Using default categories.'),
+              content: Text('No categories found. Using default categories.'),
               backgroundColor: Colors.orange,
             ),
           );
         } else {
-          print('✅ CategoryPicker: Successfully loaded ${categories.length} categories');
+          print(
+              '✅ CategoryPicker: Successfully loaded ${categories.length} categories');
         }
       }
     } catch (e) {
@@ -78,35 +95,109 @@ class _CategoryPickerState extends State<CategoryPicker> {
     switch (widget.requestType) {
       case 'item':
         return {
-          'Electronics': ['Mobile Phones', 'Laptops & Computers', 'Gaming Consoles', 'TV & Audio', 'Cameras', 'Accessories'],
-          'Clothing & Fashion': ['Clothing', 'Shoes', 'Bags', 'Jewelry', 'Accessories'],
-          'Home & Garden': ['Furniture', 'Appliances', 'Garden', 'Kitchen Items', 'Home Decor'],
-          'Sports & Outdoors': ['Sports Equipment', 'Fitness Gear', 'Outdoor Equipment', 'Exercise'],
+          'Electronics': [
+            'Mobile Phones',
+            'Laptops & Computers',
+            'Gaming Consoles',
+            'TV & Audio',
+            'Cameras',
+            'Accessories'
+          ],
+          'Clothing & Fashion': [
+            'Clothing',
+            'Shoes',
+            'Bags',
+            'Jewelry',
+            'Accessories'
+          ],
+          'Home & Garden': [
+            'Furniture',
+            'Appliances',
+            'Garden',
+            'Kitchen Items',
+            'Home Decor'
+          ],
+          'Sports & Outdoors': [
+            'Sports Equipment',
+            'Fitness Gear',
+            'Outdoor Equipment',
+            'Exercise'
+          ],
           'Books & Media': ['Books', 'Movies', 'Music', 'Games'],
           'Automotive': ['Cars', 'Motorcycles', 'Parts', 'Accessories'],
         };
       case 'service':
         return {
-          'Home Services': ['Cleaning', 'Plumbing', 'Electrical', 'Carpentry', 'Painting', 'Gardening'],
-          'Personal Services': ['Beauty', 'Fitness Training', 'Tutoring', 'Photography', 'Event Planning'],
-          'Professional Services': ['IT Support', 'Legal', 'Financial', 'Consulting', 'Marketing'],
+          'Home Services': [
+            'Cleaning',
+            'Plumbing',
+            'Electrical',
+            'Carpentry',
+            'Painting',
+            'Gardening'
+          ],
+          'Personal Services': [
+            'Beauty',
+            'Fitness Training',
+            'Tutoring',
+            'Photography',
+            'Event Planning'
+          ],
+          'Professional Services': [
+            'IT Support',
+            'Legal',
+            'Financial',
+            'Consulting',
+            'Marketing'
+          ],
           'Transportation': ['Delivery', 'Moving', 'Taxi Service', 'Courier'],
         };
       case 'delivery':
         return {
-          'Food & Beverages': ['Restaurant Food', 'Groceries', 'Beverages', 'Snacks'],
+          'Food & Beverages': [
+            'Restaurant Food',
+            'Groceries',
+            'Beverages',
+            'Snacks'
+          ],
           'Retail Items': ['Clothing', 'Electronics', 'Books', 'General Items'],
-          'Documents': ['Legal Documents', 'Business Papers', 'Personal Documents'],
+          'Documents': [
+            'Legal Documents',
+            'Business Papers',
+            'Personal Documents'
+          ],
           'Medical': ['Prescriptions', 'Medical Supplies', 'Lab Results'],
         };
       case 'rent':
         return {
           'Vehicles': ['Cars', 'Motorcycles', 'Bicycles', 'Trucks', 'Vans'],
-          'Electronics': ['Laptops', 'Gaming Consoles', 'Cameras', 'Audio Equipment', 'Projectors'],
-          'Tools & Equipment': ['Power Tools', 'Garden Tools', 'Construction Equipment', 'Kitchen Appliances'],
+          'Electronics': [
+            'Laptops',
+            'Gaming Consoles',
+            'Cameras',
+            'Audio Equipment',
+            'Projectors'
+          ],
+          'Tools & Equipment': [
+            'Power Tools',
+            'Garden Tools',
+            'Construction Equipment',
+            'Kitchen Appliances'
+          ],
           'Furniture': ['Tables', 'Chairs', 'Sofas', 'Beds', 'Storage Units'],
-          'Event Items': ['Tents', 'Chairs', 'Tables', 'Sound Systems', 'Lighting'],
-          'Sports Equipment': ['Bicycles', 'Gym Equipment', 'Outdoor Gear', 'Water Sports'],
+          'Event Items': [
+            'Tents',
+            'Chairs',
+            'Tables',
+            'Sound Systems',
+            'Lighting'
+          ],
+          'Sports Equipment': [
+            'Bicycles',
+            'Gym Equipment',
+            'Outdoor Gear',
+            'Water Sports'
+          ],
         };
       default:
         return {};
@@ -141,9 +232,11 @@ class _CategoryPickerState extends State<CategoryPicker> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.refresh),
-                  onPressed: _isLoading ? null : () {
-                    _loadCategories();
-                  },
+                  onPressed: _isLoading
+                      ? null
+                      : () {
+                          _loadCategories();
+                        },
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
@@ -184,15 +277,15 @@ class _CategoryPickerState extends State<CategoryPicker> {
           Text(
             'No categories available',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Colors.grey[600],
-            ),
+                  color: Colors.grey[600],
+                ),
           ),
           const SizedBox(height: 8),
           Text(
             'Categories will be loaded from the admin panel',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[500],
-            ),
+                  color: Colors.grey[500],
+                ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
@@ -215,7 +308,7 @@ class _CategoryPickerState extends State<CategoryPicker> {
       itemBuilder: (context, index) {
         final category = mainCategories[index];
         final subcategoryCount = _categories[category]?.length ?? 0;
-        
+
         return ListTile(
           leading: Icon(
             Icons.folder,
@@ -246,6 +339,7 @@ class _CategoryPickerState extends State<CategoryPicker> {
               Navigator.pop(context, {
                 'category': category,
                 'subcategory': null,
+                'categoryId': _categoryNameToId[category],
               });
             }
           },
@@ -254,7 +348,8 @@ class _CategoryPickerState extends State<CategoryPicker> {
     );
   }
 
-  Widget _buildSubCategoryList(String mainCategory, List<String> subcategories) {
+  Widget _buildSubCategoryList(
+      String mainCategory, List<String> subcategories) {
     return ListView.builder(
       controller: widget.scrollController,
       itemCount: subcategories.length + 1, // +1 for "All" option
@@ -283,6 +378,7 @@ class _CategoryPickerState extends State<CategoryPicker> {
               Navigator.pop(context, {
                 'category': mainCategory,
                 'subcategory': null,
+                'categoryId': _categoryNameToId[mainCategory],
               });
             },
           );
@@ -304,6 +400,8 @@ class _CategoryPickerState extends State<CategoryPicker> {
             Navigator.pop(context, {
               'category': mainCategory,
               'subcategory': subcategory,
+              'categoryId': _categoryNameToId[mainCategory],
+              // Subcategory ID not tracked yet (would need reverse map if required)
             });
           },
         );

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/category_model.dart';
-import '../services/category_service.dart';
+import '../services/rest_category_service.dart';
 
 class CategorySelectionWidget extends StatefulWidget {
   final String categoryType;
@@ -19,7 +18,8 @@ class CategorySelectionWidget extends StatefulWidget {
   });
 
   @override
-  State<CategorySelectionWidget> createState() => _CategorySelectionWidgetState();
+  State<CategorySelectionWidget> createState() =>
+      _CategorySelectionWidgetState();
 }
 
 class CategoryOption {
@@ -39,7 +39,7 @@ class CategoryOption {
 }
 
 class _CategorySelectionWidgetState extends State<CategorySelectionWidget> {
-  final CategoryService _categoryService = CategoryService();
+  final RestCategoryService _categoryService = RestCategoryService.instance;
   List<CategoryOption> _categoryOptions = [];
   bool _isLoading = true;
   String? _selectedValue;
@@ -56,31 +56,18 @@ class _CategorySelectionWidgetState extends State<CategorySelectionWidget> {
         _isLoading = true;
       });
 
-      List<Category> categories;
-      switch (widget.categoryType) {
-        case 'item':
-          categories = await _categoryService.getItemCategories();
-          break;
-        case 'service':
-          categories = await _categoryService.getServiceCategories();
-          break;
-        case 'delivery':
-          categories = await _categoryService.getDeliveryCategories();
-          break;
-        default:
-          // Use getCategoriesForType which returns CategoryModel list
-          final categoryModels = await _categoryService.getCategoriesForType(widget.categoryType);
-          categories = categoryModels.map((cm) => Category(
-            id: cm.id,
-            name: cm.category, // CategoryModel uses 'category' field
-            type: cm.type,
-            subCategories: [], // No subcategories in simplified structure
-          )).toList();
-      }
-      
+      // REST categories (filter by type in name/description)
+      final all = await _categoryService.getCategoriesWithCache();
+      final filter = widget.categoryType.toLowerCase();
+      final categories = all
+          .where((c) =>
+              c.name.toLowerCase().contains(filter) ||
+              (c.description?.toLowerCase().contains(filter) ?? false))
+          .toList();
+
       List<CategoryOption> options = [];
-      
-      for (Category category in categories) {
+
+      for (var category in categories) {
         // Add the main category
         options.add(CategoryOption(
           id: 'cat_${category.id}',
@@ -88,27 +75,17 @@ class _CategorySelectionWidgetState extends State<CategorySelectionWidget> {
           categoryId: category.id,
           isCategory: true,
         ));
-        
-        // Add subcategories with indentation
-        for (SubCategory subCategory in category.subCategories) {
-          options.add(CategoryOption(
-            id: 'sub_${category.id}_${subCategory.id}',
-            displayName: '  → ${subCategory.name}',
-            categoryId: category.id,
-            subCategoryId: subCategory.id,
-            isCategory: false,
-          ));
-        }
       }
-      
+
       setState(() {
         _categoryOptions = options;
         _isLoading = false;
-        
+
         // Set initial selection
         if (widget.selectedCategoryId != null) {
           if (widget.selectedSubCategoryId != null) {
-            _selectedValue = 'sub_${widget.selectedCategoryId}_${widget.selectedSubCategoryId}';
+            _selectedValue =
+                'sub_${widget.selectedCategoryId}_${widget.selectedSubCategoryId}';
           } else {
             _selectedValue = 'cat_${widget.selectedCategoryId}';
           }
@@ -130,13 +107,14 @@ class _CategorySelectionWidgetState extends State<CategorySelectionWidget> {
     setState(() {
       _selectedValue = value;
     });
-    
+
     if (value == null) {
       widget.onSelectionChanged(null, null);
       return;
     }
-    
-    final selectedOption = _categoryOptions.firstWhere((opt) => opt.id == value);
+
+    final selectedOption =
+        _categoryOptions.firstWhere((opt) => opt.id == value);
     widget.onSelectionChanged(
       selectedOption.categoryId,
       selectedOption.subCategoryId,
@@ -198,9 +176,13 @@ class _CategorySelectionWidgetState extends State<CategorySelectionWidget> {
             children: [
               // Icon for category vs subcategory
               Icon(
-                option.isCategory ? Icons.folder : Icons.subdirectory_arrow_right,
+                option.isCategory
+                    ? Icons.folder
+                    : Icons.subdirectory_arrow_right,
                 size: 16,
-                color: option.isCategory ? Colors.blue.shade600 : Colors.grey.shade600,
+                color: option.isCategory
+                    ? Colors.blue.shade600
+                    : Colors.grey.shade600,
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -208,8 +190,11 @@ class _CategorySelectionWidgetState extends State<CategorySelectionWidget> {
                   option.displayName,
                   style: TextStyle(
                     fontSize: 14,
-                    fontWeight: option.isCategory ? FontWeight.w500 : FontWeight.normal,
-                    color: option.isCategory ? Colors.black87 : Colors.grey.shade700,
+                    fontWeight:
+                        option.isCategory ? FontWeight.w500 : FontWeight.normal,
+                    color: option.isCategory
+                        ? Colors.black87
+                        : Colors.grey.shade700,
                   ),
                 ),
               ),
@@ -218,12 +203,14 @@ class _CategorySelectionWidgetState extends State<CategorySelectionWidget> {
         );
       }).toList(),
       onChanged: _onSelectionChanged,
-      validator: widget.isRequired ? (value) {
-        if (value == null || value.isEmpty) {
-          return 'Please select a category';
-        }
-        return null;
-      } : null,
+      validator: widget.isRequired
+          ? (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please select a category';
+              }
+              return null;
+            }
+          : null,
       isExpanded: true,
       menuMaxHeight: 300,
     );

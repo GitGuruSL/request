@@ -11,14 +11,16 @@ import '../../utils/currency_helper.dart';
 
 class UnifiedRequestCreateScreen extends StatefulWidget {
   final RequestType? initialType;
-  
+
   const UnifiedRequestCreateScreen({super.key, this.initialType});
 
   @override
-  State<UnifiedRequestCreateScreen> createState() => _UnifiedRequestCreateScreenState();
+  State<UnifiedRequestCreateScreen> createState() =>
+      _UnifiedRequestCreateScreenState();
 }
 
-class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen> {
+class _UnifiedRequestCreateScreenState
+    extends State<UnifiedRequestCreateScreen> {
   final _formKey = GlobalKey<FormState>();
   final CentralizedRequestService _requestService = CentralizedRequestService();
   final EnhancedUserService _userService = EnhancedUserService();
@@ -28,19 +30,19 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
   final _descriptionController = TextEditingController();
   final _locationController = TextEditingController();
   final _budgetController = TextEditingController();
-  
+
   // Item-specific controllers
   final _itemNameController = TextEditingController();
   final _quantityController = TextEditingController();
   final _categoryController = TextEditingController();
-  
+
   // Service-specific controllers
   final _specialInstructionsController = TextEditingController();
-  
+
   // Rental-specific controllers
   final _itemToRentController = TextEditingController();
   final _rentalItemController = TextEditingController();
-  
+
   // Delivery-specific controllers
   final _pickupLocationController = TextEditingController();
   final _dropoffLocationController = TextEditingController();
@@ -48,8 +50,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
   final _itemDescriptionController = TextEditingController();
   final _weightController = TextEditingController();
   final _dimensionsController = TextEditingController();
-  
-  
+
   RequestType _selectedType = RequestType.item;
   String _selectedCondition = 'New';
   String _selectedUrgency = 'Flexible';
@@ -70,14 +71,37 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
   double? _selectedLatitude;
   double? _selectedLongitude;
 
-  final List<String> _conditions = ['New', 'Used', 'For Parts', 'Any Condition'];
+  final List<String> _conditions = [
+    'New',
+    'Used',
+    'For Parts',
+    'Any Condition'
+  ];
   final List<String> _urgencyLevels = ['Flexible', 'ASAP', 'Specific Date'];
-  final List<String> _deliveryTimes = ['Anytime', 'Morning', 'Afternoon', 'By End of Day'];
+  final List<String> _deliveryTimes = [
+    'Anytime',
+    'Morning',
+    'Afternoon',
+    'By End of Day'
+  ];
   final List<String> _categories = [
-    'Electronics', 'Clothing & Accessories', 'Home & Garden', 'Sports & Outdoors', 
-    'Books & Media', 'Toys & Games', 'Health & Beauty', 'Automotive', 
-    'Tools & Hardware', 'Art & Crafts', 'Jewelry & Watches', 'Musical Instruments',
-    'Baby & Kids', 'Pet Supplies', 'Office Supplies', 'Food & Beverages', 'Other'
+    'Electronics',
+    'Clothing & Accessories',
+    'Home & Garden',
+    'Sports & Outdoors',
+    'Books & Media',
+    'Toys & Games',
+    'Health & Beauty',
+    'Automotive',
+    'Tools & Hardware',
+    'Art & Crafts',
+    'Jewelry & Watches',
+    'Musical Instruments',
+    'Baby & Kids',
+    'Pet Supplies',
+    'Office Supplies',
+    'Food & Beverages',
+    'Other'
   ];
 
   @override
@@ -147,9 +171,10 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
     if (result != null && result.containsKey('category')) {
       setState(() {
         _selectedCategory = result['category'] ?? 'Electronics';
-        _selectedSubcategory = result['subcategory']; // Can be null for main categories
-        _selectedCategoryId = _selectedCategory; // Set ID same as name for now
-        _selectedSubCategoryId = _selectedSubcategory; // Set ID same as name for now
+        _selectedSubcategory = result['subcategory'];
+        _selectedCategoryId = result['categoryId'] ?? _selectedCategory;
+        _selectedSubCategoryId =
+            result['subcategoryId'] ?? _selectedSubcategory;
       });
     }
   }
@@ -201,16 +226,13 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
                   )
                 : Text(
                     'Create ${_getTypeDisplayName(_selectedType)}',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w600),
                   ),
           ),
         ),
       ),
     );
-  }
-
-  Widget _buildCommonFields() {
-    return const SizedBox(); // No common fields anymore - each type has its own order
   }
 
   Widget _buildFlatField({required Widget child}) {
@@ -249,7 +271,6 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
             decoration: const InputDecoration(
               labelText: 'Request Title',
               hintText: 'Enter a short, descriptive title',
-              
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -260,7 +281,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Item Name
         _buildFlatField(
           child: TextFormField(
@@ -278,7 +299,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Description
         _buildFlatField(
           child: TextFormField(
@@ -287,7 +308,6 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
             decoration: const InputDecoration(
               labelText: 'Description',
               hintText: 'Provide detailed information...',
-              
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -298,7 +318,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Category (Use Category Picker)
         _buildFlatField(
           child: TextFormField(
@@ -307,16 +327,16 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
               labelText: 'Category',
               hintText: 'Select a category',
               suffixIcon: Icon(Icons.arrow_drop_down),
-              
             ),
             controller: TextEditingController(
-              text: _selectedSubcategory != null 
-                ? '$_selectedCategory > $_selectedSubcategory'
-                : _selectedCategory,
+              text: _selectedSubcategory != null
+                  ? '$_selectedCategory > $_selectedSubcategory'
+                  : _selectedCategory,
             ),
             onTap: _showCategoryPicker,
             validator: (value) {
-              if (_selectedCategory == 'Electronics' && _selectedCategoryId == null) {
+              if (_selectedCategory == 'Electronics' &&
+                  _selectedCategoryId == null) {
                 return 'Please select a category';
               }
               return null;
@@ -324,7 +344,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Quantity
         _buildFlatField(
           child: TextFormField(
@@ -333,7 +353,6 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
             decoration: const InputDecoration(
               labelText: 'Quantity',
               hintText: 'How many do you need?',
-              
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -344,14 +363,13 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Desired Condition
         _buildFlatField(
           child: DropdownButtonFormField<String>(
             value: _selectedCondition,
             decoration: const InputDecoration(
               labelText: 'Desired Condition',
-              
             ),
             items: _conditions.map((condition) {
               return DropdownMenuItem<String>(
@@ -367,7 +385,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Location (Use Location Picker Widget)
         _buildFlatField(
           child: Column(
@@ -396,7 +414,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Budget
         _buildFlatField(
           child: TextFormField(
@@ -406,12 +424,11 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
               labelText: CurrencyHelper.instance.getBudgetLabel(),
               hintText: 'Enter your budget range',
               prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
-              
             ),
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Photo/Link
         _buildFlatField(
           child: Column(
@@ -462,11 +479,12 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
                 ),
               ),
             );
-            
+
             if (result != null) {
               setState(() {
                 _selectedCategory = result['category'] ?? _selectedCategory;
-                _selectedSubcategory = result['subcategory'] ?? _selectedSubcategory;
+                _selectedSubcategory =
+                    result['subcategory'] ?? _selectedSubcategory;
                 _selectedCategoryId = result['category'];
                 _selectedSubCategoryId = result['subcategory'];
               });
@@ -494,7 +512,8 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        (_selectedCategory.isNotEmpty == true && _selectedSubcategory?.isNotEmpty == true)
+                        (_selectedCategory.isNotEmpty == true &&
+                                _selectedSubcategory?.isNotEmpty == true)
                             ? '$_selectedCategory > $_selectedSubcategory'
                             : 'Select service category',
                         style: const TextStyle(
@@ -511,7 +530,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Request Title
         _buildFlatField(
           child: TextFormField(
@@ -519,7 +538,6 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
             decoration: const InputDecoration(
               labelText: 'Request Title',
               hintText: 'Enter a short, descriptive title',
-              
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -530,7 +548,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Description
         _buildFlatField(
           child: TextFormField(
@@ -538,8 +556,8 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
             maxLines: 4,
             decoration: const InputDecoration(
               labelText: 'Description',
-              hintText: 'Provide detailed information about the service needed...',
-              
+              hintText:
+                  'Provide detailed information about the service needed...',
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -550,7 +568,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Location (Use Location Picker Widget)
         _buildFlatField(
           child: Column(
@@ -579,7 +597,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Preferred Date & Time (Remove Border)
         _buildFlatField(
           child: Column(
@@ -631,14 +649,13 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Urgency
         _buildFlatField(
           child: DropdownButtonFormField<String>(
             value: _selectedUrgency,
             decoration: const InputDecoration(
               labelText: 'Urgency',
-              
             ),
             items: _urgencyLevels.map((urgency) {
               return DropdownMenuItem<String>(
@@ -654,7 +671,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Budget
         _buildFlatField(
           child: TextFormField(
@@ -664,12 +681,11 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
               labelText: CurrencyHelper.instance.getBudgetLabel(),
               hintText: 'Enter your budget range',
               prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
-              
             ),
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Photo/Video
         _buildFlatField(
           child: Column(
@@ -711,7 +727,6 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
             decoration: const InputDecoration(
               labelText: 'Request Title',
               hintText: 'Enter a short, descriptive title',
-              
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -722,7 +737,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Description
         _buildFlatField(
           child: TextFormField(
@@ -730,8 +745,8 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
             maxLines: 4,
             decoration: const InputDecoration(
               labelText: 'Description',
-              hintText: 'Provide detailed information about the rental needed...',
-              
+              hintText:
+                  'Provide detailed information about the rental needed...',
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -742,7 +757,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Item to Rent (Use Category Picker)
         _buildFlatField(
           child: Column(
@@ -755,12 +770,14 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
               const SizedBox(height: 8),
               GestureDetector(
                 onTap: () async {
-                  final result = await showModalBottomSheet<Map<String, String>>(
+                  final result =
+                      await showModalBottomSheet<Map<String, String>>(
                     context: context,
                     isScrollControlled: true,
                     backgroundColor: Colors.white,
                     shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(20)),
                     ),
                     builder: (context) => SizedBox(
                       height: MediaQuery.of(context).size.height * 0.8,
@@ -770,7 +787,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
                       ),
                     ),
                   );
-                  
+
                   if (result != null && result['category'] != null) {
                     setState(() {
                       _selectedCategory = result['category']!;
@@ -790,10 +807,10 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        _selectedSubcategory ?? _selectedCategory ?? 'Select item to rent',
+                        _selectedSubcategory ?? 'Select item to rent',
                         style: TextStyle(
-                          color: (_selectedSubcategory != null || _selectedCategory != null) 
-                              ? Colors.black 
+                          color: _selectedSubcategory != null
+                              ? Colors.black
                               : Colors.grey.shade600,
                         ),
                       ),
@@ -806,7 +823,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Start Date & Time
         _buildFlatField(
           child: Column(
@@ -858,7 +875,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // End Date & Time
         _buildFlatField(
           child: Column(
@@ -910,7 +927,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Location (Use Location Picker)
         _buildFlatField(
           child: Column(
@@ -939,7 +956,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Budget
         _buildFlatField(
           child: TextFormField(
@@ -949,12 +966,11 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
               labelText: 'Budget (per day/hour)',
               hintText: 'Enter your budget',
               prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
-              
             ),
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Pickup / Dropoff
         _buildFlatField(
           child: Column(
@@ -967,13 +983,14 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _pickupDropoffPreference,
-                decoration: const InputDecoration(
-                  
-                ),
+                decoration: const InputDecoration(),
                 items: const [
-                  DropdownMenuItem(value: 'pickup', child: Text('I will pickup')),
-                  DropdownMenuItem(value: 'delivery', child: Text('Please deliver')),
-                  DropdownMenuItem(value: 'flexible', child: Text('Either option works')),
+                  DropdownMenuItem(
+                      value: 'pickup', child: Text('I will pickup')),
+                  DropdownMenuItem(
+                      value: 'delivery', child: Text('Please deliver')),
+                  DropdownMenuItem(
+                      value: 'flexible', child: Text('Either option works')),
                 ],
                 onChanged: (value) {
                   setState(() {
@@ -985,7 +1002,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Photo/Link
         _buildFlatField(
           child: Column(
@@ -1027,7 +1044,6 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
             decoration: const InputDecoration(
               labelText: 'Request Title',
               hintText: 'Enter a short, descriptive title',
-              
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -1038,7 +1054,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Pickup Location
         _buildFlatField(
           child: Column(
@@ -1065,7 +1081,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Drop-off Location
         _buildFlatField(
           child: Column(
@@ -1092,7 +1108,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Item Categories (Use Category Picker)
         _buildFlatField(
           child: GestureDetector(
@@ -1108,11 +1124,12 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
                   ),
                 ),
               );
-              
+
               if (result != null) {
                 setState(() {
                   _selectedCategory = result['category'] ?? _selectedCategory;
-                  _selectedSubcategory = result['subcategory'] ?? _selectedSubcategory;
+                  _selectedSubcategory =
+                      result['subcategory'] ?? _selectedSubcategory;
                   _selectedCategoryId = result['category'];
                   _selectedSubCategoryId = result['subcategory'];
                 });
@@ -1130,7 +1147,9 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
                   Text(
                     _selectedSubcategory ?? 'Select item category',
                     style: TextStyle(
-                      color: _selectedSubcategory != null ? Colors.black : Colors.grey.shade600,
+                      color: _selectedSubcategory != null
+                          ? Colors.black
+                          : Colors.grey.shade600,
                     ),
                   ),
                   const Icon(Icons.arrow_drop_down),
@@ -1140,7 +1159,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Item Description
         _buildFlatField(
           child: TextFormField(
@@ -1149,7 +1168,6 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
             decoration: const InputDecoration(
               labelText: 'Item Description',
               hintText: 'Describe what needs to be delivered...',
-              
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -1160,7 +1178,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Weight & Dimensions
         _buildFlatField(
           child: Column(
@@ -1179,7 +1197,6 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
                         hintText: 'Weight (kg)',
-                        
                       ),
                     ),
                   ),
@@ -1189,7 +1206,6 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
                       controller: _dimensionsController,
                       decoration: const InputDecoration(
                         hintText: 'Dimensions (L x W x H)',
-                        
                       ),
                     ),
                   ),
@@ -1199,7 +1215,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Preferred Delivery Time
         _buildFlatField(
           child: Column(
@@ -1251,7 +1267,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Special Instructions
         _buildFlatField(
           child: TextFormField(
@@ -1260,12 +1276,11 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
             decoration: const InputDecoration(
               labelText: 'Special Instructions (Optional)',
               hintText: 'Any special handling requirements, access codes, etc.',
-              
             ),
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Photo Upload
         _buildFlatField(
           child: Column(
@@ -1303,8 +1318,10 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
     }
 
     // Additional validation for category selection based on request type
-    if ((_selectedType == RequestType.service || _selectedType == RequestType.delivery || _selectedType == RequestType.rental) 
-        && (_selectedCategoryId == null || _selectedCategoryId!.isEmpty)) {
+    if ((_selectedType == RequestType.service ||
+            _selectedType == RequestType.delivery ||
+            _selectedType == RequestType.rental) &&
+        (_selectedCategoryId == null || _selectedCategoryId!.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Please select a ${_selectedType.name} category'),
@@ -1343,13 +1360,13 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
         }
       }
 
-      String requestId = await _requestService.createRequest(
+      await _requestService.createRequestCompat(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         type: _selectedType,
         location: locationInfo,
-        budget: _budgetController.text.trim().isNotEmpty 
-            ? double.tryParse(_budgetController.text.trim()) 
+        budget: _budgetController.text.trim().isNotEmpty
+            ? double.tryParse(_budgetController.text.trim())
             : null,
         images: _imageUrls,
         typeSpecificData: _getTypeSpecificData(),
@@ -1358,7 +1375,8 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${_getTypeDisplayName(_selectedType)} created successfully!'),
+            content: Text(
+                '${_getTypeDisplayName(_selectedType)} created successfully!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -1393,7 +1411,9 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
         };
       case RequestType.service:
         return {
-          'serviceType': (_selectedSubcategory?.isNotEmpty == true) ? _selectedSubcategory : _selectedCategory,
+          'serviceType': (_selectedSubcategory?.isNotEmpty == true)
+              ? _selectedSubcategory
+              : _selectedCategory,
           'categoryId': _selectedCategoryId ?? '',
           'subCategoryId': _selectedSubCategoryId ?? '',
           'category': _selectedCategory,
@@ -1405,17 +1425,18 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
         return {
           'pickupLocation': _pickupLocationController.text.trim(),
           'dropoffLocation': _dropoffLocationController.text.trim(),
-          'itemCategory': _selectedCategory.trim() ?? '',
-          'category': _selectedCategory.trim() ?? '', // Store in both fields for compatibility
+          'itemCategory': _selectedCategory.trim(),
+          'category': _selectedCategory.trim(),
           'categoryId': _selectedCategoryId?.trim() ?? '',
           'subcategory': _selectedSubcategory?.trim(),
           'subcategoryId': _selectedSubCategoryId?.trim() ?? '',
           'itemDescription': _descriptionController.text.trim(),
-          'weight': _weightController.text.trim().isNotEmpty 
-              ? double.tryParse(_weightController.text.trim()) 
+          'weight': _weightController.text.trim().isNotEmpty
+              ? double.tryParse(_weightController.text.trim())
               : null,
           'dimensions': _dimensionsController.text.trim(),
-          'preferredDeliveryTime': _preferredDeliveryTime?.millisecondsSinceEpoch,
+          'preferredDeliveryTime':
+              _preferredDeliveryTime?.millisecondsSinceEpoch,
           'specialInstructions': _specialInstructionsController.text.trim(),
         };
       case RequestType.rental:

@@ -9,7 +9,8 @@ class CreatePriceRequestScreen extends StatefulWidget {
   const CreatePriceRequestScreen({super.key});
 
   @override
-  State<CreatePriceRequestScreen> createState() => _CreatePriceRequestScreenState();
+  State<CreatePriceRequestScreen> createState() =>
+      _CreatePriceRequestScreenState();
 }
 
 class _CreatePriceRequestScreenState extends State<CreatePriceRequestScreen> {
@@ -22,7 +23,7 @@ class _CreatePriceRequestScreenState extends State<CreatePriceRequestScreen> {
   final _descriptionController = TextEditingController();
   final _locationController = TextEditingController();
   final _budgetController = TextEditingController();
-  
+
   // Price-specific fields
   String _requestType = 'Product Price';
   String _category = 'Electronics';
@@ -131,7 +132,8 @@ class _CreatePriceRequestScreenState extends State<CreatePriceRequestScreen> {
                 controller: _descriptionController,
                 decoration: InputDecoration(
                   labelText: 'Description',
-                  hintText: 'Provide more details about what you need priced...',
+                  hintText:
+                      'Provide more details about what you need priced...',
                   filled: true,
                   fillColor: Colors.white,
                   border: InputBorder.none,
@@ -239,7 +241,8 @@ class _CreatePriceRequestScreenState extends State<CreatePriceRequestScreen> {
                   children: [
                     CheckboxListTile(
                       title: const Text('Include Shipping Costs'),
-                      subtitle: const Text('Get total price including delivery'),
+                      subtitle:
+                          const Text('Get total price including delivery'),
                       value: _includeShipping,
                       onChanged: (value) {
                         setState(() {
@@ -251,7 +254,8 @@ class _CreatePriceRequestScreenState extends State<CreatePriceRequestScreen> {
                     ),
                     CheckboxListTile(
                       title: const Text('Looking for Best Deal'),
-                      subtitle: const Text('I want the most competitive prices'),
+                      subtitle:
+                          const Text('I want the most competitive prices'),
                       value: _lookingForBestDeal,
                       onChanged: (value) {
                         setState(() {
@@ -283,7 +287,8 @@ class _CreatePriceRequestScreenState extends State<CreatePriceRequestScreen> {
                       ? const CircularProgressIndicator(color: Colors.white)
                       : const Text(
                           'Get Price Quotes',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                 ),
               ),
@@ -321,7 +326,8 @@ class _CreatePriceRequestScreenState extends State<CreatePriceRequestScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Please verify your phone number to create requests'),
+              content:
+                  Text('Please verify your phone number to create requests'),
             ),
           );
         }
@@ -332,7 +338,9 @@ class _CreatePriceRequestScreenState extends State<CreatePriceRequestScreen> {
       final priceData = PriceRequestData(
         itemOrService: _titleController.text.trim(),
         category: _category,
-        brand: _brandController.text.trim().isEmpty ? null : _brandController.text.trim(),
+        brand: _brandController.text.trim().isEmpty
+            ? null
+            : _brandController.text.trim(),
         condition: _condition,
         specifications: {
           'specifications': _specificationsController.text.trim(),
@@ -341,7 +349,7 @@ class _CreatePriceRequestScreenState extends State<CreatePriceRequestScreen> {
         compareNewAndUsed: _compareNewAndUsed,
       );
 
-      final requestId = await _requestService.createRequest(
+      await _requestService.createRequestCompat(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         type: RequestType.price,

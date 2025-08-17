@@ -1,6 +1,32 @@
 class CentralizedRequestService {
   Future<List<dynamic>> getRequests() async => [];
   Future<dynamic> createRequest(Map<String, dynamic> data) async => null;
+  // Compatibility helper matching legacy named-parameter usage
+  Future<dynamic> createRequestCompat({
+    required String title,
+    required String description,
+    required dynamic type,
+    dynamic location,
+    double? budget,
+    String? currency,
+    List<String>? images,
+    Map<String, dynamic>? typeSpecificData,
+    List<String>? tags,
+  }) async {
+    final map = <String, dynamic>{
+      'title': title,
+      'description': description,
+      'type': type.toString(),
+      if (location != null) 'location': location,
+      if (budget != null) 'budget': budget,
+      if (currency != null) 'currency': currency,
+      if (images != null) 'images': images,
+      if (typeSpecificData != null) 'typeSpecificData': typeSpecificData,
+      if (tags != null) 'tags': tags,
+    };
+    return createRequest(map);
+  }
+
   Future<void> updateRequest(String id, Map<String, dynamic> data) async {}
   Future<void> updateRequestFlexible({
     String? requestId,

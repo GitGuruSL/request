@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../services/rest_auth_service.dart';
-// Removed category/city/list imports for simplified home UI
+import '../../screens/unified_request_response/unified_request_create_screen.dart';
+import '../../models/enhanced_user_model.dart' show RequestType;
+import '../../screens/requests/ride/create_ride_request_screen.dart';
+import '../../screens/requests/create_price_request_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -9,11 +12,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
   @override
   void initState() {
     super.initState();
@@ -25,42 +23,42 @@ class _HomeScreenState extends State<HomeScreen> {
           title: 'Item Request',
           subtitle: 'Request for products or items',
           icon: Icons.shopping_bag_outlined,
-          color: Color(0xFFFF8A3D),
+          color: const Color(0xFFFF8A3D),
         ),
         _RequestType(
           type: 'service',
           title: 'Service Request',
           subtitle: 'Request for services',
           icon: Icons.build_outlined,
-          color: Color(0xFF22B8A7),
+          color: const Color(0xFF22B8A7),
         ),
         _RequestType(
           type: 'rental',
           title: 'Rental Request',
           subtitle: 'Rent vehicles, equipment, or items',
           icon: Icons.vpn_key_outlined,
-          color: Color(0xFF37A7FF),
+          color: const Color(0xFF37A7FF),
         ),
         _RequestType(
           type: 'delivery',
           title: 'Delivery Request',
           subtitle: 'Request for delivery services',
           icon: Icons.local_shipping_outlined,
-          color: Color(0xFF3BB273),
+          color: const Color(0xFF3BB273),
         ),
         _RequestType(
           type: 'ride',
           title: 'Ride Request',
           subtitle: 'Request for transportation',
           icon: Icons.directions_car_filled_outlined,
-          color: Color(0xFFFFC84A),
+          color: const Color(0xFFFFC84A),
         ),
         _RequestType(
           type: 'price',
           title: 'Price Request',
           subtitle: 'Request price quotes for items or services',
           icon: Icons.price_check_outlined,
-          color: Color(0xFFB085F5),
+          color: const Color(0xFFB085F5),
         ),
       ];
 
@@ -83,16 +81,16 @@ class _HomeScreenState extends State<HomeScreen> {
     return _capitalize(token);
   }
 
-  String _capitalize(String s) {
-    if (s.isEmpty) return s;
-    if (s.length == 1) return s.toUpperCase();
-    return s[0].toUpperCase() + s.substring(1);
-  }
+  String _capitalize(String s) => s.isEmpty
+      ? s
+      : s.length == 1
+          ? s.toUpperCase()
+          : s[0].toUpperCase() + s.substring(1);
 
-  void _onCreateRequest() {
+  void _openCreateSheet() {
     showModalBottomSheet(
       context: context,
-      isScrollControlled: false,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
         final items = _requestTypes;
@@ -104,37 +102,46 @@ class _HomeScreenState extends State<HomeScreen> {
               top: false,
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SizedBox(height: 10),
-                    Container(
-                      width: 44,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      'Create New Request',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    // Limit height to 80% of screen; rest scrolls
+                    maxHeight: MediaQuery.of(ctx).size.height * 0.8,
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SizedBox(height: 10),
+                        Container(
+                          width: 44,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(3),
                           ),
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          'Create New Request',
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                        ),
+                        const SizedBox(height: 12),
+                        ...items.map(
+                          (it) => _RequestTypeTile(
+                            icon: it.icon,
+                            iconColor: it.color,
+                            title: it.title,
+                            subtitle: it.subtitle,
+                            onTap: () => _selectRequestType(it.type),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
                     ),
-                    const SizedBox(height: 12),
-                    ...items.map(
-                      (it) => _RequestTypeTile(
-                        icon: it.icon,
-                        iconColor: it.color,
-                        title: it.title,
-                        subtitle: it.subtitle,
-                        onTap: () => _selectRequestType(it.type),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -146,9 +153,37 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _selectRequestType(String type) {
     Navigator.of(context).pop();
-    // TODO: Navigate to actual creation form based on type
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Selected: $type request')),
+    switch (type) {
+      case 'item':
+        _openUnified(RequestType.item);
+        break;
+      case 'service':
+        _openUnified(RequestType.service);
+        break;
+      case 'rental':
+        _openUnified(RequestType.rental);
+        break;
+      case 'delivery':
+        _openUnified(RequestType.delivery);
+        break;
+      case 'ride':
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const CreateRideRequestScreen()),
+        );
+        break;
+      case 'price':
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const CreatePriceRequestScreen()),
+        );
+        break;
+    }
+  }
+
+  void _openUnified(RequestType type) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => UnifiedRequestCreateScreen(initialType: type),
+      ),
     );
   }
 
@@ -157,60 +192,48 @@ class _HomeScreenState extends State<HomeScreen> {
     final user = RestAuthService.instance.currentUser;
     return Scaffold(
       appBar: AppBar(
-        // No title per new design; greeting moves to banner in body
         title: const SizedBox.shrink(),
         actions: [
           IconButton(
-              tooltip: 'Notifications',
-              onPressed: () {},
-              icon: const Icon(Icons.notifications_none)),
+            tooltip: 'Notifications',
+            onPressed: () {},
+            icon: const Icon(Icons.notifications_none),
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: GestureDetector(
-              onTap: () {},
-              child: CircleAvatar(
-                radius: 18,
-                child: Text(
-                  (user?.displayName?.isNotEmpty == true
-                          ? user!.displayName![0]
-                          : user?.email.isNotEmpty == true
-                              ? user!.email[0]
-                              : 'U')
-                      .toUpperCase(),
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
+            child: CircleAvatar(
+              radius: 18,
+              child: Text(
+                (user?.displayName?.isNotEmpty == true
+                        ? user!.displayName![0]
+                        : user?.email.isNotEmpty == true
+                            ? user!.email[0]
+                            : 'U')
+                    .toUpperCase(),
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
           )
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Greeting Banner
-              Text(
-                'Hello, ${_greetingName()}!',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              // Subtitle removed (was learning-focused, not relevant to requests app)
-            ],
+          child: Text(
+            'Hello, ${_greetingName()}!',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
           ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _onCreateRequest,
+        onPressed: _openCreateSheet,
         tooltip: 'New Request',
         child: const Icon(Icons.add),
       ),
     );
   }
-
-  // (Reserved for future expansion)
 }
 
 class _RequestTypeTile extends StatelessWidget {
