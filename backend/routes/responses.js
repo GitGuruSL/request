@@ -90,6 +90,11 @@ router.put('/:responseId', auth.authMiddleware(), async (req, res) => {
     const existing = await db.queryOne('SELECT * FROM responses WHERE id = $1 AND request_id = $2', [responseId, requestId]);
     if (!existing) return res.status(404).json({ success: false, message: 'Response not found' });
     if (existing.user_id !== userId) return res.status(403).json({ success: false, message: 'Not permitted' });
+    // If this response is accepted, disallow edits except maybe price? For now block entirely
+    const reqRow = await db.queryOne('SELECT accepted_response_id FROM requests WHERE id=$1', [requestId]);
+    if (reqRow && reqRow.accepted_response_id === responseId) {
+      return res.status(400).json({ success: false, message: 'Cannot edit an accepted response' });
+    }
 
     const updates = [];
     const values = [];
@@ -123,6 +128,11 @@ router.delete('/:responseId', auth.authMiddleware(), async (req, res) => {
     if (!existing) return res.status(404).json({ success: false, message: 'Response not found' });
     if (existing.user_id !== userId && existing.request_owner !== userId) return res.status(403).json({ success: false, message: 'Not permitted' });
 
+    // Prevent deleting an accepted response by non-request-owner; only request owner can clear via unaccept then delete.
+    const reqRow = await db.queryOne('SELECT accepted_response_id FROM requests WHERE id=$1', [requestId]);
+    if (reqRow && reqRow.accepted_response_id === responseId && existing.request_owner !== userId) {
+      return res.status(400).json({ success: false, message: 'Accepted response cannot be deleted (owner must unaccept first)' });
+    }
     const deleted = await db.queryOne('DELETE FROM responses WHERE id = $1 RETURNING *', [responseId]);
     res.json({ success: true, message: 'Response deleted', data: deleted });
   } catch (error) {

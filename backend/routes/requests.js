@@ -14,6 +14,7 @@ router.get('/', async (req, res) => {
       country_code = 'LK',
       status,
       user_id,
+  has_accepted,
       page = 1,
       limit = 20,
       sort_by = 'created_at',
@@ -48,6 +49,9 @@ router.get('/', async (req, res) => {
     if (user_id) {
       conditions.push(`r.user_id = $${paramCounter++}`);
       values.push(user_id);
+    }
+    if (has_accepted === 'true') {
+      conditions.push('r.accepted_response_id IS NOT NULL');
     }
 
     const offset = (page - 1) * limit;
@@ -107,6 +111,90 @@ router.get('/', async (req, res) => {
       message: 'Error fetching requests',
       error: error.message
     });
+  }
+});
+
+// Search requests by title or description (must come before :id route)
+router.get('/search', async (req, res) => {
+  try {
+    const {
+      q,
+      category_id,
+      subcategory_id,
+      city_id,
+      country_code = 'LK',
+      status,
+      user_id,
+  has_accepted,
+      page = 1,
+      limit = 20,
+      sort_by = 'created_at',
+      sort_order = 'DESC'
+    } = req.query;
+
+    if (!q || String(q).trim().length === 0) {
+      return res.status(400).json({ success: false, message: 'Query parameter q is required' });
+    }
+
+    const search = `%${q.trim()}%`;
+
+    const conditions = ['r.status = $1', '(r.title ILIKE $2 OR r.description ILIKE $2)'];
+    const values = ['active', search];
+    let paramCounter = 3;
+
+    if (category_id) { conditions.push(`r.category_id = $${paramCounter++}`); values.push(category_id); }
+    if (subcategory_id) { conditions.push(`r.subcategory_id = $${paramCounter++}`); values.push(subcategory_id); }
+    if (city_id) { conditions.push(`r.location_city_id = $${paramCounter++}`); values.push(city_id); }
+    if (country_code) { conditions.push(`r.country_code = $${paramCounter++}`); values.push(country_code); }
+    if (status) { conditions.push(`r.status = $${paramCounter++}`); values.push(status); }
+    if (user_id) { conditions.push(`r.user_id = $${paramCounter++}`); values.push(user_id); }
+  if (has_accepted === 'true') { conditions.push('r.accepted_response_id IS NOT NULL'); }
+
+    const offset = (page - 1) * limit;
+    const validSortColumns = ['created_at', 'updated_at', 'title', 'budget_min', 'budget_max'];
+    const finalSortBy = validSortColumns.includes(sort_by) ? sort_by : 'created_at';
+    const finalSortOrder = sort_order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+    const query = `
+      SELECT 
+        r.*,
+        u.display_name as user_name,
+        u.email as user_email,
+        c.name as category_name,
+        sc.name as subcategory_name,
+        ct.name as city_name
+      FROM requests r
+      LEFT JOIN users u ON r.user_id = u.id
+      LEFT JOIN categories c ON r.category_id = c.id
+      LEFT JOIN subcategories sc ON r.subcategory_id = sc.id
+      LEFT JOIN cities ct ON r.location_city_id = ct.id
+      WHERE ${conditions.join(' AND ')}
+      ORDER BY r.${finalSortBy} ${finalSortOrder}
+      LIMIT $${paramCounter++} OFFSET $${paramCounter++}
+    `;
+
+    values.push(limit, offset);
+
+    const requests = await database.query(query, values);
+    const countQuery = `SELECT COUNT(*) as total FROM requests r WHERE ${conditions.join(' AND ')}`;
+    const countResult = await database.queryOne(countQuery, values.slice(0, -2));
+    const total = parseInt(countResult.total);
+
+    res.json({
+      success: true,
+      data: {
+        requests: requests.rows,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          totalPages: Math.ceil(total / limit)
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error searching requests:', error);
+    res.status(500).json({ success: false, message: 'Error searching requests', error: error.message });
   }
 });
 

@@ -306,6 +306,7 @@ class RestRequestService {
     String countryCode = 'LK',
     String? status,
     String? userId,
+    bool? hasAccepted,
     int page = 1,
     int limit = 20,
     String sortBy = 'created_at',
@@ -325,6 +326,7 @@ class RestRequestService {
       if (cityId != null) queryParams['city_id'] = cityId;
       if (status != null) queryParams['status'] = status;
       if (userId != null) queryParams['user_id'] = userId;
+      if (hasAccepted == true) queryParams['has_accepted'] = 'true';
 
       final response = await _apiClient.get<Map<String, dynamic>>(
         '/api/requests',
@@ -449,6 +451,7 @@ class RestRequestService {
     String? categoryId,
     String? cityId,
     String countryCode = 'LK',
+    bool? hasAccepted,
     int page = 1,
     int limit = 20,
   }) async {
@@ -462,6 +465,7 @@ class RestRequestService {
 
       if (categoryId != null) queryParams['category_id'] = categoryId;
       if (cityId != null) queryParams['city_id'] = cityId;
+      if (hasAccepted == true) queryParams['has_accepted'] = 'true';
 
       final response = await _apiClient.get<Map<String, dynamic>>(
         '/api/requests/search',
