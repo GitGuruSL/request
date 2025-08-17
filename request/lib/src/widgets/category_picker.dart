@@ -21,11 +21,30 @@ class _CategoryPickerState extends State<CategoryPicker> {
   bool _isLoading = true;
   final Map<String, String> _categoryNameToId =
       {}; // Map main category name -> category id
+  final Map<String, Map<String, String>> _subcategoryNameToId =
+      {}; // main category -> (subName -> subId)
+  bool _isClosing = false; // guard against multiple pops
 
   @override
   void initState() {
     super.initState();
     _loadCategories();
+  }
+
+  void _closeWithResult(Map<String, String?> result) {
+    if (_isClosing) return;
+    _isClosing = true;
+    // Build a non-null value map to satisfy Map<String,String> type expected by caller
+    final cleaned = <String, String>{};
+    result.forEach((k, v) {
+      if (v != null) cleaned[k] = v;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context, cleaned);
+      }
+    });
   }
 
   Future<void> _loadCategories() async {
@@ -38,24 +57,66 @@ class _CategoryPickerState extends State<CategoryPicker> {
       final rest = RestCategoryService.instance;
       final allCategories = await rest.getCategoriesWithCache();
 
-      // Heuristic filter by requestType (until backend supplies explicit field)
+      // Primary filter: direct category.requestType match (if backend provides)
       final t = widget.requestType.toLowerCase();
-      final relevant = allCategories
-          .where((c) =>
-              c.name.toLowerCase().contains(t) ||
-              (c.description?.toLowerCase().contains(t) ?? false))
-          .toList();
-      final source = relevant.isEmpty ? allCategories : relevant;
+      var source = allCategories.where((c) => c.requestType == t).toList();
+      if (source.isEmpty) {
+        // Strict filter logic: structured tag in description
+        // Supported patterns: [type:item], type:item, {"type":"item"}
+        bool matchesTypeTag(Category c) {
+          final d = c.description?.toLowerCase();
+          if (d == null || d.isEmpty) return false;
+          if (RegExp(r'\[type:?\s*' + t + r'\]').hasMatch(d)) return true;
+          if (RegExp(
+                  r'(?:^|[;,\n\r\t ])type\s*[:=]\s*' + t + r'(?:$|[;,\n\r\t ])')
+              .hasMatch(d)) return true;
+          if (RegExp(r'"type"\s*:\s*"' + t + r'"').hasMatch(d)) return true;
+          return false;
+        }
+
+        source = allCategories.where(matchesTypeTag).toList();
+      }
+      // If still empty and we're on 'item', attempt fallback list of known item categories (hard names)
+      if (source.isEmpty && t == 'item') {
+        const itemNameHints = [
+          'electronics',
+          'fashion',
+          'clothing',
+          'home',
+          'garden',
+          'tools',
+          'automotive',
+          'books',
+          'media',
+          'sports',
+          'outdoors',
+          'toys',
+          'beauty',
+          'health'
+        ];
+        source = allCategories
+            .where((c) =>
+                itemNameHints.any((h) => c.name.toLowerCase().contains(h)))
+            .toList();
+      }
+
+      // If still empty, do NOT fallback to full list (better to show none than all wrong types)
+      if (source.isEmpty) {
+        source = [];
+      }
 
       Map<String, List<String>> categories = {};
       for (final cat in source) {
         _categoryNameToId[cat.name] = cat.id;
-        // Load subcategories from API (cached)
         final subs = await rest.getSubcategoriesWithCache(categoryId: cat.id);
         if (subs.isEmpty) {
           categories.putIfAbsent(cat.name, () => []);
         } else {
           categories[cat.name] = subs.map((s) => s.name).toList();
+          for (final s in subs) {
+            _subcategoryNameToId.putIfAbsent(cat.name, () => {});
+            _subcategoryNameToId[cat.name]![s.name] = s.id;
+          }
         }
       }
 
@@ -249,52 +310,12 @@ class _CategoryPickerState extends State<CategoryPicker> {
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : _categories.isEmpty
-                    ? _buildEmptyState()
-                    : _selectedMainCategory == null
-                        ? _buildMainCategoryList(_categories.keys.toList())
-                        : _buildSubCategoryList(
-                            _selectedMainCategory!,
-                            _categories[_selectedMainCategory!] ?? [],
-                          ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.category_outlined,
-            size: 64,
-            color: Colors.grey[400],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No categories available',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Colors.grey[600],
-                ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Categories will be loaded from the admin panel',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[500],
-                ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () {
-              _loadCategories();
-            },
-            icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
+                : _selectedMainCategory == null
+                    ? _buildMainCategoryList(_categories.keys.toList())
+                    : _buildSubCategoryList(
+                        _selectedMainCategory!,
+                        _categories[_selectedMainCategory!] ?? [],
+                      ),
           ),
         ],
       ),
@@ -336,7 +357,7 @@ class _CategoryPickerState extends State<CategoryPicker> {
               });
             } else {
               // If no subcategories, return the main category
-              Navigator.pop(context, {
+              _closeWithResult({
                 'category': category,
                 'subcategory': null,
                 'categoryId': _categoryNameToId[category],
@@ -375,7 +396,7 @@ class _CategoryPickerState extends State<CategoryPicker> {
               ),
             ),
             onTap: () {
-              Navigator.pop(context, {
+              _closeWithResult({
                 'category': mainCategory,
                 'subcategory': null,
                 'categoryId': _categoryNameToId[mainCategory],
@@ -397,11 +418,11 @@ class _CategoryPickerState extends State<CategoryPicker> {
             ),
           ),
           onTap: () {
-            Navigator.pop(context, {
+            _closeWithResult({
               'category': mainCategory,
               'subcategory': subcategory,
               'categoryId': _categoryNameToId[mainCategory],
-              // Subcategory ID not tracked yet (would need reverse map if required)
+              'subcategoryId': _subcategoryNameToId[mainCategory]?[subcategory],
             });
           },
         );

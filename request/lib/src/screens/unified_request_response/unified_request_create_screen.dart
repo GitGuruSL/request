@@ -172,7 +172,7 @@ class _UnifiedRequestCreateScreenState
       setState(() {
         _selectedCategory = result['category'] ?? 'Electronics';
         _selectedSubcategory = result['subcategory'];
-        _selectedCategoryId = result['categoryId'] ?? _selectedCategory;
+        _selectedCategoryId = result['categoryId'] ?? _selectedCategoryId;
         _selectedSubCategoryId =
             result['subcategoryId'] ?? _selectedSubcategory;
       });
@@ -485,8 +485,10 @@ class _UnifiedRequestCreateScreenState
                 _selectedCategory = result['category'] ?? _selectedCategory;
                 _selectedSubcategory =
                     result['subcategory'] ?? _selectedSubcategory;
-                _selectedCategoryId = result['category'];
-                _selectedSubCategoryId = result['subcategory'];
+                _selectedCategoryId =
+                    result['categoryId'] ?? _selectedCategoryId;
+                _selectedSubCategoryId =
+                    result['subcategoryId'] ?? _selectedSubCategoryId;
               });
             }
           },
@@ -792,8 +794,10 @@ class _UnifiedRequestCreateScreenState
                     setState(() {
                       _selectedCategory = result['category']!;
                       _selectedSubcategory = result['subcategory'];
-                      _selectedCategoryId = result['category']!;
-                      _selectedSubCategoryId = result['subcategory'];
+                      _selectedCategoryId =
+                          result['categoryId'] ?? _selectedCategoryId;
+                      _selectedSubCategoryId =
+                          result['subcategoryId'] ?? _selectedSubCategoryId;
                     });
                   }
                 },
@@ -1130,8 +1134,10 @@ class _UnifiedRequestCreateScreenState
                   _selectedCategory = result['category'] ?? _selectedCategory;
                   _selectedSubcategory =
                       result['subcategory'] ?? _selectedSubcategory;
-                  _selectedCategoryId = result['category'];
-                  _selectedSubCategoryId = result['subcategory'];
+                  _selectedCategoryId =
+                      result['categoryId'] ?? _selectedCategoryId;
+                  _selectedSubCategoryId =
+                      result['subcategoryId'] ?? _selectedSubCategoryId;
                 });
               }
             },

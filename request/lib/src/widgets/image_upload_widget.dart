@@ -31,6 +31,10 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
   List<String> _imageUrls = [];
   List<XFile> _pendingImages = [];
   bool _isUploading = false;
+  // Maintain a mapping of uploaded image URLs to their original local files
+  // so we can show a reliable preview even if the returned URL is a placeholder
+  // or not immediately accessible.
+  final Map<String, XFile> _localPreviewFiles = {};
 
   @override
   void initState() {
@@ -40,7 +44,8 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
 
   Future<void> _pickImages() async {
     try {
-      final availableSlots = widget.maxImages - _imageUrls.length - _pendingImages.length;
+      final availableSlots =
+          widget.maxImages - _imageUrls.length - _pendingImages.length;
       if (availableSlots <= 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Maximum ${widget.maxImages} images allowed')),
@@ -78,10 +83,11 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
           image,
           '${widget.uploadPath}/${DateTime.now().millisecondsSinceEpoch}',
         );
-        
+
         if (url != null) {
           setState(() {
             _imageUrls.add(url);
+            _localPreviewFiles[url] = image; // keep local fallback
           });
         }
       }
@@ -101,13 +107,14 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
 
   Future<void> _removeImage(int index) async {
     final String imageUrl = _imageUrls[index];
-    
+
     setState(() {
       _imageUrls.removeAt(index);
+      _localPreviewFiles.remove(imageUrl);
     });
-    
+
     widget.onImagesChanged(_imageUrls);
-    
+
     // Delete from Firebase Storage
     await _imageService.deleteImage(imageUrl);
   }
@@ -166,9 +173,9 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          _isUploading 
-                            ? 'Uploading...' 
-                            : 'Tap to upload images',
+                          _isUploading
+                              ? 'Uploading...'
+                              : 'Tap to upload images',
                           style: TextStyle(
                             color: Colors.grey.shade600,
                             fontSize: 16,
@@ -185,7 +192,7 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
                     ),
                   ),
                 ),
-              
+
               // Images Grid
               if (_imageUrls.isNotEmpty || _pendingImages.isNotEmpty)
                 Container(
@@ -193,7 +200,8 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
                   child: GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
@@ -207,7 +215,8 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
                       } else {
                         // Pending images
                         final pendingIndex = index - _imageUrls.length;
-                        return _buildPendingImageItem(_pendingImages[pendingIndex]);
+                        return _buildPendingImageItem(
+                            _pendingImages[pendingIndex]);
                       }
                     },
                   ),
@@ -215,7 +224,7 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
             ],
           ),
         ),
-        
+
         // Progress indicator
         if (_isUploading)
           const Padding(
@@ -236,37 +245,10 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              imageUrl,
-              width: double.infinity,
-              height: double.infinity,
-              fit: BoxFit.cover,
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) return child;
-                return Container(
-                  alignment: Alignment.center,
-                  child: CircularProgressIndicator(
-                    value: loadingProgress.expectedTotalBytes != null
-                        ? loadingProgress.cumulativeBytesLoaded /
-                            loadingProgress.expectedTotalBytes!
-                        : null,
-                  ),
-                );
-              },
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  alignment: Alignment.center,
-                  color: Colors.grey.shade200,
-                  child: Icon(
-                    Icons.error,
-                    color: Colors.grey.shade400,
-                  ),
-                );
-              },
-            ),
+            child: _buildImagePreview(imageUrl),
           ),
         ),
-        
+
         // Remove button
         Positioned(
           top: 4,
@@ -324,7 +306,7 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
                   ),
           ),
         ),
-        
+
         // Uploading indicator
         Positioned.fill(
           child: Container(
@@ -340,6 +322,96 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
           ),
         ),
       ],
+    );
+  }
+
+  bool _isNetworkUrl(String url) =>
+      url.startsWith('http://') || url.startsWith('https://');
+
+  Widget _buildImagePreview(String imageUrl) {
+    // If it's a network URL, try network first with fallback to local file if available
+    if (_isNetworkUrl(imageUrl)) {
+      final localFile = _localPreviewFiles[imageUrl];
+      return Image.network(
+        imageUrl,
+        width: double.infinity,
+        height: double.infinity,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return Center(
+            child: CircularProgressIndicator(
+              value: progress.expectedTotalBytes != null
+                  ? progress.cumulativeBytesLoaded /
+                      progress.expectedTotalBytes!
+                  : null,
+            ),
+          );
+        },
+        errorBuilder: (context, error, stack) {
+          if (localFile != null) {
+            return _localFileWidget(localFile);
+          }
+          return Container(
+            alignment: Alignment.center,
+            color: Colors.grey.shade200,
+            child: Icon(
+              Icons.error,
+              color: Colors.grey.shade400,
+            ),
+          );
+        },
+      );
+    }
+
+    // Treat as local path
+    return _localPathWidget(imageUrl);
+  }
+
+  Widget _localFileWidget(XFile localFile) {
+    if (kIsWeb) {
+      return FutureBuilder<Uint8List>(
+        future: localFile.readAsBytes(),
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            return Image.memory(
+              snapshot.data!,
+              width: double.infinity,
+              height: double.infinity,
+              fit: BoxFit.cover,
+            );
+          }
+          return const Center(child: CircularProgressIndicator());
+        },
+      );
+    }
+    return Image.file(
+      File(localFile.path),
+      width: double.infinity,
+      height: double.infinity,
+      fit: BoxFit.cover,
+    );
+  }
+
+  Widget _localPathWidget(String path) {
+    final cleaned = path.startsWith('file://') ? path.substring(7) : path;
+    try {
+      if (!kIsWeb && File(cleaned).existsSync()) {
+        return Image.file(
+          File(cleaned),
+          width: double.infinity,
+          height: double.infinity,
+          fit: BoxFit.cover,
+        );
+      }
+    } catch (_) {}
+    return Container(
+      alignment: Alignment.center,
+      color: Colors.grey.shade200,
+      child: Icon(
+        Icons.image_not_supported,
+        color: Colors.grey.shade400,
+      ),
     );
   }
 }

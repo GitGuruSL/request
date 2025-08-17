@@ -10,6 +10,8 @@ class Category {
   final int displayOrder;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String?
+      requestType; // item, service, delivery, rent, etc (optional backend field)
 
   Category({
     required this.id,
@@ -21,9 +23,13 @@ class Category {
     required this.displayOrder,
     required this.createdAt,
     required this.updatedAt,
+    this.requestType,
   });
 
   factory Category.fromJson(Map<String, dynamic> json) {
+    // Attempt to read various possible field names for type
+    final dynamicType =
+        json['type'] ?? json['request_type'] ?? json['category_type'];
     return Category(
       id: json['id'].toString(),
       name: json['name'] ?? '',
@@ -34,6 +40,9 @@ class Category {
       displayOrder: json['display_order'] ?? 0,
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
+      requestType: (dynamicType is String && dynamicType.isNotEmpty)
+          ? dynamicType.toLowerCase()
+          : null,
     );
   }
 
@@ -48,6 +57,7 @@ class Category {
       'display_order': displayOrder,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
+      if (requestType != null) 'type': requestType,
     };
   }
 }
@@ -261,8 +271,8 @@ class RestCategoryService {
     return subcategories.where((subcategory) {
       return subcategory.name.toLowerCase().contains(query.toLowerCase()) ||
           (subcategory.description?.toLowerCase().contains(
-                query.toLowerCase(),
-              ) ??
+                    query.toLowerCase(),
+                  ) ??
               false);
     }).toList();
   }
