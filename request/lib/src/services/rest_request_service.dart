@@ -165,6 +165,9 @@ class CreateRequestData {
   final String categoryId;
   final String? subcategoryId;
   final String? locationCityId;
+  final String? locationAddress;
+  final double? locationLatitude;
+  final double? locationLongitude;
   final String countryCode;
   final double? budgetMin;
   final double? budgetMax;
@@ -179,6 +182,9 @@ class CreateRequestData {
     required this.categoryId,
     this.subcategoryId,
     this.locationCityId,
+    this.locationAddress,
+    this.locationLatitude,
+    this.locationLongitude,
     this.countryCode = 'LK',
     this.budgetMin,
     this.budgetMax,
@@ -196,6 +202,10 @@ class CreateRequestData {
       if (subcategoryId != null) 'subcategory_id': subcategoryId,
       // Backend expects 'city_id' (error message: Title, description, category_id, and city_id are required)
       if (locationCityId != null) 'city_id': locationCityId,
+      if (locationAddress != null && locationAddress!.isNotEmpty)
+        'location_address': locationAddress,
+      if (locationLatitude != null) 'location_latitude': locationLatitude,
+      if (locationLongitude != null) 'location_longitude': locationLongitude,
       'country_code': countryCode,
       if (budgetMin != null) 'budget_min': budgetMin,
       if (budgetMax != null) 'budget_max': budgetMax,

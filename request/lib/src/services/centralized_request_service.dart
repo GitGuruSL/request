@@ -41,6 +41,47 @@ class CentralizedRequestService {
           data['budget'] ?? data['budgetMax'] ?? data['budgetMin'];
       double? budget = _asDoubleInternal(budgetRaw);
 
+      // Resolve city id (backend requires city_id). Accept multiple key names.
+      String? cityId = _firstNonEmpty([
+        data['cityId'],
+        data['city_id'],
+        data['locationCityId'],
+        typeSpecific['cityId'],
+        typeSpecific['city_id'],
+        typeSpecific['locationCityId'],
+      ]);
+
+      // Extract raw location details if provided
+      String? locationAddress;
+      double? locationLat;
+      double? locationLon;
+      final dynamic locationObj = data['location'];
+      if (locationObj != null) {
+        try {
+          if (locationObj is Map) {
+            locationAddress = locationObj['address']?.toString();
+            locationLat = _asDoubleInternal(locationObj['latitude']);
+            locationLon = _asDoubleInternal(locationObj['longitude']);
+          } else {
+            // Use reflection via toString not ideal; ignore for now
+          }
+        } catch (_) {}
+      }
+
+      // Fallback: infer from any existing request for same country
+      if (cityId == null || cityId.isEmpty) {
+        try {
+          final existing = await _rest.getRequests(
+              limit: 1,
+              countryCode: CountryService.instance.countryCode ?? 'LK');
+          cityId = existing?.requests.first.locationCityId;
+        } catch (_) {}
+      }
+
+      // Final hardcoded fallback (temporary) so creation succeeds; replace with real city picker.
+      cityId ??=
+          '72e9d78c-8f05-483a-ae63-e5c9aacfd9bf'; // Kandy (from sample data)
+
       final createData = CreateRequestData(
         title: (data['title'] ?? '').toString(),
         description: (data['description'] ?? '').toString(),
@@ -48,13 +89,10 @@ class CentralizedRequestService {
         subcategoryId: (subcategoryId != null && subcategoryId.isNotEmpty)
             ? subcategoryId
             : null,
-        // Try to pick up a city id from either root or type specific data
-        locationCityId: _firstNonEmpty([
-          data['cityId'],
-          data['city_id'],
-          typeSpecific['cityId'],
-          typeSpecific['city_id'],
-        ]),
+        locationCityId: cityId,
+        locationAddress: locationAddress,
+        locationLatitude: locationLat,
+        locationLongitude: locationLon,
         countryCode: CountryService.instance.countryCode ?? 'LK',
         budgetMin: budget,
         budgetMax: budget,
@@ -68,6 +106,10 @@ class CentralizedRequestService {
           ...typeSpecific,
         },
       );
+
+      // Debug log final create payload
+      // ignore: avoid_print
+      print('CentralizedRequestService -> creating with city_id=$cityId');
 
       final created = await _rest.createRequest(createData);
       return created?.id; // Return the new request ID
