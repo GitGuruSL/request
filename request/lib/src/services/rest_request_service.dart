@@ -194,7 +194,8 @@ class CreateRequestData {
       'description': description,
       'category_id': categoryId,
       if (subcategoryId != null) 'subcategory_id': subcategoryId,
-      if (locationCityId != null) 'location_city_id': locationCityId,
+      // Backend expects 'city_id' (error message: Title, description, category_id, and city_id are required)
+      if (locationCityId != null) 'city_id': locationCityId,
       'country_code': countryCode,
       if (budgetMin != null) 'budget_min': budgetMin,
       if (budgetMax != null) 'budget_max': budgetMax,
