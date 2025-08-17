@@ -202,13 +202,32 @@ class AuthService {
         const otp = this.generateOTP();
         const expiresAt = new Date(Date.now() + this.otpExpiry);
 
-        // Store OTP in database
-        await dbService.query(`
-            INSERT INTO email_otp_verifications (email, otp, expires_at, created_at)
-            VALUES ($1, $2, $3, $4)
-            ON CONFLICT (email) 
-            DO UPDATE SET otp = $2, expires_at = $3, created_at = $4, attempts = 0
-        `, [email, otp, expiresAt, new Date()]);
+                // Ensure table exists (defensive in case migrations not run yet)
+                await dbService.query(`CREATE TABLE IF NOT EXISTS email_otp_verifications (
+                    email VARCHAR(255) PRIMARY KEY,
+                    otp VARCHAR(6) NOT NULL,
+                    expires_at TIMESTAMPTZ NOT NULL,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    attempts INT NOT NULL DEFAULT 0,
+                    verified BOOLEAN NOT NULL DEFAULT FALSE,
+                    verified_at TIMESTAMPTZ
+                )`);
+    // Add missing columns if the table existed without them (older baseline)
+    await dbService.query(`ALTER TABLE email_otp_verifications ADD COLUMN IF NOT EXISTS verified BOOLEAN NOT NULL DEFAULT FALSE`);
+    await dbService.query(`ALTER TABLE email_otp_verifications ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ`);
+
+                // Store OTP (manual UPSERT to tolerate environments where primary key wasn't created yet)
+                await dbService.query(`
+                    WITH updated AS (
+                        UPDATE email_otp_verifications
+                            SET otp = $2, expires_at = $3, created_at = $4, attempts = 0, verified = FALSE
+                            WHERE email = $1
+                            RETURNING email
+                    )
+                    INSERT INTO email_otp_verifications (email, otp, expires_at, created_at)
+                    SELECT $1, $2, $3, $4
+                    WHERE NOT EXISTS (SELECT 1 FROM updated);
+                `, [email, otp, expiresAt, new Date()]);
 
         // Send email via SES (with dev fallback handled inside email service)
         try {
@@ -228,13 +247,30 @@ class AuthService {
         const otp = this.generateOTP();
         const expiresAt = new Date(Date.now() + this.otpExpiry);
 
-        // Store OTP in database
-        await dbService.query(`
-            INSERT INTO phone_otp_verifications (phone, otp, expires_at, created_at)
-            VALUES ($1, $2, $3, $4)
-            ON CONFLICT (phone) 
-            DO UPDATE SET otp = $2, expires_at = $3, created_at = $4, attempts = 0
-        `, [phone, otp, expiresAt, new Date()]);
+                await dbService.query(`CREATE TABLE IF NOT EXISTS phone_otp_verifications (
+                    phone VARCHAR(32) PRIMARY KEY,
+                    otp VARCHAR(6) NOT NULL,
+                    expires_at TIMESTAMPTZ NOT NULL,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    attempts INT NOT NULL DEFAULT 0,
+                    verified BOOLEAN NOT NULL DEFAULT FALSE,
+                    verified_at TIMESTAMPTZ
+                )`);
+    await dbService.query(`ALTER TABLE phone_otp_verifications ADD COLUMN IF NOT EXISTS verified BOOLEAN NOT NULL DEFAULT FALSE`);
+    await dbService.query(`ALTER TABLE phone_otp_verifications ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ`);
+
+                // Store OTP (manual UPSERT)
+                await dbService.query(`
+                    WITH updated AS (
+                        UPDATE phone_otp_verifications
+                            SET otp = $2, expires_at = $3, created_at = $4, attempts = 0, verified = FALSE
+                            WHERE phone = $1
+                            RETURNING phone
+                    )
+                    INSERT INTO phone_otp_verifications (phone, otp, expires_at, created_at)
+                    SELECT $1, $2, $3, $4
+                    WHERE NOT EXISTS (SELECT 1 FROM updated);
+                `, [phone, otp, expiresAt, new Date()]);
 
         // TODO: Send SMS via your SMS service
         console.log(`Phone OTP for ${phone}: ${otp}`);

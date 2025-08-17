@@ -59,7 +59,18 @@ class _OTPScreenState extends State<OTPScreen> {
 
       if (result.success) {
         _otpToken = result.otpToken ?? '';
-        _showMessage('OTP sent successfully', isError: false);
+        String info = 'OTP sent';
+        if (result.channel == 'email') {
+          if (result.messageId != null) {
+            info += ' (ID: ${result.messageId!.substring(0, 8)}...)';
+          } else if (result.fallback) {
+            info += ' (dev fallback)';
+          }
+          if (result.deliveryError != null) {
+            info += ' ! Email warn: ${result.deliveryError}';
+          }
+        }
+        _showMessage(info, isError: false);
       } else {
         _showMessage(result.error ?? 'Failed to send OTP');
       }
@@ -85,7 +96,7 @@ class _OTPScreenState extends State<OTPScreen> {
       final result = await authService.verifyOTP(
         emailOrPhone: widget.emailOrPhone,
         otp: otp,
-        otpToken: _otpToken,
+        otpToken: _otpToken.isNotEmpty ? _otpToken : '',
       );
 
       if (result.success) {

@@ -137,6 +137,8 @@ class _LoginScreenState extends State<LoginScreen>
       }
 
       print('🔍 Attempting to check user existence for: $emailOrPhone');
+      // NOTE: OTP flow now uses dedicated /send-email-otp or /send-phone-otp endpoints
+      // via RestAuthService. Legacy otpToken-based path is deprecated.
 
       // Check if user exists via REST API
       try {

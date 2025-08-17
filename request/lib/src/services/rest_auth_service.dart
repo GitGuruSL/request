@@ -198,14 +198,34 @@ class RestAuthService {
     required String countryCode,
   }) async {
     try {
-      final response = await _apiClient.post<Map<String, dynamic>>(
-        '/api/auth/send-otp',
-        data: {
-          'emailOrPhone': emailOrPhone.toLowerCase().trim(),
-          'isEmail': isEmail,
-          'countryCode': countryCode,
-        },
+      // Use new dedicated endpoints (email/phone) which do not return otpToken.
+      // Legacy combined endpoint '/send-otp' provided otpToken; we fall back if new endpoints fail.
+      final endpoint =
+          isEmail ? '/api/auth/send-email-otp' : '/api/auth/send-phone-otp';
+      ApiResponse<Map<String, dynamic>> response =
+          await _apiClient.post<Map<String, dynamic>>(
+        endpoint,
+        data: isEmail
+            ? {
+                'email': emailOrPhone.toLowerCase().trim(),
+              }
+            : {
+                'phone': emailOrPhone.toLowerCase().trim(),
+              },
       );
+
+      // If the new endpoint failed, try legacy combined endpoint (provides otpToken)
+      if (!response.success) {
+        final legacy = await _apiClient.post<Map<String, dynamic>>(
+          '/api/auth/send-otp',
+          data: {
+            'emailOrPhone': emailOrPhone.toLowerCase().trim(),
+            'isEmail': isEmail,
+            'countryCode': countryCode,
+          },
+        );
+        response = legacy; // use legacy response
+      }
 
       if (kDebugMode) {
         print(
@@ -216,8 +236,10 @@ class RestAuthService {
       if (response.success ||
           (response.data != null && response.data!['success'] == true)) {
         final responseData = response.data ?? <String, dynamic>{};
-        final otpToken = responseData['otpToken'] as String?;
-        final message = responseData['message'] as String? ?? response.message;
+        final otpToken =
+            responseData['otpToken'] as String?; // only present in legacy flow
+        final message =
+            (responseData['message'] as String?) ?? response.message;
 
         if (kDebugMode) {
           print('🔍 Extracted otpToken: $otpToken');
@@ -227,10 +249,24 @@ class RestAuthService {
           }
         }
 
+        final channel = responseData['channel'] as String?;
+        Map<String, dynamic>? emailMeta;
+        if (responseData['email'] is Map<String, dynamic>) {
+          emailMeta = responseData['email'] as Map<String, dynamic>;
+        }
+
         return OTPResult(
           success: true,
           otpToken: otpToken,
           message: message ?? 'OTP sent successfully',
+          channel: channel,
+          messageId:
+              emailMeta != null ? emailMeta['messageId'] as String? : null,
+          fallback: emailMeta != null
+              ? (emailMeta['fallback'] as bool? ?? false)
+              : false,
+          deliveryError:
+              emailMeta != null ? emailMeta['error'] as String? : null,
         );
       }
 
@@ -256,26 +292,69 @@ class RestAuthService {
     required String otpToken,
   }) async {
     try {
-      final response = await _apiClient.post<Map<String, dynamic>>(
-        '/api/auth/verify-otp',
-        data: {
-          'emailOrPhone': emailOrPhone.toLowerCase().trim(),
-          'otp': otp,
-          'otpToken': otpToken,
-        },
-      );
-
-      if (response.isSuccess && response.data != null) {
-        return AuthResult(
-          success: true,
-          message: response.message ?? 'OTP verified successfully',
+      final isEmail = emailOrPhone.contains('@');
+      // Decide which verification endpoint to call.
+      // If we have an otpToken (legacy flow) use /verify-otp, otherwise new endpoints.
+      ApiResponse<Map<String, dynamic>> response;
+      if (otpToken.isNotEmpty) {
+        response = await _apiClient.post<Map<String, dynamic>>(
+          '/api/auth/verify-otp',
+          data: {
+            'emailOrPhone': emailOrPhone.toLowerCase().trim(),
+            'otp': otp,
+            'otpToken': otpToken,
+          },
         );
+        if (response.isSuccess) {
+          return AuthResult(
+            success: true,
+            message: response.message ?? 'OTP verified successfully',
+          );
+        }
+      } else {
+        final endpoint = isEmail
+            ? '/api/auth/verify-email-otp'
+            : '/api/auth/verify-phone-otp';
+        final payload = isEmail
+            ? {
+                'email': emailOrPhone.toLowerCase().trim(),
+                'otp': otp,
+              }
+            : {
+                'phone': emailOrPhone.toLowerCase().trim(),
+                'otp': otp,
+              };
+        response = await _apiClient.post<Map<String, dynamic>>(
+          endpoint,
+          data: payload,
+        );
+        if (response.isSuccess && response.data != null) {
+          // New endpoints wrap data in data.data (ApiClient flattens once when fromJson not supplied)
+          final raw = response.data!;
+          Map<String, dynamic>? container;
+          if (raw['data'] is Map<String, dynamic>) {
+            container = raw['data'] as Map<String, dynamic>;
+          } else {
+            container = raw; // fallback
+          }
+          final userMap = container['user'] as Map<String, dynamic>?;
+          final token = container['token'] as String?;
+          final refreshToken = container['refreshToken'] as String?;
+          if (token != null) await _apiClient.saveToken(token);
+          if (refreshToken != null)
+            await _apiClient.saveRefreshToken(refreshToken);
+          if (userMap != null) {
+            _currentUser = UserModel.fromJson(userMap);
+          }
+          return AuthResult(
+            success: true,
+            user: _currentUser,
+            token: token,
+            message: response.message ?? 'OTP verified successfully',
+          );
+        }
       }
-
-      return AuthResult(
-        success: false,
-        error: response.error ?? 'Invalid OTP',
-      );
+      return AuthResult(success: false, error: response.error ?? 'Invalid OTP');
     } catch (e) {
       if (kDebugMode) {
         print('Verify OTP error: $e');
@@ -464,12 +543,20 @@ class OTPResult {
   final String? otpToken;
   final String? message;
   final String? error;
+  final String? channel; // 'email' or 'sms'
+  final String? messageId; // SES message id
+  final bool fallback; // dev fallback mode
+  final String? deliveryError; // provider error if any
 
   OTPResult({
     required this.success,
     this.otpToken,
     this.message,
     this.error,
+    this.channel,
+    this.messageId,
+    this.fallback = false,
+    this.deliveryError,
   });
 
   bool get isSuccess => success;
@@ -477,6 +564,6 @@ class OTPResult {
 
   @override
   String toString() {
-    return 'OTPResult(success: $success, otpToken: $otpToken, error: $error)';
+    return 'OTPResult(success: $success, otpToken: $otpToken, channel: $channel, messageId: $messageId, fallback: $fallback, error: $error, deliveryError: $deliveryError)';
   }
 }

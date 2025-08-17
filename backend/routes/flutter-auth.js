@@ -79,13 +79,15 @@ router.post('/send-otp', async (req, res) => {
     );
 
     // Send OTP via email or SMS
+    let emailMeta = null;
     if (isEmail) {
       // Send email OTP using AWS SES
       try {
-        await emailService.sendOTP(emailOrPhone, otpCode, 'registration');
+        emailMeta = await emailService.sendOTP(emailOrPhone, otpCode, 'registration');
         console.log(`✅ Email OTP sent to ${emailOrPhone}: ${otpCode}`);
       } catch (error) {
         console.error('❌ Failed to send email OTP:', error.message);
+        emailMeta = { success: false, error: error.message };
         // Continue anyway - OTP is still stored in database for verification
       }
     } else {
@@ -97,7 +99,13 @@ router.post('/send-otp', async (req, res) => {
     res.json({
       success: true,
       otpToken: otpToken,
-      message: `OTP sent to ${emailOrPhone}`
+      message: `OTP sent to ${emailOrPhone}`,
+      channel: isEmail ? 'email' : 'sms',
+      email: isEmail ? {
+        messageId: emailMeta?.messageId || null,
+        fallback: emailMeta?.fallback || false,
+        error: emailMeta?.error || null
+      } : undefined
     });
 
   } catch (error) {
@@ -157,6 +165,23 @@ router.post('/verify-otp', async (req, res) => {
       'UPDATE otp_tokens SET used = true WHERE id = $1',
       [otpRecord.id]
     );
+
+    // Attempt to mark user as verified (legacy enhancement)
+    try {
+      if (emailOrPhone.includes('@')) {
+        await dbService.query(
+          `UPDATE users SET email_verified = true, updated_at = NOW() WHERE email = $1`,
+          [emailOrPhone]
+        );
+      } else {
+        await dbService.query(
+          `UPDATE users SET phone_verified = true, updated_at = NOW() WHERE phone = $1`,
+          [emailOrPhone]
+        );
+      }
+    } catch (e) {
+      console.warn('⚠️ Failed to update user verification status (legacy path):', e.message);
+    }
 
     // OTP verified successfully - return success
     res.json({
