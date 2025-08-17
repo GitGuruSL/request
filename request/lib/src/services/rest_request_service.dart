@@ -68,9 +68,8 @@ class RequestModel {
       budgetMin: json['budget_min']?.toDouble(),
       budgetMax: json['budget_max']?.toDouble(),
       currency: json['currency'],
-      deadline: json['deadline'] != null
-          ? DateTime.parse(json['deadline'])
-          : null,
+      deadline:
+          json['deadline'] != null ? DateTime.parse(json['deadline']) : null,
       imageUrls: json['image_urls'] != null
           ? List<String>.from(json['image_urls'])
           : null,
@@ -114,9 +113,8 @@ class RequestsResponse {
     final paginationData = json['pagination'] as Map<String, dynamic>? ?? {};
 
     return RequestsResponse(
-      requests: requestsData
-          .map((item) => RequestModel.fromJson(item))
-          .toList(),
+      requests:
+          requestsData.map((item) => RequestModel.fromJson(item)).toList(),
       pagination: PaginationInfo.fromJson(paginationData),
     );
   }
@@ -190,6 +188,85 @@ class CreateRequestData {
       if (metadata != null) 'metadata': metadata,
     };
   }
+}
+
+class ResponseModel {
+  final String id;
+  final String requestId;
+  final String userId;
+  final String? userName;
+  final String message;
+  final double? price;
+  final String? currency;
+  final Map<String, dynamic>? metadata;
+  final List<String>? imageUrls;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  ResponseModel({
+    required this.id,
+    required this.requestId,
+    required this.userId,
+    this.userName,
+    required this.message,
+    this.price,
+    this.currency,
+    this.metadata,
+    this.imageUrls,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory ResponseModel.fromJson(Map<String, dynamic> json) => ResponseModel(
+        id: json['id'].toString(),
+        requestId: json['request_id'].toString(),
+        userId: json['user_id'].toString(),
+        userName: json['user_name'],
+        message: json['message'] ?? '',
+        price: json['price']?.toDouble(),
+        currency: json['currency'],
+        metadata: json['metadata'],
+        imageUrls: json['image_urls'] != null
+            ? List<String>.from(json['image_urls'])
+            : null,
+        createdAt: DateTime.parse(json['created_at']),
+        updatedAt: DateTime.parse(json['updated_at']),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'request_id': requestId,
+        'user_id': userId,
+        'message': message,
+        'price': price,
+        'currency': currency,
+        'metadata': metadata,
+        'image_urls': imageUrls,
+        'created_at': createdAt.toIso8601String(),
+        'updated_at': updatedAt.toIso8601String(),
+      };
+}
+
+class CreateResponseData {
+  final String message;
+  final double? price;
+  final String? currency;
+  final Map<String, dynamic>? metadata;
+  final List<String>? imageUrls;
+  CreateResponseData({
+    required this.message,
+    this.price,
+    this.currency,
+    this.metadata,
+    this.imageUrls,
+  });
+  Map<String, dynamic> toJson() => {
+        'message': message,
+        if (price != null) 'price': price,
+        if (currency != null) 'currency': currency,
+        if (metadata != null) 'metadata': metadata,
+        if (imageUrls != null) 'image_urls': imageUrls,
+      };
 }
 
 class RestRequestService {
@@ -382,6 +459,66 @@ class RestRequestService {
     } catch (e) {
       print('Error searching requests: $e');
       return null;
+    }
+  }
+
+  Future<List<ResponseModel>> getResponses(String requestId) async {
+    try {
+      final res = await _apiClient
+          .get<Map<String, dynamic>>('/api/requests/$requestId/responses');
+      if (res.isSuccess && res.data != null) {
+        final data = res.data!['data'] as List? ?? [];
+        return data.map((e) => ResponseModel.fromJson(e)).toList();
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching responses: $e');
+      return [];
+    }
+  }
+
+  Future<ResponseModel?> createResponse(
+      String requestId, CreateResponseData data) async {
+    try {
+      final res = await _apiClient.post<Map<String, dynamic>>(
+          '/api/requests/$requestId/responses',
+          data: data.toJson());
+      if (res.isSuccess && res.data != null) {
+        final json = res.data!['data'] as Map<String, dynamic>?;
+        if (json != null) return ResponseModel.fromJson(json);
+      }
+      return null;
+    } catch (e) {
+      print('Error creating response: $e');
+      return null;
+    }
+  }
+
+  Future<ResponseModel?> updateResponse(
+      String requestId, String responseId, Map<String, dynamic> updates) async {
+    try {
+      final res = await _apiClient.put<Map<String, dynamic>>(
+          '/api/requests/$requestId/responses/$responseId',
+          data: updates);
+      if (res.isSuccess && res.data != null) {
+        final json = res.data!['data'] as Map<String, dynamic>?;
+        if (json != null) return ResponseModel.fromJson(json);
+      }
+      return null;
+    } catch (e) {
+      print('Error updating response: $e');
+      return null;
+    }
+  }
+
+  Future<bool> deleteResponse(String requestId, String responseId) async {
+    try {
+      final res = await _apiClient.delete<Map<String, dynamic>>(
+          '/api/requests/$requestId/responses/$responseId');
+      return res.isSuccess;
+    } catch (e) {
+      print('Error deleting response: $e');
+      return false;
     }
   }
 }

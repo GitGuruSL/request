@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'src/utils/firebase_shim.dart'; // Added by migration script
+// REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/enhanced_user_service.dart';
 import '../services/contact_verification_service.dart';
 import '../models/enhanced_user_model.dart';
@@ -94,6 +95,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
 
       // Check driver verification status
       try {
+// FIRESTORE_TODO: replace with REST service. Original: final driverDoc = await FirebaseFirestore.instance
         final driverDoc = await FirebaseFirestore.instance
             .collection('new_driver_verifications')
             .doc(user.uid)
@@ -112,6 +114,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
 
       // Check business verification status
       try {
+// FIRESTORE_TODO: replace with REST service. Original: final businessDoc = await FirebaseFirestore.instance
         final businessDoc = await FirebaseFirestore.instance
             .collection('new_business_verifications')
             .doc(user.uid)

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'src/utils/firebase_shim.dart'; // Added by migration script
+// // REMOVED_FB_IMPORT: import 'package:firebase_auth/firebase_auth.dart'; // Removed Firebase dependency
 import '../../models/message_model.dart';
 import '../../models/request_model.dart';
 import '../../models/enhanced_user_model.dart';
@@ -26,7 +27,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
   final EnhancedUserService _userService = EnhancedUserService();
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  
+
   UserModel? _otherUser;
   bool _isLoading = true;
 
@@ -46,14 +47,14 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   Future<void> _loadOtherUser() async {
     try {
-      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-      if (currentUserId == null) return;
+      final currentUserId = 'temp_user_id'; // TODO: Get from RestAuthService
+      // Skip null check since we have a temp user ID
 
       final otherUserId = widget.conversation.participantIds
           .firstWhere((id) => id != currentUserId);
 
       final user = await _userService.getUserById(otherUserId);
-      
+
       setState(() {
         _otherUser = user;
         _isLoading = false;
@@ -79,7 +80,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
         conversationId: widget.conversation.id,
         text: text,
       );
-      
+
       _messageController.clear();
       _scrollToBottom();
     } catch (e) {
@@ -107,7 +108,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => UnifiedRequestViewScreen(requestId: widget.conversation.requestId),
+          builder: (context) => UnifiedRequestViewScreen(
+              requestId: widget.conversation.requestId),
         ),
       );
     } catch (e) {
@@ -222,7 +224,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
           // Messages
           Expanded(
             child: StreamBuilder<List<MessageModel>>(
-              stream: _messagingService.getMessagesStream(widget.conversation.id),
+              stream:
+                  _messagingService.getMessagesStream(widget.conversation.id),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -233,7 +236,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 }
 
                 final messages = snapshot.data ?? [];
-                
+
                 if (messages.isEmpty) {
                   return const Center(
                     child: Text('No messages yet. Start the conversation!'),
@@ -299,7 +302,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
   }
 
   Widget _buildMessageBubble(MessageModel message) {
-    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    final currentUserId = 'temp_user_id'; // TODO: Get from RestAuthService
     final isMe = message.senderId == currentUserId;
     final isSystem = message.type == MessageType.system;
 
@@ -328,7 +331,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
-        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment:
+            isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
           Container(
             constraints: BoxConstraints(

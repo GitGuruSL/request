@@ -3,6 +3,7 @@
 const express = require('express');
 const router = express.Router();
 const dbService = require('../services/database'); // Your existing database connection
+const emailService = require('../services/email'); // Email service for OTP
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
@@ -22,12 +23,20 @@ router.post('/check-user-exists', async (req, res) => {
       });
     }
 
+    console.log(`🔍 Checking if user exists: ${emailOrPhone}`);
+
     const result = await dbService.query(
-      'SELECT id, email, phone FROM users WHERE email = $1 OR phone = $1 AND is_active = true',
+      'SELECT id, email, phone FROM users WHERE (email = $1 OR phone = $1) AND is_active = true',
       [emailOrPhone]
     );
 
+    console.log(`📊 Query result: found ${result.rows.length} users`);
+    if (result.rows.length > 0) {
+      console.log(`👤 Found user: ${JSON.stringify(result.rows[0])}`);
+    }
+
     res.json({
+      success: true,
       exists: result.rows.length > 0,
       message: result.rows.length > 0 ? 'User found' : 'User not found'
     });
@@ -69,11 +78,16 @@ router.post('/send-otp', async (req, res) => {
       [emailOrPhone, otpCode, otpToken, expiresAt, 'registration']
     );
 
-    // TODO: Send actual OTP via SMS/Email
+    // Send OTP via email or SMS
     if (isEmail) {
       // Send email OTP using AWS SES
-      console.log(`Email OTP for ${emailOrPhone}: ${otpCode}`);
-      // await sendEmailOTP(emailOrPhone, otpCode);
+      try {
+        await emailService.sendOTP(emailOrPhone, otpCode, 'registration');
+        console.log(`✅ Email OTP sent to ${emailOrPhone}: ${otpCode}`);
+      } catch (error) {
+        console.error('❌ Failed to send email OTP:', error.message);
+        // Continue anyway - OTP is still stored in database for verification
+      }
     } else {
       // Send SMS OTP using your SMS provider
       console.log(`SMS OTP for ${emailOrPhone}: ${otpCode}`);
@@ -230,7 +244,16 @@ router.post('/login', async (req, res) => {
 // 5. Update existing register endpoint for Flutter compatibility
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, display_name, phone } = req.body;
+    let { email, password, display_name, phone, first_name, last_name } = req.body;
+
+    // Normalize names (frontend may send first_name & last_name instead of display_name)
+    if (!display_name) {
+      const fn = (first_name || '').trim();
+      const ln = (last_name || '').trim();
+      if (fn || ln) {
+        display_name = `${fn} ${ln}`.trim();
+      }
+    }
 
     if (!email || !password) {
       return res.status(400).json({
@@ -258,10 +281,10 @@ router.post('/register', async (req, res) => {
 
     // Create user
     const userResult = await dbService.query(
-      `INSERT INTO users (email, password_hash, display_name, phone, country_code, email_verified, phone_verified)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, email, phone, display_name, email_verified, phone_verified, is_active, role, country_code, created_at, updated_at`,
-      [email, hashedPassword, display_name, phone, 'LK', false, false]
+      `INSERT INTO users (email, password_hash, display_name, first_name, last_name, phone, country_code, email_verified, phone_verified)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING id, email, phone, display_name, first_name, last_name, email_verified, phone_verified, is_active, role, country_code, created_at, updated_at`,
+      [email, hashedPassword, display_name, first_name || display_name?.split(' ')[0] || null, last_name || (display_name?.split(' ').slice(1).join(' ') || null), phone, 'LK', false, false]
     );
 
     const newUser = userResult.rows[0];
@@ -282,7 +305,11 @@ router.post('/register', async (req, res) => {
       success: true,
       message: 'User registered successfully',
       token: token,
-      user: newUser
+      user: {
+        ...newUser,
+        first_name: first_name || (display_name ? display_name.split(' ')[0] : null),
+        last_name: last_name || (display_name ? display_name.split(' ').slice(1).join(' ') || null : null)
+      }
     });
 
   } catch (error) {

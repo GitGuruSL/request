@@ -62,7 +62,7 @@ class AuthService {
      * Register new user
      */
     async register(userData) {
-        const { email, phone, password, displayName, role = 'user' } = userData;
+        const { email, phone, password, displayName, role = 'user', first_name, last_name } = userData;
 
         // Validate required fields
         if (!email && !phone) {
@@ -95,6 +95,8 @@ class AuthService {
             phone: phone || null,
             password_hash: hashedPassword,
             display_name: displayName || null,
+            first_name: first_name || (displayName ? displayName.split(' ')[0] : null),
+            last_name: last_name || (displayName ? displayName.split(' ').slice(1).join(' ') : null),
             role,
             is_active: true,
             email_verified: false,

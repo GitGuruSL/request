@@ -2,16 +2,10 @@ import 'package:flutter/services.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../../models/request_model.dart';
-import '../../../models/enhanced_user_model.dart';
-import '../../../models/vehicle_type_model.dart';
-import '../../../services/centralized_request_service.dart';
-import '../../../services/enhanced_user_service.dart';
-import '../../../services/country_service.dart';
-import '../../../services/vehicle_service.dart';
+import '../../../services/rest_vehicle_type_service.dart';
+import '../../../services/rest_ride_request_service.dart';
+import '../../../services/rest_auth_service.dart';
 import '../../../utils/address_utils.dart';
-import '../../../widgets/image_upload_widget.dart';
 import '../../../widgets/accurate_location_picker_widget.dart';
 import '../../../utils/currency_helper.dart';
 import '../../../utils/distance_calculator.dart';
@@ -21,14 +15,12 @@ class CreateRideRequestScreen extends StatefulWidget {
   const CreateRideRequestScreen({super.key});
 
   @override
-  State<CreateRideRequestScreen> createState() => _CreateRideRequestScreenState();
+  State<CreateRideRequestScreen> createState() =>
+      _CreateRideRequestScreenState();
 }
 
 class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final CentralizedRequestService _requestService = CentralizedRequestService();
-  final EnhancedUserService _userService = EnhancedUserService();
-  final VehicleService _vehicleService = VehicleService();
+  // final _formKey = GlobalKey<FormState>(); // Removed unused form key (UI fully custom)
 
   // Form Controllers
   final _titleController = TextEditingController();
@@ -36,20 +28,18 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
   final _pickupLocationController = TextEditingController();
   final _destinationController = TextEditingController();
   final _budgetController = TextEditingController();
-  
+
   // Ride-specific fields
   String _selectedVehicleType = '';
   DateTime? _departureTime;
   int _passengerCount = 1;
   bool _scheduleForLater = false;
-  bool _allowSharing = true;
   final _specialRequestsController = TextEditingController();
-  List<String> _imageUrls = [];
-  
+
   // Location coordinates and distance
   double? _pickupLat;
   double? _pickupLng;
-  double? _destinationLat; 
+  double? _destinationLat;
   double? _destinationLng;
   double? _distance; // Distance in kilometers
   String? _estimatedTime;
@@ -66,7 +56,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
   bool _isLoading = false;
 
   // Dynamic vehicle types from database
-  List<VehicleTypeModel> _vehicleTypes = [];
+  List<VehicleType> _vehicleTypes = [];
 
   @override
   void initState() {
@@ -75,37 +65,16 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
   }
 
   Future<void> _loadVehicleTypes() async {
-    try {
-      setState(() => _isLoading = true);
-      
-      // Debug: Check country setup
-      final countryService = CountryService.instance;
-      print('🏁 Loading vehicles...');
-      print('   Country Code: ${countryService.countryCode}');
-      print('   Country Name: ${countryService.countryName}');
-      
-      // Force refresh vehicles to bypass cache
-      final vehicles = await _vehicleService.refreshVehicles();
-      print('🚗 Loaded ${vehicles.length} vehicles');
-      
-      setState(() {
-        _vehicleTypes = vehicles;
-        // Set first vehicle as default selection if available
-        if (vehicles.isNotEmpty && _selectedVehicleType.isEmpty) {
-          _selectedVehicleType = vehicles.first.id;
-        }
-        _isLoading = false;
-      });
-    } catch (e) {
-      print('Error loading vehicle types: $e');
-      setState(() => _isLoading = false);
-      // Show error snackbar if needed
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to load vehicle types')),
-        );
+    setState(() => _isLoading = true);
+    final vehicles =
+        await RestVehicleTypeService.instance.getEnabledVehicleTypes();
+    setState(() {
+      _vehicleTypes = vehicles;
+      if (_vehicleTypes.isNotEmpty && _selectedVehicleType.isEmpty) {
+        _selectedVehicleType = _vehicleTypes.first.id;
       }
-    }
+      _isLoading = false;
+    });
   }
 
   @override
@@ -145,9 +114,10 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
   }
 
   void _calculateDistance() async {
-    if (_pickupLat != null && _pickupLng != null && 
-        _destinationLat != null && _destinationLng != null) {
-      
+    if (_pickupLat != null &&
+        _pickupLng != null &&
+        _destinationLat != null &&
+        _destinationLng != null) {
       // Always calculate fallback distance first
       final fallbackDistance = DistanceCalculator.calculateDistance(
         startLat: _pickupLat!,
@@ -155,21 +125,22 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
         endLat: _destinationLat!,
         endLng: _destinationLng!,
       );
-      
+
       final fallbackTime = DistanceCalculator.estimateTravelTime(
         fallbackDistance,
         vehicleType: _selectedVehicleType,
       );
-      
+
       // Set fallback values first
       _distance = fallbackDistance;
       _estimatedTime = fallbackTime;
-      
+
       setState(() {});
-      
+
       // Try to get better estimates from Google API in the background
       try {
-        Map<String, dynamic> routeInfo = await GoogleDirectionsService.getRouteInfo(
+        Map<String, dynamic> routeInfo =
+            await GoogleDirectionsService.getRouteInfo(
           origin: LatLng(_pickupLat!, _pickupLng!),
           destination: LatLng(_destinationLat!, _destinationLng!),
           travelMode: 'driving',
@@ -179,35 +150,36 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
           // Update with API data
           _distance = (routeInfo['distance'] / 1000.0);
           _estimatedTime = routeInfo['durationText'];
-          
+
           setState(() {});
         }
       } catch (e) {
         print('Google Directions API error: $e');
         // Keep fallback values
       }
-      
+
       // Update map with route
       _updateMapWithRoute();
     }
   }
 
-  Future<BitmapDescriptor> _createCustomMarker(IconData icon, Color color) async {
+  Future<BitmapDescriptor> _createCustomMarker(
+      IconData icon, Color color) async {
     final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
     final Canvas canvas = Canvas(pictureRecorder);
     final Paint paint = Paint()..color = color;
     const double radius = 20.0;
-    
+
     // Draw circle background
     canvas.drawCircle(const Offset(radius, radius), radius, paint);
-    
+
     // Draw white circle border
     final Paint borderPaint = Paint()
       ..color = Colors.white
       ..strokeWidth = 3.0
       ..style = PaintingStyle.stroke;
     canvas.drawCircle(const Offset(radius, radius), radius, borderPaint);
-    
+
     // Draw icon
     TextPainter textPainter = TextPainter(textDirection: TextDirection.ltr);
     textPainter.text = TextSpan(
@@ -220,39 +192,48 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
     );
     textPainter.layout();
     textPainter.paint(canvas, const Offset(10, 10));
-    
+
     // Convert to image
     final ui.Image markerAsImage = await pictureRecorder.endRecording().toImage(
-      (radius * 2).toInt(),
-      (radius * 2).toInt(),
-    );
-    
-    final ByteData? byteData = await markerAsImage.toByteData(format: ui.ImageByteFormat.png);
+          (radius * 2).toInt(),
+          (radius * 2).toInt(),
+        );
+
+    final ByteData? byteData =
+        await markerAsImage.toByteData(format: ui.ImageByteFormat.png);
     final Uint8List uint8List = byteData!.buffer.asUint8List();
-    
+
     return BitmapDescriptor.bytes(uint8List);
   }
 
   void _updateMapWithRoute() async {
-    if (_pickupLat != null && _pickupLng != null && 
-        _destinationLat != null && _destinationLng != null) {
-      
+    if (_pickupLat != null &&
+        _pickupLng != null &&
+        _destinationLat != null &&
+        _destinationLng != null) {
       // Create custom human icon for pickup
-      final BitmapDescriptor humanIcon = await _createCustomMarker(Icons.person, Colors.blue);
-      final BitmapDescriptor destinationIcon = await _createCustomMarker(Icons.location_on, Colors.red);
-      
+      final BitmapDescriptor humanIcon =
+          await _createCustomMarker(Icons.person, Colors.blue);
+      final BitmapDescriptor destinationIcon =
+          await _createCustomMarker(Icons.location_on, Colors.red);
+
       // Add markers with human icon for pickup
       _markers = {
         Marker(
           markerId: const MarkerId('pickup'),
           position: LatLng(_pickupLat!, _pickupLng!),
-          infoWindow: InfoWindow(title: 'Pickup', snippet: AddressUtils.cleanAddress(_pickupLocationController.text)),
+          infoWindow: InfoWindow(
+              title: 'Pickup',
+              snippet:
+                  AddressUtils.cleanAddress(_pickupLocationController.text)),
           icon: humanIcon,
         ),
         Marker(
           markerId: const MarkerId('destination'),
           position: LatLng(_destinationLat!, _destinationLng!),
-          infoWindow: InfoWindow(title: 'Destination', snippet: AddressUtils.cleanAddress(_destinationController.text)),
+          infoWindow: InfoWindow(
+              title: 'Destination',
+              snippet: AddressUtils.cleanAddress(_destinationController.text)),
           icon: destinationIcon,
         ),
       };
@@ -308,10 +289,14 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
 
       // Adjust camera to show both points
       if (_mapController != null) {
-        double minLat = _pickupLat! < _destinationLat! ? _pickupLat! : _destinationLat!;
-        double maxLat = _pickupLat! > _destinationLat! ? _pickupLat! : _destinationLat!;
-        double minLng = _pickupLng! < _destinationLng! ? _pickupLng! : _destinationLng!;
-        double maxLng = _pickupLng! > _destinationLng! ? _pickupLng! : _destinationLng!;
+        double minLat =
+            _pickupLat! < _destinationLat! ? _pickupLat! : _destinationLat!;
+        double maxLat =
+            _pickupLat! > _destinationLat! ? _pickupLat! : _destinationLat!;
+        double minLng =
+            _pickupLng! < _destinationLng! ? _pickupLng! : _destinationLng!;
+        double maxLng =
+            _pickupLng! > _destinationLng! ? _pickupLng! : _destinationLng!;
 
         _mapController!.animateCamera(
           CameraUpdate.newLatLngBounds(
@@ -323,7 +308,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
           ),
         );
       }
-      
+
       setState(() {});
     }
   }
@@ -350,7 +335,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
               mapToolbarEnabled: false,
             ),
           ),
-          
+
           // My Location Button (like in Uber)
           Positioned(
             right: 16,
@@ -365,7 +350,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
               ),
             ),
           ),
-          
+
           // Top App Bar
           Positioned(
             top: 0,
@@ -457,7 +442,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                     // Distance information card
                     if (_distance != null) _buildDistanceCard(),
                     if (_distance != null) const SizedBox(height: 16),
-                    
+
                     // Vehicle selection
                     _buildVehicleSelection(),
                     const SizedBox(height: 24),
@@ -478,16 +463,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-        color: Colors.black87,
-      ),
-    );
-  }
+  // Removed unused _buildSectionTitle helper (design simplified)
 
   Widget _buildLocationInputs() {
     return Column(
@@ -581,7 +557,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
 
   Widget _buildDistanceCard() {
     if (_distance == null) return const SizedBox.shrink();
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -645,14 +621,14 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
           const SizedBox(height: 12),
           Container(
             height: 80,
-            child: _isLoading 
-              ? const Center(child: CircularProgressIndicator())
-              : const Center(
-                  child: Text(
-                    'No vehicles available in your area',
-                    style: TextStyle(color: Colors.grey),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : const Center(
+                    child: Text(
+                      'No vehicles available in your area',
+                      style: TextStyle(color: Colors.grey),
+                    ),
                   ),
-                ),
           ),
         ],
       );
@@ -677,7 +653,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
             itemBuilder: (context, index) {
               final vehicle = _vehicleTypes[index];
               final isSelected = _selectedVehicleType == vehicle.id;
-              
+
               return GestureDetector(
                 onTap: () {
                   setState(() {
@@ -707,13 +683,14 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                       Row(
                         children: [
                           Icon(
-                            _getVehicleIcon(vehicle.icon),
+                            _getVehicleIcon(
+                                vehicle.iconUrl ?? 'directions_car'),
                             size: 24,
                             color: Colors.grey[800],
                           ),
                           const Spacer(),
                           Text(
-                            '${vehicle.passengerCapacity}',
+                            ' ', // passenger capacity not in REST model yet
                             style: TextStyle(
                               fontSize: 10,
                               color: Colors.grey[800],
@@ -768,13 +745,13 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
               Row(
                 children: [
                   IconButton(
-                    onPressed: _passengerCount > 1 
-                        ? () => setState(() => _passengerCount--) 
+                    onPressed: _passengerCount > 1
+                        ? () => setState(() => _passengerCount--)
                         : null,
                     icon: Icon(
                       Icons.remove_circle_outline,
-                      color: _passengerCount > 1 
-                          ? Theme.of(context).primaryColor 
+                      color: _passengerCount > 1
+                          ? Theme.of(context).primaryColor
                           : Colors.grey,
                     ),
                   ),
@@ -787,13 +764,13 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                     ),
                   ),
                   IconButton(
-                    onPressed: _passengerCount < 6 
-                        ? () => setState(() => _passengerCount++) 
+                    onPressed: _passengerCount < 6
+                        ? () => setState(() => _passengerCount++)
                         : null,
                     icon: Icon(
                       Icons.add_circle_outline,
-                      color: _passengerCount < 6 
-                          ? Theme.of(context).primaryColor 
+                      color: _passengerCount < 6
+                          ? Theme.of(context).primaryColor
                           : Colors.grey,
                     ),
                   ),
@@ -802,9 +779,9 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
             ],
           ),
         ),
-        
+
         const SizedBox(height: 12),
-        
+
         // Schedule for later
         Container(
           decoration: BoxDecoration(
@@ -813,11 +790,13 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
           ),
           child: ListTile(
             leading: Icon(
-              Icons.schedule, 
-              color: _scheduleForLater ? Theme.of(context).primaryColor : Colors.grey,
+              Icons.schedule,
+              color: _scheduleForLater
+                  ? Theme.of(context).primaryColor
+                  : Colors.grey,
             ),
-            title: Text(_scheduleForLater 
-                ? (_departureTime != null 
+            title: Text(_scheduleForLater
+                ? (_departureTime != null
                     ? 'Leave at ${_departureTime!.hour}:${_departureTime!.minute.toString().padLeft(2, '0')}'
                     : 'Select time')
                 : 'Leave now'),
@@ -865,106 +844,16 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
     );
   }
 
-  void _updateMapMarkers() {
-    setState(() {
-      _markers.clear();
-      _polylines.clear();
-      
-      // Add pickup marker
-      if (_pickupLat != null && _pickupLng != null) {
-        _markers.add(
-          Marker(
-            markerId: const MarkerId('pickup'),
-            position: LatLng(_pickupLat!, _pickupLng!),
-            infoWindow: InfoWindow(
-              title: 'Pickup',
-              snippet: AddressUtils.cleanAddress(_pickupLocationController.text),
-            ),
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-          ),
-        );
-      }
-      
-      // Add destination marker
-      if (_destinationLat != null && _destinationLng != null) {
-        _markers.add(
-          Marker(
-            markerId: const MarkerId('destination'),
-            position: LatLng(_destinationLat!, _destinationLng!),
-            infoWindow: InfoWindow(
-              title: 'Drop',
-              snippet: AddressUtils.cleanAddress(_destinationController.text),
-            ),
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-          ),
-        );
-      }
-      
-      // Add route line if both locations are set
-      if (_pickupLat != null && _pickupLng != null && 
-          _destinationLat != null && _destinationLng != null) {
-        _polylines.add(
-          Polyline(
-            polylineId: const PolylineId('route'),
-            points: [
-              LatLng(_pickupLat!, _pickupLng!),
-              LatLng(_destinationLat!, _destinationLng!),
-            ],
-            color: const Color(0xFF2196F3),
-            width: 5,
-            patterns: [PatternItem.dash(20), PatternItem.gap(10)],
-          ),
-        );
-      }
-    });
-    
-    // Camera movement after setState
-    if (_pickupLat != null && _pickupLng != null && 
-        _destinationLat != null && _destinationLng != null) {
-      Future.delayed(const Duration(milliseconds: 200), () {
-        _fitMarkersOnMap();
-      });
-    } else if (_pickupLat != null && _pickupLng != null) {
-      // If only pickup is set, center on pickup
-      Future.delayed(const Duration(milliseconds: 200), () {
-        _mapController?.animateCamera(
-          CameraUpdate.newLatLngZoom(LatLng(_pickupLat!, _pickupLng!), 15),
-        );
-      });
-    } else if (_destinationLat != null && _destinationLng != null) {
-      // If only destination is set, center on destination
-      Future.delayed(const Duration(milliseconds: 200), () {
-        _mapController?.animateCamera(
-          CameraUpdate.newLatLngZoom(LatLng(_destinationLat!, _destinationLng!), 15),
-        );
-      });
-    }
-  }
+  // Removed unused _updateMapMarkers (replaced by _updateMapWithRoute logic)
 
-  void _fitMarkersOnMap() {
-    if (_mapController == null || _pickupLat == null || _destinationLat == null) return;
-    
-    final bounds = LatLngBounds(
-      southwest: LatLng(
-        _pickupLat! < _destinationLat! ? _pickupLat! : _destinationLat!,
-        _pickupLng! < _destinationLng! ? _pickupLng! : _destinationLng!,
-      ),
-      northeast: LatLng(
-        _pickupLat! > _destinationLat! ? _pickupLat! : _destinationLat!,
-        _pickupLng! > _destinationLng! ? _pickupLng! : _destinationLng!,
-      ),
-    );
-    
-    _mapController!.animateCamera(
-      CameraUpdate.newLatLngBounds(bounds, 120.0), // More padding for better view
-    );
-  }
+  // Removed unused _fitMarkersOnMap helper
 
   void _onMapTapped(LatLng position) {
     // For now, just show coordinates - can be enhanced to set pickup/destination
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Tapped: ${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}'),
+        content: Text(
+            'Tapped: ${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}'),
         duration: const Duration(seconds: 2),
       ),
     );
@@ -987,13 +876,13 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    
+
     if (pickedDate != null) {
       final TimeOfDay? pickedTime = await showTimePicker(
         context: context,
         initialTime: TimeOfDay.now(),
       );
-      
+
       if (pickedTime != null) {
         setState(() {
           _departureTime = DateTime(
@@ -1037,12 +926,13 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
 
     try {
       // Check if user has verified phone number
-      final currentUser = await _userService.getCurrentUserModel();
-      if (currentUser == null || !currentUser.isPhoneVerified) {
+      final currentUser = RestAuthService.instance.currentUser;
+      if (currentUser == null || !currentUser.phoneVerified) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Please verify your phone number to create requests'),
+              content:
+                  Text('Please verify your phone number to create requests'),
             ),
           );
         }
@@ -1051,49 +941,22 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
 
       // Get selected vehicle details
       final selectedVehicle = _vehicleTypes.firstWhere(
-        (vehicle) => vehicle.id == _selectedVehicleType,
-      );
+          (v) => v.id == _selectedVehicleType,
+          orElse: () => _vehicleTypes.first);
 
       // Create the ride-specific data
-      final rideData = RideRequestData(
+      await RestRideRequestService.instance.createRideRequest(
+        pickupAddress: _pickupLocationController.text.trim(),
+        pickupLat: _pickupLat ?? 0,
+        pickupLng: _pickupLng ?? 0,
+        destinationAddress: _destinationController.text.trim(),
+        destinationLat: _destinationLat ?? 0,
+        destinationLng: _destinationLng ?? 0,
+        vehicleTypeId: selectedVehicle.id,
         passengers: _passengerCount,
-        preferredTime: _scheduleForLater ? _departureTime! : DateTime.now().add(const Duration(minutes: 10)),
-        isFlexibleTime: !_scheduleForLater,
-        vehicleType: selectedVehicle.name,
-        allowSmoking: false,
-        petsAllowed: _allowSharing,
-        specialRequests: _specialRequestsController.text.trim().isEmpty 
-            ? null 
-            : _specialRequestsController.text.trim(),
-      );
-
-      // Generate a descriptive title
-      final title = 'Ride from ${_pickupLocationController.text.trim()} to ${_destinationController.text.trim()}';
-
-      final requestId = await _requestService.createRequest(
-        title: title,
-        description: 'Ride request for $_passengerCount passenger(s) using ${selectedVehicle.name}',
-        type: RequestType.ride,
-        budget: double.tryParse(_budgetController.text),
+        scheduledTime: _scheduleForLater ? _departureTime : null,
+        budgetMin: double.tryParse(_budgetController.text),
         currency: CurrencyHelper.instance.getCurrency(),
-        typeSpecificData: rideData.toMap(),
-        tags: [
-          'ride', 
-          _selectedVehicleType,
-          'passengers_$_passengerCount',
-          if (_scheduleForLater) 'scheduled',
-        ],
-        location: LocationInfo(
-          latitude: _pickupLat ?? 0.0,
-          longitude: _pickupLng ?? 0.0,
-          address: _pickupLocationController.text.trim(),
-        ),
-        destinationLocation: LocationInfo(
-          latitude: _destinationLat ?? 0.0,
-          longitude: _destinationLng ?? 0.0,
-          address: _destinationController.text.trim(),
-        ),
-        images: _imageUrls,
       );
 
       if (mounted) {

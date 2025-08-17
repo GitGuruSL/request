@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'src/utils/firebase_shim.dart'; // Added by migration script
+// REMOVED_FB_IMPORT: import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/message_model.dart';
 import '../../services/messaging_service.dart';
 import '../../services/enhanced_user_service.dart';
@@ -106,7 +107,7 @@ class _ConversationsListScreenState extends State<ConversationsListScreen> {
   }
 
   Widget _buildConversationTile(ConversationModel conversation) {
-    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    final currentUserId = RestAuthService.instance.currentUser?.uid;
     final otherUserId = conversation.participantIds
         .firstWhere((id) => id != currentUserId, orElse: () => '');
     

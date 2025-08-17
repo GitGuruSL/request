@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../services/enhanced_user_service.dart';
 import '../services/contact_verification_service.dart';
 import '../theme/app_theme.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'src/utils/firebase_shim.dart'; // Added by migration script
+// REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
@@ -73,6 +74,7 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
       print('DEBUG: Loading business verification for userId: ${currentUser.uid}');
 
       // Get business data from new_business_verifications collection
+// FIRESTORE_TODO: replace with REST service. Original: final doc = await FirebaseFirestore.instance
       final doc = await FirebaseFirestore.instance
           .collection('new_business_verifications')
           .doc(currentUser.uid)
@@ -1096,6 +1098,7 @@ class _BusinessVerificationScreenState extends State<BusinessVerificationScreen>
       final downloadUrl = await uploadTask.ref.getDownloadURL();
 
       // Update Firestore with new document URL and reset status to pending
+// FIRESTORE_TODO: replace with REST service. Original: final businessRef = FirebaseFirestore.instance
       final businessRef = FirebaseFirestore.instance
           .collection('new_business_verifications')
           .doc(currentUser.uid);

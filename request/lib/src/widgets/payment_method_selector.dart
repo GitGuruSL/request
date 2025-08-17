@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'src/utils/firebase_shim.dart'; // Added by migration script
+// REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/payment_methods_service.dart';
 import '../../services/country_service.dart';
 import '../../theme/app_theme.dart';

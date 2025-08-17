@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'src/utils/firebase_shim.dart'; // Added by migration script
+// REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/promo_code_model.dart';
 import '../../services/promo_code_service.dart';
 
@@ -11,6 +12,7 @@ class PromoCodeAdminScreen extends StatefulWidget {
 }
 
 class _PromoCodeAdminScreenState extends State<PromoCodeAdminScreen> {
+// FIRESTORE_TODO: replace with REST service. Original: final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   List<PromoCodeModel> promoCodes = [];
   bool isLoading = true;

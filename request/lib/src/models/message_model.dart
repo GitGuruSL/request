@@ -1,4 +1,5 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+// // REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart'; import 'src/utils/firebase_shim.dart'; // Added by migration script
+// Removed Firebase dependency
 
 class ConversationModel {
   final String id;
@@ -32,10 +33,14 @@ class ConversationModel {
       requestTitle: map['requestTitle'] ?? '',
       participantIds: List<String>.from(map['participantIds'] ?? []),
       lastMessage: map['lastMessage'] ?? '',
-      lastMessageTime: (map['lastMessageTime'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      lastMessageTime: map['lastMessageTime'] != null
+          ? DateTime.parse(map['lastMessageTime'].toString())
+          : DateTime.now(),
       requesterId: map['requesterId'] ?? '',
       responderId: map['responderId'] ?? '',
-      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: map['createdAt'] != null
+          ? DateTime.parse(map['createdAt'].toString())
+          : DateTime.now(),
       readStatus: Map<String, bool>.from(map['readStatus'] ?? {}),
     );
   }
@@ -46,10 +51,10 @@ class ConversationModel {
       'requestTitle': requestTitle,
       'participantIds': participantIds,
       'lastMessage': lastMessage,
-      'lastMessageTime': Timestamp.fromDate(lastMessageTime),
+      'lastMessageTime': lastMessageTime.toIso8601String(),
       'requesterId': requesterId,
       'responderId': responderId,
-      'createdAt': Timestamp.fromDate(createdAt),
+      'createdAt': createdAt.toIso8601String(),
       'readStatus': readStatus,
     };
   }
@@ -80,7 +85,9 @@ class MessageModel {
       conversationId: map['conversationId'] ?? '',
       senderId: map['senderId'] ?? '',
       text: map['text'] ?? '',
-      timestamp: (map['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      timestamp: map['timestamp'] != null
+          ? DateTime.parse(map['timestamp'].toString())
+          : DateTime.now(),
       type: MessageType.values.firstWhere(
         (e) => e.name == (map['type'] ?? 'text'),
         orElse: () => MessageType.text,
@@ -94,7 +101,7 @@ class MessageModel {
       'conversationId': conversationId,
       'senderId': senderId,
       'text': text,
-      'timestamp': Timestamp.fromDate(timestamp),
+      'timestamp': timestamp.toIso8601String(),
       'type': type.name,
       'metadata': metadata,
     };

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'src/utils/firebase_shim.dart'; // Added by migration script
+// REMOVED_FB_IMPORT: import 'package:firebase_auth/firebase_auth.dart';
 import '../models/subscription_model.dart';
 import '../services/subscription_service.dart';
 import 'subscription_screen.dart';
@@ -29,7 +30,7 @@ class _SubscriptionStatusWidgetState extends State<SubscriptionStatusWidget> {
   }
 
   Future<void> _loadSubscriptionStatus() async {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = RestAuthService.instance.currentUser;
     if (user == null) {
       setState(() => isLoading = false);
       return;
@@ -370,7 +371,7 @@ class _SubscriptionStatusWidgetState extends State<SubscriptionStatusWidget> {
 mixin SubscriptionCheckMixin<T extends StatefulWidget> on State<T> {
   /// Check if user can perform an action based on their subscription
   Future<bool> checkSubscriptionAccess(String action, {bool showDialog = true}) async {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = RestAuthService.instance.currentUser;
     if (user == null) return false;
 
     try {
@@ -388,7 +389,7 @@ mixin SubscriptionCheckMixin<T extends StatefulWidget> on State<T> {
 
   /// Record user action for subscription tracking
   Future<void> recordSubscriptionAction(String action) async {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = RestAuthService.instance.currentUser;
     if (user == null) return;
 
     try {

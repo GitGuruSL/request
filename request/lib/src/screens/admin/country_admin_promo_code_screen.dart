@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'src/utils/firebase_shim.dart'; // Added by migration script
+// REMOVED_FB_IMPORT: import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/promo_code_model.dart';
 import '../../services/promo_code_service.dart';
 
@@ -35,7 +36,7 @@ class _CountryAdminPromoCodeScreenState extends State<CountryAdminPromoCodeScree
     });
 
     try {
-      final adminId = FirebaseAuth.instance.currentUser?.uid;
+      final adminId = RestAuthService.instance.currentUser?.uid;
       if (adminId != null) {
         final codes = await PromoCodeService.getPromoCodesByCountryAdmin(
           adminId,
@@ -791,7 +792,7 @@ class _CreatePromoCodeFormState extends State<_CreatePromoCodeForm> {
     });
 
     try {
-      final adminId = FirebaseAuth.instance.currentUser?.uid;
+      final adminId = RestAuthService.instance.currentUser?.uid;
       if (adminId == null) {
         throw Exception('Admin not authenticated');
       }

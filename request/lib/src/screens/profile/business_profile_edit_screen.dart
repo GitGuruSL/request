@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'src/utils/firebase_shim.dart'; // Added by migration script
+// REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
+// REMOVED_FB_IMPORT: import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/auth_service.dart';
 import '../../services/payment_methods_service.dart';
 import '../../widgets/payment_method_selector.dart';
@@ -62,9 +63,10 @@ class _BusinessProfileEditScreenState extends State<BusinessProfileEditScreen> {
     setState(() => _isInitialLoading = true);
     
     try {
-      final user = FirebaseAuth.instance.currentUser;
+      final user = RestAuthService.instance.currentUser;
       if (user == null) return;
 
+// FIRESTORE_TODO: replace with REST service. Original: final doc = await FirebaseFirestore.instance
       final doc = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -101,7 +103,7 @@ class _BusinessProfileEditScreenState extends State<BusinessProfileEditScreen> {
     setState(() => _isLoading = true);
     
     try {
-      final user = FirebaseAuth.instance.currentUser;
+      final user = RestAuthService.instance.currentUser;
       if (user == null) throw Exception('User not authenticated');
 
       final businessProfile = {
@@ -116,6 +118,7 @@ class _BusinessProfileEditScreenState extends State<BusinessProfileEditScreen> {
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
+// FIRESTORE_TODO: replace with REST service. Original: await FirebaseFirestore.instance
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)

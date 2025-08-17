@@ -1,6 +1,7 @@
 // Enhanced User Model with Multi-Role Support
-import 'package:cloud_firestore/cloud_firestore.dart';
+// REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'src/utils/firebase_shim.dart'; // Added by migration script
 enum UserRole { 
   general, 
   driver, 

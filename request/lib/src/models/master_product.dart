@@ -1,5 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+// REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'src/utils/firebase_shim.dart'; // Added by migration script
 class ProductVariable {
   final String name;
   final String type;

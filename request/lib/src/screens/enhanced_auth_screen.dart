@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'src/utils/firebase_shim.dart'; // Added by migration script
+// REMOVED_FB_IMPORT: import 'package:firebase_auth/firebase_auth.dart';
 import '../services/enhanced_auth_service.dart';
 import '../models/enhanced_user_model.dart';
 

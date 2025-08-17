@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'src/utils/firebase_shim.dart'; // Added by migration script
+// REMOVED_FB_IMPORT: import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/promo_code_model.dart';
 import '../../services/promo_code_service.dart';
 
@@ -508,7 +509,7 @@ class _SuperAdminPromoApprovalScreenState extends State<SuperAdminPromoApprovalS
 
   Future<void> _approvePromoCode(PromoCodeModel promoCode, Map<String, dynamic> modifications) async {
     try {
-      final superAdminId = FirebaseAuth.instance.currentUser?.uid;
+      final superAdminId = RestAuthService.instance.currentUser?.uid;
       if (superAdminId == null) {
         throw Exception('Super admin not authenticated');
       }
@@ -545,7 +546,7 @@ class _SuperAdminPromoApprovalScreenState extends State<SuperAdminPromoApprovalS
 
   Future<void> _rejectPromoCode(PromoCodeModel promoCode, String reason) async {
     try {
-      final superAdminId = FirebaseAuth.instance.currentUser?.uid;
+      final superAdminId = RestAuthService.instance.currentUser?.uid;
       if (superAdminId == null) {
         throw Exception('Super admin not authenticated');
       }

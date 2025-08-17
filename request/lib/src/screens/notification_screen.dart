@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:request_marketplace/src/services/placeholder_services.dart';
 import '../models/notification_model.dart';
-import '../services/comprehensive_notification_service.dart';
-import '../services/enhanced_user_service.dart';
+// import '../services/comprehensive_notification_service.dart'; // Replaced with placeholder
+// import '../services/enhanced_user_service.dart'; // Replaced with placeholder
 import '../theme/app_theme.dart';
 
 class NotificationScreen extends StatefulWidget {
@@ -12,7 +13,8 @@ class NotificationScreen extends StatefulWidget {
 }
 
 class _NotificationScreenState extends State<NotificationScreen> {
-  final ComprehensiveNotificationService _notificationService = ComprehensiveNotificationService();
+  final ComprehensiveNotificationService _notificationService =
+      ComprehensiveNotificationService();
   final EnhancedUserService _userService = EnhancedUserService();
 
   @override
@@ -136,7 +138,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   Widget _buildNotificationCard(NotificationModel notification) {
     final isUnread = notification.status == NotificationStatus.unread;
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: isUnread ? 2 : 1,
@@ -152,7 +154,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: _getNotificationColor(notification.type).withOpacity(0.15),
+                  color: _getNotificationColor(notification.type)
+                      .withOpacity(0.15),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -162,7 +165,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              
+
               // Notification content
               Expanded(
                 child: Column(
@@ -174,7 +177,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
                           child: Text(
                             notification.title,
                             style: TextStyle(
-                              fontWeight: isUnread ? FontWeight.w600 : FontWeight.w500,
+                              fontWeight:
+                                  isUnread ? FontWeight.w600 : FontWeight.w500,
                               fontSize: 16,
                             ),
                           ),
@@ -225,7 +229,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   ],
                 ),
               ),
-              
+
               // More options
               PopupMenuButton<String>(
                 icon: Icon(Icons.more_vert, color: Colors.grey[600]),
@@ -346,7 +350,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   void _navigateBasedOnNotification(NotificationModel notification) {
     final data = notification.data;
-    
+
     switch (notification.type) {
       case NotificationType.newResponse:
       case NotificationType.requestEdited:
@@ -356,18 +360,20 @@ class _NotificationScreenState extends State<NotificationScreen> {
         final requestId = data['requestId'] as String?;
         if (requestId != null) {
           // Navigate to request details
-          Navigator.pushNamed(context, '/request-details', arguments: requestId);
+          Navigator.pushNamed(context, '/request-details',
+              arguments: requestId);
         }
         break;
-        
+
       case NotificationType.newMessage:
         final conversationId = data['conversationId'] as String?;
         if (conversationId != null) {
           // Navigate to conversation
-          Navigator.pushNamed(context, '/conversation', arguments: conversationId);
+          Navigator.pushNamed(context, '/conversation',
+              arguments: conversationId);
         }
         break;
-        
+
       case NotificationType.newRideRequest:
       case NotificationType.rideResponseAccepted:
       case NotificationType.rideDetailsUpdated:
@@ -377,7 +383,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           Navigator.pushNamed(context, '/ride-details', arguments: requestId);
         }
         break;
-        
+
       case NotificationType.productInquiry:
         final productName = data['productName'] as String?;
         if (productName != null) {
@@ -385,7 +391,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           Navigator.pushNamed(context, '/business-dashboard');
         }
         break;
-        
+
       case NotificationType.systemMessage:
         // Handle system messages if needed
         break;
@@ -405,13 +411,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
           );
         }
         break;
-        
+
       case 'delete':
         final confirmed = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Delete Notification'),
-            content: const Text('Are you sure you want to delete this notification?'),
+            content: const Text(
+                'Are you sure you want to delete this notification?'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
@@ -425,7 +432,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
             ],
           ),
         );
-        
+
         if (confirmed == true) {
           await _notificationService.deleteNotification(notification.id);
           if (mounted) {

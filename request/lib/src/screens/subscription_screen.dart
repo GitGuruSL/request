@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'src/utils/firebase_shim.dart'; // Added by migration script
+// REMOVED_FB_IMPORT: import 'package:firebase_auth/firebase_auth.dart';
 import '../models/subscription_model.dart';
 import '../services/subscription_service.dart';
 import '../services/country_service.dart';
@@ -31,7 +32,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         errorMessage = null;
       });
 
-      final user = FirebaseAuth.instance.currentUser;
+      final user = RestAuthService.instance.currentUser;
       if (user == null) {
         setState(() {
           errorMessage = 'Please log in to view subscription details';
@@ -496,7 +497,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         },
       );
 
-      final user = FirebaseAuth.instance.currentUser;
+      final user = RestAuthService.instance.currentUser;
       if (user == null) throw Exception('User not logged in');
 
       await SubscriptionService.upgradeSubscription(

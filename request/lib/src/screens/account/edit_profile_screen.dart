@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'src/utils/firebase_shim.dart'; // Added by migration script
+// REMOVED_FB_IMPORT: import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/enhanced_user_model.dart';
 import '../../services/enhanced_user_service.dart';
 
@@ -41,7 +42,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> _loadUserData() async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
+      final user = RestAuthService.instance.currentUser;
       if (user != null) {
         final userData = await _userService.getUserById(user.uid);
         if (userData != null && mounted) {
@@ -72,7 +73,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     });
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
+      final user = RestAuthService.instance.currentUser;
       if (user != null && _currentUser != null) {
         // Use the updateProfile method from the service
         await _userService.updateProfile(

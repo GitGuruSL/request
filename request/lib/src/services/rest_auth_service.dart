@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'api_client.dart';
 
@@ -36,6 +35,7 @@ class RestAuthService {
     required String password,
     String? displayName,
     String? phone,
+    Map<String, dynamic>? extra,
   }) async {
     try {
       final response = await _apiClient.post<Map<String, dynamic>>(
@@ -45,6 +45,7 @@ class RestAuthService {
           'password': password,
           if (displayName != null) 'display_name': displayName,
           if (phone != null) 'phone': phone,
+          if (extra != null) ...extra,
         },
       );
 
@@ -131,6 +132,10 @@ class RestAuthService {
   /// Check if user exists by email or phone
   Future<bool> checkUserExists(String emailOrPhone) async {
     try {
+      if (kDebugMode) {
+        print('🔍 Checking if user exists: $emailOrPhone');
+      }
+
       final response = await _apiClient.post<Map<String, dynamic>>(
         '/api/auth/check-user-exists',
         data: {
@@ -138,10 +143,24 @@ class RestAuthService {
         },
       );
 
-      if (response.isSuccess && response.data != null) {
-        return response.data!['exists'] as bool? ?? false;
+      if (kDebugMode) {
+        print('📱 checkUserExists response: ${response.data}');
       }
 
+      if (response.isSuccess && response.data != null) {
+        final exists = response.data!['exists'] as bool? ?? false;
+        if (kDebugMode) {
+          print('👤 User exists: $exists');
+          print('🎯 checkUserExists returning: $exists');
+        }
+        return exists;
+      }
+
+      if (kDebugMode) {
+        print('❌ checkUserExists: response not successful or data is null');
+        print('📊 Response success: ${response.isSuccess}');
+        print('📊 Response data: ${response.data}');
+      }
       return false;
     } catch (e) {
       if (kDebugMode) {
@@ -167,11 +186,30 @@ class RestAuthService {
         },
       );
 
-      if (response.isSuccess && response.data != null) {
+      if (kDebugMode) {
+        print(
+            '🔍 sendOTP response: success=${response.success}, data=${response.data}');
+      }
+
+      // Handle the backend response structure directly
+      if (response.success ||
+          (response.data != null && response.data!['success'] == true)) {
+        final responseData = response.data ?? <String, dynamic>{};
+        final otpToken = responseData['otpToken'] as String?;
+        final message = responseData['message'] as String? ?? response.message;
+
+        if (kDebugMode) {
+          print('🔍 Extracted otpToken: $otpToken');
+          if (otpToken == null) {
+            print(
+                '⚠️ otpToken is null even though success=true. Raw response data: ${response.data}');
+          }
+        }
+
         return OTPResult(
           success: true,
-          otpToken: response.data!['otpToken'] as String?,
-          message: response.message ?? 'OTP sent successfully',
+          otpToken: otpToken,
+          message: message ?? 'OTP sent successfully',
         );
       }
 
@@ -289,6 +327,8 @@ class UserModel {
   final String email;
   final String? phone;
   final String? displayName;
+  final String? firstName;
+  final String? lastName;
   final bool emailVerified;
   final bool phoneVerified;
   final bool isActive;
@@ -302,6 +342,8 @@ class UserModel {
     required this.email,
     this.phone,
     this.displayName,
+    this.firstName,
+    this.lastName,
     required this.emailVerified,
     required this.phoneVerified,
     required this.isActive,
@@ -317,6 +359,8 @@ class UserModel {
       email: json['email'] as String,
       phone: json['phone'] as String?,
       displayName: json['display_name'] as String?,
+      firstName: json['first_name'] as String?,
+      lastName: json['last_name'] as String?,
       emailVerified: json['email_verified'] as bool? ?? false,
       phoneVerified: json['phone_verified'] as bool? ?? false,
       isActive: json['is_active'] as bool? ?? true,
@@ -333,6 +377,8 @@ class UserModel {
       'email': email,
       'phone': phone,
       'display_name': displayName,
+      'first_name': firstName,
+      'last_name': lastName,
       'email_verified': emailVerified,
       'phone_verified': phoneVerified,
       'is_active': isActive,
@@ -344,6 +390,21 @@ class UserModel {
   }
 
   String get name => displayName ?? email.split('@')[0];
+  String get fullName {
+    if (firstName != null || lastName != null) {
+      return [firstName, lastName]
+          .where((p) => p != null && p.isNotEmpty)
+          .cast<String>()
+          .join(' ');
+    }
+    return displayName ?? email.split('@')[0];
+  }
+
+  // Legacy compatibility getters (Firebase-style fields)
+  // Many legacy screens still reference user.uid / user.phoneNumber
+  // during the incremental migration away from Firebase.
+  String get uid => id; // Firebase user UID equivalent
+  String? get phoneNumber => phone; // Firebase phoneNumber equivalent
 
   @override
   String toString() {

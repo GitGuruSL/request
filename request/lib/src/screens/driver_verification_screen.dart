@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'src/utils/firebase_shim.dart'; // Added by migration script
+// REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
+// REMOVED_FB_IMPORT: import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:io';
 import 'dart:async';
 import '../services/enhanced_user_service.dart';
@@ -109,12 +110,14 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
   Future<void> _loadAvailableVehicleTypes() async {
     try {
       // Get all vehicle types (without orderBy to avoid index requirement)
+// FIRESTORE_TODO: replace with REST service. Original: final vehicleTypesSnapshot = await FirebaseFirestore.instance
       final vehicleTypesSnapshot = await FirebaseFirestore.instance
           .collection('vehicle_types')
           .where('isActive', isEqualTo: true)
           .get();
 
       // Get country-specific enabled vehicles
+// FIRESTORE_TODO: replace with REST service. Original: final countryVehiclesSnapshot = await FirebaseFirestore.instance
       final countryVehiclesSnapshot = await FirebaseFirestore.instance
           .collection('country_vehicles')
           .where('countryCode', isEqualTo: _userCountry)
@@ -171,6 +174,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
       });
 
       // Get cities for the user's country
+// FIRESTORE_TODO: replace with REST service. Original: final citiesSnapshot = await FirebaseFirestore.instance
       final citiesSnapshot = await FirebaseFirestore.instance
           .collection('cities')
           .where('countryCode', isEqualTo: _userCountry)
@@ -241,7 +245,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
 
   // Check if phone number needs OTP verification
   bool _isPhoneVerifiedByFirebase() {
-    final currentUser = FirebaseAuth.instance.currentUser;
+    final currentUser = RestAuthService.instance.currentUser;
     if (currentUser?.phoneNumber == null || _phoneController.text.isEmpty) {
       return false;
     }

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../services/enhanced_user_service.dart';
 import '../models/enhanced_user_model.dart';
 import '../theme/app_theme.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'src/utils/firebase_shim.dart'; // Added by migration script
+// REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -31,6 +32,7 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
       if (currentUser == null) throw Exception('User not authenticated');
 
       // Get driver data from new_driver_verifications collection
+// FIRESTORE_TODO: replace with REST service. Original: final doc = await FirebaseFirestore.instance
       final doc = await FirebaseFirestore.instance
           .collection('new_driver_verifications')
           .doc(currentUser.uid)
@@ -60,6 +62,7 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
     
     // If it looks like a Firebase document ID, try to resolve it
     try {
+// FIRESTORE_TODO: replace with REST service. Original: final cityDoc = await FirebaseFirestore.instance
       final cityDoc = await FirebaseFirestore.instance
           .collection('cities')
           .doc(cityValue)
@@ -1115,6 +1118,7 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
       final downloadUrl = await uploadTask.ref.getDownloadURL();
 
       // Update Firestore with new document URL and reset status to pending
+// FIRESTORE_TODO: replace with REST service. Original: final driverRef = FirebaseFirestore.instance
       final driverRef = FirebaseFirestore.instance
           .collection('new_driver_verifications')
           .doc(currentUser.uid);
@@ -1250,6 +1254,7 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
       final downloadUrl = await uploadTask.ref.getDownloadURL();
 
       // Update Firestore with new image URL and reset status to pending
+// FIRESTORE_TODO: replace with REST service. Original: final driverRef = FirebaseFirestore.instance
       final driverRef = FirebaseFirestore.instance
           .collection('new_driver_verifications')
           .doc(currentUser.uid);

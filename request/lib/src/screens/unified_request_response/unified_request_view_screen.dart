@@ -1,1142 +1,561 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../../models/request_model.dart';
-import '../../models/enhanced_user_model.dart';
-import '../../services/enhanced_request_service.dart';
-import '../../services/enhanced_user_service.dart';
-import '../../services/messaging_service.dart';
-import '../../utils/currency_helper.dart';
-import '../messaging/conversation_screen.dart';
-import 'unified_response_create_screen.dart';
-import 'unified_request_edit_screen.dart';
-import 'view_all_responses_screen.dart';
+import '../../services/rest_request_service.dart' as rest;
+import '../../services/rest_auth_service.dart';
 
+/// UnifiedRequestViewScreen (Minimal REST Migration)
+/// Legacy Firebase-based logic removed. Displays core request info only.
 class UnifiedRequestViewScreen extends StatefulWidget {
   final String requestId;
-
   const UnifiedRequestViewScreen({super.key, required this.requestId});
-
   @override
-  State<UnifiedRequestViewScreen> createState() => _UnifiedRequestViewScreenState();
+  State<UnifiedRequestViewScreen> createState() =>
+      _UnifiedRequestViewScreenState();
 }
 
 class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
-  final EnhancedRequestService _requestService = EnhancedRequestService();
-  final EnhancedUserService _userService = EnhancedUserService();
-  final MessagingService _messagingService = MessagingService();
-  
-  RequestModel? _request;
-  List<ResponseModel> _responses = [];
-  bool _isLoading = true;
+  final rest.RestRequestService _service = rest.RestRequestService.instance;
+  rest.RequestModel? _request;
+  bool _loading = true;
   bool _isOwner = false;
-  String _requesterName = '';
-  ResponseModel? _currentUserResponse;
-  UserModel? _currentUser;
+  // Added state
+  List<rest.ResponseModel> _responses = [];
+  bool _responsesLoading = false;
+  bool _creating = false;
+  final Set<String> _updating = {};
+  final Set<String> _deleting = {};
 
   @override
   void initState() {
     super.initState();
-    _loadRequestData();
+    _load();
   }
 
-  Future<void> _loadRequestData() async {
-    setState(() {
-      _isLoading = true;
-    });
-
+  Future<void> _load() async {
+    setState(() => _loading = true);
     try {
-      // Check Firebase Auth state first
-      final firebaseUser = FirebaseAuth.instance.currentUser;
-      print('🔍 Debug Auth - Firebase User: ${firebaseUser?.uid ?? "NULL"}');
-      print('🔍 Debug Auth - Firebase User Email: ${firebaseUser?.email ?? "NULL"}');
-      print('🔍 Debug Auth - Firebase User Phone: ${firebaseUser?.phoneNumber ?? "NULL"}');
-      
-      final request = await _requestService.getRequestById(widget.requestId);
-      final responses = await _requestService.getResponsesForRequest(widget.requestId);
-      final currentUser = await _userService.getCurrentUserModel();
-      
-      // Store current user for role validation
-      _currentUser = currentUser;
-      
-      // Load requester name
-      String requesterName = 'Unknown User';
-      if (request != null) {
-        try {
-          final requesterUser = await _userService.getUserById(request.requesterId);
-          if (requesterUser != null && requesterUser.name.isNotEmpty) {
-            requesterName = requesterUser.name;
-          }
-        } catch (e) {
-          print('Error loading requester name: $e');
-        }
-      }
-      
-      // More robust owner check using both current user model and Firebase Auth
-      bool isOwner = false;
-      String currentUserId = '';
-      
-      // Try Firebase Auth first
-      if (firebaseUser?.uid != null) {
-        currentUserId = firebaseUser!.uid;
-      }
-      
-      // If Firebase Auth doesn't work, try user service
-      if (currentUserId.isEmpty && currentUser?.id != null) {
-        currentUserId = currentUser!.id;
-      }
-      
-      // Check ownership with additional safety checks
-      if (currentUserId.isNotEmpty && request?.requesterId != null) {
-        isOwner = currentUserId == request!.requesterId;
-      } else {
-        // If we can't determine the current user, assume ownership to hide respond button
-        // This is a safety measure to prevent users from responding to their own requests
-        isOwner = true;
-        print('⚠️ Warning: Could not determine current user, defaulting to owner=true for safety');
-      }
-
-      // Find current user's response if they have one
-      ResponseModel? currentUserResponse;
-      if (currentUserId.isNotEmpty) {
-        for (final response in responses) {
-          if (response.responderId == currentUserId) {
-            currentUserResponse = response;
-            break;
-          }
-        }
-      }
-
+      final r = await _service.getRequestById(widget.requestId);
+      final currentUserId = RestAuthService.instance.currentUser?.uid;
+      bool owner =
+          r != null && currentUserId != null && r.userId == currentUserId;
+      List<rest.ResponseModel> responses = [];
+      if (r != null) responses = await _service.getResponses(r.id);
       if (mounted) {
         setState(() {
-          _request = request;
+          _request = r;
+          _isOwner = owner;
           _responses = responses;
-          _isOwner = isOwner;
-          _requesterName = requesterName;
-          _currentUserResponse = currentUserResponse;
-          _isLoading = false;
+          _loading = false;
         });
-        
-        // Enhanced debug information
-        print('🔍 Debug Unified - Firebase User ID: ${firebaseUser?.uid ?? "NULL"}');
-        print('🔍 Debug Unified - Current User Model ID: ${currentUser?.id ?? "NULL"}');
-        print('🔍 Debug Unified - Final Current User ID: $currentUserId');
-        print('🔍 Debug Unified - Request Owner ID: ${request?.requesterId ?? "NULL"}');
-        print('🔍 Debug Unified - Is Owner: $isOwner');
-        print('🔍 Debug Unified - Requester Name: $requesterName');
-        print('🔍 Debug Unified - Will Show Respond Button: ${!isOwner && request != null}');
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _loading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error loading request: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+            SnackBar(content: Text('Failed to load request: $e')));
       }
     }
   }
 
-  // Check if current user can respond to this request type
-  bool _canUserRespond() {
-    if (_currentUser == null || _request == null) return false;
-    if (_isOwner) return false; // owners never respond
-    if (_currentUserResponse != null) return true; // can always edit own existing response
-
-    switch (_request!.type) {
-      case RequestType.delivery:
-        final hasDelivery = _currentUser!.hasRole(UserRole.delivery) && _currentUser!.isRoleVerified(UserRole.delivery);
-        final hasBusiness = _currentUser!.hasRole(UserRole.business) && _currentUser!.isRoleVerified(UserRole.business);
-        final can = hasDelivery || hasBusiness;
-        print('🔍 Delivery can respond? delivery=$hasDelivery business=$hasBusiness => $can');
-        return can;
-      case RequestType.ride:
-        return _currentUser!.hasRole(UserRole.driver) && _currentUser!.isRoleVerified(UserRole.driver);
-      case RequestType.item:
-      case RequestType.service:
-      case RequestType.rental:
-      case RequestType.price:
-      default:
-        return true;
-    }
-  }
-
-  String _getCannotRespondReason() {
-    if (_currentUser == null || _request == null) return 'Please log in to respond';
-    
-  // If owner, provide clearer message
-  if (_isOwner) return 'You created this request';
-
-  switch (_request!.type) {
-      case RequestType.delivery:
-        if (_currentUserResponse != null) return 'You already responded';
-        final hasDeliveryRole = _currentUser!.hasRole(UserRole.delivery);
-        final deliveryVerified = _currentUser!.isRoleVerified(UserRole.delivery);
-        final hasBusinessRole = _currentUser!.hasRole(UserRole.business);
-        final businessVerified = _currentUser!.isRoleVerified(UserRole.business);
-        if (!(hasDeliveryRole || hasBusinessRole)) {
-          return 'Register as delivery or business to respond';
-        }
-        if (!(deliveryVerified || businessVerified)) {
-          return 'Awaiting role approval';
-        }
-        break;
-      case RequestType.ride:
-        if (!_currentUser!.hasRole(UserRole.driver)) {
-          return 'Register as driver to respond';
-        }
-        if (!_currentUser!.isRoleVerified(UserRole.driver)) {
-          return 'Waiting for driver approval';
-        }
-        break;
-      case RequestType.item:
-      case RequestType.service:
-      case RequestType.rental:
-      case RequestType.price:
-      default:
-        return 'You can respond to this request';
-    }
-    return 'Cannot respond to this request';
-  }
-
-  void _navigateToEditRequest() {
+  Future<void> _reloadResponses() async {
     if (_request == null) return;
-    
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => UnifiedRequestEditScreen(request: _request!),
+    setState(() => _responsesLoading = true);
+    try {
+      final list = await _service.getResponses(_request!.id);
+      if (mounted) setState(() => _responses = list);
+    } finally {
+      if (mounted) setState(() => _responsesLoading = false);
+    }
+  }
+
+  bool get _hasUserResponded {
+    final uid = RestAuthService.instance.currentUser?.uid;
+    if (uid == null) return false;
+    return _responses.any((r) => r.userId == uid);
+  }
+
+  bool get _canRespond {
+    if (_request == null) return false;
+    if (_isOwner) return false;
+    if (_hasUserResponded) return false;
+    if (_request!.status.toLowerCase() != 'active') return false;
+    return RestAuthService.instance.currentUser != null;
+  }
+
+  void _openCreateResponseSheet() {
+    final messageController = TextEditingController();
+    final priceController = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: StatefulBuilder(builder: (ctx, setSheet) {
+            return Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [
+                      const Expanded(
+                          child: Text('New Response',
+                              style: TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.bold))),
+                      IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(ctx))
+                    ]),
+                    TextField(
+                        controller: messageController,
+                        maxLines: 4,
+                        decoration: const InputDecoration(
+                            labelText: 'Message',
+                            border: OutlineInputBorder())),
+                    const SizedBox(height: 12),
+                    TextField(
+                        controller: priceController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        decoration: const InputDecoration(
+                            labelText: 'Price (optional)',
+                            prefixIcon: Icon(Icons.attach_money))),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _creating
+                              ? null
+                              : () async {
+                                  final msg = messageController.text.trim();
+                                  if (msg.isEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                            content: Text('Message required')));
+                                    return;
+                                  }
+                                  setState(() => _creating = true);
+                                  setSheet(() => {});
+                                  final price = double.tryParse(
+                                      priceController.text.trim());
+                                  final created = await _service.createResponse(
+                                      _request!.id,
+                                      rest.CreateResponseData(
+                                          message: msg,
+                                          price: price,
+                                          currency: _request!.currency));
+                                  if (created != null) {
+                                    if (mounted) {
+                                      Navigator.pop(ctx);
+                                      await _reloadResponses();
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(const SnackBar(
+                                              content:
+                                                  Text('Response submitted')));
+                                    }
+                                  } else {
+                                    if (mounted)
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(const SnackBar(
+                                              content: Text(
+                                                  'Failed to submit response')));
+                                  }
+                                  if (mounted)
+                                    setState(() => _creating = false);
+                                },
+                          icon: _creating
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.white))
+                              : const Icon(Icons.send),
+                          label: Text(
+                              _creating ? 'Submitting...' : 'Submit Response'),
+                        )),
+                    const SizedBox(height: 12),
+                  ]),
+            );
+          })),
+    );
+  }
+
+  void _openEditResponseSheet(rest.ResponseModel response) {
+    final messageController = TextEditingController(text: response.message);
+    final priceController = TextEditingController(
+        text: response.price != null ? response.price!.toStringAsFixed(0) : '');
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: StatefulBuilder(builder: (ctx, setSheet) {
+          final isBusy = _updating.contains(response.id);
+          return Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    const Expanded(
+                        child: Text('Edit Response',
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold))),
+                    IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(ctx))
+                  ]),
+                  TextField(
+                      controller: messageController,
+                      maxLines: 4,
+                      decoration: const InputDecoration(
+                          labelText: 'Message', border: OutlineInputBorder())),
+                  const SizedBox(height: 12),
+                  TextField(
+                      controller: priceController,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                          labelText: 'Price (optional)',
+                          prefixIcon: Icon(Icons.attach_money))),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: isBusy
+                            ? null
+                            : () async {
+                                final msg = messageController.text.trim();
+                                if (msg.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text('Message required')));
+                                  return;
+                                }
+                                setState(() => _updating.add(response.id));
+                                setSheet(() => {});
+                                final priceText = priceController.text.trim();
+                                final priceVal = priceText.isEmpty
+                                    ? null
+                                    : double.tryParse(priceText);
+                                final updated = await _service
+                                    .updateResponse(_request!.id, response.id, {
+                                  'message': msg,
+                                  'price': priceVal,
+                                });
+                                if (updated != null) {
+                                  final idx = _responses
+                                      .indexWhere((r) => r.id == response.id);
+                                  if (idx != -1)
+                                    setState(() => _responses[idx] = updated);
+                                  if (mounted) Navigator.pop(ctx);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text('Response updated')));
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text(
+                                              'Failed to update response')));
+                                }
+                                if (mounted)
+                                  setState(() => _updating.remove(response.id));
+                              },
+                        icon: isBusy
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white))
+                            : const Icon(Icons.save),
+                        label: Text(isBusy ? 'Saving...' : 'Save Changes'),
+                      )),
+                  const SizedBox(height: 12),
+                ]),
+          );
+        }),
       ),
-    ).then((_) => _loadRequestData()); // Reload data when coming back
+    );
+  }
+
+  void _confirmDelete(rest.ResponseModel response) async {
+    final isBusy = _deleting.contains(response.id);
+    if (isBusy) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Response'),
+        content: const Text(
+            'Are you sure you want to delete this response? This action cannot be undone.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    setState(() => _deleting.add(response.id));
+    final success = await _service.deleteResponse(_request!.id, response.id);
+    if (success) {
+      setState(() => _responses.removeWhere((r) => r.id == response.id));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Response deleted')));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to delete response')));
+    }
+    if (mounted) setState(() => _deleting.remove(response.id));
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
+    if (_loading) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Loading...'),
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
-          elevation: 0,
-        ),
-        body: const Center(child: CircularProgressIndicator()),
-      );
+          appBar: AppBar(title: const Text('Loading...')),
+          body: const Center(child: CircularProgressIndicator()));
     }
-
     if (_request == null) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Request Not Found'),
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
-          elevation: 0,
-        ),
-        body: const Center(
-          child: Text('Request not found or has been removed.'),
-        ),
-      );
+          appBar: AppBar(title: const Text('Request')),
+          body: const Center(child: Text('Request not found.')));
     }
-
+    final r = _request!;
     return Scaffold(
       appBar: AppBar(
-        title: Text(_getTypeDisplayName(_request!.type)),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-        actions: [
-          if (_isOwner)
+          title: Text(r.title.isNotEmpty ? r.title : 'Request'),
+          actions: [
             IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: _navigateToEditRequest,
-              tooltip: 'Edit Request',
-            ),
-          if (!_isOwner &&
-              _currentUserResponse != null &&
-              FirebaseAuth.instance.currentUser != null &&
-              FirebaseAuth.instance.currentUser!.uid != _request!.requesterId &&
-              _canUserRespond())
-            IconButton(
-              icon: const Icon(Icons.edit),
-              tooltip: 'Edit Your Response',
-              onPressed: _navigateToEditResponse,
-            ),
-        ],
-      ),
-      backgroundColor: Colors.grey[50],
+                onPressed: _load,
+                icon: const Icon(Icons.refresh),
+                tooltip: 'Reload')
+          ]),
       body: RefreshIndicator(
-        onRefresh: _loadRequestData,
+        onRefresh: _load,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildRequestDetails(),
-              const SizedBox(height: 16),
-              _buildRequesterInfo(),
-              const SizedBox(height: 24),
-              _buildTypeSpecificDetails(),
-              const SizedBox(height: 24),
-              _buildResponsesSection(),
-            ],
-          ),
-        ),
-      ),
-      floatingActionButton: (_request != null &&
-              !_isOwner &&
-              _currentUserResponse == null &&
-              FirebaseAuth.instance.currentUser != null &&
-              FirebaseAuth.instance.currentUser!.uid != _request!.requesterId &&
-              _canUserRespond())
-          ? FloatingActionButton.extended(
-              onPressed: () {
-                print('🔍 Respond button pressed - IsOwner: $_isOwner');
-                print('🔍 Respond button pressed - Current User: ${FirebaseAuth.instance.currentUser?.uid}');
-                print('🔍 Respond button pressed - Request Owner: ${_request!.requesterId}');
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => UnifiedResponseCreateScreen(request: _request!),
-                  ),
-                ).then((_) => _loadRequestData());
-              },
-              icon: const Icon(Icons.reply),
-              label: const Text('Respond'),
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-            )
-          : (_request != null && !_canUserRespond())
-              ? FloatingActionButton.extended(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(_getCannotRespondReason()),
-                        backgroundColor: Colors.orange,
-                        duration: const Duration(seconds: 4),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.info_outline),
-                  label: const Text('Can\'t Respond'),
-                  backgroundColor: Colors.grey,
-                  foregroundColor: Colors.white,
-                )
-              : null,
-    );
-  }
-
-  String _getTypeDisplayName(RequestType type) {
-    switch (type) {
-      case RequestType.item:
-        return 'Item Request';
-      case RequestType.service:
-        return 'Service Request';
-      case RequestType.delivery:
-        return 'Delivery Request';
-      case RequestType.rental:
-        return 'Rental Request';
-      case RequestType.ride:
-        return 'Ride Request'; // Should not reach here due to redirect above
-      case RequestType.price:
-        return 'Price Request'; // Should not reach here due to redirect above
-    }
-  }
-
-  Widget _buildRequestDetails() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                _getTypeIcon(_request!.type),
-                color: Colors.blue,
-                size: 24,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  _request!.title,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            _request!.description,
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[700],
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Icon(Icons.location_on, color: Colors.grey[600], size: 16),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  _request!.location?.address ?? 'Location not specified',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                ),
-              ),
-            ],
-          ),
-          if (_request!.budget != null) ...[
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(Icons.account_balance_wallet, color: Colors.blue, size: 16),
-                const SizedBox(width: 4),
-                Text(
-                  'Budget: ${CurrencyHelper.instance.formatPrice(_request!.budget!)}',
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ],
-          // Display images if available
-          if (_request!.images.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Text(
-              'Images',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 120,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: _request!.images.length,
-                itemBuilder: (context, index) {
-                  return GestureDetector(
-                    onTap: () => _showFullScreenImage(index),
-                    child: Container(
-                      width: 120,
-                      margin: const EdgeInsets.only(right: 8),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          _request!.images[index],
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Colors.grey[200],
-                              child: Icon(
-                                Icons.broken_image,
-                                color: Colors.grey[400],
-                              ),
-                            );
-                          },
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return Container(
-                              color: Colors.grey[200],
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  value: loadingProgress.expectedTotalBytes != null
-                                      ? loadingProgress.cumulativeBytesLoaded /
-                                          loadingProgress.expectedTotalBytes!
-                                      : null,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Icon(Icons.access_time, color: Colors.grey[600], size: 16),
-              const SizedBox(width: 4),
-              Text(
-                'Posted ${_formatDate(_request!.createdAt)}',
-                style: TextStyle(color: Colors.grey[600], fontSize: 12),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _request!.status == RequestStatus.open ? Colors.green[50] : Colors.grey[50],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  _request!.status.name.toUpperCase(),
-                  style: TextStyle(
-                    color: _request!.status == RequestStatus.open ? Colors.green[700] : Colors.grey[700],
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  IconData _getTypeIcon(RequestType type) {
-    switch (type) {
-      case RequestType.item:
-        return Icons.shopping_bag;
-      case RequestType.service:
-        return Icons.build;
-      case RequestType.delivery:
-        return Icons.local_shipping;
-      case RequestType.rental:
-        return Icons.access_time;
-      case RequestType.ride:
-        return Icons.directions_car;
-      case RequestType.price:
-        return Icons.compare_arrows;
-    }
-  }
-
-  Widget _buildRequesterInfo() {
-    final String firstLetter = _requesterName.isNotEmpty ? _requesterName[0].toUpperCase() : 'U';
-    
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () {
-              // TODO: Navigate to user profile screen
-              print('Navigate to profile: ${_request!.requesterId}');
-            },
-            child: CircleAvatar(
-              radius: 20,
-              backgroundColor: Colors.blue[100],
-              child: Text(
-                firstLetter,
-                style: TextStyle(
-                  color: Colors.blue[700],
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _requesterName,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                  ),
-                ),
-                Row(
-                  children: [
-                    Icon(Icons.verified, color: Colors.blue, size: 14),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Verified',
-                      style: TextStyle(
-                        color: Colors.blue,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          // Only show message button if viewing someone else's request
-          if (!_isOwner) 
-            IconButton(
-              onPressed: () async {
-                try {
-                  // Create or get existing conversation
-                  final conversation = await _messagingService.createConversationFromRequest(_request!);
-                  
-                  if (mounted) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ConversationScreen(
-                          conversation: conversation,
-                          request: _request,
-                        ),
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error starting conversation: $e')),
-                    );
-                  }
-                }
-              },
-              icon: const Icon(Icons.message),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTypeSpecificDetails() {
-    switch (_request!.type) {
-      case RequestType.item:
-        return _buildItemFields();
-      case RequestType.service:
-        return _buildServiceFields();
-      case RequestType.delivery:
-        return _buildDeliveryFields();
-      case RequestType.rental:
-        return _buildRentalFields();
-      case RequestType.ride:
-        return const SizedBox(); // Should not reach here
-      case RequestType.price:
-        return const SizedBox(); // Should not reach here
-    }
-  }
-
-  Widget _buildItemFields() {
-    final itemData = _request!.itemData;
-    
-    // Debug information
-    print('🔍 Item Debug - TypeSpecificData: ${_request!.typeSpecificData}');
-    print('🔍 Item Debug - ItemData: $itemData');
-    
-    if (itemData == null) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Item Details',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-            ),
-            SizedBox(height: 12),
-            Text(
-              'No additional item details available.',
-              style: TextStyle(color: Colors.grey),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Item Details',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 12),
-          if (itemData.itemName?.isNotEmpty == true) ...[
-            Row(
-              children: [
-                Text('Item Name: ', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500)),
-                Expanded(child: Text(itemData.itemName!)),
-              ],
-            ),
-            const SizedBox(height: 8),
-          ],
-          if (itemData.category.isNotEmpty) ...[
-            Row(
-              children: [
-                Text('Category: ', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500)),
-                Expanded(child: Text(itemData.subcategory?.isNotEmpty == true ? itemData.subcategory! : itemData.category)),
-              ],
-            ),
-            const SizedBox(height: 8),
-          ],
-          if (itemData.quantity != null) ...[
-            Row(
-              children: [
-                Text('Quantity: ', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500)),
-                Text('${itemData.quantity}'),
-              ],
-            ),
-            const SizedBox(height: 8),
-          ],
-          Row(
-            children: [
-              Text('Condition: ', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500)),
-              Text(itemData.condition),
-            ],
-          ),
-          if (itemData.brand?.isNotEmpty == true) ...[
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Text('Brand: ', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500)),
-                Text(itemData.brand!),
-              ],
-            ),
-          ],
-          if (itemData.model?.isNotEmpty == true) ...[
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Text('Model: ', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500)),
-                Text(itemData.model!),
-              ],
-            ),
-          ],
-          if (itemData.specifications.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            const Text(
-              'Specifications:',
-              style: TextStyle(fontWeight: FontWeight.w500),
-            ),
-            const SizedBox(height: 4),
-            ...itemData.specifications.entries.map((entry) => 
-              Padding(
-                padding: const EdgeInsets.only(bottom: 2),
-                child: Text('• ${entry.key}: ${entry.value}'),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildServiceFields() {
-    final serviceData = _request!.serviceData;
-    if (serviceData == null) return const SizedBox();
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Service Details',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Text('Service Type: ', style: TextStyle(color: Colors.grey[600])),
-              Text(serviceData.serviceType),
-            ],
-          ),
-          if (serviceData.skillLevel != null) ...[
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Text('Skill Level: ', style: TextStyle(color: Colors.grey[600])),
-                Text(serviceData.skillLevel!.toUpperCase()),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDeliveryFields() {
-    final deliveryData = _request!.deliveryData;
-    if (deliveryData == null) return const SizedBox();
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Delivery Details',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Text('Pickup: ', style: TextStyle(color: Colors.grey[600])),
-              Expanded(child: Text(_request!.location?.address ?? 'Pickup location not specified')),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Text('Drop-off: ', style: TextStyle(color: Colors.grey[600])),
-              Expanded(child: Text(_request!.destinationLocation?.address ?? 'Dropoff location not specified')),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Text('Item Type: ', style: TextStyle(color: Colors.grey[600])),
-              Text(deliveryData.package.category ?? 'Not specified'),
-            ],
-          ),
-          if (deliveryData.package.weight > 0) ...[
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Text('Weight: ', style: TextStyle(color: Colors.grey[600])),
-                Text('${deliveryData.package.weight} kg'),
-              ],
-            ),
-          ],
-          if (deliveryData.isFragile || deliveryData.requireSignature) ...[
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Text('Special: ', style: TextStyle(color: Colors.grey[600])),
-                Text(deliveryData.isFragile ? 'Fragile' : 'Signature Required'),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRentalFields() {
-    final rentData = _request!.rentalData;
-    if (rentData == null) return const SizedBox();
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Rental Details',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Text('Item Type: ', style: TextStyle(color: Colors.grey[600])),
-              Text(rentData.itemCategory),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Text('Start Date: ', style: TextStyle(color: Colors.grey[600])),
-              Text(rentData.startDate.toString().split(' ')[0]),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Text('End Date: ', style: TextStyle(color: Colors.grey[600])),
-              Text(rentData.endDate.toString().split(' ')[0]),
-            ],
-          ),
-          if (rentData.specifications.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Text('Specifications: ', style: TextStyle(color: Colors.grey[600])),
-                Text(rentData.specifications.entries.map((e) => '${e.key}: ${e.value}').join(', ')),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildResponsesSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Response header with count
-        Row(
-          children: [
-            const Text(
-              'Responses',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.blue[50],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                '${_responses.length}',
-                style: TextStyle(
-                  color: Colors.blue[700],
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            if (_isOwner && _responses.isNotEmpty) ...[
-              const Spacer(),
-              TextButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ViewAllResponsesScreen(
-                        request: _request!,
-                      ),
-                    ),
-                  );
-                },
-                icon: Icon(Icons.visibility, size: 16, color: Colors.blue[700]),
-                label: Text(
-                  'View All',
-                  style: TextStyle(color: Colors.blue[700], fontSize: 14),
-                ),
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 12),
-        
-        // Simple response summary instead of detailed list
-        if (_responses.isEmpty)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              children: [
-                Icon(Icons.inbox_outlined, size: 48, color: Colors.grey[400]),
-                const SizedBox(height: 16),
-                Text(
-                  'No responses yet',
-                  style: TextStyle(
-                    color: Colors.grey[600], 
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _isOwner 
-                    ? 'Your request is waiting for responses' 
-                    : 'Be the first to respond!',
-                  style: TextStyle(color: Colors.grey[500], fontSize: 14),
-                ),
-              ],
-            ),
-          )
-        else
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.green[50],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.green[600], size: 24),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            _sectionCard(
+                child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '${_responses.length} Response${_responses.length == 1 ? '' : 's'} Received',
+                  Text(r.title,
+                      style: const TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  Text(r.description,
+                      style: TextStyle(color: Colors.grey[700], height: 1.4)),
+                  const SizedBox(height: 16),
+                  Wrap(spacing: 8, runSpacing: 8, children: [
+                    _chip(Icons.person, r.userName ?? 'User'),
+                    _chip(Icons.category, r.categoryName ?? r.categoryId),
+                    if (r.cityName != null)
+                      _chip(Icons.location_on, r.cityName!),
+                    _chip(Icons.flag, r.countryCode),
+                    _chip(Icons.access_time, _relativeTime(r.createdAt)),
+                    _chip(Icons.info_outline, r.status.toUpperCase()),
+                  ]),
+                  if (r.budgetMin != null || r.budgetMax != null) ...[
+                    const SizedBox(height: 20),
+                    Row(children: [
+                      const Icon(Icons.account_balance_wallet,
+                          size: 18, color: Colors.blue),
+                      const SizedBox(width: 6),
+                      Text(_formatBudget(r),
+                          style: const TextStyle(fontWeight: FontWeight.w600)),
+                    ])
+                  ],
+                  if (r.metadata != null && r.metadata!.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    const Text('Extra Details',
                         style: TextStyle(
-                          color: Colors.green[800],
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        _isOwner 
-                          ? 'Tap "View All" to see response details'
-                          : 'Thank you for your interest in this request',
-                        style: TextStyle(color: Colors.green[700], fontSize: 14),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-
-  void _showFullScreenImage(int initialIndex) {
-    showDialog(
-      context: context,
-      barrierColor: Colors.black87,
-      builder: (context) => Dialog.fullscreen(
-        backgroundColor: Colors.black,
-        child: Stack(
-          children: [
-            PageView.builder(
-              controller: PageController(initialPage: initialIndex),
-              itemCount: _request!.images.length,
-              itemBuilder: (context, index) {
-                return Center(
-                  child: InteractiveViewer(
-                    child: Image.network(
-                      _request!.images[index],
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.broken_image,
-                              color: Colors.grey[400],
-                              size: 64,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Failed to load image',
-                              style: TextStyle(color: Colors.grey[400]),
-                            ),
-                          ],
-                        );
-                      },
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Center(
-                          child: CircularProgressIndicator(
-                            value: loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded /
-                                    loadingProgress.expectedTotalBytes!
-                                : null,
-                            color: Colors.white,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                );
-              },
-            ),
-            Positioned(
-              top: 50,
-              right: 20,
-              child: IconButton(
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(
-                  Icons.close,
-                  color: Colors.white,
-                  size: 30,
-                ),
-              ),
-            ),
-            if (_request!.images.length > 1)
-              Positioned(
-                bottom: 50,
-                left: 0,
-                right: 0,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(
-                    _request!.images.length,
-                    (index) => Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: index == initialIndex
-                            ? Colors.white
-                            : Colors.white.withOpacity(0.3),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-          ],
+                            fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    ...r.metadata!.entries.take(8).map((e) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('${e.key}: ',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w500)),
+                                Expanded(child: Text(e.value.toString())),
+                              ]),
+                        )),
+                    if (r.metadata!.length > 8)
+                      Text('+${r.metadata!.length - 8} more entries',
+                          style:
+                              TextStyle(color: Colors.grey[600], fontSize: 12)),
+                  ],
+                  if (_isOwner) ...[
+                    const SizedBox(height: 24),
+                    const Text('Owner features (edit / responses) coming soon',
+                        style: TextStyle(
+                            fontSize: 12, fontStyle: FontStyle.italic)),
+                  ],
+                ])),
+            const SizedBox(height: 20),
+            _responsesSection(),
+          ]),
         ),
       ),
+      floatingActionButton: _canRespond
+          ? FloatingActionButton.extended(
+              onPressed: _openCreateResponseSheet,
+              icon: const Icon(Icons.reply),
+              label: const Text('Respond'))
+          : null,
     );
   }
 
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
-    
-    if (difference.inDays > 0) {
-      return '${difference.inDays}d ago';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m ago';
-    } else {
-      return 'Just now';
-    }
+  Widget _sectionCard({required Widget child}) => Card(
+        elevation: 1,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(padding: const EdgeInsets.all(20), child: child),
+      );
+
+  Widget _chip(IconData icon, String label) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+            color: Colors.grey[100], borderRadius: BorderRadius.circular(20)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 14, color: Colors.grey[700]),
+          const SizedBox(width: 4),
+          Text(label, style: const TextStyle(fontSize: 12)),
+        ]),
+      );
+
+  String _relativeTime(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1) return 'just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
   }
 
-  void _navigateToEditResponse() {
-    if (_currentUserResponse == null) return;
-    
-    // Navigate to unified response edit screen
-    Navigator.pushNamed(
-      context,
-      '/edit-response',
-      arguments: {
-        'response': _currentUserResponse,
-        'request': _request,
-      },
-    ).then((_) => _loadRequestData());
+  String _formatBudget(rest.RequestModel r) {
+    final cur = r.currency ?? '';
+    if (r.budgetMin == null && r.budgetMax == null) return 'No budget';
+    if (r.budgetMin != null && r.budgetMax != null) {
+      if (r.budgetMin == r.budgetMax)
+        return '$cur${r.budgetMin!.toStringAsFixed(0)}';
+      return '$cur${r.budgetMin!.toStringAsFixed(0)}-${r.budgetMax!.toStringAsFixed(0)}';
+    }
+    if (r.budgetMin != null)
+      return 'From $cur${r.budgetMin!.toStringAsFixed(0)}';
+    return 'Up to $cur${r.budgetMax!.toStringAsFixed(0)}';
+  }
+
+  Widget _responsesSection() {
+    if (_responsesLoading)
+      return _sectionCard(
+          child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(child: CircularProgressIndicator())));
+    return _sectionCard(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        const Text('Responses',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(width: 8),
+        if (_responses.isNotEmpty)
+          Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(12)),
+              child: Text(_responses.length.toString(),
+                  style: TextStyle(
+                      color: Colors.blue[700],
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500))),
+        const Spacer(),
+        IconButton(
+            onPressed: _reloadResponses,
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh responses')
+      ]),
+      const SizedBox(height: 8),
+      if (_responses.isEmpty)
+        Text(_canRespond ? 'Be the first to respond.' : 'No responses yet.',
+            style: TextStyle(color: Colors.grey[600]))
+      else
+        ..._responses.take(5).map(_responseTile),
+      if (_responses.length > 5)
+        Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text('+${_responses.length - 5} more (pagination coming)',
+                style: TextStyle(color: Colors.grey[600], fontSize: 12)))
+    ]));
+  }
+
+  Widget _responseTile(rest.ResponseModel r) {
+    final myUid = RestAuthService.instance.currentUser?.uid;
+    final isMine = myUid != null && r.userId == myUid;
+    final busy = _updating.contains(r.id) || _deleting.contains(r.id);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isMine ? Colors.blue[50] : Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border:
+            Border.all(color: (isMine ? Colors.blue[100] : Colors.grey[200])!),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Icon(isMine ? Icons.person_pin : Icons.person,
+              size: 16, color: Colors.grey[600]),
+          const SizedBox(width: 4),
+          Expanded(
+              child: Text(r.userName ?? 'User ${r.userId}',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: isMine ? Colors.blue[800] : null))),
+          if (busy)
+            const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2)),
+          Text(_relativeTime(r.createdAt),
+              style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+          if (isMine && !busy)
+            PopupMenuButton<String>(
+              onSelected: (val) {
+                if (val == 'edit')
+                  _openEditResponseSheet(r);
+                else if (val == 'delete') _confirmDelete(r);
+              },
+              itemBuilder: (ctx) => [
+                const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                const PopupMenuItem(value: 'delete', child: Text('Delete')),
+              ],
+            ),
+        ]),
+        const SizedBox(height: 6),
+        Text(r.message, style: const TextStyle(fontSize: 14)),
+        if (r.price != null) ...[
+          const SizedBox(height: 6),
+          Row(children: [
+            const Icon(Icons.attach_money, size: 16, color: Colors.green),
+            Text(
+                '${r.currency ?? _request?.currency ?? ''}${r.price!.toStringAsFixed(0)}',
+                style: const TextStyle(fontWeight: FontWeight.w600))
+          ])
+        ]
+      ]),
+    );
   }
 }

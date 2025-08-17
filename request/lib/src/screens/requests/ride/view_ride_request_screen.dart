@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'src/utils/firebase_shim.dart'; // Added by migration script
+// REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
+// REMOVED_FB_IMPORT: import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:math' as math;
 import '../../../models/request_model.dart';
@@ -51,7 +52,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
 
     try {
       // Check Firebase Auth state first
-      final firebaseUser = FirebaseAuth.instance.currentUser;
+      final firebaseUser = RestAuthService.instance.currentUser;
       print('🔍 Debug Ride Auth - Firebase User: ${firebaseUser?.uid ?? "NULL"}');
       print('🔍 Debug Ride Auth - Firebase User Email: ${firebaseUser?.email ?? "NULL"}');
       print('🔍 Debug Ride Auth - Firebase User Phone: ${firebaseUser?.phoneNumber ?? "NULL"}');
@@ -151,14 +152,14 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   }
 
   bool _hasUserResponded() {
-    final currentUser = FirebaseAuth.instance.currentUser;
+    final currentUser = RestAuthService.instance.currentUser;
     if (currentUser == null) return false;
 
     return _responses.any((response) => response.responderId == currentUser.uid);
   }
 
   ResponseModel? _getUserResponse() {
-    final currentUser = FirebaseAuth.instance.currentUser;
+    final currentUser = RestAuthService.instance.currentUser;
     if (currentUser == null) return null;
 
     try {

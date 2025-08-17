@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/enhanced_user_model.dart';
 import '../services/enhanced_user_service.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'src/utils/firebase_shim.dart'; // Added by migration script
+// REMOVED_FB_IMPORT: import 'package:firebase_auth/firebase_auth.dart';
 
 class VerificationStatusScreen extends StatefulWidget {
   const VerificationStatusScreen({Key? key}) : super(key: key);
@@ -23,7 +24,7 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
 
   Future<void> _loadUserData() async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
+      final user = RestAuthService.instance.currentUser;
       if (user != null) {
         final userModel = await _userService.getUserById(user.uid);
         setState(() {
