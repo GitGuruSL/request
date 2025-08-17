@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const dbService = require('./database');
 const emailService = require('./email');
+const smsService = require('./sms');
 
 class AuthService {
     constructor() {
@@ -248,11 +249,11 @@ class AuthService {
     /**
      * Send OTP for phone verification
      */
-    async sendPhoneOTP(phone) {
+    async sendPhoneOTP(phone, countryCode = 'LK') {
         const otp = this.generateOTP();
         const expiresAt = new Date(Date.now() + this.otpExpiry);
 
-                await dbService.query(`CREATE TABLE IF NOT EXISTS phone_otp_verifications (
+        await dbService.query(`CREATE TABLE IF NOT EXISTS phone_otp_verifications (
                     phone VARCHAR(32) PRIMARY KEY,
                     otp VARCHAR(6) NOT NULL,
                     expires_at TIMESTAMPTZ NOT NULL,
@@ -261,11 +262,10 @@ class AuthService {
                     verified BOOLEAN NOT NULL DEFAULT FALSE,
                     verified_at TIMESTAMPTZ
                 )`);
-    await dbService.query(`ALTER TABLE phone_otp_verifications ADD COLUMN IF NOT EXISTS verified BOOLEAN NOT NULL DEFAULT FALSE`);
-    await dbService.query(`ALTER TABLE phone_otp_verifications ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ`);
+        await dbService.query(`ALTER TABLE phone_otp_verifications ADD COLUMN IF NOT EXISTS verified BOOLEAN NOT NULL DEFAULT FALSE`);
+        await dbService.query(`ALTER TABLE phone_otp_verifications ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ`);
 
-                // Store OTP (manual UPSERT)
-                await dbService.query(`
+        await dbService.query(`
                     WITH updated AS (
                         UPDATE phone_otp_verifications
                             SET otp = $2, expires_at = $3, created_at = $4, attempts = 0, verified = FALSE
@@ -277,10 +277,18 @@ class AuthService {
                     WHERE NOT EXISTS (SELECT 1 FROM updated);
                 `, [phone, otp, expiresAt, new Date()]);
 
-        // TODO: Send SMS via your SMS service
-        console.log(`Phone OTP for ${phone}: ${otp}`);
-
-        return { message: 'OTP sent to phone', otpSent: true };
+        if (!countryCode) {
+            if (phone.startsWith('+94')) countryCode = 'LK';
+        }
+        let smsMeta;
+        try {
+            smsMeta = await smsService.sendOTP({ phone, otp, countryCode });
+        } catch (e) {
+            console.warn('[SMS] send failed, fallback dev log:', e.message);
+            console.log(`[SMS][FALLBACK-ERROR] OTP for ${phone}: ${otp}`);
+            smsMeta = { success: false, error: e.message, provider: 'dev', fallback: true };
+        }
+        return { message: 'OTP sent to phone', otpSent: true, channel: 'sms', sms: smsMeta };
     }
 
     /**

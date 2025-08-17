@@ -120,7 +120,7 @@ router.post('/send-email-otp', async (req, res) => {
  */
 router.post('/send-phone-otp', async (req, res) => {
     try {
-        const { phone } = req.body;
+        const { phone, countryCode } = req.body;
 
         if (!phone) {
             return res.status(400).json({ 
@@ -128,11 +128,13 @@ router.post('/send-phone-otp', async (req, res) => {
             });
         }
 
-        const result = await authService.sendPhoneOTP(phone);
+        const result = await authService.sendPhoneOTP(phone, countryCode);
 
         res.json({
             success: true,
-            message: result.message
+            message: result.message,
+            channel: result.channel,
+            sms: result.sms
         });
     } catch (error) {
         console.error('Send phone OTP error:', error);

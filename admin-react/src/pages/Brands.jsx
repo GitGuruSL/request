@@ -32,18 +32,7 @@ import {
   Business,
   Search
 } from '@mui/icons-material';
-import {
-  collection,
-  getDocs,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
-  serverTimestamp,
-  query,
-  orderBy
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+import api from '../services/apiClient';
 import useCountryFilter from '../hooks/useCountryFilter';
 
 const Brands = () => {
@@ -126,19 +115,19 @@ const Brands = () => {
 
   const handleSave = async () => {
     try {
-      const brandData = {
+      const brandPayload = {
         ...formData,
-        updatedAt: serverTimestamp(),
-        updatedBy: adminData.email
+        updatedBy: adminData?.email
       };
 
       if (editingBrand) {
-        await updateDoc(doc(db, 'brands', editingBrand), brandData);
+        await api.put(`/brands/${editingBrand}`, brandPayload);
         console.log('Brand updated successfully');
       } else {
-        brandData.createdAt = serverTimestamp();
-        brandData.createdBy = adminData.email;
-        await addDoc(collection(db, 'brands'), brandData);
+        await api.post('/brands', {
+          ...brandPayload,
+          createdBy: adminData?.email
+        });
         console.log('Brand created successfully');
       }
 
@@ -146,32 +135,32 @@ const Brands = () => {
       loadBrands();
     } catch (error) {
       console.error('Error saving brand:', error);
-      alert('Error saving brand: ' + error.message);
+      alert('Error saving brand: ' + (error.response?.data?.message || error.message));
     }
   };
 
   const handleDelete = async (brandId, brandName) => {
     if (window.confirm(`Are you sure you want to delete "${brandName}"?`)) {
       try {
-        await deleteDoc(doc(db, 'brands', brandId));
+        await api.delete(`/brands/${brandId}`);
         loadBrands();
       } catch (error) {
         console.error('Error deleting brand:', error);
-        alert('Error deleting brand: ' + error.message);
+        alert('Error deleting brand: ' + (error.response?.data?.message || error.message));
       }
     }
   };
 
   const toggleBrandStatus = async (brand) => {
     try {
-      await updateDoc(doc(db, 'brands', brand.id), {
+      await api.put(`/brands/${brand.id}/status`, {
         isActive: !brand.isActive,
-        updatedAt: serverTimestamp(),
-        updatedBy: adminData.email
+        updatedBy: adminData?.email
       });
       loadBrands();
     } catch (error) {
       console.error('Error updating brand status:', error);
+      alert('Error updating status: ' + (error.response?.data?.message || error.message));
     }
   };
 

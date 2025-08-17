@@ -1,5 +1,4 @@
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import api from './apiClient';
 
 /**
  * Centralized Country-Based Data Filtering Service
@@ -17,27 +16,13 @@ export class CountryDataService {
    * @param {Array} additionalFilters - Additional query filters
    * @returns {Query} Firestore query with country filtering applied
    */
-  getCountryFilteredQuery(collectionName, adminData, additionalFilters = []) {
-    let baseQuery = collection(db, collectionName);
-
-    // Apply country filter for country admins
+  getCountryFilteredQuery(collectionName, adminData) {
+    // For REST we just build query params. Keeping method for backward compatibility.
+    const params = {};
     if (adminData?.role === 'country_admin' && adminData?.country) {
-      // Different collections use different field names for country
-      let countryField = 'country'; // default
-      
-      if (collectionName === 'cities') {
-        countryField = 'countryCode';
-      }
-      
-      baseQuery = query(baseQuery, where(countryField, '==', adminData.country));
+      params.country = adminData.country;
     }
-
-    // Apply additional filters
-    if (additionalFilters.length > 0) {
-      baseQuery = query(baseQuery, ...additionalFilters);
-    }
-
-    return baseQuery;
+    return params;
   }
 
   /**
@@ -47,35 +32,29 @@ export class CountryDataService {
    * @param {Array} additionalFilters - Additional filters
    * @returns {Promise<Array>} Filtered documents
    */
-  async getFilteredData(collectionName, adminData, additionalFilters = []) {
+  async getFilteredData(collectionName, adminData, params = {}) {
     try {
-      // Global collections that don't need country filtering
-      const globalCollections = [
-        'master_products',
-        'categories', 
-        'subcategories',
-        'brands',
-        'vehicle_types',
-        'variables',
-        'product_variables',
-        'custom_product_variables'
-      ];
-
-      let filteredQuery;
-      
-      if (globalCollections.includes(collectionName)) {
-        // For global collections, don't apply country filter
-        filteredQuery = collection(db, collectionName);
-        if (additionalFilters.length > 0) {
-          filteredQuery = query(filteredQuery, ...additionalFilters);
-        }
-      } else {
-        // For country-specific collections, apply country filter
-        filteredQuery = this.getCountryFilteredQuery(collectionName, adminData, additionalFilters);
-      }
-      
-      const snapshot = await getDocs(filteredQuery);
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const countryParams = this.getCountryFilteredQuery(collectionName, adminData);
+      const queryParams = { ...countryParams, ...params };
+      const endpointMap = {
+        categories: '/categories',
+        subcategories: '/subcategories',
+        brands: '/brands',
+        vehicles: '/vehicles',
+        vehicle_types: '/vehicle-types',
+        variables: '/variables',
+        requests: '/requests',
+        responses: '/responses',
+        users: '/users',
+        admin_users: '/admin-users',
+        cities: '/cities',
+        price_listings: '/price-listings'
+      };
+      const path = endpointMap[collectionName] || `/${collectionName}`;
+      const res = await api.get(path, { params: queryParams });
+      // Assume API returns { data: [...] } or array directly
+      const data = Array.isArray(res.data) ? res.data : (res.data.data || []);
+      return data;
     } catch (error) {
       console.error(`Error fetching filtered data from ${collectionName}:`, error);
       throw error;
@@ -106,14 +85,14 @@ export class CountryDataService {
    * Get businesses filtered by country
    */
   async getBusinesses(adminData, additionalFilters = []) {
-    return this.getFilteredData('new_business_verifications', adminData, additionalFilters);
+  return this.getFilteredData('businesses', adminData, additionalFilters);
   }
 
   /**
    * Get drivers filtered by country
    */
   async getDrivers(adminData, additionalFilters = []) {
-    return this.getFilteredData('driver_verification', adminData, additionalFilters);
+  return this.getFilteredData('drivers', adminData, additionalFilters);
   }
 
   /**
@@ -134,7 +113,7 @@ export class CountryDataService {
    * Get price listings filtered by country
    */
   async getPriceListings(adminData, additionalFilters = []) {
-    return this.getFilteredData('price_listings', adminData, additionalFilters);
+  return this.getFilteredData('price_listings', adminData, additionalFilters);
   }
 
   /**

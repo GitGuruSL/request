@@ -1,26 +1,22 @@
 import { useAuth } from '../contexts/AuthContext';
-import { db } from '../firebase/config';
-import { doc, updateDoc } from 'firebase/firestore';
 import { Button, Card, CardContent, Typography, Box, Alert } from '@mui/material';
 import { useState } from 'react';
+import authService from '../services/authService';
 
 const DebugAuth = () => {
-  const { user, adminData, userRole, userCountry } = useAuth();
+  const { user, userRole, userCountry } = useAuth();
   const [fixing, setFixing] = useState(false);
   const [message, setMessage] = useState('');
 
   const fixSuperAdminUID = async () => {
     setFixing(true);
     try {
+      // Placeholder: In Postgres backend, this would call an admin endpoint to correct role mapping.
       if (user && user.email === 'superadmin@request.lk') {
-        // Update the document ID 6ZlVBdijVfXpOgEp83E5AnHOUaH2 with the correct UID
-        const adminDocRef = doc(db, 'admin_users', '6ZlVBdijVfXpOgEp83E5AnHOUaH2');
-        
-        await updateDoc(adminDocRef, {
-          uid: user.uid
-        });
-        
-        setMessage('✅ Super Admin UID fixed! Please refresh the page.');
+        // Example: await api.post('/admin/fix-super-admin', { userId: user.id });
+        setMessage('✅ (Simulated) Super Admin role fix executed. Refresh to re-check.');
+      } else {
+        setMessage('No action taken. Not superadmin@request.lk');
       }
     } catch (error) {
       setMessage('❌ Error: ' + error.message);
@@ -37,15 +33,11 @@ const DebugAuth = () => {
           </Typography>
           
           <Typography variant="body2" paragraph>
-            <strong>Firebase User UID:</strong> {user?.uid || 'Not logged in'}
+            <strong>User ID:</strong> {user?.id || 'Not logged in'}
           </Typography>
-          
+
           <Typography variant="body2" paragraph>
-            <strong>Firebase User Email:</strong> {user?.email || 'Not logged in'}
-          </Typography>
-          
-          <Typography variant="body2" paragraph>
-            <strong>Admin Data Found:</strong> {adminData ? 'Yes' : 'No'}
+            <strong>User Email:</strong> {user?.email || 'Not logged in'}
           </Typography>
           
           <Typography variant="body2" paragraph>
@@ -57,14 +49,13 @@ const DebugAuth = () => {
           </Typography>
           
           <Typography variant="body2" paragraph>
-            <strong>Admin Data:</strong> {JSON.stringify(adminData, null, 2)}
+            <strong>User Data:</strong> {JSON.stringify(user, null, 2)}
           </Typography>
           
-          {user?.email === 'superadmin@request.lk' && userRole !== 'super_admin' && (
+      {user?.email === 'superadmin@request.lk' && userRole !== 'super_admin' && (
             <Box sx={{ mt: 2 }}>
               <Alert severity="warning" sx={{ mb: 2 }}>
-                Issue detected: You're logged in as superadmin@request.lk but the system shows role as "{userRole}". 
-                This means the UID mapping is broken.
+        Issue detected: superadmin@request.lk not recognized as super_admin. Role mapping may need correction.
               </Alert>
               
               <Button 
@@ -73,7 +64,7 @@ const DebugAuth = () => {
                 onClick={fixSuperAdminUID}
                 disabled={fixing}
               >
-                {fixing ? 'Fixing...' : '🔧 Fix Super Admin UID'}
+        {fixing ? 'Fixing...' : '🔧 Simulate Role Fix'}
               </Button>
             </Box>
           )}

@@ -31,8 +31,7 @@ import {
   Settings,
   TuneRounded
 } from '@mui/icons-material';
-import { collection, addDoc, updateDoc, doc } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import api from '../services/apiClient';
 import useCountryFilter from '../hooks/useCountryFilter.jsx';
 import { DataLookupService } from '../services/DataLookupService.js';
 
@@ -59,10 +58,8 @@ const CountryVariableTypeManagement = () => {
       setError(null);
 
       // Get all variable types (global data)
-      const allVariableTypes = await getFilteredData('custom_product_variables', adminData) || [];
-      
-      // Get country-specific variable type activations
-      const countryActivations = await getFilteredData('country_variable_types', adminData) || [];
+  const allVariableTypes = await getFilteredData('custom_product_variables', adminData) || [];
+  const countryActivations = await getFilteredData('country_variable_types', adminData) || [];
       
       setVariableTypes(allVariableTypes || []);
       setCountryVariableTypes(countryActivations);
@@ -103,37 +100,21 @@ const CountryVariableTypeManagement = () => {
       const newStatus = !currentStatus;
 
       // Find existing record or create new one
-      const existingRecord = countryVariableTypes.find(
-        cvt => cvt.variableTypeId === variableTypeId && cvt.country === userCountry
-      );
-
-      const updateData = {
-        variableTypeId,
-        variableTypeName,
+      const existingRecord = countryVariableTypes.find(cvt => cvt.variableTypeId === variableTypeId && cvt.country === userCountry);
+      const payload = {
+        variable_type_id: variableTypeId,
+        variable_type_name: variableTypeName,
         country: userCountry,
-        countryName: getCountryDisplayName(userCountry),
-        isActive: newStatus,
-        updatedAt: new Date(),
-        updatedBy: adminData.uid,
-        updatedByName: adminData.displayName || adminData.email
+        country_name: getCountryDisplayName(userCountry),
+        is_active: newStatus
       };
-
       if (existingRecord) {
-        // Update existing record
-        await updateDoc(doc(db, 'country_variable_types', existingRecord.id), updateData);
-        
-        setCountryVariableTypes(prev => prev.map(cvt => 
-          cvt.id === existingRecord.id ? { ...cvt, ...updateData } : cvt
-        ));
+        await api.put(`/country-variable-types/${existingRecord.id}`, payload);
+        setCountryVariableTypes(prev => prev.map(cvt => cvt.id === existingRecord.id ? { ...cvt, variableTypeId, variableTypeName, country: userCountry, isActive: newStatus } : cvt));
       } else {
-        // Create new record
-        updateData.createdAt = new Date();
-        updateData.createdBy = adminData.uid;
-        updateData.createdByName = adminData.displayName || adminData.email;
-        
-        const docRef = await addDoc(collection(db, 'country_variable_types'), updateData);
-        
-        setCountryVariableTypes(prev => [...prev, { id: docRef.id, ...updateData }]);
+        const res = await api.post('/country-variable-types', payload);
+        const newId = res.data?.data?.id || res.data?.id;
+        setCountryVariableTypes(prev => [...prev, { id: newId, variableTypeId, variableTypeName, country: userCountry, isActive: newStatus }]);
       }
 
       console.log(`🔄 Toggled variable type ${variableTypeName} to ${newStatus ? 'active' : 'inactive'} in ${userCountry}`);

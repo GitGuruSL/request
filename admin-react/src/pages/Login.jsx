@@ -12,7 +12,7 @@ import {
   IconButton
 } from '@mui/material';
 import { Visibility, VisibilityOff, AdminPanelSettings } from '@mui/icons-material';
-import { signInAdmin } from '../firebase/auth';
+import authService from '../services/authService';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -28,7 +28,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      await signInAdmin(email, password);
+  await authService.login({ email, password });
       navigate('/');
     } catch (error) {
       setError(error.message);

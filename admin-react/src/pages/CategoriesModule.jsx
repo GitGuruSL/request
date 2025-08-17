@@ -45,15 +45,7 @@ import {
   Folder,
   FolderOpen
 } from '@mui/icons-material';
-import { 
-  collection, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  serverTimestamp 
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+import api from '../services/apiClient';
 import useCountryFilter from '../hooks/useCountryFilter.jsx';
 
 const CategoriesModule = () => {
@@ -171,21 +163,19 @@ const CategoriesModule = () => {
     try {
       setOperationLoading(true);
       
-      const categoryData = {
+      const categoryPayload = {
         name: formData.name,
-        category: formData.name, // Store in both fields for compatibility
+        category: formData.name,
         description: formData.description,
         status: formData.status,
         type: formData.type,
         isActive: formData.status === 'active',
-        country: formData.country,
-        updatedAt: serverTimestamp()
+        country: formData.country || undefined
       };
 
       if (selectedCategory) {
-        // Update existing category
-        await updateDoc(doc(db, 'categories', selectedCategory.id), {
-          ...categoryData,
+        await api.put(`/categories/${selectedCategory.id}`, {
+          ...categoryPayload,
           updatedBy: adminData?.email || 'admin'
         });
         setSnackbar({
@@ -194,10 +184,8 @@ const CategoriesModule = () => {
           severity: 'success'
         });
       } else {
-        // Add new category
-        await addDoc(collection(db, 'categories'), {
-          ...categoryData,
-          createdAt: serverTimestamp(),
+        await api.post('/categories', {
+          ...categoryPayload,
           createdBy: adminData?.email || 'admin'
         });
         setSnackbar({
@@ -237,7 +225,7 @@ const CategoriesModule = () => {
         return;
       }
 
-      await deleteDoc(doc(db, 'categories', selectedCategory.id));
+  await api.delete(`/categories/${selectedCategory.id}`);
       setSnackbar({
         open: true,
         message: 'Category deleted successfully!',

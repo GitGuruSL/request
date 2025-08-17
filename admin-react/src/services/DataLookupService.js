@@ -1,5 +1,4 @@
-import { doc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import api from './apiClient';
 
 // Cache for user data to avoid repeated fetches
 const userCache = new Map();
@@ -16,9 +15,8 @@ export class DataLookupService {
     }
 
     try {
-      const userDoc = await getDoc(doc(db, 'users', userId));
-      const userData = userDoc.exists() ? { id: userDoc.id, ...userDoc.data() } : null;
-      
+      const res = await api.get(`/users/${userId}`);
+      const userData = res.data?.data || res.data;
       userCache.set(userId, userData);
       return userData;
     } catch (error) {
@@ -36,9 +34,8 @@ export class DataLookupService {
     }
 
     try {
-      const productDoc = await getDoc(doc(db, 'products', productId));
-      const productData = productDoc.exists() ? { id: productDoc.id, ...productDoc.data() } : null;
-      
+      const res = await api.get(`/products/${productId}`);
+      const productData = res.data?.data || res.data;
       productCache.set(productId, productData);
       return productData;
     } catch (error) {
@@ -56,9 +53,8 @@ export class DataLookupService {
     }
 
     try {
-      const businessDoc = await getDoc(doc(db, 'businesses', businessId));
-      const businessData = businessDoc.exists() ? { id: businessDoc.id, ...businessDoc.data() } : null;
-      
+      const res = await api.get(`/businesses/${businessId}`);
+      const businessData = res.data?.data || res.data;
       businessCache.set(businessId, businessData);
       return businessData;
     } catch (error) {
@@ -132,11 +128,9 @@ export class DataLookupService {
   // Get all products
   static async getAllProducts() {
     try {
-      const productsSnapshot = await getDocs(collection(db, 'master_products'));
-      return productsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const res = await api.get('/products');
+      const data = Array.isArray(res.data) ? res.data : (res.data.data || []);
+      return data;
     } catch (error) {
       console.error('Error fetching all products:', error);
       return [];
@@ -146,11 +140,9 @@ export class DataLookupService {
   // Get all categories
   static async getAllCategories() {
     try {
-      const categoriesSnapshot = await getDocs(collection(db, 'categories'));
-      return categoriesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const res = await api.get('/categories');
+      const data = Array.isArray(res.data) ? res.data : (res.data.data || []);
+      return data;
     } catch (error) {
       console.error('Error fetching all categories:', error);
       return [];
@@ -160,11 +152,9 @@ export class DataLookupService {
   // Get all subcategories
   static async getAllSubcategories() {
     try {
-      const subcategoriesSnapshot = await getDocs(collection(db, 'subcategories'));
-      return subcategoriesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const res = await api.get('/subcategories');
+      const data = Array.isArray(res.data) ? res.data : (res.data.data || []);
+      return data;
     } catch (error) {
       console.error('Error fetching all subcategories:', error);
       return [];
@@ -174,11 +164,9 @@ export class DataLookupService {
   // Get all brands
   static async getAllBrands() {
     try {
-      const brandsSnapshot = await getDocs(collection(db, 'brands'));
-      return brandsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const res = await api.get('/brands');
+      const data = Array.isArray(res.data) ? res.data : (res.data.data || []);
+      return data;
     } catch (error) {
       console.error('Error fetching all brands:', error);
       return [];
@@ -188,11 +176,9 @@ export class DataLookupService {
   // Get all variable types
   static async getAllVariableTypes() {
     try {
-      const variableTypesSnapshot = await getDocs(collection(db, 'custom_product_variables'));
-      return variableTypesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const res = await api.get('/custom-product-variables');
+      const data = Array.isArray(res.data) ? res.data : (res.data.data || []);
+      return data;
     } catch (error) {
       console.error('Error fetching all variable types:', error);
       return [];
