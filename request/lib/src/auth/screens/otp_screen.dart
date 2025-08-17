@@ -89,17 +89,33 @@ class _OTPScreenState extends State<OTPScreen> {
       );
 
       if (result.success) {
-        // Navigate to profile completion for new users
-        Navigator.pushReplacementNamed(
-          context,
-          '/profile-completion',
-          arguments: {
-            'emailOrPhone': widget.emailOrPhone,
-            'isEmail': widget.isEmail,
-            'countryCode': widget.countryCode,
-            'otpToken': _otpToken,
-          },
-        );
+        // For brand new users we should collect a password next (registration not complete yet)
+        if (widget.isNewUser) {
+          // New user: proceed to profile completion flow after verification
+          Navigator.pushReplacementNamed(
+            context,
+            '/profile',
+            arguments: {
+              'isNewUser': true,
+              'emailOrPhone': widget.emailOrPhone,
+              'isEmail': widget.isEmail,
+              'countryCode': widget.countryCode,
+              'otpToken': _otpToken,
+            },
+          );
+        } else {
+          // Existing user verifying contact -> go to profile/dashboard
+          Navigator.pushReplacementNamed(
+            context,
+            '/profile',
+            arguments: {
+              'emailOrPhone': widget.emailOrPhone,
+              'isEmail': widget.isEmail,
+              'countryCode': widget.countryCode,
+              'otpToken': _otpToken,
+            },
+          );
+        }
       } else {
         _showMessage(result.error ?? 'Invalid OTP');
       }

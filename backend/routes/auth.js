@@ -162,10 +162,15 @@ router.post('/verify-email-otp', async (req, res) => {
         }
 
         const result = await authService.verifyEmailOTP(email, otp);
-
         res.json({
             success: true,
-            message: result.message
+            message: result.message,
+            data: {
+                verified: result.verified,
+                user: result.user,
+                token: result.token,
+                refreshToken: result.refreshToken
+            }
         });
     } catch (error) {
         console.error('Verify email OTP error:', error);
@@ -191,10 +196,15 @@ router.post('/verify-phone-otp', async (req, res) => {
         }
 
         const result = await authService.verifyPhoneOTP(phone, otp);
-
         res.json({
             success: true,
-            message: result.message
+            message: result.message,
+            data: {
+                verified: result.verified,
+                user: result.user,
+                token: result.token,
+                refreshToken: result.refreshToken
+            }
         });
     } catch (error) {
         console.error('Verify phone OTP error:', error);

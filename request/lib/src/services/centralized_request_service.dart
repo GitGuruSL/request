@@ -32,8 +32,11 @@ class CentralizedRequestService {
         typeSpecific['subcategory_id'],
       ]);
 
-      if (categoryId == null || categoryId.isEmpty) {
-        throw Exception('Category ID is required to create a request');
+      // Treat synthetic fallback IDs (from local picker defaults) as missing so we don't send invalid UUIDs
+      final isSynthetic =
+          categoryId != null && categoryId.startsWith('fallback_');
+      if (categoryId == null || categoryId.isEmpty || isSynthetic) {
+        categoryId = '';
       }
 
       // Budget can be provided as single value; we store as both min & max for now
@@ -85,6 +88,8 @@ class CentralizedRequestService {
       final createData = CreateRequestData(
         title: (data['title'] ?? '').toString(),
         description: (data['description'] ?? '').toString(),
+        // If categoryId is empty (synthetic or missing) supply a temporary safe placeholder UUID-like value that backend will reject with clear error,
+        // OR adjust backend to allow null. For now, if empty we'll short-circuit before calling API.
         categoryId: categoryId,
         subcategoryId: (subcategoryId != null && subcategoryId.isNotEmpty)
             ? subcategoryId
@@ -110,6 +115,11 @@ class CentralizedRequestService {
       // Debug log final create payload
       // ignore: avoid_print
       print('CentralizedRequestService -> creating with city_id=$cityId');
+
+      if (createData.categoryId.isEmpty) {
+        throw Exception(
+            'Please select a real category before creating the request');
+      }
 
       final created = await _rest.createRequest(createData);
       return created?.id; // Return the new request ID

@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const dbService = require('./database');
+const emailService = require('./email');
 
 class AuthService {
     constructor() {
@@ -209,8 +210,13 @@ class AuthService {
             DO UPDATE SET otp = $2, expires_at = $3, created_at = $4, attempts = 0
         `, [email, otp, expiresAt, new Date()]);
 
-        // TODO: Send email via AWS SES or your email service
-        console.log(`Email OTP for ${email}: ${otp}`);
+        // Send email via SES (with dev fallback handled inside email service)
+        try {
+            await emailService.sendOTP(email, otp, 'login');
+        } catch (e) {
+            console.warn('Email send failed, OTP logged for debugging:', e.message);
+            console.log(`Email OTP fallback (dev) for ${email}: ${otp}`);
+        }
 
         return { message: 'OTP sent to email', otpSent: true };
     }
@@ -269,8 +275,15 @@ class AuthService {
             SET email_verified = true, updated_at = NOW() 
             WHERE email = $1
         `, [email]);
-
-        return { message: 'Email verified successfully', verified: true };
+        // Fetch updated user
+        const userRows = await dbService.findMany('users', { email });
+        const user = userRows[0];
+        let token = null; let refreshToken = null;
+        if (user) {
+            token = this.generateToken(user);
+            refreshToken = await this.generateAndStoreRefreshToken(user.id);
+        }
+        return { message: 'Email verified successfully', verified: true, user: this.sanitizeUser(user), token, refreshToken };
     }
 
     /**
@@ -306,8 +319,15 @@ class AuthService {
             SET phone_verified = true, updated_at = NOW() 
             WHERE phone = $1
         `, [phone]);
-
-        return { message: 'Phone verified successfully', verified: true };
+        // Fetch updated user
+        const userRows = await dbService.findMany('users', { phone });
+        const user = userRows[0];
+        let token = null; let refreshToken = null;
+        if (user) {
+            token = this.generateToken(user);
+            refreshToken = await this.generateAndStoreRefreshToken(user.id);
+        }
+        return { message: 'Phone verified successfully', verified: true, user: this.sanitizeUser(user), token, refreshToken };
     }
 
     /**
