@@ -565,7 +565,7 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
                             if (_responder?.email != null) ...[
                               const SizedBox(height: 4),
                               Text(
-                                _responder!.email!,
+                                _responder!.email,
                                 style: TextStyle(
                                   color: Colors.grey[600],
                                   fontSize: 14,

@@ -103,7 +103,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
           print('🔍 Debug Ride - Final Current User ID: $currentUserId');
           print('🔍 Debug Ride - Request Owner ID: ${request.requesterId}');
           print('🔍 Debug Ride - Is Owner: $isOwner');
-          print('🔍 Debug Ride - Will Show Respond Button: ${!isOwner && request != null}');
+          print('🔍 Debug Ride - Will Show Respond Button: ${!isOwner}');
           
           _setupMapMarkers();
         }
@@ -717,7 +717,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
               radius: 20,
               backgroundColor: Colors.blue[100],
               child: Text(
-                _requesterUser?.name?.isNotEmpty == true 
+                _requesterUser?.name.isNotEmpty == true 
                     ? _requesterUser!.name[0].toUpperCase()
                     : 'U',
                 style: TextStyle(

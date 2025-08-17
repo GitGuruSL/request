@@ -146,13 +146,11 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
         }
         
         // Check if it's scheduled for later
-        if (rideData.preferredTime != null) {
-          final now = DateTime.now();
-          final preferredTime = rideData.preferredTime!;
-          // If preferred time is more than 30 minutes from now, consider it scheduled
-          _scheduleForLater = preferredTime.difference(now).inMinutes > 30;
-        }
-      } catch (e) {
+        final now = DateTime.now();
+        final preferredTime = rideData.preferredTime!;
+        // If preferred time is more than 30 minutes from now, consider it scheduled
+        _scheduleForLater = preferredTime.difference(now).inMinutes > 30;
+            } catch (e) {
         print('Error parsing ride data: $e');
         // Fallback to default values
         _selectedVehicleType = 'economy';

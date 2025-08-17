@@ -126,7 +126,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
         _selectedCondition = typeData['condition']?.toString() ?? 'New';
         
         // Ensure categoryId is set if we have a category
-        if (_selectedCategory?.isNotEmpty == true && (_selectedCategoryId?.isEmpty ?? true)) {
+        if (_selectedCategory.isNotEmpty == true && (_selectedCategoryId?.isEmpty ?? true)) {
           _selectedCategoryId = _selectedCategory;
         }
         break;
@@ -142,7 +142,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
         }
         
         // Ensure categoryId is set if we have a category
-        if (_selectedCategory?.isNotEmpty == true && (_selectedCategoryId?.isEmpty ?? true)) {
+        if (_selectedCategory.isNotEmpty == true && (_selectedCategoryId?.isEmpty ?? true)) {
           _selectedCategoryId = _selectedCategory;
         }
         break;
@@ -177,7 +177,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
         }
         
         // Ensure categoryId is set if we have a category
-        if (_selectedCategory?.isNotEmpty == true && (_selectedCategoryId?.isEmpty ?? true)) {
+        if (_selectedCategory.isNotEmpty == true && (_selectedCategoryId?.isEmpty ?? true)) {
           _selectedCategoryId = _selectedCategory;
         }
         break;
@@ -201,7 +201,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
         }
         
         // If we have category data but _selectedCategoryId is empty, set it to category name
-        if (_selectedCategory?.isNotEmpty == true && (_selectedCategoryId?.isEmpty ?? true)) {
+        if (_selectedCategory.isNotEmpty == true && (_selectedCategoryId?.isEmpty ?? true)) {
           _selectedCategoryId = _selectedCategory;
         }
         break;
@@ -621,7 +621,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        (_selectedCategory?.isNotEmpty == true && _selectedSubcategory?.isNotEmpty == true)
+                        (_selectedCategory.isNotEmpty == true && _selectedSubcategory?.isNotEmpty == true)
                             ? '$_selectedCategory > $_selectedSubcategory'
                             : 'Select service category',
                         style: const TextStyle(
@@ -1454,7 +1454,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
 
     // Additional validation for category selection based on request type
     if ((_selectedType == RequestType.service || _selectedType == RequestType.delivery || _selectedType == RequestType.rental) 
-        && (_selectedCategory == null || _selectedCategory!.isEmpty)) {
+        && (_selectedCategory.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Please select a ${_selectedType.name} category'),
@@ -1555,8 +1555,8 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
         return {
           'pickupLocation': _pickupLocationController.text.trim(),
           'dropoffLocation': _dropoffLocationController.text.trim(),
-          'itemCategory': _selectedCategory?.trim() ?? '',
-          'category': _selectedCategory?.trim() ?? '', // Store in both fields for compatibility
+          'itemCategory': _selectedCategory.trim() ?? '',
+          'category': _selectedCategory.trim() ?? '', // Store in both fields for compatibility
           'categoryId': _selectedCategoryId?.trim() ?? '',
           'subcategory': _selectedSubcategory?.trim(),
           'subcategoryId': _selectedSubCategoryId?.trim() ?? '',

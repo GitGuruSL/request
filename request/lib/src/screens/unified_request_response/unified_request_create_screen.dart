@@ -494,7 +494,7 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        (_selectedCategory?.isNotEmpty == true && _selectedSubcategory?.isNotEmpty == true)
+                        (_selectedCategory.isNotEmpty == true && _selectedSubcategory?.isNotEmpty == true)
                             ? '$_selectedCategory > $_selectedSubcategory'
                             : 'Select service category',
                         style: const TextStyle(
@@ -1405,8 +1405,8 @@ class _UnifiedRequestCreateScreenState extends State<UnifiedRequestCreateScreen>
         return {
           'pickupLocation': _pickupLocationController.text.trim(),
           'dropoffLocation': _dropoffLocationController.text.trim(),
-          'itemCategory': _selectedCategory?.trim() ?? '',
-          'category': _selectedCategory?.trim() ?? '', // Store in both fields for compatibility
+          'itemCategory': _selectedCategory.trim() ?? '',
+          'category': _selectedCategory.trim() ?? '', // Store in both fields for compatibility
           'categoryId': _selectedCategoryId?.trim() ?? '',
           'subcategory': _selectedSubcategory?.trim(),
           'subcategoryId': _selectedSubCategoryId?.trim() ?? '',

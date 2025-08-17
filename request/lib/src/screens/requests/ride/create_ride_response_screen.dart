@@ -159,40 +159,25 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
 
       // Use provided existing response or check request responses
       ResponseModel? existingResponse = widget.existingResponse;
-      
-      // If no existing response provided, check in request responses
-      if (existingResponse == null) {
-        final responses = widget.request.responses;
-        try {
-          existingResponse = responses.firstWhere(
-            (response) => response.responderId == currentUser.uid,
-          );
-        } catch (e) {
-          // No existing response found
-          existingResponse = null;
-        }
-      }
 
-      if (existingResponse != null) {
-        setState(() {
-          _isEditMode = true;
-          _existingResponseId = existingResponse!.id;
-          // Load existing response data
-          _priceController.text = existingResponse.price?.toString() ?? '';
-          _messageController.text = existingResponse.message;
-          // Load other fields if they exist in additionalInfo
-          if (existingResponse.additionalInfo.isNotEmpty) {
-            _vehicleType = existingResponse.additionalInfo['vehicleType'] ?? (_vehicleTypes.isNotEmpty ? _vehicleTypes.first.name : '');
-            _availableSeats = existingResponse.additionalInfo['availableSeats'] ?? 3;
-            _smokingAllowed = existingResponse.additionalInfo['smokingAllowed'] ?? false;
-            _petsAllowed = existingResponse.additionalInfo['petsAllowed'] ?? true;
-            if (existingResponse.additionalInfo['departureTime'] != null) {
-              _departureTime = DateTime.tryParse(existingResponse.additionalInfo['departureTime']);
-            }
+      setState(() {
+        _isEditMode = true;
+        _existingResponseId = existingResponse!.id;
+        // Load existing response data
+        _priceController.text = existingResponse.price?.toString() ?? '';
+        _messageController.text = existingResponse.message;
+        // Load other fields if they exist in additionalInfo
+        if (existingResponse.additionalInfo.isNotEmpty) {
+          _vehicleType = existingResponse.additionalInfo['vehicleType'] ?? (_vehicleTypes.isNotEmpty ? _vehicleTypes.first.name : '');
+          _availableSeats = existingResponse.additionalInfo['availableSeats'] ?? 3;
+          _smokingAllowed = existingResponse.additionalInfo['smokingAllowed'] ?? false;
+          _petsAllowed = existingResponse.additionalInfo['petsAllowed'] ?? true;
+          if (existingResponse.additionalInfo['departureTime'] != null) {
+            _departureTime = DateTime.tryParse(existingResponse.additionalInfo['departureTime']);
           }
-        });
-      }
-    } catch (e) {
+        }
+      });
+        } catch (e) {
       // Stay in create mode
       print('Error checking existing response: $e');
     }

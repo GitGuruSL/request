@@ -540,7 +540,7 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'File selected: ${file!.path.split('/').last}',
+                      'File selected: ${file.path.split('/').last}',
                       style: const TextStyle(
                         fontSize: 12,
                         color: Colors.green,

@@ -57,7 +57,7 @@ class SubscriptionService {
   }
 
   /// Get a specific subscription plan
-  static Future<SubscriptionPlan?> getSubscriptionPlan(String planId) async {
+  Future<SubscriptionPlan?> getSubscriptionPlan(String planId) async {
     try {
       final DocumentSnapshot doc = await _firestore
           .collection(_subscriptionPlansCollection)
@@ -77,7 +77,7 @@ class SubscriptionService {
   // ==================== USER SUBSCRIPTIONS ====================
 
   /// Get user's current subscription
-  static Future<UserSubscription?> getUserSubscription(String userId) async {
+  Future<UserSubscription?> getUserSubscription(String userId) async {
     try {
       final QuerySnapshot snapshot = await _firestore
           .collection(_userSubscriptionsCollection)
@@ -96,7 +96,7 @@ class SubscriptionService {
   }
 
   // Create user subscription with optional promo code
-  static Future<UserSubscription> createUserSubscription(
+  Future<UserSubscription> createUserSubscription(
     String userId,
     String planId,
     SubscriptionType type,
@@ -161,7 +161,7 @@ class SubscriptionService {
   }
 
   /// Upgrade subscription to paid plan
-  static Future<void> upgradeSubscription(
+  Future<void> upgradeSubscription(
     String userId,
     String planId,
     String paymentMethod,
@@ -232,7 +232,7 @@ class SubscriptionService {
   }
 
   /// Check if user can perform action based on subscription
-  static Future<bool> canPerformAction(String userId, String action) async {
+  Future<bool> canPerformAction(String userId, String action) async {
     try {
       final subscription = await getUserSubscription(userId);
       if (subscription == null) return false;
@@ -274,7 +274,7 @@ class SubscriptionService {
   }
 
   /// Record business click and handle billing
-  static Future<void> recordBusinessClick(
+  Future<void> recordBusinessClick(
     String businessUserId,
     Map<String, dynamic> clickMetadata,
   ) async {
@@ -312,7 +312,7 @@ class SubscriptionService {
   }
 
   /// Record rider action (responding to ride)
-  static Future<void> recordRiderAction(String userId, String action) async {
+  Future<void> recordRiderAction(String userId, String action) async {
     try {
       final subscription = await getUserSubscription(userId);
       if (subscription == null) return;
@@ -330,7 +330,7 @@ class SubscriptionService {
   }
 
   /// Get subscription status and limitations for UI display
-  static Future<Map<String, dynamic>> getSubscriptionStatus(String userId) async {
+  Future<Map<String, dynamic>> getSubscriptionStatus(String userId) async {
     try {
       final subscription = await getUserSubscription(userId);
       if (subscription == null) {
@@ -367,7 +367,7 @@ class SubscriptionService {
 
   // ==================== PRIVATE METHODS ====================
 
-  static Future<void> _createPaymentTransaction({
+  Future<void> _createPaymentTransaction({
     required String userId,
     required String subscriptionId,
     required double amount,
@@ -397,7 +397,7 @@ class SubscriptionService {
     await docRef.set(transaction.toFirestore());
   }
 
-  static Future<void> _chargeForClick(
+  Future<void> _chargeForClick(
     UserSubscription subscription,
     double clickRate,
     Map<String, dynamic> clickMetadata,
@@ -429,7 +429,7 @@ class SubscriptionService {
   // ==================== ADMIN FUNCTIONS ====================
 
   /// Initialize default subscription plans (run once during setup)
-  static Future<void> initializeDefaultPlans() async {
+  Future<void> initializeDefaultPlans() async {
     try {
       // Country-specific pricing (base prices in local currency)
       final Map<String, Map<String, dynamic>> countryData = {
@@ -532,7 +532,7 @@ class SubscriptionService {
   }
 
   /// Get currency for country
-  static String _getCurrencyForCountry(String countryCode) {
+  String _getCurrencyForCountry(String countryCode) {
     const currencies = {
       'US': 'USD',
       'GB': 'GBP', 
@@ -551,7 +551,7 @@ class SubscriptionService {
   }
 
   /// Get initial usage stats for subscription type
-  static Map<String, int> _getInitialUsageStats(SubscriptionType type) {
+  Map<String, int> _getInitialUsageStats(SubscriptionType type) {
     return {
       'requestsCreated': 0,
       'responsesReceived': 0,
@@ -561,7 +561,7 @@ class SubscriptionService {
   }
 
   /// Get trial limitations for subscription type
-  static Map<String, int> _getTrialLimitations(SubscriptionType type) {
+  Map<String, int> _getTrialLimitations(SubscriptionType type) {
     switch (type) {
       case SubscriptionType.rider:
         return {
