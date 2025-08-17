@@ -2,7 +2,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { pool } = require('../database'); // Your existing database connection
+const dbService = require('../services/database'); // Your existing database connection
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
@@ -22,7 +22,7 @@ router.post('/check-user-exists', async (req, res) => {
       });
     }
 
-    const result = await pool.query(
+    const result = await dbService.query(
       'SELECT id, email, phone FROM users WHERE email = $1 OR phone = $1 AND is_active = true',
       [emailOrPhone]
     );
@@ -63,7 +63,7 @@ router.post('/send-otp', async (req, res) => {
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     // Store OTP in database
-    await pool.query(
+    await dbService.query(
       `INSERT INTO otp_tokens (email_or_phone, otp_code, token_hash, expires_at, purpose)
        VALUES ($1, $2, $3, $4, $5)`,
       [emailOrPhone, otpCode, otpToken, expiresAt, 'registration']
@@ -108,7 +108,7 @@ router.post('/verify-otp', async (req, res) => {
     }
 
     // Find valid OTP token
-    const result = await pool.query(
+    const result = await dbService.query(
       `SELECT * FROM otp_tokens 
        WHERE email_or_phone = $1 AND token_hash = $2 AND used = false AND expires_at > NOW()
        ORDER BY created_at DESC LIMIT 1`,
@@ -127,7 +127,7 @@ router.post('/verify-otp', async (req, res) => {
     // Verify OTP code
     if (otpRecord.otp_code !== otp) {
       // Increment attempts
-      await pool.query(
+      await dbService.query(
         'UPDATE otp_tokens SET attempts = attempts + 1 WHERE id = $1',
         [otpRecord.id]
       );
@@ -139,7 +139,7 @@ router.post('/verify-otp', async (req, res) => {
     }
 
     // Mark OTP as used
-    await pool.query(
+    await dbService.query(
       'UPDATE otp_tokens SET used = true WHERE id = $1',
       [otpRecord.id]
     );
@@ -173,7 +173,7 @@ router.post('/login', async (req, res) => {
     }
 
     // Find user by email or phone
-    const userResult = await pool.query(
+    const userResult = await dbService.query(
       'SELECT * FROM users WHERE (email = $1 OR phone = $1) AND is_active = true',
       [email]
     );
@@ -240,7 +240,7 @@ router.post('/register', async (req, res) => {
     }
 
     // Check if user already exists
-    const existingUser = await pool.query(
+    const existingUser = await dbService.query(
       'SELECT id FROM users WHERE email = $1 OR phone = $2',
       [email, phone]
     );
@@ -257,7 +257,7 @@ router.post('/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     // Create user
-    const userResult = await pool.query(
+    const userResult = await dbService.query(
       `INSERT INTO users (email, password_hash, display_name, phone, country_code, email_verified, phone_verified)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id, email, phone, display_name, email_verified, phone_verified, is_active, role, country_code, created_at, updated_at`,
