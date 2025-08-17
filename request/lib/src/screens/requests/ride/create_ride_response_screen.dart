@@ -340,7 +340,7 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
         });
       } else {
         // Create new response
-        await _requestService.createResponse(
+        await _requestService.createResponseNamed(
           requestId: widget.request.id!,
           message: _messageController.text,
           price: double.parse(_priceController.text.trim()),

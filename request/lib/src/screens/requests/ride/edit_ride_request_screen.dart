@@ -1020,7 +1020,7 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
             0.0,
       );
 
-      await _requestService.updateRequest(
+      await _requestService.updateRequestFlexible(
         requestId: widget.request.id,
         title: title,
         description:

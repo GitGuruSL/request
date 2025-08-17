@@ -50,24 +50,31 @@ class RestAuthService {
       );
 
       if (response.isSuccess && response.data != null) {
-        final data = response.data!;
-        final token = data['token'] as String?;
-        final refreshToken = data['refreshToken'] as String?;
-        final userData = data['user'] as Map<String, dynamic>?;
-
-        if (token != null && userData != null) {
-          await _apiClient.saveToken(token);
-          if (refreshToken != null) {
-            await _apiClient.saveRefreshToken(refreshToken);
+        final raw = response.data!;
+        Map<String, dynamic>? container;
+        // Accept either flat {token,user} or nested {data:{token,user}}
+        if (raw['token'] != null || raw['user'] != null) {
+          container = raw;
+        } else if (raw['data'] is Map<String, dynamic>) {
+          container = raw['data'] as Map<String, dynamic>;
+        }
+        if (container != null) {
+          final token = container['token'] as String?;
+          final refreshToken = container['refreshToken'] as String?;
+          final userData = container['user'] as Map<String, dynamic>?;
+          if (token != null && userData != null) {
+            await _apiClient.saveToken(token);
+            if (refreshToken != null) {
+              await _apiClient.saveRefreshToken(refreshToken);
+            }
+            _currentUser = UserModel.fromJson(userData);
+            return AuthResult(
+              success: true,
+              user: _currentUser,
+              token: token,
+              message: response.message ?? 'Registration successful',
+            );
           }
-          _currentUser = UserModel.fromJson(userData);
-
-          return AuthResult(
-            success: true,
-            user: _currentUser,
-            token: token,
-            message: response.message ?? 'Registration successful',
-          );
         }
       }
 
@@ -101,24 +108,30 @@ class RestAuthService {
       );
 
       if (response.isSuccess && response.data != null) {
-        final data = response.data!;
-        final token = data['token'] as String?;
-        final refreshToken = data['refreshToken'] as String?;
-        final userData = data['user'] as Map<String, dynamic>?;
-
-        if (token != null && userData != null) {
-          await _apiClient.saveToken(token);
-          if (refreshToken != null) {
-            await _apiClient.saveRefreshToken(refreshToken);
+        final raw = response.data!;
+        Map<String, dynamic>? container;
+        if (raw['token'] != null || raw['user'] != null) {
+          container = raw;
+        } else if (raw['data'] is Map<String, dynamic>) {
+          container = raw['data'] as Map<String, dynamic>;
+        }
+        if (container != null) {
+          final token = container['token'] as String?;
+          final refreshToken = container['refreshToken'] as String?;
+          final userData = container['user'] as Map<String, dynamic>?;
+          if (token != null && userData != null) {
+            await _apiClient.saveToken(token);
+            if (refreshToken != null) {
+              await _apiClient.saveRefreshToken(refreshToken);
+            }
+            _currentUser = UserModel.fromJson(userData);
+            return AuthResult(
+              success: true,
+              user: _currentUser,
+              token: token,
+              message: response.message ?? 'Login successful',
+            );
           }
-          _currentUser = UserModel.fromJson(userData);
-
-          return AuthResult(
-            success: true,
-            user: _currentUser,
-            token: token,
-            message: response.message ?? 'Login successful',
-          );
         }
       }
 
