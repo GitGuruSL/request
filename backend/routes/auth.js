@@ -103,12 +103,8 @@ router.post('/send-email-otp', async (req, res) => {
             });
         }
 
-        const result = await authService.sendEmailOTP(email);
-
-        res.json({
-            success: true,
-            message: result.message
-        });
+    const result = await authService.sendEmailOTP(email);
+    res.json({ success: true, message: result.message, channel: result.channel, email: result.email });
     } catch (error) {
         console.error('Send email OTP error:', error);
         res.status(400).json({

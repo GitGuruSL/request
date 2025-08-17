@@ -59,6 +59,7 @@ const categoryRoutes = require('./routes/categories');
 const cityRoutes = require('./routes/cities');
 const vehicleTypeRoutes = require('./routes/vehicle-types');
 const requestRoutes = require('./routes/requests');
+const countryRoutes = require('./routes/countries');
 
 // Use routes
 app.use('/api/auth', authRoutes);
@@ -67,6 +68,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/cities', cityRoutes);
 app.use('/api/vehicle-types', vehicleTypeRoutes);
 app.use('/api/requests', requestRoutes);
+app.use('/api/countries', countryRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -86,10 +88,13 @@ app.use('*', (req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Health check: http://localhost:${PORT}/health`);
-});
+// Only start the HTTP listener when not running in test environment (so Jest / supertest can import app)
+if (process.env.NODE_ENV !== 'test') {
+  const PORT = process.env.PORT || 3001;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Health check: http://localhost:${PORT}/health`);
+  });
+}
 
 module.exports = app;

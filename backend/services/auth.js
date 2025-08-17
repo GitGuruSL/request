@@ -230,14 +230,19 @@ class AuthService {
                 `, [email, otp, expiresAt, new Date()]);
 
         // Send email via SES (with dev fallback handled inside email service)
+        let emailMeta = { messageId: null, fallback: false, error: null };
         try {
-            await emailService.sendOTP(email, otp, 'login');
+            const sendRes = await emailService.sendOTP(email, otp, 'login');
+            emailMeta.messageId = sendRes.messageId;
+            emailMeta.fallback = !!sendRes.fallback;
+            emailMeta.error = sendRes.error || null;
         } catch (e) {
+            emailMeta.error = e.message;
             console.warn('Email send failed, OTP logged for debugging:', e.message);
             console.log(`Email OTP fallback (dev) for ${email}: ${otp}`);
         }
 
-        return { message: 'OTP sent to email', otpSent: true };
+        return { message: 'OTP sent to email', otpSent: true, channel: 'email', email: emailMeta };
     }
 
     /**
