@@ -9,13 +9,15 @@ class DeliveryVerificationScreen extends StatefulWidget {
   const DeliveryVerificationScreen({Key? key}) : super(key: key);
 
   @override
-  State<DeliveryVerificationScreen> createState() => _DeliveryVerificationScreenState();
+  State<DeliveryVerificationScreen> createState() =>
+      _DeliveryVerificationScreenState();
 }
 
-class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen> {
+class _DeliveryVerificationScreenState
+    extends State<DeliveryVerificationScreen> {
   final EnhancedUserService _userService = EnhancedUserService();
   final _formKey = GlobalKey<FormState>();
-  
+
   // Form controllers
   final _companyNameController = TextEditingController();
   final _companyAddressController = TextEditingController();
@@ -24,7 +26,7 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
   final _companyEmailController = TextEditingController();
   final _serviceAreasController = TextEditingController();
   final _specialInstructionsController = TextEditingController();
-  
+
   // Service capabilities
   Map<String, bool> _serviceTypes = {
     'restaurant_delivery': false,
@@ -169,7 +171,8 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 32, vertical: 12),
                       ),
                       child: const Text('Continue'),
                     ),
@@ -183,15 +186,17 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 32, vertical: 12),
                       ),
-                      child: _isLoading 
+                      child: _isLoading
                           ? const SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
                               ),
                             )
                           : const Text('Submit for Verification'),
@@ -214,39 +219,37 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
               title: const Text('Company Information'),
               content: _buildCompanyInfoStep(),
               isActive: _currentStep >= 0,
-              state: _currentStep > 0 
-                  ? StepState.complete 
-                  : _currentStep == 0 
-                      ? StepState.indexed 
+              state: _currentStep > 0
+                  ? StepState.complete
+                  : _currentStep == 0
+                      ? StepState.indexed
                       : StepState.disabled,
             ),
             Step(
               title: const Text('Service Capabilities'),
               content: _buildCapabilitiesStep(),
               isActive: _currentStep >= 1,
-              state: _currentStep > 1 
-                  ? StepState.complete 
-                  : _currentStep == 1 
-                      ? StepState.indexed 
+              state: _currentStep > 1
+                  ? StepState.complete
+                  : _currentStep == 1
+                      ? StepState.indexed
                       : StepState.disabled,
             ),
             Step(
               title: const Text('Availability & Documents'),
               content: _buildAvailabilityDocumentsStep(),
               isActive: _currentStep >= 2,
-              state: _currentStep > 2 
-                  ? StepState.complete 
-                  : _currentStep == 2 
-                      ? StepState.indexed 
+              state: _currentStep > 2
+                  ? StepState.complete
+                  : _currentStep == 2
+                      ? StepState.indexed
                       : StepState.disabled,
             ),
             Step(
               title: const Text('Review & Submit'),
               content: _buildReviewStep(),
               isActive: _currentStep >= 3,
-              state: _currentStep == 3 
-                  ? StepState.indexed 
-                  : StepState.disabled,
+              state: _currentStep == 3 ? StepState.indexed : StepState.disabled,
             ),
           ],
         ),
@@ -261,11 +264,11 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
         Text(
           'Tell us about your delivery service',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+                fontWeight: FontWeight.w600,
+              ),
         ),
         const SizedBox(height: 16),
-        
+
         // Company Name
         TextFormField(
           controller: _companyNameController,
@@ -283,7 +286,7 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
           },
         ),
         const SizedBox(height: 16),
-        
+
         // Company Address
         TextFormField(
           controller: _companyAddressController,
@@ -302,7 +305,7 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
           },
         ),
         const SizedBox(height: 16),
-        
+
         // Contact Person
         TextFormField(
           controller: _contactPersonController,
@@ -320,7 +323,7 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
           },
         ),
         const SizedBox(height: 16),
-        
+
         // Company Phone
         TextFormField(
           controller: _companyPhoneController,
@@ -339,7 +342,7 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
           },
         ),
         const SizedBox(height: 16),
-        
+
         // Company Email
         TextFormField(
           controller: _companyEmailController,
@@ -361,7 +364,7 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
           },
         ),
         const SizedBox(height: 16),
-        
+
         // Service Areas
         TextFormField(
           controller: _serviceAreasController,
@@ -391,52 +394,58 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
         Text(
           'Service Capabilities & Fleet',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+                fontWeight: FontWeight.w600,
+              ),
         ),
         const SizedBox(height: 16),
-        
+
         // Service Types
         _buildSectionCard(
           'Delivery Services Offered',
           'Select all delivery services you provide',
-          _serviceTypes.keys.map((key) => CheckboxListTile(
-            title: Text(_serviceTypeLabels[key]!),
-            value: _serviceTypes[key],
-            onChanged: (value) {
-              setState(() => _serviceTypes[key] = value ?? false);
-            },
-          )).toList(),
+          _serviceTypes.keys
+              .map((key) => CheckboxListTile(
+                    title: Text(_serviceTypeLabels[key]!),
+                    value: _serviceTypes[key],
+                    onChanged: (value) {
+                      setState(() => _serviceTypes[key] = value ?? false);
+                    },
+                  ))
+              .toList(),
         ),
-        
+
         const SizedBox(height: 16),
-        
+
         // Vehicle Types
         _buildSectionCard(
           'Available Vehicles',
           'Select all vehicle types in your fleet',
-          _vehicleTypes.keys.map((key) => CheckboxListTile(
-            title: Text(_vehicleTypeLabels[key]!),
-            value: _vehicleTypes[key],
-            onChanged: (value) {
-              setState(() => _vehicleTypes[key] = value ?? false);
-            },
-          )).toList(),
+          _vehicleTypes.keys
+              .map((key) => CheckboxListTile(
+                    title: Text(_vehicleTypeLabels[key]!),
+                    value: _vehicleTypes[key],
+                    onChanged: (value) {
+                      setState(() => _vehicleTypes[key] = value ?? false);
+                    },
+                  ))
+              .toList(),
         ),
-        
+
         const SizedBox(height: 16),
-        
+
         // Special Services
         _buildSectionCard(
           'Special Services',
           'Additional capabilities you offer',
-          _specialServices.keys.map((key) => CheckboxListTile(
-            title: Text(_specialServiceLabels[key]!),
-            value: _specialServices[key],
-            onChanged: (value) {
-              setState(() => _specialServices[key] = value ?? false);
-            },
-          )).toList(),
+          _specialServices.keys
+              .map((key) => CheckboxListTile(
+                    title: Text(_specialServiceLabels[key]!),
+                    value: _specialServices[key],
+                    onChanged: (value) {
+                      setState(() => _specialServices[key] = value ?? false);
+                    },
+                  ))
+              .toList(),
         ),
       ],
     );
@@ -449,11 +458,11 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
         Text(
           'Availability & Documentation',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+                fontWeight: FontWeight.w600,
+              ),
         ),
         const SizedBox(height: 16),
-        
+
         // 24/7 Availability
         SwitchListTile(
           title: const Text('Available 24/7'),
@@ -463,22 +472,23 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
             setState(() => _is24x7Available = value);
           },
         ),
-        
+
         if (!_is24x7Available) ...[
           const SizedBox(height: 16),
           Text(
             'Service Hours',
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+                  fontWeight: FontWeight.w600,
+                ),
           ),
           const SizedBox(height: 8),
-          
-          ..._availabilityDays.keys.map((day) => _buildDayAvailability(day)).toList(),
+          ..._availabilityDays.keys
+              .map((day) => _buildDayAvailability(day))
+              .toList(),
         ],
-        
+
         const SizedBox(height: 24),
-        
+
         // Special Instructions
         TextFormField(
           controller: _specialInstructionsController,
@@ -491,7 +501,7 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
           maxLines: 3,
         ),
         const SizedBox(height: 16),
-        
+
         // Business License Upload
         Container(
           width: double.infinity,
@@ -527,7 +537,7 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Insurance Document Upload
         Container(
           width: double.infinity,
@@ -563,7 +573,7 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Vehicle Images Upload
         Container(
           width: double.infinity,
@@ -604,7 +614,7 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
             ],
           ),
         ),
-        
+
         if (_vehicleImages.isNotEmpty) ...[
           const SizedBox(height: 16),
           SizedBox(
@@ -657,7 +667,7 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
 
   Widget _buildDayAvailability(String day) {
     final dayName = day.substring(0, 1).toUpperCase() + day.substring(1);
-    
+
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: Padding(
@@ -683,7 +693,8 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
               GestureDetector(
                 onTap: () => _selectAvailabilityTime(day, true),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     border: Border.all(color: Colors.grey[300]!),
                     borderRadius: BorderRadius.circular(4),
@@ -695,7 +706,8 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
               GestureDetector(
                 onTap: () => _selectAvailabilityTime(day, false),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     border: Border.all(color: Colors.grey[300]!),
                     borderRadius: BorderRadius.circular(4),
@@ -710,7 +722,8 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
     );
   }
 
-  Widget _buildSectionCard(String title, String subtitle, List<Widget> children) {
+  Widget _buildSectionCard(
+      String title, String subtitle, List<Widget> children) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -751,11 +764,11 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
         Text(
           'Review Your Service Information',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+                fontWeight: FontWeight.w600,
+              ),
         ),
         const SizedBox(height: 16),
-        
+
         // Company Information Summary
         _buildInfoCard(
           'Company Information',
@@ -768,9 +781,9 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
             'Service Areas: ${_serviceAreasController.text}',
           ],
         ),
-        
+
         const SizedBox(height: 16),
-        
+
         // Services Summary
         _buildInfoCard(
           'Service Capabilities',
@@ -780,9 +793,9 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
             'Special: ${_specialServices.entries.where((e) => e.value).map((e) => _specialServiceLabels[e.key]).join(', ')}',
           ],
         ),
-        
+
         const SizedBox(height: 16),
-        
+
         // Availability Summary
         _buildInfoCard(
           'Availability',
@@ -790,17 +803,20 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
             if (_is24x7Available)
               'Available 24/7'
             else
-              ..._availabilityDays.entries.where((entry) => entry.value).map((entry) {
-                final day = entry.key.substring(0, 1).toUpperCase() + entry.key.substring(1);
+              ..._availabilityDays.entries
+                  .where((entry) => entry.value)
+                  .map((entry) {
+                final day = entry.key.substring(0, 1).toUpperCase() +
+                    entry.key.substring(1);
                 return '$day: ${_formatTime(_startTimes[entry.key]!)} - ${_formatTime(_endTimes[entry.key]!)}';
               }).toList(),
             if (_specialInstructionsController.text.isNotEmpty)
               'Special Instructions: ${_specialInstructionsController.text}',
           ],
         ),
-        
+
         const SizedBox(height: 16),
-        
+
         // Documents Summary
         _buildInfoCard(
           'Documents & Photos',
@@ -810,9 +826,9 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
             'Vehicle Photos: ${_vehicleImages.length} uploaded',
           ],
         ),
-        
+
         const SizedBox(height: 24),
-        
+
         // Verification Notice
         Container(
           padding: const EdgeInsets.all(16),
@@ -852,9 +868,9 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
             ],
           ),
         ),
-        
+
         const SizedBox(height: 16),
-        
+
         // Upload Progress
         if (_isUploading)
           Container(
@@ -896,12 +912,12 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
           ),
           const SizedBox(height: 8),
           ...items.map((item) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 2),
-            child: Text(
-              '• $item',
-              style: const TextStyle(fontSize: 14),
-            ),
-          )),
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Text(
+                  '• $item',
+                  style: const TextStyle(fontSize: 14),
+                ),
+              )),
         ],
       ),
     );
@@ -911,15 +927,16 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
     switch (step) {
       case 0:
         return _companyNameController.text.trim().isNotEmpty &&
-               _companyAddressController.text.trim().isNotEmpty &&
-               _contactPersonController.text.trim().isNotEmpty &&
-               _companyPhoneController.text.trim().isNotEmpty &&
-               _companyEmailController.text.trim().isNotEmpty &&
-               _serviceAreasController.text.trim().isNotEmpty &&
-               RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(_companyEmailController.text);
+            _companyAddressController.text.trim().isNotEmpty &&
+            _contactPersonController.text.trim().isNotEmpty &&
+            _companyPhoneController.text.trim().isNotEmpty &&
+            _companyEmailController.text.trim().isNotEmpty &&
+            _serviceAreasController.text.trim().isNotEmpty &&
+            RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                .hasMatch(_companyEmailController.text);
       case 1:
         return _serviceTypes.values.any((selected) => selected) &&
-               _vehicleTypes.values.any((selected) => selected);
+            _vehicleTypes.values.any((selected) => selected);
       case 2:
         return true; // Availability and documents are flexible
       case 3:
@@ -934,7 +951,7 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
       context: context,
       initialTime: isStartTime ? _startTimes[day]! : _endTimes[day]!,
     );
-    
+
     if (time != null) {
       setState(() {
         if (isStartTime) {
@@ -960,7 +977,7 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
       maxHeight: 1024,
       imageQuality: 80,
     );
-    
+
     if (image != null) {
       setState(() => _businessLicenseImage = File(image.path));
     }
@@ -974,7 +991,7 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
       maxHeight: 1024,
       imageQuality: 80,
     );
-    
+
     if (image != null) {
       setState(() => _insuranceDocumentImage = File(image.path));
     }
@@ -987,7 +1004,7 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
       maxHeight: 1024,
       imageQuality: 80,
     );
-    
+
     if (images != null && images.isNotEmpty) {
       setState(() {
         _vehicleImages.addAll(images.map((image) => File(image.path)));
@@ -1100,9 +1117,10 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
         'businessLicenseUrl': businessLicenseUrl,
         'insuranceDocumentUrl': insuranceDocumentUrl,
         'vehicleImages': vehicleImageUrls,
-        'specialInstructions': _specialInstructionsController.text.trim().isEmpty 
-            ? null 
-            : _specialInstructionsController.text.trim(),
+        'specialInstructions':
+            _specialInstructionsController.text.trim().isEmpty
+                ? null
+                : _specialInstructionsController.text.trim(),
         'availabilityHours': BusinessHours(
           weeklyHours: availabilityHours,
           is24x7: _is24x7Available,
@@ -1113,14 +1131,14 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
       };
 
       // Update user role data
-      await _userService.updateRoleData(
+      await _userService.updateRoleDataNamed(
         userId: currentUser.uid,
         role: UserRole.delivery,
         data: deliveryData,
       );
 
       // Submit for verification
-      await _userService.submitRoleForVerification(
+      await _userService.submitRoleForVerificationNamed(
         userId: currentUser.uid,
         role: UserRole.delivery,
       );
@@ -1129,7 +1147,8 @@ class _DeliveryVerificationScreenState extends State<DeliveryVerificationScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Delivery partner verification submitted successfully! We\'ll review your information and get back to you within 2-5 business days.'),
+            content: Text(
+                'Delivery partner verification submitted successfully! We\'ll review your information and get back to you within 2-5 business days.'),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 4),
           ),

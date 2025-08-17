@@ -9,15 +9,16 @@ import '../../utils/currency_helper.dart';
 class UnifiedResponseEditScreen extends StatefulWidget {
   final RequestModel request;
   final ResponseModel response;
-  
+
   const UnifiedResponseEditScreen({
-    super.key, 
+    super.key,
     required this.request,
     required this.response,
   });
 
   @override
-  State<UnifiedResponseEditScreen> createState() => _UnifiedResponseEditScreenState();
+  State<UnifiedResponseEditScreen> createState() =>
+      _UnifiedResponseEditScreenState();
 }
 
 class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
@@ -28,7 +29,7 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
   // Common controllers
   final _messageController = TextEditingController();
   final _priceController = TextEditingController();
-  
+
   // Item response controllers
   final _offerPriceController = TextEditingController();
   final _itemConditionController = TextEditingController();
@@ -36,19 +37,19 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
   final _deliveryCostController = TextEditingController();
   final _estimatedDeliveryController = TextEditingController();
   final _warrantyController = TextEditingController();
-  
+
   // Service response controllers
   final _estimatedCostController = TextEditingController();
   final _timeframeController = TextEditingController();
   final _solutionDescriptionController = TextEditingController();
   final _hourlyRateController = TextEditingController();
-  
+
   // Rental response controllers
   final _rentalPriceController = TextEditingController();
   final _rentalItemConditionController = TextEditingController();
   final _rentalDescriptionController = TextEditingController();
   final _securityDepositController = TextEditingController();
-  
+
   // Delivery response controllers
   final _deliveryFeeController = TextEditingController();
   final _estimatedPickupTimeController = TextEditingController();
@@ -56,12 +57,12 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
   final _packageSizeController = TextEditingController();
   final _specialInstructionsController = TextEditingController();
   final _deliveryNotesController = TextEditingController();
-  
+
   // Ride response controllers
   final _fareController = TextEditingController();
   final _routeDescriptionController = TextEditingController();
   final _driverNotesController = TextEditingController();
-  
+
   // Additional common controllers
   final _notesController = TextEditingController();
   final _specialConsiderationsController = TextEditingController();
@@ -94,33 +95,40 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
     // Initialize common fields
     _messageController.text = widget.response.message;
     _priceController.text = _formatPrice(widget.response.price);
-    
+
     // Get fields from additionalInfo
     final additionalInfo = widget.response.additionalInfo;
     _notesController.text = additionalInfo['notes']?.toString() ?? '';
-    _specialConsiderationsController.text = additionalInfo['specialConsiderations']?.toString() ?? '';
-    
+    _specialConsiderationsController.text =
+        additionalInfo['specialConsiderations']?.toString() ?? '';
+
     // Initialize currency and dates
     _selectedCurrency = widget.response.currency ?? 'LKR';
     _availableFrom = widget.response.availableFrom;
     _availableUntil = widget.response.availableUntil;
-    
+
     // Initialize images - prioritize main images field, then additionalInfo
     _uploadedImages = List<String>.from(widget.response.images);
     if (_uploadedImages.isEmpty && additionalInfo['images'] != null) {
       _uploadedImages = List<String>.from(additionalInfo['images'] ?? []);
     }
-    
+
     // Initialize type-specific fields based on request type
     switch (widget.request.type) {
       case RequestType.rental:
         // Rental price is stored in main price field
         _rentalPriceController.text = _formatPrice(widget.response.price);
-        _securityDepositController.text = _formatPrice(additionalInfo['securityDeposit']);
-        _selectedRentalPeriod = additionalInfo['rentalPeriod']?.toString() ?? 'day';
-        _selectedPickupDeliveryOption = additionalInfo['pickupDeliveryOption']?.toString() ?? 'User picks up';
-        _rentalItemConditionController.text = additionalInfo['itemCondition']?.toString() ?? '';
-        _rentalDescriptionController.text = additionalInfo['itemDescription']?.toString() ?? '';
+        _securityDepositController.text =
+            _formatPrice(additionalInfo['securityDeposit']);
+        _selectedRentalPeriod =
+            additionalInfo['rentalPeriod']?.toString() ?? 'day';
+        _selectedPickupDeliveryOption =
+            additionalInfo['pickupDeliveryOption']?.toString() ??
+                'User picks up';
+        _rentalItemConditionController.text =
+            additionalInfo['itemCondition']?.toString() ?? '';
+        _rentalDescriptionController.text =
+            additionalInfo['itemDescription']?.toString() ?? '';
         break;
       case RequestType.delivery:
         // Delivery fee historically stored as main response.price, fallback if additionalInfo key missing
@@ -130,39 +138,56 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
         } else {
           _deliveryFeeController.text = _formatPrice(widget.response.price);
         }
-        _estimatedPickupTimeController.text = additionalInfo['estimatedPickupTime']?.toString() ?? '';
-        _estimatedDropoffTimeController.text = additionalInfo['estimatedDropoffTime']?.toString() ?? '';
-        _packageSizeController.text = additionalInfo['packageSize']?.toString() ?? '';
-        _specialInstructionsController.text = additionalInfo['specialInstructions']?.toString() ?? '';
-        _deliveryNotesController.text = additionalInfo['deliveryNotes']?.toString() ?? '';
-        _selectedVehicleType = additionalInfo['vehicleType']?.toString() ?? 'Car';
+        _estimatedPickupTimeController.text =
+            additionalInfo['estimatedPickupTime']?.toString() ?? '';
+        _estimatedDropoffTimeController.text =
+            additionalInfo['estimatedDropoffTime']?.toString() ?? '';
+        _packageSizeController.text =
+            additionalInfo['packageSize']?.toString() ?? '';
+        _specialInstructionsController.text =
+            additionalInfo['specialInstructions']?.toString() ?? '';
+        _deliveryNotesController.text =
+            additionalInfo['deliveryNotes']?.toString() ?? '';
+        _selectedVehicleType =
+            additionalInfo['vehicleType']?.toString() ?? 'Car';
         break;
       case RequestType.ride:
         _fareController.text = _formatPrice(additionalInfo['fare']);
-        _routeDescriptionController.text = additionalInfo['routeDescription']?.toString() ?? '';
-        _driverNotesController.text = additionalInfo['driverNotes']?.toString() ?? '';
-        _selectedVehicleType = additionalInfo['vehicleType']?.toString() ?? 'Car';
+        _routeDescriptionController.text =
+            additionalInfo['routeDescription']?.toString() ?? '';
+        _driverNotesController.text =
+            additionalInfo['driverNotes']?.toString() ?? '';
+        _selectedVehicleType =
+            additionalInfo['vehicleType']?.toString() ?? 'Car';
         break;
       case RequestType.item:
         // Offer price is stored in main price field
         _offerPriceController.text = _formatPrice(widget.response.price);
-        _itemConditionController.text = additionalInfo['itemCondition']?.toString() ?? '';
-        _offerDescriptionController.text = additionalInfo['offerDescription']?.toString() ?? '';
-        _selectedDeliveryMethod = additionalInfo['deliveryMethod']?.toString() ?? 'User pickup';
-        _deliveryCostController.text = _formatPrice(additionalInfo['deliveryCost']);
-        _estimatedDeliveryController.text = additionalInfo['estimatedDelivery']?.toString() ?? '';
+        _itemConditionController.text =
+            additionalInfo['itemCondition']?.toString() ?? '';
+        _offerDescriptionController.text =
+            additionalInfo['offerDescription']?.toString() ?? '';
+        _selectedDeliveryMethod =
+            additionalInfo['deliveryMethod']?.toString() ?? 'User pickup';
+        _deliveryCostController.text =
+            _formatPrice(additionalInfo['deliveryCost']);
+        _estimatedDeliveryController.text =
+            additionalInfo['estimatedDelivery']?.toString() ?? '';
         _warrantyController.text = additionalInfo['warranty']?.toString() ?? '';
         break;
       case RequestType.service:
         // Service price is stored in main price field
-        _selectedPriceType = additionalInfo['priceType']?.toString() ?? 'Fixed Price';
+        _selectedPriceType =
+            additionalInfo['priceType']?.toString() ?? 'Fixed Price';
         if (_selectedPriceType == 'Fixed Price') {
           _estimatedCostController.text = _formatPrice(widget.response.price);
         } else {
           _hourlyRateController.text = _formatPrice(widget.response.price);
         }
-        _timeframeController.text = additionalInfo['timeframe']?.toString() ?? '';
-        _solutionDescriptionController.text = additionalInfo['solutionDescription']?.toString() ?? '';
+        _timeframeController.text =
+            additionalInfo['timeframe']?.toString() ?? '';
+        _solutionDescriptionController.text =
+            additionalInfo['solutionDescription']?.toString() ?? '';
         break;
       case RequestType.price:
         // Handle price comparison requests if needed
@@ -172,9 +197,10 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
 
   String _formatPrice(dynamic price) {
     if (price == null) return '';
-    double? priceValue = price is double ? price : double.tryParse(price.toString());
+    double? priceValue =
+        price is double ? price : double.tryParse(price.toString());
     if (priceValue == null) return '';
-    
+
     // Remove unnecessary decimal places
     if (priceValue == priceValue.roundToDouble()) {
       return priceValue.round().toString();
@@ -210,8 +236,8 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
     _fareController.dispose();
     _routeDescriptionController.dispose();
     _driverNotesController.dispose();
-  _notesController.dispose();
-  _specialConsiderationsController.dispose();
+    _notesController.dispose();
+    _specialConsiderationsController.dispose();
     super.dispose();
   }
 
@@ -220,18 +246,21 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
     switch (widget.request.type) {
       case RequestType.delivery:
         // Allow either delivery OR business role (both verified) to edit response
-        final hasDelivery = user.hasRole(UserRole.delivery) && user.isRoleVerified(UserRole.delivery);
-        final hasBusiness = user.hasRole(UserRole.business) && user.isRoleVerified(UserRole.business);
+        final hasDelivery = user.hasRole(UserRole.delivery) &&
+            user.isRoleVerified(UserRole.delivery);
+        final hasBusiness = user.hasRole(UserRole.business) &&
+            user.isRoleVerified(UserRole.business);
         if (!hasDelivery && !hasBusiness) {
           // Distinguish between unregistered and unverified if one role exists but unverified
-          final hasEitherRole = user.hasRole(UserRole.delivery) || user.hasRole(UserRole.business);
-            if (hasEitherRole) {
-              return 'delivery_business_verification_required';
-            }
+          final hasEitherRole = user.hasRole(UserRole.delivery) ||
+              user.hasRole(UserRole.business);
+          if (hasEitherRole) {
+            return 'delivery_business_verification_required';
+          }
           return 'delivery_business_required';
         }
         break;
-        
+
       case RequestType.ride:
         // Check if user has driver role
         if (!user.hasRole(UserRole.driver)) {
@@ -242,7 +271,7 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
           return 'driver_verification_required';
         }
         break;
-        
+
       default:
         // For other request types (item, service, rental), no specific role validation required
         return null;
@@ -303,7 +332,8 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: Text('Edit Response to ${_getTypeDisplayName(widget.request.type)}'),
+        title: Text(
+            'Edit Response to ${_getTypeDisplayName(widget.request.type)}'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
@@ -488,7 +518,8 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
             controller: _messageController,
             maxLines: 4,
             decoration: const InputDecoration(
-              hintText: 'Explain why you\'re the best choice for this request...',
+              hintText:
+                  'Explain why you\'re the best choice for this request...',
               border: InputBorder.none,
               contentPadding: EdgeInsets.all(16),
               filled: true,
@@ -611,7 +642,8 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                 controller: _offerDescriptionController,
                 maxLines: 4,
                 decoration: const InputDecoration(
-                  hintText: 'Detailed description of the item you\'re offering...',
+                  hintText:
+                      'Detailed description of the item you\'re offering...',
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.all(16),
                   filled: true,
@@ -649,8 +681,10 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                   filled: true,
                   fillColor: Color(0xFFF8F9FA),
                 ),
-                items: ['User pickup', 'I can deliver'].map((method) =>
-                    DropdownMenuItem(value: method, child: Text(method))).toList(),
+                items: ['User pickup', 'I can deliver']
+                    .map((method) =>
+                        DropdownMenuItem(value: method, child: Text(method)))
+                    .toList(),
                 onChanged: (value) {
                   setState(() {
                     _selectedDeliveryMethod = value!;
@@ -808,8 +842,10 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                   filled: true,
                   fillColor: Color(0xFFF8F9FA),
                 ),
-                items: ['Fixed Price', 'Hourly Rate'].map((type) =>
-                    DropdownMenuItem(value: type, child: Text(type))).toList(),
+                items: ['Fixed Price', 'Hourly Rate']
+                    .map((type) =>
+                        DropdownMenuItem(value: type, child: Text(type)))
+                    .toList(),
                 onChanged: (value) {
                   setState(() {
                     _selectedPriceType = value!;
@@ -829,13 +865,16 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                _selectedPriceType == 'Fixed Price' ? 'Total Cost*' : 'Hourly Rate*',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                _selectedPriceType == 'Fixed Price'
+                    ? 'Total Cost*'
+                    : 'Hourly Rate*',
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _selectedPriceType == 'Fixed Price' 
-                    ? _estimatedCostController 
+                controller: _selectedPriceType == 'Fixed Price'
+                    ? _estimatedCostController
                     : _hourlyRateController,
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
@@ -843,7 +882,8 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                       ? 'Total estimated cost'
                       : 'Cost per hour',
                   prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
-                  suffixText: _selectedPriceType == 'Hourly Rate' ? '/hr' : null,
+                  suffixText:
+                      _selectedPriceType == 'Hourly Rate' ? '/hr' : null,
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.all(16),
                   filled: true,
@@ -915,7 +955,8 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Available From', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        const Text('Available From',
+                            style: TextStyle(fontSize: 12, color: Colors.grey)),
                         const SizedBox(height: 4),
                         InkWell(
                           onTap: () async {
@@ -923,7 +964,8 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                               context: context,
                               initialDate: DateTime.now(),
                               firstDate: DateTime.now(),
-                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                              lastDate:
+                                  DateTime.now().add(const Duration(days: 365)),
                             );
                             if (date != null) {
                               setState(() {
@@ -951,7 +993,8 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Available Until', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        const Text('Available Until',
+                            style: TextStyle(fontSize: 12, color: Colors.grey)),
                         const SizedBox(height: 4),
                         InkWell(
                           onTap: () async {
@@ -959,7 +1002,8 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                               context: context,
                               initialDate: _availableFrom ?? DateTime.now(),
                               firstDate: _availableFrom ?? DateTime.now(),
-                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                              lastDate:
+                                  DateTime.now().add(const Duration(days: 365)),
                             );
                             if (date != null) {
                               setState(() {
@@ -1005,7 +1049,8 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                 controller: _solutionDescriptionController,
                 maxLines: 4,
                 decoration: const InputDecoration(
-                  hintText: 'Brief explanation of how you plan to solve the problem',
+                  hintText:
+                      'Brief explanation of how you plan to solve the problem',
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.all(16),
                   filled: true,
@@ -1110,15 +1155,16 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                         filled: true,
                         fillColor: Color(0xFFF8F9FA),
                       ),
-                      items: ['day', 'week', 'hour'].map((period) =>
-                          DropdownMenuItem(
-                            value: period, 
-                            child: Text(
-                              'per $period',
-                              style: const TextStyle(fontSize: 14),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          )).toList(),
+                      items: ['day', 'week', 'hour']
+                          .map((period) => DropdownMenuItem(
+                                value: period,
+                                child: Text(
+                                  'per $period',
+                                  style: const TextStyle(fontSize: 14),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ))
+                          .toList(),
                       onChanged: (value) {
                         setState(() {
                           _selectedRentalPeriod = value!;
@@ -1151,7 +1197,8 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Available From', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        const Text('Available From',
+                            style: TextStyle(fontSize: 12, color: Colors.grey)),
                         const SizedBox(height: 4),
                         InkWell(
                           onTap: () async {
@@ -1159,7 +1206,8 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                               context: context,
                               initialDate: DateTime.now(),
                               firstDate: DateTime.now(),
-                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                              lastDate:
+                                  DateTime.now().add(const Duration(days: 365)),
                             );
                             if (date != null) {
                               setState(() {
@@ -1187,7 +1235,8 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Available Until', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        const Text('Available Until',
+                            style: TextStyle(fontSize: 12, color: Colors.grey)),
                         const SizedBox(height: 4),
                         InkWell(
                           onTap: () async {
@@ -1195,7 +1244,8 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                               context: context,
                               initialDate: _availableFrom ?? DateTime.now(),
                               firstDate: _availableFrom ?? DateTime.now(),
-                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                              lastDate:
+                                  DateTime.now().add(const Duration(days: 365)),
                             );
                             if (date != null) {
                               setState(() {
@@ -1312,8 +1362,13 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                   filled: true,
                   fillColor: Color(0xFFF8F9FA),
                 ),
-                items: ['User picks up', 'I can deliver', 'Both options available']
-                    .map((option) => DropdownMenuItem(value: option, child: Text(option)))
+                items: [
+                  'User picks up',
+                  'I can deliver',
+                  'Both options available'
+                ]
+                    .map((option) =>
+                        DropdownMenuItem(value: option, child: Text(option)))
                     .toList(),
                 onChanged: (value) {
                   setState(() {
@@ -1452,7 +1507,8 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                   fillColor: Color(0xFFF8F9FA),
                 ),
                 items: ['Car', 'Van', 'Truck', 'Motorcycle', 'Bicycle']
-                    .map((vehicle) => DropdownMenuItem(value: vehicle, child: Text(vehicle)))
+                    .map((vehicle) =>
+                        DropdownMenuItem(value: vehicle, child: Text(vehicle)))
                     .toList(),
                 onChanged: (value) {
                   setState(() {
@@ -1495,8 +1551,10 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                         final date = await showDatePicker(
                           context: context,
                           initialDate: DateTime.now(),
-                          firstDate: DateTime.now().subtract(const Duration(days: 1)),
-                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                          firstDate:
+                              DateTime.now().subtract(const Duration(days: 1)),
+                          lastDate:
+                              DateTime.now().add(const Duration(days: 365)),
                         );
                         if (date == null) return;
                         final time = await showTimePicker(
@@ -1504,8 +1562,10 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                           initialTime: TimeOfDay.now(),
                         );
                         if (time == null) return;
-                        final dt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
-                        _estimatedPickupTimeController.text = _formatDateTime(dt);
+                        final dt = DateTime(date.year, date.month, date.day,
+                            time.hour, time.minute);
+                        _estimatedPickupTimeController.text =
+                            _formatDateTime(dt);
                         setState(() {});
                       },
                     ),
@@ -1527,8 +1587,10 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                         final date = await showDatePicker(
                           context: context,
                           initialDate: DateTime.now(),
-                          firstDate: DateTime.now().subtract(const Duration(days: 1)),
-                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                          firstDate:
+                              DateTime.now().subtract(const Duration(days: 1)),
+                          lastDate:
+                              DateTime.now().add(const Duration(days: 365)),
                         );
                         if (date == null) return;
                         final time = await showTimePicker(
@@ -1536,8 +1598,10 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                           initialTime: TimeOfDay.now(),
                         );
                         if (time == null) return;
-                        final dt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
-                        _estimatedDropoffTimeController.text = _formatDateTime(dt);
+                        final dt = DateTime(date.year, date.month, date.day,
+                            time.hour, time.minute);
+                        _estimatedDropoffTimeController.text =
+                            _formatDateTime(dt);
                         setState(() {});
                       },
                     ),
@@ -1565,7 +1629,8 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                 controller: _specialInstructionsController,
                 maxLines: 3,
                 decoration: const InputDecoration(
-                  hintText: 'Any notes or concerns about the delivery (e.g., size limitations)',
+                  hintText:
+                      'Any notes or concerns about the delivery (e.g., size limitations)',
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.all(16),
                   filled: true,
@@ -1603,7 +1668,7 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
   }
 
   Future<void> _submitResponse() async {
-  if (_isLoading) return; // guard against double taps
+    if (_isLoading) return; // guard against double taps
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -1624,44 +1689,50 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
         setState(() {
           _isLoading = false;
         });
-        
+
         // Show user-friendly error messages
         String message;
         String actionLabel = 'Register';
-        
+
         switch (validationError) {
           case 'delivery_business_required':
-            message = 'You need to register as a delivery business to respond to delivery requests';
+            message =
+                'You need to register as a delivery business to respond to delivery requests';
             break;
           case 'delivery_business_verification_required':
-            message = 'Your delivery business registration is pending approval. Please wait for verification.';
+            message =
+                'Your delivery business registration is pending approval. Please wait for verification.';
             actionLabel = 'Check Status';
             break;
           case 'driver_registration_required':
-            message = 'You need to register as a driver to respond to ride requests';
+            message =
+                'You need to register as a driver to respond to ride requests';
             break;
           case 'driver_verification_required':
-            message = 'Your driver registration is pending approval. Please wait for verification.';
+            message =
+                'Your driver registration is pending approval. Please wait for verification.';
             actionLabel = 'Check Status';
             break;
           default:
             message = 'You don\'t have permission to respond to this request';
             actionLabel = 'Learn More';
         }
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(message),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 6),
-            action: actionLabel == 'Register' ? SnackBarAction(
-              label: actionLabel,
-              textColor: Colors.white,
-              onPressed: () {
-                // Navigate to appropriate registration screen
-                _navigateToRegistration();
-              },
-            ) : null,
+            action: actionLabel == 'Register'
+                ? SnackBarAction(
+                    label: actionLabel,
+                    textColor: Colors.white,
+                    onPressed: () {
+                      // Navigate to appropriate registration screen
+                      _navigateToRegistration();
+                    },
+                  )
+                : null,
           ),
         );
         return;
@@ -1678,22 +1749,23 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
             'itemCondition': _itemConditionController.text.trim(),
             'offerDescription': _offerDescriptionController.text.trim(),
             'deliveryMethod': _selectedDeliveryMethod,
-      'deliveryCost': _deliveryCostController.text.trim().isNotEmpty 
-        ? _parsePriceInput(_deliveryCostController.text.trim()) 
-        : null,
-            'estimatedDelivery': _estimatedDeliveryController.text.trim().isNotEmpty 
-                ? int.tryParse(_estimatedDeliveryController.text.trim()) 
+            'deliveryCost': _deliveryCostController.text.trim().isNotEmpty
+                ? _parsePriceInput(_deliveryCostController.text.trim())
                 : null,
-            'warranty': _warrantyController.text.trim().isNotEmpty 
-                ? _warrantyController.text.trim() 
+            'estimatedDelivery':
+                _estimatedDeliveryController.text.trim().isNotEmpty
+                    ? int.tryParse(_estimatedDeliveryController.text.trim())
+                    : null,
+            'warranty': _warrantyController.text.trim().isNotEmpty
+                ? _warrantyController.text.trim()
                 : null,
             'images': _uploadedImages,
           };
           break;
         case RequestType.service:
-      price = _parsePriceInput(_selectedPriceType == 'Fixed Price'
-        ? _estimatedCostController.text.trim()
-        : _hourlyRateController.text.trim());
+          price = _parsePriceInput(_selectedPriceType == 'Fixed Price'
+              ? _estimatedCostController.text.trim()
+              : _hourlyRateController.text.trim());
           additionalInfo = {
             'priceType': _selectedPriceType,
             'timeframe': _timeframeController.text.trim(),
@@ -1710,9 +1782,9 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
             'itemCondition': _rentalItemConditionController.text.trim(),
             'itemDescription': _rentalDescriptionController.text.trim(),
             'pickupDeliveryOption': _selectedPickupDeliveryOption,
-      'securityDeposit': _securityDepositController.text.trim().isNotEmpty 
-        ? _parsePriceInput(_securityDepositController.text.trim()) 
-        : null,
+            'securityDeposit': _securityDepositController.text.trim().isNotEmpty
+                ? _parsePriceInput(_securityDepositController.text.trim())
+                : null,
             'availableFrom': _availableFrom?.millisecondsSinceEpoch,
             'availableUntil': _availableUntil?.millisecondsSinceEpoch,
             'images': _uploadedImages,
@@ -1722,8 +1794,10 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
           price = _parsePriceInput(_deliveryFeeController.text.trim());
           additionalInfo = {
             'vehicleType': _selectedVehicleType,
-            'estimatedPickupTime': _parseDateTimeToMillis(_estimatedPickupTimeController.text.trim()),
-            'estimatedDropoffTime': _parseDateTimeToMillis(_estimatedDropoffTimeController.text.trim()),
+            'estimatedPickupTime': _parseDateTimeToMillis(
+                _estimatedPickupTimeController.text.trim()),
+            'estimatedDropoffTime': _parseDateTimeToMillis(
+                _estimatedDropoffTimeController.text.trim()),
             'specialInstructions': _specialInstructionsController.text.trim(),
           };
           break;
@@ -1741,12 +1815,14 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
             ),
           );
         }
-        setState(() { _isLoading = false; });
+        setState(() {
+          _isLoading = false;
+        });
         return;
       }
 
       // Update the response
-      await _requestService.updateResponse(
+      await _requestService.updateResponseNamed(
         responseId: widget.response.id,
         message: _messageController.text.trim(),
         price: price,

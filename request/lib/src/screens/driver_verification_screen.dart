@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'src/utils/firebase_shim.dart'; // Added by migration script
+// Removed firebase_shim after REST migration
+import '../services/rest_auth_service.dart' hide UserModel;
 // REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
 // REMOVED_FB_IMPORT: import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:io';
@@ -14,15 +15,17 @@ class DriverVerificationScreen extends StatefulWidget {
   const DriverVerificationScreen({Key? key}) : super(key: key);
 
   @override
-  State<DriverVerificationScreen> createState() => _DriverVerificationScreenState();
+  State<DriverVerificationScreen> createState() =>
+      _DriverVerificationScreenState();
 }
 
 class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
   final EnhancedUserService _userService = EnhancedUserService();
   final FileUploadService _fileUploadService = FileUploadService();
-  final ContactVerificationService _contactService = ContactVerificationService.instance;
+  final ContactVerificationService _contactService =
+      ContactVerificationService.instance;
   final _formKey = GlobalKey<FormState>();
-  
+
   // Form controllers
   final _fullNameController = TextEditingController();
   final _firstNameController = TextEditingController();
@@ -36,41 +39,41 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
   final _vehicleYearController = TextEditingController();
   final _vehicleNumberController = TextEditingController();
   final _vehicleColorController = TextEditingController();
-  
+
   // New fields from mobile app
   DateTime? _dateOfBirth;
   String? _selectedGender;
   String? _selectedCity;
   bool _isVehicleOwner = true;
   bool _licenseHasNoExpiry = false;
-  
+
   DateTime? _licenseExpiryDate;
   DateTime? _insuranceExpiryDate;
-  
+
   // Vehicle type selection
   String? _selectedVehicleType;
   List<Map<String, dynamic>> _availableVehicleTypes = [];
   String? _userCountry;
-  
+
   // Cities selection
   List<Map<String, dynamic>> _availableCities = [];
   bool _loadingCities = false;
-  
+
   // Document files
-  File? _driverImage;                    // Driver's photo (Profile Photo)
-  File? _licenseFrontPhoto;              // License front photo
-  File? _licenseBackPhoto;               // License back photo
-  File? _licenseDocument;                // Additional license document (optional)
-  File? _nicFrontPhoto;                  // NIC Front photo
-  File? _nicBackPhoto;                   // NIC Back photo  
-  File? _billingProofDocument;           // Billing Proof (optional)
-  File? _insuranceDocument;              // Vehicle insurance document
-  File? _vehicleRegistrationDocument;    // Vehicle registration document
-  List<File> _vehicleImages = [];        // Vehicle photos (4 images)
-  
+  File? _driverImage; // Driver's photo (Profile Photo)
+  File? _licenseFrontPhoto; // License front photo
+  File? _licenseBackPhoto; // License back photo
+  File? _licenseDocument; // Additional license document (optional)
+  File? _nicFrontPhoto; // NIC Front photo
+  File? _nicBackPhoto; // NIC Back photo
+  File? _billingProofDocument; // Billing Proof (optional)
+  File? _insuranceDocument; // Vehicle insurance document
+  File? _vehicleRegistrationDocument; // Vehicle registration document
+  List<File> _vehicleImages = []; // Vehicle photos (4 images)
+
   bool _isLoading = false;
   bool _isUploading = false;
-  
+
   // OTP Verification variables
   TextEditingController _phoneOtpController = TextEditingController();
   String? _phoneVerificationId;
@@ -93,12 +96,13 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
         setState(() {
           _fullNameController.text = user.name ?? '';
           _phoneController.text = user.phoneNumber ?? '';
-          _userCountry = user.countryCode ?? 'LK'; // Default to Sri Lanka if not set
+          _userCountry =
+              user.countryCode ?? 'LK'; // Default to Sri Lanka if not set
         });
-        
+
         // Load available vehicle types for user's country
         await _loadAvailableVehicleTypes();
-        
+
         // Load available cities for user's country
         await _loadAvailableCities();
       }
@@ -108,125 +112,80 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
   }
 
   Future<void> _loadAvailableVehicleTypes() async {
-    try {
-      // Get all vehicle types (without orderBy to avoid index requirement)
-// FIRESTORE_TODO: replace with REST service. Original: final vehicleTypesSnapshot = await FirebaseFirestore.instance
-      final vehicleTypesSnapshot = await FirebaseFirestore.instance
-          .collection('vehicle_types')
-          .where('isActive', isEqualTo: true)
-          .get();
-
-      // Get country-specific enabled vehicles
-// FIRESTORE_TODO: replace with REST service. Original: final countryVehiclesSnapshot = await FirebaseFirestore.instance
-      final countryVehiclesSnapshot = await FirebaseFirestore.instance
-          .collection('country_vehicles')
-          .where('countryCode', isEqualTo: _userCountry)
-          .limit(1)
-          .get();
-
-      List<String> enabledVehicleIds = [];
-      if (countryVehiclesSnapshot.docs.isNotEmpty) {
-        final countryData = countryVehiclesSnapshot.docs.first.data();
-        enabledVehicleIds = List<String>.from(countryData['enabledVehicles'] ?? []);
-      }
-
-      // Filter vehicle types based on country configuration and sort manually
-      final availableVehicles = vehicleTypesSnapshot.docs
-          .where((doc) => enabledVehicleIds.isEmpty || enabledVehicleIds.contains(doc.id))
-          .map((doc) => {
-                'id': doc.id,
-                'name': doc.data()['name'] as String,
-                'icon': doc.data()['icon'] as String? ?? 'DirectionsCar',
-                'displayOrder': doc.data()['displayOrder'] as int? ?? 1,
-              })
-          .toList();
-
-      // Sort manually by displayOrder
-      availableVehicles.sort((a, b) => (a['displayOrder'] as int).compareTo(b['displayOrder'] as int));
-
-      if (mounted) {
-        setState(() {
-          _availableVehicleTypes = availableVehicles;
-          // Set default selection to first available vehicle type
-          if (_availableVehicleTypes.isNotEmpty && _selectedVehicleType == null) {
-            _selectedVehicleType = _availableVehicleTypes.first['id'];
-          }
-        });
-      }
-    } catch (e) {
-      print('Error loading vehicle types: $e');
-      // Show user-friendly error
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error loading vehicle types. Please try again.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+    // Stubbed vehicle types until REST endpoint implemented
+    if (mounted) {
+      setState(() {
+        _availableVehicleTypes = [
+          {
+            'id': 'car',
+            'name': 'Car',
+            'icon': 'DirectionsCar',
+            'displayOrder': 1
+          },
+          {
+            'id': 'motorcycle',
+            'name': 'Motorcycle',
+            'icon': 'TwoWheeler',
+            'displayOrder': 2
+          },
+        ];
+        if (_selectedVehicleType == null && _availableVehicleTypes.isNotEmpty) {
+          _selectedVehicleType = _availableVehicleTypes.first['id'];
+        }
+      });
     }
   }
 
   Future<void> _loadAvailableCities() async {
-    try {
+    // Stubbed city list (previous Firestore logic removed during REST migration)
+    if (mounted) {
       setState(() {
-        _loadingCities = true;
+        _availableCities = [
+          {'id': 'colombo', 'name': 'Colombo', 'countryCode': _userCountry},
+          {'id': 'galle', 'name': 'Galle', 'countryCode': _userCountry},
+          {'id': 'kandy', 'name': 'Kandy', 'countryCode': _userCountry},
+        ];
+        _loadingCities = false;
       });
-
-      // Get cities for the user's country
-// FIRESTORE_TODO: replace with REST service. Original: final citiesSnapshot = await FirebaseFirestore.instance
-      final citiesSnapshot = await FirebaseFirestore.instance
-          .collection('cities')
-          .where('countryCode', isEqualTo: _userCountry)
-          .where('isActive', isEqualTo: true)
-          .orderBy('name')
-          .get();
-
-      final availableCities = citiesSnapshot.docs
-          .map((doc) => {
-                'id': doc.id,
-                'name': doc.data()['name'] as String,
-                'countryCode': doc.data()['countryCode'] as String,
-                'population': doc.data()['population'] as int?,
-                'coordinates': doc.data()['coordinates'] as Map<String, dynamic>?,
-              })
-          .toList();
-
-      // Remove duplicates based on city name (in case there are duplicate entries in database)
-      final Map<String, Map<String, dynamic>> uniqueCities = {};
-      for (final city in availableCities) {
-        final cityName = city['name'] as String;
-        uniqueCities[cityName] = city;
-      }
-      final uniqueCitiesList = uniqueCities.values.toList();
-
-      if (mounted) {
-        setState(() {
-          _availableCities = uniqueCitiesList;
-          _loadingCities = false;
-        });
-      }
-
-      print('Loaded ${uniqueCitiesList.length} unique cities for country: $_userCountry');
-      for (final city in uniqueCitiesList) {
-        print('City: ${city['name']} (ID: ${city['id']})');
-      }
-    } catch (e) {
-      print('Error loading cities: $e');
-      if (mounted) {
-        setState(() {
-          _loadingCities = false;
-        });
-        
-        // Show user-friendly error
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error loading cities. Please try again.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
     }
+  }
+
+  Future<void> _selectDateOfBirth() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime(now.year - 25, now.month, now.day),
+      firstDate: DateTime(1900, 1, 1),
+      lastDate: DateTime(now.year - 18, now.month, now.day),
+    );
+    if (picked != null && mounted) {
+      setState(() => _dateOfBirth = picked);
+    }
+  }
+
+  void _showDocumentRequirementsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Required Documents'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text('• National Identity Card'),
+            Text('• No Objection Certificate (if not vehicle owner)'),
+            Text('• Vehicle Owner\'s National Identity Card (if applicable)'),
+            Text('• Billing Proof (Utility bill or bank statement)'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -249,17 +208,22 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
     if (currentUser?.phoneNumber == null || _phoneController.text.isEmpty) {
       return false;
     }
-    
+
     // Clean both phone numbers for comparison
-    String firebasePhone = currentUser!.phoneNumber!.replaceAll(' ', '').replaceAll('-', '');
-    String enteredPhone = _phoneController.text.replaceAll(' ', '').replaceAll('-', '');
-    
+    String firebasePhone =
+        currentUser!.phoneNumber!.replaceAll(' ', '').replaceAll('-', '');
+    String enteredPhone =
+        _phoneController.text.replaceAll(' ', '').replaceAll('-', '');
+
     // Remove country codes for comparison if present
-    if (firebasePhone.startsWith('+94')) firebasePhone = firebasePhone.substring(3);
-    if (enteredPhone.startsWith('+94')) enteredPhone = enteredPhone.substring(3);
-    if (firebasePhone.startsWith('94')) firebasePhone = firebasePhone.substring(2);
+    if (firebasePhone.startsWith('+94'))
+      firebasePhone = firebasePhone.substring(3);
+    if (enteredPhone.startsWith('+94'))
+      enteredPhone = enteredPhone.substring(3);
+    if (firebasePhone.startsWith('94'))
+      firebasePhone = firebasePhone.substring(2);
     if (enteredPhone.startsWith('94')) enteredPhone = enteredPhone.substring(2);
-    
+
     return firebasePhone == enteredPhone;
   }
 
@@ -270,7 +234,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
         timer.cancel();
         return;
       }
-      
+
       setState(() {
         if (_otpCountdown > 0) {
           _otpCountdown--;
@@ -431,7 +395,9 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
                         ? 'Date of Birth *'
                         : 'Date of Birth: ${_dateOfBirth!.day}/${_dateOfBirth!.month}/${_dateOfBirth!.year}',
                     style: TextStyle(
-                      color: _dateOfBirth == null ? Colors.grey[600] : Colors.black,
+                      color: _dateOfBirth == null
+                          ? Colors.grey[600]
+                          : Colors.black,
                       fontSize: 16,
                     ),
                   ),
@@ -507,187 +473,219 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
           ),
           const SizedBox(height: 16),
           // Phone Verification Section - Auto or Manual based on Firebase verification
-          _isPhoneVerifiedByFirebase() 
-            ? Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green.withOpacity(0.3)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.check_circle, color: Colors.green, size: 20),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Phone Number (Auto-Verified)',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.green,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _phoneController.text.isNotEmpty ? _phoneController.text : 'No phone number',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: AppTheme.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'This number was verified during account creation',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            : Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange.withOpacity(0.3)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.warning, color: Colors.orange, size: 20),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Phone Verification Required',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.orange,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _phoneController.text.isNotEmpty ? _phoneController.text : 'No phone number',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: AppTheme.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'This number is different from your account phone. Please verify:',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    
-                    // OTP Verification UI
-                    if (!_isPhoneVerified && !_isPhoneOtpSent) ...[
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: _isVerifyingPhone ? null : () => _startPhoneVerification(_phoneController.text),
-                          icon: _isVerifyingPhone 
-                            ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)))
-                            : Icon(Icons.send),
-                          label: Text(_isVerifyingPhone ? 'Sending OTP...' : 'Send OTP'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
-                            foregroundColor: Colors.white,
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
-                    ],
-                    
-                    if (_isPhoneOtpSent && !_isPhoneVerified) ...[
-                      TextFormField(
-                        controller: _phoneOtpController,
-                        decoration: InputDecoration(
-                          labelText: 'Enter OTP',
-                          hintText: 'Enter the 6-digit code',
-                          prefixIcon: Icon(Icons.message),
-                          border: OutlineInputBorder(),
-                          counterText: _otpCountdown > 0 ? 'Resend in $_otpCountdown seconds' : '',
-                        ),
-                        keyboardType: TextInputType.number,
-                        maxLength: 6,
-                      ),
-                      const SizedBox(height: 12),
+          _isPhoneVerifiedByFirebase()
+              ? Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.green.withOpacity(0.3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Row(
                         children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: _isVerifyingPhoneOtp ? null : _verifyPhoneOTP,
-                              icon: _isVerifyingPhoneOtp 
-                                ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)))
-                                : Icon(Icons.verified),
-                              label: Text(_isVerifyingPhoneOtp ? 'Verifying...' : 'Verify OTP'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-                                foregroundColor: Colors.white,
-                                padding: EdgeInsets.symmetric(vertical: 12),
-                              ),
+                          Icon(Icons.check_circle,
+                              color: Colors.green, size: 20),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Phone Number (Auto-Verified)',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.green,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          if (_otpCountdown == 0)
-                            ElevatedButton(
-                              onPressed: () => _startPhoneVerification(_phoneController.text),
-                              child: Text('Resend'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.grey,
-                                foregroundColor: Colors.white,
-                                padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                              ),
-                            ),
                         ],
                       ),
-                    ],
-                    
-                    if (_isPhoneVerified) ...[
-                      Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.green),
+                      const SizedBox(height: 8),
+                      Text(
+                        _phoneController.text.isNotEmpty
+                            ? _phoneController.text
+                            : 'No phone number',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.textPrimary,
                         ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.check_circle, color: Colors.green),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Phone number verified successfully!',
-                              style: TextStyle(
-                                color: Colors.green,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'This number was verified during account creation',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textSecondary,
                         ),
                       ),
                     ],
-                  ],
+                  ),
+                )
+              : Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.warning, color: Colors.orange, size: 20),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Phone Verification Required',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.orange,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _phoneController.text.isNotEmpty
+                            ? _phoneController.text
+                            : 'No phone number',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'This number is different from your account phone. Please verify:',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // OTP Verification UI
+                      if (!_isPhoneVerified && !_isPhoneOtpSent) ...[
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _isVerifyingPhone
+                                ? null
+                                : () => _startPhoneVerification(
+                                    _phoneController.text),
+                            icon: _isVerifyingPhone
+                                ? SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                                Colors.white)))
+                                : Icon(Icons.send),
+                            label: Text(_isVerifyingPhone
+                                ? 'Sending OTP...'
+                                : 'Send OTP'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                      ],
+
+                      if (_isPhoneOtpSent && !_isPhoneVerified) ...[
+                        TextFormField(
+                          controller: _phoneOtpController,
+                          decoration: InputDecoration(
+                            labelText: 'Enter OTP',
+                            hintText: 'Enter the 6-digit code',
+                            prefixIcon: Icon(Icons.message),
+                            border: OutlineInputBorder(),
+                            counterText: _otpCountdown > 0
+                                ? 'Resend in $_otpCountdown seconds'
+                                : '',
+                          ),
+                          keyboardType: TextInputType.number,
+                          maxLength: 6,
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: _isVerifyingPhoneOtp
+                                    ? null
+                                    : _verifyPhoneOTP,
+                                icon: _isVerifyingPhoneOtp
+                                    ? SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                    Colors.white)))
+                                    : Icon(Icons.verified),
+                                label: Text(_isVerifyingPhoneOtp
+                                    ? 'Verifying...'
+                                    : 'Verify OTP'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: Colors.white,
+                                  padding: EdgeInsets.symmetric(vertical: 12),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            if (_otpCountdown == 0)
+                              ElevatedButton(
+                                onPressed: () => _startPhoneVerification(
+                                    _phoneController.text),
+                                child: Text('Resend'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.grey,
+                                  foregroundColor: Colors.white,
+                                  padding: EdgeInsets.symmetric(
+                                      vertical: 12, horizontal: 16),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+
+                      if (_isPhoneVerified) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.green),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.check_circle, color: Colors.green),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Phone number verified successfully!',
+                                style: TextStyle(
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-              ),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -700,12 +698,13 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
                 labelText: 'City *',
                 prefixIcon: const Icon(Icons.location_city),
                 border: InputBorder.none,
-                suffixIcon: _loadingCities ? 
-                  const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ) : null,
+                suffixIcon: _loadingCities
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : null,
               ),
               items: _availableCities.map((city) {
                 return DropdownMenuItem<String>(
@@ -713,28 +712,32 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
                   child: Text(city['name']),
                 );
               }).toList()
-                ..add(const DropdownMenuItem(value: 'other', child: Text('Other'))),
-              onChanged: _loadingCities ? null : (value) {
-                setState(() {
-                  _selectedCity = value;
-                });
-              },
+                ..add(const DropdownMenuItem(
+                    value: 'other', child: Text('Other'))),
+              onChanged: _loadingCities
+                  ? null
+                  : (value) {
+                      setState(() {
+                        _selectedCity = value;
+                      });
+                    },
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Please select your city';
                 }
                 return null;
               },
-              hint: _loadingCities ? 
-                const Text('Loading cities...') : 
-                const Text('Select your city'),
+              hint: _loadingCities
+                  ? const Text('Loading cities...')
+                  : const Text('Select your city'),
             ),
           ),
           const SizedBox(height: 24),
           // Vehicle Ownership Section
           Row(
             children: [
-              Icon(Icons.directions_car, color: AppTheme.primaryColor, size: 24),
+              Icon(Icons.directions_car,
+                  color: AppTheme.primaryColor, size: 24),
               const SizedBox(width: 12),
               const Text(
                 'Vehicle Ownership',
@@ -755,7 +758,8 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
             child: Column(
               children: [
                 RadioListTile<bool>(
-                  title: const Text('I am the owner of this vehicle I am about to register.'),
+                  title: const Text(
+                      'I am the owner of this vehicle I am about to register.'),
                   value: true,
                   groupValue: _isVehicleOwner,
                   onChanged: (value) {
@@ -842,7 +846,9 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
                           ? 'Expiration Date *'
                           : 'Expiration Date: ${_licenseExpiryDate!.day}/${_licenseExpiryDate!.month}/${_licenseExpiryDate!.year}',
                       style: TextStyle(
-                        color: _licenseExpiryDate == null ? Colors.grey[600] : Colors.black,
+                        color: _licenseExpiryDate == null
+                            ? Colors.grey[600]
+                            : Colors.black,
                         fontSize: 16,
                       ),
                     ),
@@ -852,8 +858,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
                 ),
               ),
             ),
-          if (!_licenseHasNoExpiry)
-            const SizedBox(height: 16),
+          if (!_licenseHasNoExpiry) const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(12),
             decoration: const BoxDecoration(
@@ -1076,7 +1081,9 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
                       ? 'Insurance Expiry Date *'
                       : 'Insurance Expiry: ${_insuranceExpiryDate!.day}/${_insuranceExpiryDate!.month}/${_insuranceExpiryDate!.year}',
                   style: TextStyle(
-                    color: _insuranceExpiryDate == null ? Colors.grey[600] : Colors.black,
+                    color: _insuranceExpiryDate == null
+                        ? Colors.grey[600]
+                        : Colors.black,
                     fontSize: 16,
                   ),
                 ),
@@ -1118,7 +1125,8 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.directions_car, color: AppTheme.primaryColor, size: 24),
+              Icon(Icons.directions_car,
+                  color: AppTheme.primaryColor, size: 24),
               const SizedBox(width: 12),
               const Text(
                 'Vehicle Information',
@@ -1401,7 +1409,8 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
               mainAxisSpacing: 12,
               childAspectRatio: 1.2,
             ),
-            itemCount: _vehicleImages.length < 6 ? _vehicleImages.length + 1 : 6,
+            itemCount:
+                _vehicleImages.length < 6 ? _vehicleImages.length + 1 : 6,
             itemBuilder: (context, index) {
               if (index < _vehicleImages.length) {
                 return _buildVehicleImageItem(index);
@@ -1514,7 +1523,8 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.grey[100],
-          border: Border.all(color: Colors.grey[300]!, style: BorderStyle.solid, width: 2),
+          border: Border.all(
+              color: Colors.grey[300]!, style: BorderStyle.solid, width: 2),
         ),
         child: const Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -1538,7 +1548,9 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
     );
   }
 
-  Widget _buildDocumentUpload(String title, String description, File? file, VoidCallback onTap, IconData icon, {bool isRequired = false}) {
+  Widget _buildDocumentUpload(String title, String description, File? file,
+      VoidCallback onTap, IconData icon,
+      {bool isRequired = false}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -1608,109 +1620,35 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
 
   bool _canSubmit() {
     // Check if phone verification is required and completed
-    bool phoneVerificationComplete = _isPhoneVerifiedByFirebase() || _isPhoneVerified;
-    
+    bool phoneVerificationComplete =
+        _isPhoneVerifiedByFirebase() || _isPhoneVerified;
+
     return _firstNameController.text.trim().isNotEmpty &&
-           _lastNameController.text.trim().isNotEmpty &&
-           _phoneController.text.trim().isNotEmpty &&  // Phone number required
-           phoneVerificationComplete &&                 // Phone verification required
-           _dateOfBirth != null &&
-           _selectedGender != null &&
-           _nicNumberController.text.trim().isNotEmpty &&
-           _selectedCity != null &&
-           _licenseNumberController.text.trim().isNotEmpty &&
-           (_licenseExpiryDate != null || _licenseHasNoExpiry) &&
-           _driverImage != null &&                    // Driver photo required
-           _licenseFrontPhoto != null &&              // License front photo required
-           _licenseBackPhoto != null &&               // License back photo required
-           _insuranceNumberController.text.trim().isNotEmpty &&
-           _insuranceExpiryDate != null &&            // Insurance expiry date required
-           _insuranceDocument != null &&              // Vehicle insurance required
-           _vehicleModelController.text.trim().isNotEmpty &&
-           _vehicleYearController.text.trim().isNotEmpty &&
-           _vehicleColorController.text.trim().isNotEmpty &&
-           _vehicleNumberController.text.trim().isNotEmpty &&
-           _vehicleRegistrationDocument != null &&   // Vehicle registration required
-           _vehicleImages.length >= 4 &&             // Minimum 4 vehicle photos
-           !_isLoading;
+        _lastNameController.text.trim().isNotEmpty &&
+        _phoneController.text.trim().isNotEmpty && // Phone number required
+        phoneVerificationComplete && // Phone verification required
+        _dateOfBirth != null &&
+        _selectedGender != null &&
+        _nicNumberController.text.trim().isNotEmpty &&
+        _selectedCity != null &&
+        _licenseNumberController.text.trim().isNotEmpty &&
+        (_licenseExpiryDate != null || _licenseHasNoExpiry) &&
+        _driverImage != null && // Driver photo required
+        _licenseFrontPhoto != null && // License front photo required
+        _licenseBackPhoto != null && // License back photo required
+        _insuranceNumberController.text.trim().isNotEmpty &&
+        _insuranceExpiryDate != null && // Insurance expiry date required
+        _insuranceDocument != null && // Vehicle insurance required
+        _vehicleModelController.text.trim().isNotEmpty &&
+        _vehicleYearController.text.trim().isNotEmpty &&
+        _vehicleColorController.text.trim().isNotEmpty &&
+        _vehicleNumberController.text.trim().isNotEmpty &&
+        _vehicleRegistrationDocument != null && // Vehicle registration required
+        _vehicleImages.length >= 4 && // Minimum 4 vehicle photos
+        !_isLoading;
   }
 
-  Future<void> _selectDateOfBirth() async {
-    final date = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now().subtract(const Duration(days: 6570)), // 18 years ago
-      firstDate: DateTime(1950),
-      lastDate: DateTime.now().subtract(const Duration(days: 6570)), // Must be at least 18
-    );
-    if (date != null) {
-      setState(() => _dateOfBirth = date);
-    }
-  }
-
-  void _showDocumentRequirementsDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.info_outline, color: AppTheme.primaryColor),
-            const SizedBox(width: 8),
-            const Text('Document Requirements'),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Mandatory documents:',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-              const SizedBox(height: 8),
-              _buildDocumentListItem('• Revenue Licence'),
-              _buildDocumentListItem('• Driving License'),
-              _buildDocumentListItem('• Insurance Certificate (any insurance category)'),
-              _buildDocumentListItem('• Vehicle photos (front / rear / inside)'),
-              _buildDocumentListItem('• Driver\'s photo'),
-              const SizedBox(height: 16),
-              const Text(
-                'Non-mandatory documents:',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-              const SizedBox(height: 8),
-              _buildDocumentListItem('• National Identity Card'),
-              _buildDocumentListItem('• No Objection Certificate from the vehicle owner'),
-              _buildDocumentListItem('• National Identity Card of the vehicle owner'),
-              _buildDocumentListItem('• Billing Proof'),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OKAY'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDocumentListItem(String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Text(
-        text,
-        style: const TextStyle(fontSize: 14),
-      ),
-    );
-  }
+  // (Removed duplicate _loadAvailableCities and obsolete _buildDocumentListItem)
 
   Future<void> _selectLicenseExpiryDate() async {
     final date = await showDatePicker(
@@ -1771,7 +1709,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
       maxWidth: 1500,
       maxHeight: 1500,
     );
-    
+
     if (image != null) {
       setState(() {
         switch (type) {
@@ -1816,9 +1754,9 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Select Image Source'),
         content: Text(
-          _vehicleImages.length < 2 
-            ? 'Photo ${_vehicleImages.length + 1}: ${_vehicleImages.length == 0 ? "Front view with number plate" : "Rear view with number plate"}'
-            : 'Additional vehicle photo ${_vehicleImages.length + 1}',
+          _vehicleImages.length < 2
+              ? 'Photo ${_vehicleImages.length + 1}: ${_vehicleImages.length == 0 ? "Front view with number plate" : "Rear view with number plate"}'
+              : 'Additional vehicle photo ${_vehicleImages.length + 1}',
         ),
         actions: [
           TextButton.icon(
@@ -1840,7 +1778,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
     );
 
     if (source == null) return;
-    
+
     final picker = ImagePicker();
     final image = await picker.pickImage(
       source: source,
@@ -1848,7 +1786,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
       maxWidth: 1500,
       maxHeight: 1500,
     );
-    
+
     if (image != null) {
       setState(() {
         _vehicleImages.add(File(image.path));
@@ -1872,99 +1810,95 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
       if (currentUser == null) throw Exception('User not authenticated');
 
       // Upload documents
-      String? driverImageUrl, licenseFrontUrl, licenseBackUrl, licenseDocumentUrl, 
-              nicFrontUrl, nicBackUrl, billingProofUrl, insuranceUrl, registrationUrl;
+      String? driverImageUrl,
+          licenseFrontUrl,
+          licenseBackUrl,
+          licenseDocumentUrl,
+          nicFrontUrl,
+          nicBackUrl,
+          billingProofUrl,
+          insuranceUrl,
+          registrationUrl;
       List<String> vehicleImageUrls = [];
 
       // Upload driver photo (required)
       if (_driverImage != null) {
         driverImageUrl = await _fileUploadService.uploadDriverDocument(
-          currentUser.uid, _driverImage!, 'driver_photo'
-        );
+            currentUser.uid, _driverImage!, 'driver_photo');
       }
 
       // Upload license front photo (required)
       if (_licenseFrontPhoto != null) {
         licenseFrontUrl = await _fileUploadService.uploadDriverDocument(
-          currentUser.uid, _licenseFrontPhoto!, 'license_front'
-        );
+            currentUser.uid, _licenseFrontPhoto!, 'license_front');
       }
 
       // Upload license back photo (required)
       if (_licenseBackPhoto != null) {
         licenseBackUrl = await _fileUploadService.uploadDriverDocument(
-          currentUser.uid, _licenseBackPhoto!, 'license_back'
-        );
+            currentUser.uid, _licenseBackPhoto!, 'license_back');
       }
 
       // Upload additional license document (optional)
       if (_licenseDocument != null) {
         licenseDocumentUrl = await _fileUploadService.uploadDriverDocument(
-          currentUser.uid, _licenseDocument!, 'license_document'
-        );
+            currentUser.uid, _licenseDocument!, 'license_document');
       }
 
       // Upload NIC front photo (optional)
       if (_nicFrontPhoto != null) {
         nicFrontUrl = await _fileUploadService.uploadDriverDocument(
-          currentUser.uid, _nicFrontPhoto!, 'nic_front'
-        );
+            currentUser.uid, _nicFrontPhoto!, 'nic_front');
       }
 
       // Upload NIC back photo (optional)
       if (_nicBackPhoto != null) {
         nicBackUrl = await _fileUploadService.uploadDriverDocument(
-          currentUser.uid, _nicBackPhoto!, 'nic_back'
-        );
+            currentUser.uid, _nicBackPhoto!, 'nic_back');
       }
 
       // Upload billing proof document (optional)
       if (_billingProofDocument != null) {
         billingProofUrl = await _fileUploadService.uploadDriverDocument(
-          currentUser.uid, _billingProofDocument!, 'billing_proof'
-        );
+            currentUser.uid, _billingProofDocument!, 'billing_proof');
       }
 
       // Upload license front photo (required)
       if (_licenseFrontPhoto != null) {
         licenseFrontUrl = await _fileUploadService.uploadDriverDocument(
-          currentUser.uid, _licenseFrontPhoto!, 'license_front'
-        );
+            currentUser.uid, _licenseFrontPhoto!, 'license_front');
       }
 
       // Upload license back photo (required)
       if (_licenseBackPhoto != null) {
         licenseBackUrl = await _fileUploadService.uploadDriverDocument(
-          currentUser.uid, _licenseBackPhoto!, 'license_back'
-        );
+            currentUser.uid, _licenseBackPhoto!, 'license_back');
       }
 
       // Upload additional license document (optional)
       if (_licenseDocument != null) {
         licenseDocumentUrl = await _fileUploadService.uploadDriverDocument(
-          currentUser.uid, _licenseDocument!, 'license_document'
-        );
+            currentUser.uid, _licenseDocument!, 'license_document');
       }
 
       // Upload vehicle insurance document (required)
       if (_insuranceDocument != null) {
         insuranceUrl = await _fileUploadService.uploadDriverDocument(
-          currentUser.uid, _insuranceDocument!, 'vehicle_insurance'
-        );
+            currentUser.uid, _insuranceDocument!, 'vehicle_insurance');
       }
 
       // Upload vehicle registration document (required)
       if (_vehicleRegistrationDocument != null) {
         registrationUrl = await _fileUploadService.uploadDriverDocument(
-          currentUser.uid, _vehicleRegistrationDocument!, 'vehicle_registration'
-        );
+            currentUser.uid,
+            _vehicleRegistrationDocument!,
+            'vehicle_registration');
       }
 
       // Upload vehicle images
       for (int i = 0; i < _vehicleImages.length; i++) {
         final imageUrl = await _fileUploadService.uploadVehicleImage(
-          currentUser.uid, _vehicleImages[i], i + 1
-        );
+            currentUser.uid, _vehicleImages[i], i + 1);
         vehicleImageUrls.add(imageUrl);
       }
 
@@ -1973,13 +1907,16 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
         'userId': currentUser.uid,
         'firstName': _firstNameController.text.trim(),
         'lastName': _lastNameController.text.trim(),
-        'fullName': '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}',
+        'fullName':
+            '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}',
         'email': currentUser.email,
         'phoneNumber': _phoneController.text.trim(),
         'phoneVerified': _isPhoneVerifiedByFirebase() ? true : _isPhoneVerified,
-        'phoneVerificationSource': _isPhoneVerifiedByFirebase() ? 'firebase_auth' : 'otp_verification',
-        'secondaryMobile': _secondaryMobileController.text.trim().isNotEmpty 
-                          ? _secondaryMobileController.text.trim() : null,
+        'phoneVerificationSource':
+            _isPhoneVerifiedByFirebase() ? 'firebase_auth' : 'otp_verification',
+        'secondaryMobile': _secondaryMobileController.text.trim().isNotEmpty
+            ? _secondaryMobileController.text.trim()
+            : null,
         'dateOfBirth': _dateOfBirth,
         'gender': _selectedGender,
         'nicNumber': _nicNumberController.text.trim(),
@@ -2006,42 +1943,69 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
         'subscriptionPlan': 'free',
         'createdAt': DateTime.now(),
         'updatedAt': DateTime.now(),
-        
+
         // Document URLs
-        'driverImageUrl': driverImageUrl,                    // Driver photo (profile photo)
-        'licenseFrontUrl': licenseFrontUrl,                  // License front photo
-        'licenseBackUrl': licenseBackUrl,                    // License back photo
-        'licenseDocumentUrl': licenseDocumentUrl,            // Additional license document (optional)
-        'nicFrontUrl': nicFrontUrl,                          // NIC front photo (optional)
-        'nicBackUrl': nicBackUrl,                            // NIC back photo (optional)
-        'billingProofUrl': billingProofUrl,                  // Billing proof (optional)
-        'insuranceDocumentUrl': insuranceUrl,                // Vehicle insurance
-        'vehicleRegistrationUrl': registrationUrl,           // Vehicle registration
+        'driverImageUrl': driverImageUrl, // Driver photo (profile photo)
+        'licenseFrontUrl': licenseFrontUrl, // License front photo
+        'licenseBackUrl': licenseBackUrl, // License back photo
+        'licenseDocumentUrl':
+            licenseDocumentUrl, // Additional license document (optional)
+        'nicFrontUrl': nicFrontUrl, // NIC front photo (optional)
+        'nicBackUrl': nicBackUrl, // NIC back photo (optional)
+        'billingProofUrl': billingProofUrl, // Billing proof (optional)
+        'insuranceDocumentUrl': insuranceUrl, // Vehicle insurance
+        'vehicleRegistrationUrl': registrationUrl, // Vehicle registration
         'vehicleImageUrls': vehicleImageUrls,
-        
+
         // Verification status for each document/image
         'documentVerification': {
-          'driverImage': {'status': 'pending', 'submittedAt': DateTime.now()},           // Driver photo
-          'licenseFront': {'status': 'pending', 'submittedAt': DateTime.now()},          // License front
-          'licenseBack': {'status': 'pending', 'submittedAt': DateTime.now()},           // License back
-          'licenseDocument': licenseDocumentUrl != null 
-            ? {'status': 'pending', 'submittedAt': DateTime.now()} : null,               // Optional: License document
-          'nicFront': nicFrontUrl != null 
-            ? {'status': 'pending', 'submittedAt': DateTime.now()} : null,               // Optional: NIC front
-          'nicBack': nicBackUrl != null 
-            ? {'status': 'pending', 'submittedAt': DateTime.now()} : null,               // Optional: NIC back
-          'billingProof': billingProofUrl != null 
-            ? {'status': 'pending', 'submittedAt': DateTime.now()} : null,               // Optional: Billing proof
-          'vehicleInsurance': {'status': 'pending', 'submittedAt': DateTime.now()},      // Vehicle insurance
-          'vehicleRegistration': {'status': 'pending', 'submittedAt': DateTime.now()},   // Vehicle registration
+          'driverImage': {
+            'status': 'pending',
+            'submittedAt': DateTime.now()
+          }, // Driver photo
+          'licenseFront': {
+            'status': 'pending',
+            'submittedAt': DateTime.now()
+          }, // License front
+          'licenseBack': {
+            'status': 'pending',
+            'submittedAt': DateTime.now()
+          }, // License back
+          'licenseDocument': licenseDocumentUrl != null
+              ? {'status': 'pending', 'submittedAt': DateTime.now()}
+              : null, // Optional: License document
+          'nicFront': nicFrontUrl != null
+              ? {'status': 'pending', 'submittedAt': DateTime.now()}
+              : null, // Optional: NIC front
+          'nicBack': nicBackUrl != null
+              ? {'status': 'pending', 'submittedAt': DateTime.now()}
+              : null, // Optional: NIC back
+          'billingProof': billingProofUrl != null
+              ? {'status': 'pending', 'submittedAt': DateTime.now()}
+              : null, // Optional: Billing proof
+          'vehicleInsurance': {
+            'status': 'pending',
+            'submittedAt': DateTime.now()
+          }, // Vehicle insurance
+          'vehicleRegistration': {
+            'status': 'pending',
+            'submittedAt': DateTime.now()
+          }, // Vehicle registration
         },
-        'vehicleImageVerification': _vehicleImages.asMap().entries.map((entry) => {
-          'imageIndex': entry.key,
-          'status': 'pending',
-          'submittedAt': DateTime.now(),
-          'imageType': entry.key == 0 ? 'front_with_plate' : 
-                      entry.key == 1 ? 'rear_with_plate' : 'additional',
-        }).toList(),
+        'vehicleImageVerification': _vehicleImages
+            .asMap()
+            .entries
+            .map((entry) => {
+                  'imageIndex': entry.key,
+                  'status': 'pending',
+                  'submittedAt': DateTime.now(),
+                  'imageType': entry.key == 0
+                      ? 'front_with_plate'
+                      : entry.key == 1
+                          ? 'rear_with_plate'
+                          : 'additional',
+                })
+            .toList(),
       };
 
       // Save to Firestore
@@ -2050,7 +2014,8 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Driver verification submitted successfully! We\'ll review your documents within 1-3 business days.'),
+            content: Text(
+                'Driver verification submitted successfully! We\'ll review your documents within 1-3 business days.'),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 4),
           ),
@@ -2083,11 +2048,13 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
     });
 
     try {
-      print('DEBUG: Calling ContactVerificationService.startBusinessPhoneVerification for driver');
+      print(
+          'DEBUG: Calling ContactVerificationService.startBusinessPhoneVerification for driver');
       final result = await _contactService.startBusinessPhoneVerification(
         phoneNumber: phoneNumber,
         onCodeSent: (verificationId) {
-          print('DEBUG: SMS code sent successfully. VerificationId: $verificationId');
+          print(
+              'DEBUG: SMS code sent successfully. VerificationId: $verificationId');
           if (mounted) {
             setState(() {
               _phoneVerificationId = verificationId;
@@ -2095,16 +2062,17 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
               _isPhoneOtpSent = true;
               _otpCountdown = 60; // Start 60 second countdown
             });
-            
+
             // Start countdown timer
             _startOtpCountdown();
-            
+
             // Show different message for development mode
             String message;
             if (verificationId.startsWith('dev_verification_')) {
               message = '🚀 DEVELOPMENT MODE: Use OTP code 123456 to verify';
             } else {
-              message = 'SMS sent to $phoneNumber! Check your messages for the 6-digit code.';
+              message =
+                  'SMS sent to $phoneNumber! Check your messages for the 6-digit code.';
             }
             _showSnackBar(message, isError: false);
           }
@@ -2137,7 +2105,8 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
   }
 
   Future<void> _verifyPhoneOTP() async {
-    if (_phoneVerificationId == null || _phoneOtpController.text.trim().isEmpty) {
+    if (_phoneVerificationId == null ||
+        _phoneOtpController.text.trim().isEmpty) {
       _showSnackBar('Please enter the OTP', isError: true);
       return;
     }

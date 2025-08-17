@@ -15,7 +15,8 @@ class BrowseScreen extends StatefulWidget {
 }
 
 class _BrowseScreenState extends State<BrowseScreen> {
-  final CountryFilteredDataService _dataService = CountryFilteredDataService.instance;
+  final CountryFilteredDataService _dataService =
+      CountryFilteredDataService.instance;
   String _searchQuery = '';
   RequestType? _selectedType;
   String _selectedLocation = 'All Locations';
@@ -36,14 +37,14 @@ class _BrowseScreenState extends State<BrowseScreen> {
   Future<void> _loadData() async {
     try {
       _currencySymbol = CountryService.instance.getCurrencySymbol();
-      
+
       // Load country modules configuration
       final countryCode = CountryService.instance.countryCode;
       if (countryCode != null) {
         _countryModules = await ModuleService.getCountryModules(countryCode);
         _enabledRequestTypes = _getEnabledRequestTypes();
       }
-      
+
       await _loadRequests();
     } catch (e) {
       if (mounted) {
@@ -62,7 +63,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
 
   List<RequestType> _getEnabledRequestTypes() {
     if (_countryModules == null) return RequestType.values;
-    
+
     List<RequestType> enabledTypes = [];
     _countryModules!.modules.forEach((moduleId, isEnabled) {
       if (isEnabled) {
@@ -72,7 +73,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
         }
       }
     });
-    
+
     return enabledTypes;
   }
 
@@ -104,22 +105,23 @@ class _BrowseScreenState extends State<BrowseScreen> {
     }
     try {
       print('📥 Fetching country-filtered requests...');
-      
+
       // Use centralized service which automatically filters by user's country
       final requestsStream = _dataService.getCountryRequestsStream(
         status: null, // Get all statuses
         type: _selectedType?.name, // pass enum name as string for shim services
         limit: 50,
       );
-      
+
       // Listen to the stream and get the first result
       final loadedRequests = await requestsStream.first;
-          
+
       print('📊 Found ${loadedRequests.length} country-filtered requests');
-      
+
       if (mounted) {
         _requests = loadedRequests;
-        print('📝 Successfully loaded ${_requests.length} requests for country: ${CountryService.instance.countryCode}');
+        print(
+            '📝 Successfully loaded ${_requests.length} requests for country: ${CountryService.instance.countryCode}');
         setState(() {});
       }
     } catch (e) {
@@ -159,19 +161,19 @@ class _BrowseScreenState extends State<BrowseScreen> {
 
   List<RequestModel> get _filteredRequests {
     List<RequestModel> filtered = List.from(_requests);
-    
+
     // Apply module-based filtering first - only show requests for enabled modules
     if (_countryModules != null) {
       filtered = filtered.where((request) {
         // Get the module ID for this request type
         String? moduleId = _getModuleIdFromRequestType(request.type);
         if (moduleId == null) return false;
-        
+
         // Check if this module is enabled for the user's country
         return _countryModules!.isModuleEnabled(moduleId);
       }).toList();
     }
-    
+
     // Apply search filter
     if (_searchQuery.isNotEmpty) {
       // Split search query by comma, period, and space to handle multiple terms
@@ -180,7 +182,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
           .split(RegExp(r'[,.\s]+'))
           .where((term) => term.isNotEmpty)
           .toList();
-      
+
       filtered = filtered.where((request) {
         // Create a searchable string with all request fields
         String searchableContent = [
@@ -194,22 +196,22 @@ class _BrowseScreenState extends State<BrowseScreen> {
           request.status.name,
           ...request.tags, // Include tags which might contain categories
           // Add type-specific data that might contain categories
-          ...request.typeSpecificData.values.map((value) => value?.toString() ?? ''),
+          ...request.typeSpecificData.values
+              .map((value) => value?.toString() ?? ''),
         ].join(' ').toLowerCase();
-        
+
         // Check if ALL search terms are found (AND logic)
         // You can change this to ANY (OR logic) by using .any() instead of .every()
-        return searchTerms.every((term) => 
-          searchableContent.contains(term)
-        );
+        return searchTerms.every((term) => searchableContent.contains(term));
       }).toList();
     }
-    
+
     // Apply type filter
     if (_selectedType != null) {
-      filtered = filtered.where((request) => request.type == _selectedType).toList();
+      filtered =
+          filtered.where((request) => request.type == _selectedType).toList();
     }
-    
+
     return filtered;
   }
 
@@ -223,13 +225,15 @@ class _BrowseScreenState extends State<BrowseScreen> {
         title: const Text('Browse Requests'),
         backgroundColor: theme.colorScheme.background, // Match background
         elevation: 0, // No shadow
-        foregroundColor: theme.textTheme.bodyLarge?.color, // Use theme text color
+        foregroundColor:
+            theme.textTheme.bodyLarge?.color, // Use theme text color
         titleSpacing: 0,
         actions: [
           IconButton(
             icon: Icon(
               _showFilters ? Icons.filter_alt : Icons.filter_alt_outlined,
-              color: _showFilters ? Colors.blue : theme.textTheme.bodyLarge?.color,
+              color:
+                  _showFilters ? Colors.blue : theme.textTheme.bodyLarge?.color,
             ),
             onPressed: () {
               setState(() {
@@ -242,180 +246,206 @@ class _BrowseScreenState extends State<BrowseScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
-        children: [
-          // Search bar
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextFormField(
-              decoration: InputDecoration(
-                hintText: 'Search requests... (use , or . to separate terms)',
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: Colors.white, // White background for the field
-                border: InputBorder.none, // No border
-              ),
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value;
-                });
-              },
+              children: [
+                // Search bar
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: TextFormField(
+                    decoration: InputDecoration(
+                      hintText:
+                          'Search requests... (use , or . to separate terms)',
+                      prefixIcon: const Icon(Icons.search),
+                      filled: true,
+                      fillColor: Colors.white, // White background for the field
+                      border: InputBorder.none, // No border
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        _searchQuery = value;
+                      });
+                    },
+                  ),
+                ),
+
+                // Collapsible filter section
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  height: _showFilters ? null : 0,
+                  child: _showFilters
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          color: theme.colorScheme.surface.withOpacity(0.5),
+                          child: Column(
+                            children: [
+                              // Category filter
+                              Row(
+                                children: [
+                                  const Text('Category:',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w500)),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: DropdownButtonFormField<RequestType>(
+                                      value: _selectedType,
+                                      decoration: InputDecoration(
+                                        filled: true,
+                                        fillColor: Colors.white,
+                                        border: InputBorder.none,
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 8),
+                                      ),
+                                      hint: const Text('All Categories'),
+                                      items: [
+                                        const DropdownMenuItem(
+                                            value: null,
+                                            child: Text('All Categories')),
+                                        ..._enabledRequestTypes.map((type) {
+                                          return DropdownMenuItem(
+                                            value: type,
+                                            child: Text(
+                                                _getRequestTypeDisplayName(
+                                                    type)),
+                                          );
+                                        }).toList(),
+                                      ],
+                                      onChanged: (value) {
+                                        setState(() {
+                                          _selectedType = value;
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+
+                              // Location filter
+                              Row(
+                                children: [
+                                  const Text('Location:',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w500)),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: DropdownButtonFormField<String>(
+                                      value: _selectedLocation,
+                                      decoration: InputDecoration(
+                                        filled: true,
+                                        fillColor: Colors.white,
+                                        border: InputBorder.none,
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 8),
+                                      ),
+                                      items: const [
+                                        DropdownMenuItem(
+                                            value: 'All Locations',
+                                            child: Text('All Locations')),
+                                        DropdownMenuItem(
+                                            value: 'Nearby',
+                                            child: Text('Nearby')),
+                                        DropdownMenuItem(
+                                            value: 'City Center',
+                                            child: Text('City Center')),
+                                        DropdownMenuItem(
+                                            value: 'Suburbs',
+                                            child: Text('Suburbs')),
+                                      ],
+                                      onChanged: (value) {
+                                        setState(() {
+                                          _selectedLocation =
+                                              value ?? 'All Locations';
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                            ],
+                          ),
+                        )
+                      : const SizedBox.shrink(),
+                ),
+
+                // Results List
+                Expanded(
+                  child: _error != null
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                size: 64,
+                                color: Colors.red[400],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Error',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                _error!,
+                                style: Theme.of(context).textTheme.bodyMedium,
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: _loadRequests,
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        )
+                      : _filteredRequests.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.search_off,
+                                    size: 64,
+                                    color: Colors.grey[400],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'No requests found',
+                                    style:
+                                        Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    _searchQuery.isNotEmpty ||
+                                            _selectedType != null
+                                        ? 'Try adjusting your search or filters'
+                                        : 'No requests available at the moment',
+                                    style:
+                                        Theme.of(context).textTheme.bodyMedium,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  ElevatedButton(
+                                    onPressed: _loadRequests,
+                                    child: const Text('Refresh'),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount: _filteredRequests.length,
+                              itemBuilder: (context, index) {
+                                final request = _filteredRequests[index];
+                                return _buildRequestCard(request);
+                              },
+                            ),
+                ),
+              ],
             ),
-          ),
-
-          // Collapsible filter section
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            height: _showFilters ? null : 0,
-            child: _showFilters
-                ? Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    color: theme.colorScheme.surface.withOpacity(0.5),
-                    child: Column(
-                      children: [
-                        // Category filter
-                        Row(
-                          children: [
-                            const Text('Category:', style: TextStyle(fontWeight: FontWeight.w500)),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: DropdownButtonFormField<RequestType>(
-                                value: _selectedType,
-                                decoration: InputDecoration(
-                                  filled: true,
-                                  fillColor: Colors.white,
-                                  border: InputBorder.none,
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                ),
-                                hint: const Text('All Categories'),
-                                items: [
-                                  const DropdownMenuItem(value: null, child: Text('All Categories')),
-                                  ..._enabledRequestTypes.map((type) {
-                                    return DropdownMenuItem(
-                                      value: type,
-                                      child: Text(_getRequestTypeDisplayName(type)),
-                                    );
-                                  }).toList(),
-                                ],
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedType = value;
-                                  });
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        
-                        // Location filter
-                        Row(
-                          children: [
-                            const Text('Location:', style: TextStyle(fontWeight: FontWeight.w500)),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                value: _selectedLocation,
-                                decoration: InputDecoration(
-                                  filled: true,
-                                  fillColor: Colors.white,
-                                  border: InputBorder.none,
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                ),
-                                items: const [
-                                  DropdownMenuItem(value: 'All Locations', child: Text('All Locations')),
-                                  DropdownMenuItem(value: 'Nearby', child: Text('Nearby')),
-                                  DropdownMenuItem(value: 'City Center', child: Text('City Center')),
-                                  DropdownMenuItem(value: 'Suburbs', child: Text('Suburbs')),
-                                ],
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedLocation = value ?? 'All Locations';
-                                  });
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                      ],
-                    ),
-                  )
-                : const SizedBox.shrink(),
-          ),
-
-          // Results List
-          Expanded(
-            child: _error != null
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 64,
-                          color: Colors.red[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Error',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _error!,
-                          style: Theme.of(context).textTheme.bodyMedium,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: _loadRequests,
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  )
-                : _filteredRequests.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.search_off,
-                              size: 64,
-                              color: Colors.grey[400],
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No requests found',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _searchQuery.isNotEmpty || _selectedType != null
-                                  ? 'Try adjusting your search or filters'
-                                  : 'No requests available at the moment',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: _loadRequests,
-                              child: const Text('Refresh'),
-                            ),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _filteredRequests.length,
-                        itemBuilder: (context, index) {
-                          final request = _filteredRequests[index];
-                          return _buildRequestCard(request);
-                        },
-                      ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -459,15 +489,15 @@ class _BrowseScreenState extends State<BrowseScreen> {
                   Text(
                     title,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                          fontWeight: FontWeight.w600,
+                        ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     description,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[600],
-                    ),
+                          color: Colors.grey[600],
+                        ),
                   ),
                 ],
               ),
@@ -485,7 +515,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
 
   void _navigateToCreateRequest(RequestType type) {
     Navigator.pop(context); // Close the bottom sheet first
-    
+
     String routeName;
     switch (type) {
       case RequestType.item:
@@ -507,7 +537,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
         routeName = '/price'; // Navigate to existing price comparison screen
         break;
     }
-    
+
     Navigator.pushNamed(context, routeName).then((_) {
       // Refresh the requests list when returning from create screen
       _loadRequests();
@@ -516,7 +546,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
 
   Widget _buildRequestCard(RequestModel request) {
     final iconData = _getIconForRequestType(request.type);
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
@@ -548,13 +578,14 @@ class _BrowseScreenState extends State<BrowseScreen> {
                   Expanded(
                     child: Text(
                       request.title,
-                      style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w500, fontSize: 16),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-              
+
               // Description
               Text(
                 request.description,
@@ -566,7 +597,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              
+
               // Bottom row with type/budget on left and location on right
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -592,7 +623,8 @@ class _BrowseScreenState extends State<BrowseScreen> {
                             ),
                           ),
                           Text(
-                            CountryService.instance.formatPrice(request.budget!),
+                            CountryService.instance
+                                .formatPrice(request.budget!),
                             style: TextStyle(
                               color: Colors.grey[600],
                               fontSize: 12,
@@ -603,12 +635,13 @@ class _BrowseScreenState extends State<BrowseScreen> {
                       ],
                     ),
                   ),
-                  
+
                   // Right side - location
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
+                      Icon(Icons.location_on,
+                          size: 14, color: Colors.grey[600]),
                       const SizedBox(width: 4),
                       Text(
                         _getLocationDisplay(request),
@@ -750,24 +783,28 @@ class _BrowseScreenState extends State<BrowseScreen> {
     if (request.location == null) {
       return 'Location';
     }
-    
+
     // First try city
     if (request.location!.city != null && request.location!.city!.isNotEmpty) {
       return request.location!.city!;
     }
-    
+
     // Then try to extract city from address
     final address = request.location!.address;
     if (address.isNotEmpty) {
       // Split by comma and take the last meaningful part (usually city)
-      final parts = address.split(',').map((part) => part.trim()).where((part) => part.isNotEmpty).toList();
+      final parts = address
+          .split(',')
+          .map((part) => part.trim())
+          .where((part) => part.isNotEmpty)
+          .toList();
       if (parts.length >= 2) {
         return parts[parts.length - 2]; // Second last part is usually city
       } else if (parts.isNotEmpty) {
         return parts.first; // If only one part, use it
       }
     }
-    
+
     return 'Location';
   }
 }

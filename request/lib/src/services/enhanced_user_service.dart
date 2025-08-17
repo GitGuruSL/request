@@ -130,16 +130,28 @@ class EnhancedUserService {
     }
   }
 
-  Future<void> updateRoleData(String role, Map<String, dynamic> data) async {
+  Future<void> updateRoleData(
+      [String? role, Map<String, dynamic>? data]) async {
     if (kDebugMode) {
-      print('updateRoleData stub role=$role keys=${data.keys}');
+      print('updateRoleData stub role=$role keys=${data?.keys}');
     }
   }
 
-  Future<void> submitRoleForVerification(String role) async {
+  Future<void> submitRoleForVerification([String? role]) async {
     if (kDebugMode) {
       print('submitRoleForVerification stub role=$role');
     }
+  }
+
+  // Named wrapper variants used by legacy screens (ignore userId parameter)
+  Future<void> updateRoleDataNamed(
+      {String? userId, dynamic role, Map<String, dynamic>? data}) async {
+    await updateRoleData(role?.toString(), data);
+  }
+
+  Future<void> submitRoleForVerificationNamed(
+      {String? userId, dynamic role}) async {
+    await submitRoleForVerification(role?.toString());
   }
 
   Future<void> switchActiveRole(String userId, String role) async {

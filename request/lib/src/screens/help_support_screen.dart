@@ -33,13 +33,15 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
     try {
       final pages = await _contentService.getPages();
       setState(() {
-        _helpPages = pages.where((page) => 
-          page.category.toLowerCase().contains('help') ||
-          page.category.toLowerCase().contains('support') ||
-          page.title.toLowerCase().contains('help') ||
-          page.title.toLowerCase().contains('faq') ||
-          page.title.toLowerCase().contains('guide')
-        ).toList();
+        _helpPages = pages.where((page) {
+          final cat = page.category?.toLowerCase() ?? '';
+          final title = page.title.toLowerCase();
+          return cat.contains('help') ||
+              cat.contains('support') ||
+              title.contains('help') ||
+              title.contains('faq') ||
+              title.contains('guide');
+        }).toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -115,7 +117,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
                   child: ListTile(
                     leading: Icon(Icons.article, color: Colors.blue[600]),
                     title: Text(page.title),
-                    subtitle: Text(page.category),
+                    subtitle: Text(page.category ?? ''),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                     onTap: () {
                       Navigator.push(
@@ -134,7 +136,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
             ),
             const SizedBox(height: 20),
           ],
-          
+
           // Static FAQ Items
           Text(
             'Frequently Asked Questions',
@@ -145,27 +147,27 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
             ),
           ),
           const SizedBox(height: 15),
-          
+
           _buildFAQItem(
             'How do I create a request?',
             'Go to the Browse screen, select a category, and tap "Create Request". Fill in the details and submit.',
           ),
-          
+
           _buildFAQItem(
             'How do I respond to a request?',
             'Find the request you want to respond to and tap "Respond". Provide your offer details and contact information.',
           ),
-          
+
           _buildFAQItem(
             'How does pricing work?',
             'You can compare prices from different businesses and contact them directly for the best deals.',
           ),
-          
+
           _buildFAQItem(
             'Is my information secure?',
             'Yes, we take privacy seriously. Your personal information is encrypted and protected.',
           ),
-          
+
           _buildFAQItem(
             'How do I verify my business?',
             'Go to Account > Role Management and submit your business verification documents.',
@@ -190,37 +192,31 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
             ),
           ),
           const SizedBox(height: 15),
-          
           _buildGuideItem(
             Icons.person_add,
             'Getting Started',
             'Learn how to set up your account and start using the app',
           ),
-          
           _buildGuideItem(
             Icons.search,
             'Creating Requests',
             'Step-by-step guide on how to create and manage requests',
           ),
-          
           _buildGuideItem(
             Icons.business,
             'Business Features',
             'How to use business features and manage your listings',
           ),
-          
           _buildGuideItem(
             Icons.price_check,
             'Price Comparison',
             'How to compare prices and find the best deals',
           ),
-          
           _buildGuideItem(
             Icons.car_rental,
             'Ride Requests',
             'Guide for creating and responding to ride requests',
           ),
-          
           _buildGuideItem(
             Icons.delivery_dining,
             'Delivery Services',
@@ -246,37 +242,37 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
             ),
           ),
           const SizedBox(height: 15),
-          
+
           _buildContactOption(
             Icons.chat,
             'Live Chat',
             'Get instant help from our support team',
             _startLiveChat,
           ),
-          
+
           _buildContactOption(
             Icons.email,
             'Email Support',
             'Send us a detailed message',
             _sendEmail,
           ),
-          
+
           _buildContactOption(
             Icons.phone,
             'Phone Support',
             'Call our support hotline',
             _callSupport,
           ),
-          
+
           _buildContactOption(
             Icons.bug_report,
             'Report a Bug',
             'Help us improve by reporting issues',
             _reportBug,
           ),
-          
+
           const SizedBox(height: 30),
-          
+
           // Contact Form
           Container(
             padding: const EdgeInsets.all(20),
@@ -297,7 +293,6 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
                   ),
                 ),
                 const SizedBox(height: 15),
-                
                 TextField(
                   decoration: InputDecoration(
                     labelText: 'Subject',
@@ -310,9 +305,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
                     ),
                   ),
                 ),
-                
                 const SizedBox(height: 15),
-                
                 TextField(
                   maxLines: 5,
                   decoration: InputDecoration(
@@ -327,9 +320,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
                     ),
                   ),
                 ),
-                
                 const SizedBox(height: 20),
-                
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -403,7 +394,8 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
     );
   }
 
-  Widget _buildContactOption(IconData icon, String title, String description, VoidCallback onTap) {
+  Widget _buildContactOption(
+      IconData icon, String title, String description, VoidCallback onTap) {
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
@@ -433,7 +425,8 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
       context: context,
       builder: (context) => AlertDialog(
         title: Text(guide),
-        content: const Text('This guide will be implemented with detailed step-by-step instructions.'),
+        content: const Text(
+            'This guide will be implemented with detailed step-by-step instructions.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),

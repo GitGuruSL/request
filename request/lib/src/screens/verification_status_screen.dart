@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
+import '../services/rest_auth_service.dart'
+    hide UserModel; // for auth current user
 import '../models/enhanced_user_model.dart';
 import '../services/enhanced_user_service.dart';
-import 'src/utils/firebase_shim.dart'; // Added by migration script
 // REMOVED_FB_IMPORT: import 'package:firebase_auth/firebase_auth.dart';
 
 class VerificationStatusScreen extends StatefulWidget {
   const VerificationStatusScreen({Key? key}) : super(key: key);
 
   @override
-  State<VerificationStatusScreen> createState() => _VerificationStatusScreenState();
+  State<VerificationStatusScreen> createState() =>
+      _VerificationStatusScreenState();
 }
 
 class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
@@ -56,7 +58,7 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: _isLoading 
+      body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Colors.black))
           : _userModel == null
               ? const Center(child: Text('User data not found'))
@@ -120,9 +122,9 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
               ],
             ),
           ),
-          
+
           const SizedBox(height: 32),
-          
+
           const Text(
             'Your Roles',
             style: TextStyle(
@@ -131,12 +133,12 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
               color: Colors.black,
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Roles List
           ..._userModel!.roles.map((role) => _buildRoleCard(role)).toList(),
-          
+
           if (_userModel!.roles.length < UserRole.values.length) ...[
             const SizedBox(height: 32),
             const Text(
@@ -148,9 +150,10 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            
-            ...UserRole.values.where((role) => !_userModel!.hasRole(role))
-                .map((role) => _buildAddRoleCard(role)).toList(),
+            ...UserRole.values
+                .where((role) => !_userModel!.hasRole(role))
+                .map((role) => _buildAddRoleCard(role))
+                .toList(),
           ],
         ],
       ),
@@ -160,7 +163,7 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
   Widget _buildRoleCard(UserRole role) {
     final roleData = _userModel!.roleData[role];
     final isActive = _userModel!.activeRole == role;
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
@@ -188,9 +191,7 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
                   size: 24,
                 ),
               ),
-              
               const SizedBox(width: 16),
-              
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -209,9 +210,7 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
                           const SizedBox(width: 12),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 8, 
-                              vertical: 4
-                            ),
+                                horizontal: 8, vertical: 4),
                             decoration: const BoxDecoration(
                               color: Colors.black,
                             ),
@@ -227,11 +226,10 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
                         ],
                       ],
                     ),
-                    
                     const SizedBox(height: 8),
-                    
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: _getStatusColor(roleData?.verificationStatus),
                       ),
@@ -247,7 +245,6 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
                   ],
                 ),
               ),
-              
               if (!isActive)
                 TextButton(
                   onPressed: () => _switchRole(role),
@@ -258,7 +255,6 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
                 ),
             ],
           ),
-          
           if (roleData?.verificationNotes != null) ...[
             const SizedBox(height: 16),
             Container(
@@ -390,9 +386,9 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
 
   Future<void> _switchRole(UserRole role) async {
     try {
-      await _userService.switchActiveRole(_userModel!.id, role);
+      await _userService.switchActiveRole(_userModel!.id, role.name);
       await _loadUserData(); // Refresh data
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -429,7 +425,7 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
         route = '/new-business-verification';
         break;
     }
-    
+
     Navigator.pushNamed(context, route);
   }
 }

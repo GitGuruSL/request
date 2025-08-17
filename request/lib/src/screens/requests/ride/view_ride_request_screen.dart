@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../../services/rest_auth_service.dart' hide UserModel;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'src/utils/firebase_shim.dart'; // Added by migration script
+// Removed unused firebase_shim import after migration
 // REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
 // REMOVED_FB_IMPORT: import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -26,7 +27,7 @@ class ViewRideRequestScreen extends StatefulWidget {
 class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   final EnhancedRequestService _requestService = EnhancedRequestService();
   final EnhancedUserService _userService = EnhancedUserService();
-  
+
   RequestModel? _request;
   List<ResponseModel> _responses = [];
   bool _isLoading = true;
@@ -38,7 +39,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   GoogleMapController? _mapController;
   Set<Marker> _markers = {};
   Set<Polyline> _polylines = {};
-  
+
   @override
   void initState() {
     super.initState();
@@ -53,31 +54,36 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
     try {
       // Check Firebase Auth state first
       final firebaseUser = RestAuthService.instance.currentUser;
-      print('🔍 Debug Ride Auth - Firebase User: ${firebaseUser?.uid ?? "NULL"}');
-      print('🔍 Debug Ride Auth - Firebase User Email: ${firebaseUser?.email ?? "NULL"}');
-      print('🔍 Debug Ride Auth - Firebase User Phone: ${firebaseUser?.phoneNumber ?? "NULL"}');
-      
+      print(
+          '🔍 Debug Ride Auth - Firebase User: ${firebaseUser?.uid ?? "NULL"}');
+      print(
+          '🔍 Debug Ride Auth - Firebase User Email: ${firebaseUser?.email ?? "NULL"}');
+      print(
+          '🔍 Debug Ride Auth - Firebase User Phone: ${firebaseUser?.phoneNumber ?? "NULL"}');
+
       final request = await _requestService.getRequestById(widget.requestId);
-      final responses = await _requestService.getResponsesForRequest(widget.requestId);
+      final responses =
+          await _requestService.getResponsesForRequest(widget.requestId);
       final currentUser = await _userService.getCurrentUserModel();
-      
+
       if (request != null) {
-        final requesterUser = await _userService.getUserById(request.requesterId);
-        
+        final requesterUser =
+            await _userService.getUserById(request.requesterId);
+
         // More robust owner check using both current user model and Firebase Auth
         bool isOwner = false;
         String currentUserId = '';
-        
+
         // Try Firebase Auth first
         if (firebaseUser?.uid != null) {
           currentUserId = firebaseUser!.uid;
         }
-        
+
         // If Firebase Auth doesn't work, try user service
         if (currentUserId.isEmpty && currentUser?.id != null) {
           currentUserId = currentUser!.id;
         }
-        
+
         // Check ownership with additional safety checks
         if (currentUserId.isNotEmpty && request.requesterId.isNotEmpty) {
           isOwner = currentUserId == request.requesterId;
@@ -85,27 +91,30 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
           // If we can't determine the current user, assume ownership to hide respond button
           // This is a safety measure to prevent users from responding to their own requests
           isOwner = true;
-          print('⚠️ Warning: Could not determine current user, defaulting to owner=true for safety');
+          print(
+              '⚠️ Warning: Could not determine current user, defaulting to owner=true for safety');
         }
-        
+
         if (mounted) {
           setState(() {
             _request = request;
-            _responses = responses;
+            _responses = responses.cast<ResponseModel>();
             _isOwner = isOwner;
             _requesterUser = requesterUser;
             _currentUser = currentUser;
             _isLoading = false;
           });
-          
+
           // Enhanced debug information
-          print('🔍 Debug Ride - Firebase User ID: ${firebaseUser?.uid ?? "NULL"}');
-          print('🔍 Debug Ride - Current User Model ID: ${currentUser?.id ?? "NULL"}');
+          print(
+              '🔍 Debug Ride - Firebase User ID: ${firebaseUser?.uid ?? "NULL"}');
+          print(
+              '🔍 Debug Ride - Current User Model ID: ${currentUser?.id ?? "NULL"}');
           print('🔍 Debug Ride - Final Current User ID: $currentUserId');
           print('🔍 Debug Ride - Request Owner ID: ${request.requesterId}');
           print('🔍 Debug Ride - Is Owner: $isOwner');
           print('🔍 Debug Ride - Will Show Respond Button: ${!isOwner}');
-          
+
           _setupMapMarkers();
         }
       }
@@ -130,8 +139,8 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
     if (_isOwner) return false;
 
     // For ride requests, user must have driver role and be approved
-    return _currentUser!.hasRole(UserRole.driver) && 
-           _currentUser!.isRoleVerified(UserRole.driver);
+    return _currentUser!.hasRole(UserRole.driver) &&
+        _currentUser!.isRoleVerified(UserRole.driver);
   }
 
   String? _getCannotRespondReason() {
@@ -155,7 +164,8 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
     final currentUser = RestAuthService.instance.currentUser;
     if (currentUser == null) return false;
 
-    return _responses.any((response) => response.responderId == currentUser.uid);
+    return _responses
+        .any((response) => response.responderId == currentUser.uid);
   }
 
   ResponseModel? _getUserResponse() {
@@ -163,7 +173,8 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
     if (currentUser == null) return null;
 
     try {
-      return _responses.firstWhere((response) => response.responderId == currentUser.uid);
+      return _responses
+          .firstWhere((response) => response.responderId == currentUser.uid);
     } catch (e) {
       return null;
     }
@@ -171,58 +182,66 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
 
   void _navigateToEditRideRequest() {
     if (_request == null) return;
-    
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => EditRideRequestScreen(request: _request!),
-      ),
-    ).then((_) => _loadRequestData()); // Reload data when coming back
+
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (context) => EditRideRequestScreen(request: _request!),
+          ),
+        )
+        .then((_) => _loadRequestData()); // Reload data when coming back
   }
 
   void _setupMapMarkers() {
     if (_request?.location == null) return;
-    
+
     setState(() {
       _markers.clear();
       _polylines.clear();
-      
+
       // Add pickup marker
       _markers.add(
         Marker(
           markerId: const MarkerId('pickup'),
-          position: LatLng(_request!.location!.latitude, _request!.location!.longitude),
+          position: LatLng(
+              _request!.location!.latitude, _request!.location!.longitude),
           infoWindow: InfoWindow(
             title: 'Pickup Location',
             snippet: AddressUtils.cleanAddress(_request!.location!.address),
           ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
         ),
       );
-      
+
       // Add destination marker if available
       if (_request!.destinationLocation != null) {
         _markers.add(
           Marker(
             markerId: const MarkerId('destination'),
             position: LatLng(
-              _request!.destinationLocation!.latitude, 
+              _request!.destinationLocation!.latitude,
               _request!.destinationLocation!.longitude,
             ),
             infoWindow: InfoWindow(
               title: 'Destination',
-              snippet: AddressUtils.cleanAddress(_request!.destinationLocation!.address),
+              snippet: AddressUtils.cleanAddress(
+                  _request!.destinationLocation!.address),
             ),
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+            icon:
+                BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
           ),
         );
-        
+
         // Add route line
         _polylines.add(
           Polyline(
             polylineId: const PolylineId('route'),
             points: [
-              LatLng(_request!.location!.latitude, _request!.location!.longitude),
-              LatLng(_request!.destinationLocation!.latitude, _request!.destinationLocation!.longitude),
+              LatLng(
+                  _request!.location!.latitude, _request!.location!.longitude),
+              LatLng(_request!.destinationLocation!.latitude,
+                  _request!.destinationLocation!.longitude),
             ],
             color: const Color(0xFF2196F3),
             width: 5,
@@ -231,7 +250,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
         );
       }
     });
-    
+
     // Fit markers on map after setting them up
     if (_mapController != null) {
       Future.delayed(const Duration(milliseconds: 100), () {
@@ -252,7 +271,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
 
   void _fitMarkersOnMap() {
     if (_mapController == null || _markers.isEmpty) return;
-    
+
     if (_markers.length == 1) {
       // Center on single marker
       final marker = _markers.first;
@@ -263,7 +282,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
       // Fit all markers
       final positions = _markers.map((m) => m.position).toList();
       final bounds = _calculateBounds(positions);
-      
+
       _mapController!.animateCamera(
         CameraUpdate.newLatLngBounds(bounds, 100.0),
       );
@@ -331,7 +350,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
             zoomControlsEnabled: false,
             mapToolbarEnabled: false,
           ),
-          
+
           // Top App Bar
           Positioned(
             top: 0,
@@ -340,7 +359,8 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
             child: SafeArea(
               bottom: false,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   boxShadow: [
@@ -392,7 +412,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
               ),
             ),
           ),
-          
+
           // Bottom Sheet
           DraggableScrollableSheet(
             initialChildSize: 0.4,
@@ -432,7 +452,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                           ),
                         ),
                       ),
-                      
+
                       _buildRideDetails(),
                       const SizedBox(height: 24),
                       _buildRequesterInfo(),
@@ -453,7 +473,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
 
   Widget _buildRideDetails() {
     final rideData = _request!.rideData;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -465,12 +485,12 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Location Details
         _buildLocationInfo(),
-        
+
         const SizedBox(height: 16),
-        
+
         // Ride Specific Details
         if (rideData != null) ...[
           Row(
@@ -490,14 +510,14 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
               const Icon(Icons.schedule, size: 16, color: Colors.grey),
               const SizedBox(width: 8),
               Text(
-                rideData.isFlexibleTime 
-                    ? 'Flexible timing' 
+                rideData.isFlexibleTime
+                    ? 'Flexible timing'
                     : 'Scheduled: ${_formatDateTime(rideData.preferredTime)}',
               ),
             ],
           ),
         ],
-        
+
         if (_request!.budget != null) ...[
           const SizedBox(height: 12),
           Container(
@@ -509,8 +529,8 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.account_balance_wallet, 
-                     color: Colors.green[600], size: 16),
+                Icon(Icons.account_balance_wallet,
+                    color: Colors.green[600], size: 16),
                 const SizedBox(width: 8),
                 Text(
                   'Budget: ${CurrencyHelper.instance.getCurrencySymbol()}${_request!.budget?.toStringAsFixed(2)}',
@@ -523,9 +543,9 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
             ),
           ),
         ],
-        
+
         const SizedBox(height: 12),
-        
+
         // Status and Date
         Row(
           children: [
@@ -556,17 +576,21 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
     );
   }
 
-  Future<void> _openGoogleMaps(double latitude, double longitude, String address) async {
-    final googleMapsUrl = 'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude';
-    final googleMapsAppUrl = 'geo:$latitude,$longitude?q=$latitude,$longitude($address)';
-    
+  Future<void> _openGoogleMaps(
+      double latitude, double longitude, String address) async {
+    final googleMapsUrl =
+        'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude';
+    final googleMapsAppUrl =
+        'geo:$latitude,$longitude?q=$latitude,$longitude($address)';
+
     try {
       // Try to open Google Maps app first
       if (await canLaunchUrl(Uri.parse(googleMapsAppUrl))) {
         await launchUrl(Uri.parse(googleMapsAppUrl));
       } else if (await canLaunchUrl(Uri.parse(googleMapsUrl))) {
         // Fallback to web version
-        await launchUrl(Uri.parse(googleMapsUrl), mode: LaunchMode.externalApplication);
+        await launchUrl(Uri.parse(googleMapsUrl),
+            mode: LaunchMode.externalApplication);
       } else {
         throw 'Could not open maps';
       }
@@ -589,28 +613,31 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
 
     final pickup = _request!.location!;
     final destination = _request!.destinationLocation!;
-    
+
     // Google Maps directions URL
     final directionsUrl = 'https://www.google.com/maps/dir/?api=1'
         '&origin=${pickup.latitude},${pickup.longitude}'
         '&destination=${destination.latitude},${destination.longitude}'
         '&travelmode=driving';
-    
+
     // Google Maps app directions URL
-    final mapsAppUrl = 'google.navigation:q=${destination.latitude},${destination.longitude}';
-    
+    final mapsAppUrl =
+        'google.navigation:q=${destination.latitude},${destination.longitude}';
+
     try {
       if (await canLaunchUrl(Uri.parse(mapsAppUrl))) {
         await launchUrl(Uri.parse(mapsAppUrl));
       } else if (await canLaunchUrl(Uri.parse(directionsUrl))) {
-        await launchUrl(Uri.parse(directionsUrl), mode: LaunchMode.externalApplication);
+        await launchUrl(Uri.parse(directionsUrl),
+            mode: LaunchMode.externalApplication);
       } else {
         throw 'Could not open maps';
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open Google Maps directions')),
+          const SnackBar(
+              content: Text('Could not open Google Maps directions')),
         );
       }
     }
@@ -648,7 +675,8 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    AddressUtils.cleanAddress(_request!.location?.address ?? 'Pickup location not specified'),
+                    AddressUtils.cleanAddress(_request!.location?.address ??
+                        'Pickup location not specified'),
                     style: const TextStyle(
                       fontWeight: FontWeight.w500,
                       color: Color(0xFF1C1C1E), // Same color as title
@@ -683,7 +711,8 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      AddressUtils.cleanAddress(_request!.destinationLocation!.address),
+                      AddressUtils.cleanAddress(
+                          _request!.destinationLocation!.address),
                       style: const TextStyle(
                         fontWeight: FontWeight.w500,
                         color: Color(0xFF1C1C1E), // Same color as title
@@ -718,7 +747,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
               radius: 20,
               backgroundColor: Colors.blue[100],
               child: Text(
-                _requesterUser?.name.isNotEmpty == true 
+                _requesterUser?.name.isNotEmpty == true
                     ? _requesterUser!.name[0].toUpperCase()
                     : 'U',
                 style: TextStyle(
@@ -780,7 +809,10 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
             children: [
               const Text(
                 'Responses',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey),
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey),
               ),
               const SizedBox(width: 8),
               Container(
@@ -857,7 +889,8 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.blue[50],
                     borderRadius: BorderRadius.circular(12),
@@ -1082,15 +1115,17 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   void _showResponseDialog() {
     // Navigate to the comprehensive ride response screen
     final existingResponse = _getUserResponse();
-    
-    Navigator.of(context).push(
+
+    Navigator.of(context)
+        .push(
       MaterialPageRoute(
         builder: (context) => CreateRideResponseScreen(
           request: _request!,
           existingResponse: existingResponse,
         ),
       ),
-    ).then((_) {
+    )
+        .then((_) {
       // Refresh the responses when returning from the response screen
       _loadRequestData(); // Reload data when coming back
     });
@@ -1099,7 +1134,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
-    
+
     if (difference.inDays > 0) {
       return '${difference.inDays}d ago';
     } else if (difference.inHours > 0) {

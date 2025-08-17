@@ -19,7 +19,7 @@ import '../../../utils/currency_helper.dart';
 class CreateRideResponseScreen extends StatefulWidget {
   final RequestModel request;
   final ResponseModel? existingResponse;
-  
+
   const CreateRideResponseScreen({
     super.key,
     required this.request,
@@ -27,7 +27,8 @@ class CreateRideResponseScreen extends StatefulWidget {
   });
 
   @override
-  State<CreateRideResponseScreen> createState() => _CreateRideResponseScreenState();
+  State<CreateRideResponseScreen> createState() =>
+      _CreateRideResponseScreenState();
 }
 
 class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
@@ -42,7 +43,7 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
   // Form Controllers
   final _priceController = TextEditingController();
   final _messageController = TextEditingController();
-  
+
   String _vehicleType = '';
   bool _smokingAllowed = false;
   bool _petsAllowed = true;
@@ -54,14 +55,14 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
   bool _isLoadingLocation = false;
   bool _isEditMode = false;
   String? _existingResponseId;
-  
+
   // Location data
   Position? _currentPosition;
   UserModel? _requesterUser;
-  
+
   // Map markers
   Set<Marker> _markers = {};
-  
+
   // Dynamic vehicle types from database
   List<VehicleTypeModel> _vehicleTypes = [];
 
@@ -81,13 +82,13 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
       print('🏁 Loading vehicles for response...');
       print('   Country Code: ${countryService.countryCode}');
       print('   Country Name: ${countryService.countryName}');
-      
+
       // Force refresh vehicles to bypass cache
       final vehicles = await _vehicleService.refreshVehicles();
       print('🚗 Loaded ${vehicles.length} vehicles for response');
-      
+
       setState(() {
-        _vehicleTypes = vehicles;
+        _vehicleTypes = vehicles.cast<VehicleTypeModel>();
         // Set first vehicle as default if available and not already set
         if (vehicles.isNotEmpty && _vehicleType.isEmpty) {
           _vehicleType = vehicles.first.name;
@@ -110,8 +111,8 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
     }
-    
-    if (permission == LocationPermission.whileInUse || 
+
+    if (permission == LocationPermission.whileInUse ||
         permission == LocationPermission.always) {
       await _getCurrentLocation();
     }
@@ -126,12 +127,12 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
-      
+
       setState(() {
         _currentPosition = position;
         _isLoadingLocation = false;
       });
-      
+
       await _updateMapMarkersAndCamera();
     } catch (e) {
       print('Error getting current location: $e');
@@ -143,7 +144,8 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
 
   Future<void> _loadRequesterData() async {
     try {
-      UserModel? user = await _userService.getUserById(widget.request.requesterId);
+      UserModel? user =
+          await _userService.getUserById(widget.request.requesterId);
       setState(() {
         _requesterUser = user;
       });
@@ -168,16 +170,20 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
         _messageController.text = existingResponse.message;
         // Load other fields if they exist in additionalInfo
         if (existingResponse.additionalInfo.isNotEmpty) {
-          _vehicleType = existingResponse.additionalInfo['vehicleType'] ?? (_vehicleTypes.isNotEmpty ? _vehicleTypes.first.name : '');
-          _availableSeats = existingResponse.additionalInfo['availableSeats'] ?? 3;
-          _smokingAllowed = existingResponse.additionalInfo['smokingAllowed'] ?? false;
+          _vehicleType = existingResponse.additionalInfo['vehicleType'] ??
+              (_vehicleTypes.isNotEmpty ? _vehicleTypes.first.name : '');
+          _availableSeats =
+              existingResponse.additionalInfo['availableSeats'] ?? 3;
+          _smokingAllowed =
+              existingResponse.additionalInfo['smokingAllowed'] ?? false;
           _petsAllowed = existingResponse.additionalInfo['petsAllowed'] ?? true;
           if (existingResponse.additionalInfo['departureTime'] != null) {
-            _departureTime = DateTime.tryParse(existingResponse.additionalInfo['departureTime']);
+            _departureTime = DateTime.tryParse(
+                existingResponse.additionalInfo['departureTime']);
           }
         }
       });
-        } catch (e) {
+    } catch (e) {
       // Stay in create mode
       print('Error checking existing response: $e');
     }
@@ -185,44 +191,48 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
 
   Future<void> _updateMapMarkersAndCamera() async {
     Set<Marker> newMarkers = {};
-    
+
     // Add driver location marker (current position)
     if (_currentPosition != null) {
       newMarkers.add(
         Marker(
           markerId: const MarkerId('driver'),
-          position: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+          position:
+              LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
           infoWindow: const InfoWindow(title: 'Your Location'),
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
         ),
       );
     }
-    
+
     // Add pickup location marker
     if (widget.request.location != null) {
       newMarkers.add(
         Marker(
           markerId: const MarkerId('pickup'),
-          position: LatLng(widget.request.location!.latitude, widget.request.location!.longitude),
+          position: LatLng(widget.request.location!.latitude,
+              widget.request.location!.longitude),
           infoWindow: InfoWindow(
-            title: 'Pickup Location', 
-            snippet: AddressUtils.cleanAddress(widget.request.location!.address)
-          ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+              title: 'Pickup Location',
+              snippet:
+                  AddressUtils.cleanAddress(widget.request.location!.address)),
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
         ),
       );
     }
-    
+
     // Add dropoff location marker
     if (widget.request.destinationLocation != null) {
       newMarkers.add(
         Marker(
           markerId: const MarkerId('dropoff'),
-          position: LatLng(widget.request.destinationLocation!.latitude, widget.request.destinationLocation!.longitude),
+          position: LatLng(widget.request.destinationLocation!.latitude,
+              widget.request.destinationLocation!.longitude),
           infoWindow: InfoWindow(
-            title: 'Drop-off Location', 
-            snippet: AddressUtils.cleanAddress(widget.request.destinationLocation!.address)
-          ),
+              title: 'Drop-off Location',
+              snippet: AddressUtils.cleanAddress(
+                  widget.request.destinationLocation!.address)),
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
         ),
       );
@@ -263,11 +273,12 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
   double _calculateDistance() {
     if (_currentPosition != null && widget.request.location != null) {
       return Geolocator.distanceBetween(
-        _currentPosition!.latitude,
-        _currentPosition!.longitude,
-        widget.request.location!.latitude,
-        widget.request.location!.longitude,
-      ) / 1000; // Convert to kilometers
+            _currentPosition!.latitude,
+            _currentPosition!.longitude,
+            widget.request.location!.latitude,
+            widget.request.location!.longitude,
+          ) /
+          1000; // Convert to kilometers
     }
     return 0.0;
   }
@@ -279,22 +290,17 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 30)),
     );
-    
+
     if (date != null) {
       final TimeOfDay? time = await showTimePicker(
         context: context,
         initialTime: TimeOfDay.now(),
       );
-      
+
       if (time != null) {
         setState(() {
-          _departureTime = DateTime(
-            date.year, 
-            date.month, 
-            date.day, 
-            time.hour, 
-            time.minute
-          );
+          _departureTime =
+              DateTime(date.year, date.month, date.day, time.hour, time.minute);
         });
       }
     }
@@ -351,7 +357,10 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_isEditMode ? 'Ride offer updated successfully!' : 'Ride offer submitted successfully!')),
+          SnackBar(
+              content: Text(_isEditMode
+                  ? 'Ride offer updated successfully!'
+                  : 'Ride offer submitted successfully!')),
         );
         Navigator.pop(context);
       }
@@ -464,7 +473,8 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
                       child: GoogleMap(
                         initialCameraPosition: CameraPosition(
                           target: _currentPosition != null
-                              ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
+                              ? LatLng(_currentPosition!.latitude,
+                                  _currentPosition!.longitude)
                               : const LatLng(3.1390, 101.6869), // KL as default
                           zoom: 14,
                         ),
@@ -517,7 +527,9 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              AddressUtils.cleanAddress(widget.request.location?.address ?? 'Location not specified'),
+                              AddressUtils.cleanAddress(
+                                  widget.request.location?.address ??
+                                      'Location not specified'),
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -555,7 +567,9 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              AddressUtils.cleanAddress(widget.request.destinationLocation?.address ?? 'Location not specified'),
+                              AddressUtils.cleanAddress(
+                                  widget.request.destinationLocation?.address ??
+                                      'Location not specified'),
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -605,10 +619,12 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
                             ),
                             const SizedBox(height: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 12),
                               decoration: const BoxDecoration(
                                 color: Color(0xFFF5F5F5),
-                                borderRadius: BorderRadius.all(Radius.circular(8)),
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(8)),
                               ),
                               child: Text(
                                 '${widget.request.typeSpecificData['passengers'] ?? 1} passenger${(widget.request.typeSpecificData['passengers'] ?? 1) > 1 ? 's' : ''}',
@@ -636,10 +652,12 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
                             ),
                             const SizedBox(height: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 12),
                               decoration: const BoxDecoration(
                                 color: Color(0xFFF5F5F5),
-                                borderRadius: BorderRadius.all(Radius.circular(8)),
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(8)),
                               ),
                               child: Text(
                                 '${_calculateDistance().toStringAsFixed(1)} km',

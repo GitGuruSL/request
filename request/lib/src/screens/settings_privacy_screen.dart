@@ -25,12 +25,14 @@ class _SettingsPrivacyScreenState extends State<SettingsPrivacyScreen> {
     try {
       final pages = await _contentService.getPages();
       setState(() {
-        _policyPages = pages.where((page) => 
-          page.category.toLowerCase().contains('policy') ||
-          page.category.toLowerCase().contains('legal') ||
-          page.title.toLowerCase().contains('privacy') ||
-          page.title.toLowerCase().contains('terms')
-        ).toList();
+        _policyPages = pages.where((page) {
+          final cat = page.category?.toLowerCase() ?? '';
+          final title = page.title.toLowerCase();
+          return cat.contains('policy') ||
+              cat.contains('legal') ||
+              title.contains('privacy') ||
+              title.contains('terms');
+        }).toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -169,20 +171,22 @@ class _SettingsPrivacyScreenState extends State<SettingsPrivacyScreen> {
         if (_policyPages.isNotEmpty)
           _buildSection(
             title: 'Legal & Policies',
-            children: _policyPages.map((page) => _buildSettingsTile(
-              icon: Icons.article,
-              title: page.title,
-              subtitle: 'Last updated: ${_formatDate(page.updatedAt)}',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ContentPageScreen(
-                    slug: page.slug,
-                    title: page.title,
-                  ),
-                ),
-              ),
-            )).toList(),
+            children: _policyPages
+                .map((page) => _buildSettingsTile(
+                      icon: Icons.article,
+                      title: page.title,
+                      subtitle: 'Last updated: ${_formatDate(page.updatedAt)}',
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ContentPageScreen(
+                            slug: page.slug,
+                            title: page.title,
+                          ),
+                        ),
+                      ),
+                    ))
+                .toList(),
           ),
 
         // App Settings Section
@@ -215,7 +219,8 @@ class _SettingsPrivacyScreenState extends State<SettingsPrivacyScreen> {
     );
   }
 
-  Widget _buildSection({required String title, required List<Widget> children}) {
+  Widget _buildSection(
+      {required String title, required List<Widget> children}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
@@ -515,7 +520,8 @@ class _SettingsPrivacyScreenState extends State<SettingsPrivacyScreen> {
       applicationVersion: '1.0.0',
       applicationIcon: const Icon(Icons.apps, size: 48),
       children: [
-        const Text('A comprehensive marketplace and request platform for Sri Lanka.'),
+        const Text(
+            'A comprehensive marketplace and request platform for Sri Lanka.'),
         const SizedBox(height: 16),
         const Text('© 2025 Request Platform. All rights reserved.'),
       ],

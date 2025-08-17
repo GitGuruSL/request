@@ -1,14 +1,18 @@
 import 'dart:async';
+import '../models/price_listing.dart';
 
 class PricingService {
-  Future<List<dynamic>> searchProducts(
-          {String query = '', String? brand, int limit = 25}) async =>
-      [];
+  Future<List<PriceListing>> searchProducts(
+      {String query = '', String? brand, int limit = 25}) async {
+    // Return empty typed list placeholder
+    return <PriceListing>[];
+  }
+
   Future<bool> isBusinessEligibleForPricing(String? businessUserId) async =>
       true;
-  Stream<List<dynamic>> getPriceListingsForProduct(
+  Stream<List<PriceListing>> getPriceListingsForProduct(
       String masterProductId) async* {
-    yield const [];
+    yield <PriceListing>[];
   }
 
   Future<List<Map<String, dynamic>>> getActiveVariableTypes() async => [];
@@ -17,8 +21,9 @@ class PricingService {
       String? masterProductId,
       String? businessId,
       String? userId}) async {}
-  Stream<List<dynamic>> getBusinessPriceListings(String? businessId) async* {
-    yield const [];
+  Stream<List<PriceListing>> getBusinessPriceListings(
+      String? businessId) async* {
+    yield <PriceListing>[];
   }
 
   Future<bool> deletePriceListing(
@@ -29,9 +34,10 @@ class PricingService {
       String? query,
       String? searchQuery,
       String? businessId,
+      String? brand,
       int limit = 50}) async* {
     // accept either query or searchQuery (legacy param name)
-    final effectiveQuery = query ?? searchQuery;
+    // ignore effective query in placeholder implementation
     yield const [];
   }
 

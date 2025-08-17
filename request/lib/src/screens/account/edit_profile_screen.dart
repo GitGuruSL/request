@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'src/utils/firebase_shim.dart'; // Added by migration script
+import '../../services/rest_auth_service.dart'
+    hide UserModel; // hide to avoid clash
 // REMOVED_FB_IMPORT: import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/enhanced_user_model.dart';
 import '../../services/enhanced_user_service.dart';
@@ -14,11 +15,11 @@ class EditProfileScreen extends StatefulWidget {
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final _userService = EnhancedUserService();
-  
+
   late TextEditingController _nameController;
   late TextEditingController _emailController;
   late TextEditingController _phoneController;
-  
+
   UserModel? _currentUser;
   bool _isLoading = true;
   bool _isSaving = false;
@@ -77,9 +78,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (user != null && _currentUser != null) {
         // Use the updateProfile method from the service
         await _userService.updateProfile(
-          userId: user.uid,
-          name: _nameController.text.trim(),
-          phoneNumber: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
+          displayName: _nameController.text.trim(),
+          phoneNumber: _phoneController.text.trim().isEmpty
+              ? null
+              : _phoneController.text.trim(),
         );
 
         if (mounted) {
@@ -203,9 +205,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                       ),
                                       onPressed: () {
                                         // TODO: Implement image picker
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
                                           const SnackBar(
-                                            content: Text('Photo upload coming soon'),
+                                            content: Text(
+                                                'Photo upload coming soon'),
                                           ),
                                         );
                                       },
@@ -235,9 +239,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 30),
-                    
+
                     // Personal Information Section
                     Container(
                       decoration: BoxDecoration(
@@ -257,7 +261,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.person_outline, color: Colors.blue[600], size: 24),
+                              Icon(Icons.person_outline,
+                                  color: Colors.blue[600], size: 24),
                               const SizedBox(width: 10),
                               Text(
                                 'Personal Information',
@@ -270,20 +275,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             ],
                           ),
                           const SizedBox(height: 20),
-                          
+
                           // Name Field
                           TextFormField(
                             controller: _nameController,
                             decoration: InputDecoration(
                               labelText: 'Full Name',
                               hintText: 'Enter your full name',
-                              prefixIcon: Icon(Icons.person, color: Colors.blue[600]),
+                              prefixIcon:
+                                  Icon(Icons.person, color: Colors.blue[600]),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide(color: Colors.blue[600]!),
+                                borderSide:
+                                    BorderSide(color: Colors.blue[600]!),
                               ),
                             ),
                             validator: (value) {
@@ -296,9 +303,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               return null;
                             },
                           ),
-                          
+
                           const SizedBox(height: 15),
-                          
+
                           // Email Field
                           TextFormField(
                             controller: _emailController,
@@ -306,28 +313,31 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             decoration: InputDecoration(
                               labelText: 'Email Address',
                               hintText: 'Enter your email',
-                              prefixIcon: Icon(Icons.email, color: Colors.blue[600]),
+                              prefixIcon:
+                                  Icon(Icons.email, color: Colors.blue[600]),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide(color: Colors.blue[600]!),
+                                borderSide:
+                                    BorderSide(color: Colors.blue[600]!),
                               ),
                             ),
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
                                 return 'Please enter your email';
                               }
-                              if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+                              if (!RegExp(r'^[^@]+@[^@]+\.[^@]+')
+                                  .hasMatch(value)) {
                                 return 'Please enter a valid email';
                               }
                               return null;
                             },
                           ),
-                          
+
                           const SizedBox(height: 15),
-                          
+
                           // Phone Field
                           TextFormField(
                             controller: _phoneController,
@@ -335,13 +345,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             decoration: InputDecoration(
                               labelText: 'Phone Number',
                               hintText: 'Enter your phone number',
-                              prefixIcon: Icon(Icons.phone, color: Colors.blue[600]),
+                              prefixIcon:
+                                  Icon(Icons.phone, color: Colors.blue[600]),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide(color: Colors.blue[600]!),
+                                borderSide:
+                                    BorderSide(color: Colors.blue[600]!),
                               ),
                             ),
                             validator: (value) {
@@ -356,9 +368,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         ],
                       ),
                     ),
-                    
+
                     const SizedBox(height: 30),
-                    
+
                     // Account Status Section
                     if (_currentUser != null)
                       Container(
@@ -379,7 +391,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           children: [
                             Row(
                               children: [
-                                Icon(Icons.verified_user_outlined, color: Colors.blue[600], size: 24),
+                                Icon(Icons.verified_user_outlined,
+                                    color: Colors.blue[600], size: 24),
                                 const SizedBox(width: 10),
                                 Text(
                                   'Account Status',
@@ -392,16 +405,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               ],
                             ),
                             const SizedBox(height: 15),
-                            
+
                             // Email Verification Status
                             Row(
                               children: [
                                 Icon(
-                                  _currentUser!.isEmailVerified 
-                                      ? Icons.check_circle 
+                                  _currentUser!.isEmailVerified
+                                      ? Icons.check_circle
                                       : Icons.cancel,
-                                  color: _currentUser!.isEmailVerified 
-                                      ? Colors.green 
+                                  color: _currentUser!.isEmailVerified
+                                      ? Colors.green
                                       : Colors.orange,
                                 ),
                                 const SizedBox(width: 10),
@@ -414,18 +427,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 ),
                               ],
                             ),
-                            
+
                             const SizedBox(height: 10),
-                            
+
                             // Phone Verification Status
                             Row(
                               children: [
                                 Icon(
-                                  _currentUser!.isPhoneVerified 
-                                      ? Icons.check_circle 
+                                  _currentUser!.isPhoneVerified
+                                      ? Icons.check_circle
                                       : Icons.cancel,
-                                  color: _currentUser!.isPhoneVerified 
-                                      ? Colors.green 
+                                  color: _currentUser!.isPhoneVerified
+                                      ? Colors.green
                                       : Colors.orange,
                                 ),
                                 const SizedBox(width: 10),
@@ -438,9 +451,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 ),
                               ],
                             ),
-                            
+
                             const SizedBox(height: 10),
-                            
+
                             // Active Role
                             Row(
                               children: [

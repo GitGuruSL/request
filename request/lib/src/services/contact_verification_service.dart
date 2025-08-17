@@ -12,14 +12,26 @@ class ContactVerificationService {
   Future<bool> verifyEmailOtp(String email, String code) async => true;
 
   // Business specific methods expected by screens
-  Future<Map<String, dynamic>> startBusinessPhoneVerification(
-          {String? phoneNumber}) async =>
-      {
-        'success': true,
-        'message': 'OTP sent',
-      };
-  Future<Map<String, dynamic>> verifyBusinessPhoneOTP(
-          {String? phoneNumber, String? verificationId}) async =>
+  Future<Map<String, dynamic>> startBusinessPhoneVerification({
+    String? phoneNumber,
+    void Function(String verificationId)? onCodeSent,
+    void Function(String error)? onError,
+  }) async {
+    // invoke callback with fake verification id
+    if (onCodeSent != null) {
+      onCodeSent('dummy_verification_id');
+    }
+    return {
+      'success': true,
+      'message': 'OTP sent',
+    };
+  }
+
+  Future<Map<String, dynamic>> verifyBusinessPhoneOTP({
+    String? phoneNumber,
+    String? verificationId,
+    String? otp,
+  }) async =>
       {
         'success': true,
         'verified': true,
@@ -38,4 +50,10 @@ extension LinkedCredentialsStatusX on LinkedCredentialsStatus {
   bool get businessPhoneVerified => this == LinkedCredentialsStatus.complete;
   bool get businessEmailVerified => this == LinkedCredentialsStatus.complete;
   bool get isAllVerified => this == LinkedCredentialsStatus.complete;
+}
+
+extension VerificationResultMapX on Map<String, dynamic> {
+  bool get success => this['success'] == true;
+  String? get error => this['error'] as String? ?? this['message'] as String?;
+  bool get isCredentialConflict => this['isCredentialConflict'] == true;
 }

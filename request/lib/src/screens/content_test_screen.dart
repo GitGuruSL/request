@@ -28,7 +28,7 @@ class _ContentTestScreenState extends State<ContentTestScreen> {
       });
 
       final pages = await _contentService.getPages();
-      
+
       if (mounted) {
         setState(() {
           _pages = pages;
@@ -96,8 +96,8 @@ class _ContentTestScreenState extends State<ContentTestScreen> {
             Text(
               _error!,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.red,
-              ),
+                    color: Colors.red,
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -133,7 +133,9 @@ class _ContentTestScreenState extends State<ContentTestScreen> {
     // Group pages by category
     final pagesByCategory = <String, List<ContentPage>>{};
     for (final page in _pages) {
-      pagesByCategory.putIfAbsent(page.category, () => []).add(page);
+      final key =
+          (page.category ?? '').isEmpty ? 'uncategorized' : page.category!;
+      pagesByCategory.putIfAbsent(key, () => []).add(page);
     }
 
     return RefreshIndicator(
@@ -151,21 +153,23 @@ class _ContentTestScreenState extends State<ContentTestScreen> {
                   Text(
                     'Content Summary',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   const SizedBox(height: 8),
                   Text('Total pages: ${_pages.length}'),
                   Text('Categories: ${pagesByCategory.keys.length}'),
-                  Text('Global pages: ${_pages.where((p) => p.type == 'centralized').length}'),
-                  Text('Country pages: ${_pages.where((p) => p.type == 'country_specific').length}'),
+                  Text(
+                      'Global pages: ${_pages.where((p) => p.type == 'centralized').length}'),
+                  Text(
+                      'Country pages: ${_pages.where((p) => p.type == 'country_specific').length}'),
                 ],
               ),
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Pages by category
           ...pagesByCategory.entries.map((entry) {
             return Column(
@@ -176,9 +180,9 @@ class _ContentTestScreenState extends State<ContentTestScreen> {
                   child: Text(
                     entry.key.toUpperCase(),
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                   ),
                 ),
                 ...entry.value.map((page) {
@@ -188,16 +192,16 @@ class _ContentTestScreenState extends State<ContentTestScreen> {
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: page.type == 'centralized' 
+                          color: page.type == 'centralized'
                               ? Colors.blue.withOpacity(0.1)
                               : Colors.green.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
-                          page.type == 'centralized' 
+                          page.type == 'centralized'
                               ? Icons.public
                               : Icons.location_on,
-                          color: page.type == 'centralized' 
+                          color: page.type == 'centralized'
                               ? Colors.blue
                               : Colors.green,
                           size: 20,
@@ -218,10 +222,10 @@ class _ContentTestScreenState extends State<ContentTestScreen> {
                         ],
                       ),
                       trailing: Icon(
-                        page.status == 'published' 
+                        page.status == 'published'
                             ? Icons.check_circle
                             : Icons.schedule,
-                        color: page.status == 'published' 
+                        color: page.status == 'published'
                             ? Colors.green
                             : Colors.orange,
                       ),
@@ -259,12 +263,12 @@ class _ContentTestScreenState extends State<ContentTestScreen> {
               Text(
                 'Content Preview:',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
               const SizedBox(height: 8),
               Text(
-                page.content.length > 200 
+                page.content.length > 200
                     ? '${page.content.substring(0, 200)}...'
                     : page.content,
                 style: Theme.of(context).textTheme.bodySmall,

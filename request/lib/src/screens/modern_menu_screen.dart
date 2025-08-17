@@ -406,7 +406,9 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
     // Group pages by category
     final pagesByCategory = <String, List<ContentPage>>{};
     for (final page in _pages) {
-      pagesByCategory.putIfAbsent(page.category, () => []).add(page);
+      final key =
+          (page.category ?? '').isEmpty ? 'uncategorized' : page.category!;
+      pagesByCategory.putIfAbsent(key, () => []).add(page);
     }
 
     return Container(
