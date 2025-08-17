@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 // New service imports for REST API
 import 'src/services/service_manager.dart';
-import 'src/services/api_client.dart';
 import 'src/auth/screens/splash_screen.dart';
 import 'src/auth/screens/welcome_screen.dart';
 import 'src/auth/screens/login_screen.dart';
@@ -29,7 +27,6 @@ import 'src/screens/content_page_screen.dart';
 import 'src/screens/content_test_screen.dart';
 import 'src/screens/api_test_screen.dart'; // API test screen
 import 'src/models/master_product.dart';
-import 'src/services/country_service.dart';
 import 'src/theme/app_theme.dart';
 
 void main() async {
@@ -78,19 +75,10 @@ class MyApp extends StatelessWidget {
             final args = settings.arguments as Map<String, dynamic>?;
             return MaterialPageRoute(
               builder: (context) => OTPScreen(
-                verificationId: args?['verificationId'],
-                sessionId: args?['sessionId'],
-                otpId: args?['otpId'],
-                purpose: args?['purpose'],
-                isNewUser: args?['isNewUser'] ?? false,
-                emailOrPhone: args?['emailOrPhone'] ?? args?['phoneNumber'],
-                phoneNumber: args?['phoneNumber'],
-                email: args?['email'],
+                emailOrPhone: args?['emailOrPhone'] ?? '',
                 isEmail: args?['isEmail'] ?? false,
-                isLogin: args?['isLogin'] ?? false,
-                isCustomOTP: args?['isCustomOTP'] ?? false,
-                countryCode: args?['countryCode'],
-                expiresIn: args?['expiresIn'],
+                isNewUser: args?['isNewUser'] ?? false,
+                countryCode: args?['countryCode'] ?? 'LK',
               ),
             );
           case '/password':

@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../../services/auth_service.dart';
-import '../../services/country_service.dart';
-import '../../services/sms_auth_service.dart';
+import '../../services/rest_auth_service.dart';
 
 class ProfileCompletionScreen extends StatefulWidget {
   const ProfileCompletionScreen({super.key});
 
   @override
-  State<ProfileCompletionScreen> createState() => _ProfileCompletionScreenState();
+  State<ProfileCompletionScreen> createState() =>
+      _ProfileCompletionScreenState();
 }
 
 class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
@@ -49,22 +47,19 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
 
     try {
       // Get arguments passed from previous screen
-      final arguments = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      final arguments =
+          ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       final emailOrPhone = arguments?['emailOrPhone'];
-      final isEmail = arguments?['isEmail'] ?? false;
-      final countryCode = arguments?['countryCode'];
-      final otpId = arguments?['otpId'];
-      
-      // Complete profile using SMS auth service
-      final result = await SMSAuthService().completeProfile(
-        firstName: _firstNameController.text.trim(),
-        lastName: _lastNameController.text.trim(),
+
+      // Complete profile using REST auth service
+      final result = await RestAuthService.instance.register(
+        email: emailOrPhone,
         password: _passwordController.text.trim(),
-        emailOrPhone: emailOrPhone,
-        otpId: otpId,
+        displayName:
+            '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}',
       );
-      
-      if (result['success']) {
+
+      if (result.success) {
         // Profile completed successfully
         Navigator.pushNamedAndRemoveUntil(
           context,
@@ -72,7 +67,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
           (route) => false,
         );
       } else {
-        throw Exception(result['message'] ?? 'Failed to complete profile');
+        throw Exception(result.error ?? 'Failed to complete profile');
       }
     } catch (e) {
       setState(() {
@@ -111,9 +106,9 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                     color: Colors.black87,
                   ),
                 ),
-                
+
                 const SizedBox(height: 8),
-                
+
                 const Text(
                   'We need a few more details to complete your account',
                   style: TextStyle(
@@ -121,9 +116,9 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                     color: Colors.grey,
                   ),
                 ),
-                
+
                 const SizedBox(height: 40),
-                
+
                 // First Name field
                 TextFormField(
                   controller: _firstNameController,
@@ -141,9 +136,9 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                     return null;
                   },
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Last Name field
                 TextFormField(
                   controller: _lastNameController,
@@ -161,9 +156,9 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                     return null;
                   },
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Password field
                 TextFormField(
                   controller: _passwordController,
@@ -173,7 +168,9 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                        _isPasswordVisible
+                            ? Icons.visibility
+                            : Icons.visibility_off,
                       ),
                       onPressed: () {
                         setState(() {
@@ -195,9 +192,9 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                     return null;
                   },
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Confirm Password field
                 TextFormField(
                   controller: _confirmPasswordController,
@@ -207,11 +204,14 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                     prefixIcon: const Icon(Icons.lock),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _isConfirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                        _isConfirmPasswordVisible
+                            ? Icons.visibility
+                            : Icons.visibility_off,
                       ),
                       onPressed: () {
                         setState(() {
-                          _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+                          _isConfirmPasswordVisible =
+                              !_isConfirmPasswordVisible;
                         });
                       },
                     ),
@@ -229,9 +229,9 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                     return null;
                   },
                 ),
-                
+
                 const SizedBox(height: 40),
-                
+
                 // Complete button
                 SizedBox(
                   width: double.infinity,
@@ -249,13 +249,14 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                         ? const CircularProgressIndicator(color: Colors.white)
                         : const Text(
                             'Complete Profile',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.w600),
                           ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 20),
-                
+
                 // Skip button
                 Center(
                   child: TextButton(
@@ -272,7 +273,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                     ),
                   ),
                 ),
-                
+
                 // Extra padding at bottom for keyboard
                 SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 20),
               ],

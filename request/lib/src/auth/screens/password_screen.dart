@@ -1,6 +1,5 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../../services/sms_auth_service.dart';
+import '../../services/rest_auth_service.dart';
 
 class PasswordScreen extends StatefulWidget {
   final bool isNewUser;
@@ -8,9 +7,9 @@ class PasswordScreen extends StatefulWidget {
   final bool isEmail;
   final String? countryCode;
   final String? userId;
-  
+
   const PasswordScreen({
-    super.key, 
+    super.key,
     required this.isNewUser,
     required this.emailOrPhone,
     this.isEmail = false,
@@ -22,7 +21,8 @@ class PasswordScreen extends StatefulWidget {
   State<PasswordScreen> createState() => _PasswordScreenState();
 }
 
-class _PasswordScreenState extends State<PasswordScreen> with TickerProviderStateMixin {
+class _PasswordScreenState extends State<PasswordScreen>
+    with TickerProviderStateMixin {
   final TextEditingController _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
   bool _isLoading = false;
@@ -62,16 +62,16 @@ class _PasswordScreenState extends State<PasswordScreen> with TickerProviderStat
     print("=== PASSWORD SCREEN LOGIN START ===");
     print("Email/Phone: ${widget.emailOrPhone}");
     print("Password length: ${_passwordController.text.trim().length}");
-    
+
     try {
-      final result = await SMSAuthService().loginWithPassword(
-        emailOrPhone: widget.emailOrPhone,
+      final result = await RestAuthService.instance.login(
+        email: widget.emailOrPhone,
         password: _passwordController.text.trim(),
       );
 
-      print("Login result: ${result['success'] ? 'SUCCESS' : 'FAILED'}");
-      
-      if (result['success']) {
+      print("Login result: ${result.success ? 'SUCCESS' : 'FAILED'}");
+
+      if (result.success) {
         print("Navigating to home screen...");
         if (mounted) {
           Navigator.pushNamedAndRemoveUntil(
@@ -81,21 +81,22 @@ class _PasswordScreenState extends State<PasswordScreen> with TickerProviderStat
           );
         }
       } else {
-        print("Login failed: ${result['message']}");
-        _showErrorSnackBar(result['message'] ?? 'Login failed. Please check your credentials.');
+        print("Login failed: ${result.error}");
+        _showErrorSnackBar(
+            result.error ?? 'Login failed. Please check your credentials.');
       }
     } catch (e) {
       print("Exception caught in password screen: $e");
       String errorMessage = 'Login failed. Please try again.';
-      
-      if (e.toString().contains('wrong-password')) {
+
+      if (e.toString().contains('invalid_credentials')) {
         errorMessage = 'Incorrect password. Please try again.';
-      } else if (e.toString().contains('user-not-found')) {
+      } else if (e.toString().contains('user_not_found')) {
         errorMessage = 'No account found with this email/phone.';
-      } else if (e.toString().contains('too-many-requests')) {
+      } else if (e.toString().contains('too_many_requests')) {
         errorMessage = 'Too many failed attempts. Please try again later.';
       }
-      
+
       _showErrorSnackBar(errorMessage);
     } finally {
       if (mounted) {
@@ -112,13 +113,17 @@ class _PasswordScreenState extends State<PasswordScreen> with TickerProviderStat
     });
 
     try {
-      final result = await SMSAuthService().sendPasswordResetOTP(widget.emailOrPhone);
-      
-      if (result['success']) {
+      final result = await RestAuthService.instance.sendOTP(
+        emailOrPhone: widget.emailOrPhone,
+        countryCode: widget.countryCode ?? '',
+        isEmail: widget.isEmail,
+      );
+
+      if (result.success) {
         setState(() {
           _isLoading = false;
         });
-        
+
         Navigator.pushNamed(
           context,
           '/otp',
@@ -127,13 +132,12 @@ class _PasswordScreenState extends State<PasswordScreen> with TickerProviderStat
             'isNewUser': false,
             'isEmail': widget.isEmail,
             'countryCode': widget.countryCode,
-            'otpId': result['otpId'],
+            'otpToken': result.otpToken,
             'purpose': 'password_reset',
-            'expiresIn': result['expiresIn'],
           },
         );
       } else {
-        throw Exception(result['message'] ?? 'Failed to send OTP');
+        throw Exception(result.error ?? 'Failed to send OTP');
       }
     } catch (e) {
       setState(() {
@@ -148,18 +152,6 @@ class _PasswordScreenState extends State<PasswordScreen> with TickerProviderStat
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.red.shade600,
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
-
-  void _showSuccessSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green.shade600,
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -187,7 +179,7 @@ class _PasswordScreenState extends State<PasswordScreen> with TickerProviderStat
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 20),
-              
+
               // Header
               const Text(
                 'Welcome back',
@@ -207,9 +199,9 @@ class _PasswordScreenState extends State<PasswordScreen> with TickerProviderStat
                   height: 1.4,
                 ),
               ),
-              
+
               const SizedBox(height: 48),
-              
+
               // Password Input
               Container(
                 decoration: BoxDecoration(
@@ -226,10 +218,13 @@ class _PasswordScreenState extends State<PasswordScreen> with TickerProviderStat
                   decoration: InputDecoration(
                     hintText: 'Enter your password',
                     hintStyle: TextStyle(color: Colors.grey.shade500),
-                    prefixIcon: Icon(Icons.lock_outline, color: Colors.grey.shade600),
+                    prefixIcon:
+                        Icon(Icons.lock_outline, color: Colors.grey.shade600),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _isPasswordVisible ? Icons.visibility_off : Icons.visibility,
+                        _isPasswordVisible
+                            ? Icons.visibility_off
+                            : Icons.visibility,
                         color: Colors.grey.shade600,
                       ),
                       onPressed: () {
@@ -241,21 +236,23 @@ class _PasswordScreenState extends State<PasswordScreen> with TickerProviderStat
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
                     focusedBorder: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 16),
                   ),
                   onSubmitted: (_) => _handleLogin(),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Forgot Password
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: _handleForgotPassword,
                   style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
                   child: const Text(
                     'Forgot password?',
@@ -267,9 +264,9 @@ class _PasswordScreenState extends State<PasswordScreen> with TickerProviderStat
                   ),
                 ),
               ),
-              
+
               const Spacer(),
-              
+
               // Login Button
               Container(
                 width: double.infinity,
@@ -292,7 +289,8 @@ class _PasswordScreenState extends State<PasswordScreen> with TickerProviderStat
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
                       : const Text(

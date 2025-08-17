@@ -10,6 +10,7 @@ import 'help_support_screen.dart';
 import 'about_request_screen.dart';
 import 'notification_screen.dart';
 import 'driver_subscription_screen.dart';
+import 'api_test_screen.dart';
 
 class ModernMenuScreen extends StatefulWidget {
   const ModernMenuScreen({super.key});
@@ -22,7 +23,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
   final ContentService _contentService = ContentService.instance;
   final AuthService _authService = AuthService.instance;
   final EnhancedUserService _userService = EnhancedUserService();
-  
+
   List<ContentPage> _pages = [];
   Map<String, dynamic>? _currentUser;
   bool _isLoading = true;
@@ -37,7 +38,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
   Future<void> _loadData() async {
     try {
       setState(() => _isLoading = true);
-      
+
       // Load user data
       final user = _authService.currentUser;
       if (user != null) {
@@ -47,10 +48,10 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
           _profileImageUrl = null; // No profile image in current model
         });
       }
-      
+
       // Load content pages
       final pages = await _contentService.getPages();
-      
+
       if (mounted) {
         setState(() {
           _pages = pages;
@@ -125,24 +126,24 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
             ),
           ],
         ),
-        
+
         // Menu content
         SliverList(
           delegate: SliverChildListDelegate([
             const SizedBox(height: 12),
-            
+
             // User Profile Card
             _buildUserProfileCard(),
             const SizedBox(height: 12),
-            
+
             // Facebook-style grid sections
             _buildMenuGrid(),
             const SizedBox(height: 12),
-            
+
             // Content pages section
             if (_pages.isNotEmpty) _buildContentPagesSection(),
             const SizedBox(height: 12),
-            
+
             // Account actions section
             _buildAccountActionsSection(),
             const SizedBox(height: 120),
@@ -163,9 +164,9 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            _currentUser?['name'] ?? 
-            _currentUser?['displayName'] ?? 
-            'Fathima Nusra',
+            _currentUser?['name'] ??
+                _currentUser?['displayName'] ??
+                'Fathima Nusra',
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -203,21 +204,24 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                     onTap: () => Navigator.pushNamed(context, '/account'),
                     child: CircleAvatar(
                       radius: 24,
-                      backgroundImage: _profileImageUrl != null && _profileImageUrl!.isNotEmpty
+                      backgroundImage: _profileImageUrl != null &&
+                              _profileImageUrl!.isNotEmpty
                           ? NetworkImage(_profileImageUrl!)
                           : null,
                       backgroundColor: Colors.grey[300],
-                      child: _profileImageUrl == null || _profileImageUrl!.isEmpty
-                          ? Icon(Icons.person, color: Colors.grey[600], size: 28)
-                          : null,
+                      child:
+                          _profileImageUrl == null || _profileImageUrl!.isEmpty
+                              ? Icon(Icons.person,
+                                  color: Colors.grey[600], size: 28)
+                              : null,
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Text(
-                      _currentUser?['name'] ?? 
-                      _currentUser?['displayName'] ?? 
-                      'User',
+                      _currentUser?['name'] ??
+                          _currentUser?['displayName'] ??
+                          'User',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
@@ -341,17 +345,21 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                   if (item.route == '/activities') {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const MyActivitiesScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => const MyActivitiesScreen()),
                     );
                   } else if (item.route == '/notifications') {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const NotificationScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => const NotificationScreen()),
                     );
                   } else if (item.route == '/driver-subscriptions') {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const DriverSubscriptionScreen()),
+                      MaterialPageRoute(
+                          builder: (context) =>
+                              const DriverSubscriptionScreen()),
                     );
                   } else {
                     Navigator.pushNamed(context, item.route!);
@@ -446,7 +454,8 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
     );
   }
 
-  Widget _buildPageCategory(String category, List<ContentPage> pages, Map<String, List<ContentPage>> pagesByCategory) {
+  Widget _buildPageCategory(String category, List<ContentPage> pages,
+      Map<String, List<ContentPage>> pagesByCategory) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -484,7 +493,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
             showDivider: page != pages.last,
           );
         }),
-        if (pages.isNotEmpty && category != pagesByCategory.keys.last) 
+        if (pages.isNotEmpty && category != pagesByCategory.keys.last)
           const SizedBox(height: 8),
       ],
     );
@@ -500,13 +509,24 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
       child: Column(
         children: [
           _buildActionTile(
+            icon: Icons.developer_mode,
+            title: 'API Test Screen',
+            subtitle: 'Test REST API connectivity',
+            color: Colors.purple,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ApiTestScreen()),
+            ),
+          ),
+          _buildActionTile(
             icon: Icons.help_outline,
             title: 'Help and Support',
             subtitle: 'Get help when you need it',
             color: Colors.grey,
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const HelpSupportScreen()),
+              MaterialPageRoute(
+                  builder: (context) => const HelpSupportScreen()),
             ),
           ),
           _buildActionTile(
@@ -516,7 +536,8 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
             color: Colors.grey,
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const SettingsPrivacyScreen()),
+              MaterialPageRoute(
+                  builder: (context) => const SettingsPrivacyScreen()),
             ),
           ),
           _buildActionTile(
@@ -526,7 +547,8 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
             color: Colors.grey,
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const AboutRequestScreen()),
+              MaterialPageRoute(
+                  builder: (context) => const AboutRequestScreen()),
             ),
           ),
           _buildActionTile(
@@ -552,7 +574,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                   ],
                 ),
               );
-              
+
               if (shouldLogout == true) {
                 await _authService.signOut();
                 if (mounted) {

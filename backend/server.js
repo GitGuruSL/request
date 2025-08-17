@@ -13,6 +13,7 @@ const dbService = require('./services/database');
 
 // Import routes
 const authRoutes = require('./routes/auth');
+const flutterAuthRoutes = require('./routes/flutter-auth');
 const categoryRoutes = require('./routes/categories');
 const cityRoutes = require('./routes/cities');
 const requestRoutes = require('./routes/requests');
@@ -66,6 +67,7 @@ app.get('/health', async (req, res) => {
 
 // API routes
 app.use('/api/auth', authRoutes);
+app.use('/api/auth', flutterAuthRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/cities', cityRoutes);
 app.use('/api/requests', requestRoutes);

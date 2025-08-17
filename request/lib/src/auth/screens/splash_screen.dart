@@ -88,7 +88,10 @@ class _SplashScreenState extends State<SplashScreen>
                       'Get what you need',
                       style: TextStyle(
                         fontSize: 16,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7),
                         fontFamily: 'Poppins',
                       ),
                     ),
