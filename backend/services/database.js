@@ -1,8 +1,33 @@
 const { Pool } = require('pg');
 const dotenv = require('dotenv');
+const fs = require('fs');
+const path = require('path');
 
-// Load environment variables
-dotenv.config({ path: '.env.rds' });
+// Attempt to load .env files from several candidate locations
+const envCandidates = [
+  path.join(process.cwd(), '.env.rds'),
+  path.join(__dirname, '..', '.env.rds'),
+  path.join(__dirname, '..', '..', '.env.rds'),
+];
+let loadedEnvPath = null;
+for (const p of envCandidates) {
+  if (fs.existsSync(p)) {
+    dotenv.config({ path: p });
+    loadedEnvPath = p;
+    break;
+  }
+}
+if (!loadedEnvPath) {
+  console.warn('[ENV] .env.rds not found in candidates:', envCandidates);
+} else {
+  console.log(`[ENV] Loaded environment from: ${loadedEnvPath}`);
+}
+
+const REQUIRED_VARS = ['DB_HOST','DB_PORT','DB_NAME','DB_USERNAME','DB_PASSWORD'];
+const missing = REQUIRED_VARS.filter(v => !process.env[v]);
+if (missing.length) {
+  console.warn('[ENV] Missing required DB vars:', missing.join(', '));
+}
 
 class DatabaseService {
     constructor() {
@@ -247,6 +272,26 @@ class DatabaseService {
                 error: error.message
             };
         }
+    }
+
+    /**
+     * Diagnose connectivity issues
+     */
+    async diagnoseConnectivity() {
+        const summary = {
+            loadedEnvPath,
+            env: REQUIRED_VARS.reduce((acc, k) => { acc[k] = process.env[k] ? 'SET' : 'MISSING'; return acc; }, {}),
+            ssl: process.env.DB_SSL,
+            testQuery: null,
+            error: null
+        };
+        try {
+            const r = await this.query('SELECT 1 as ok');
+            summary.testQuery = r.rows[0];
+        } catch (e) {
+            summary.error = e.message;
+        }
+        return summary;
     }
 
     /**

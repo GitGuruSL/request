@@ -49,7 +49,15 @@ app.use(morgan('combined'));
 app.get('/health', async (req, res) => {
     try {
         const dbHealth = await dbService.healthCheck();
-        
+        if (dbHealth.status !== 'healthy') {
+            const diag = await dbService.diagnoseConnectivity();
+            return res.status(503).json({
+                status: 'unhealthy',
+                timestamp: new Date().toISOString(),
+                database: dbHealth,
+                diagnosis: diag
+            });
+        }
         res.json({
             status: 'healthy',
             timestamp: new Date().toISOString(),
@@ -57,10 +65,12 @@ app.get('/health', async (req, res) => {
             version: process.env.npm_package_version || '1.0.0'
         });
     } catch (error) {
+        const diag = await dbService.diagnoseConnectivity().catch(()=>null);
         res.status(503).json({
             status: 'unhealthy',
             error: error.message,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            diagnosis: diag
         });
     }
 });
@@ -121,6 +131,20 @@ process.on('SIGINT', async () => {
     }
 });
 
+// Startup DB connectivity check
+(async () => {
+    try {
+        const healthy = await dbService.healthCheck();
+        if (healthy.status !== 'healthy') {
+            console.error('Database not healthy at startup:', healthy);
+        } else {
+            console.log('Database connection OK at startup');
+        }
+    } catch (e) {
+        console.error('Failed initial DB connectivity check:', e);
+    }
+})();
+
 const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {
@@ -128,3 +152,5 @@ app.listen(PORT, () => {
     console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🔗 Health check: http://localhost:${PORT}/health`);
 });
+
+module.exports = app;

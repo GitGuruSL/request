@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const database = require('../services/database');
 const auth = require('../services/auth');
+const responsesRouter = require('./responses');
 
 // Get requests with optional filtering
 router.get('/', async (req, res) => {
@@ -498,5 +499,7 @@ router.get('/user/my-requests', auth.authMiddleware(), async (req, res) => {
     });
   }
 });
+
+router.use('/:requestId/responses', responsesRouter);
 
 module.exports = router;

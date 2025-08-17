@@ -269,6 +269,22 @@ class CreateResponseData {
       };
 }
 
+class ResponsesPage {
+  final List<ResponseModel> responses;
+  final int page;
+  final int limit;
+  final int total;
+  final int totalPages;
+  ResponsesPage(
+      {required this.responses,
+      required this.page,
+      required this.limit,
+      required this.total,
+      required this.totalPages});
+  factory ResponsesPage.empty() => ResponsesPage(
+      responses: const [], page: 1, limit: 20, total: 0, totalPages: 0);
+}
+
 class RestRequestService {
   static RestRequestService? _instance;
   static RestRequestService get instance =>
@@ -462,18 +478,35 @@ class RestRequestService {
     }
   }
 
-  Future<List<ResponseModel>> getResponses(String requestId) async {
+  Future<ResponsesPage> getResponses(String requestId,
+      {int page = 1, int limit = 20}) async {
     try {
-      final res = await _apiClient
-          .get<Map<String, dynamic>>('/api/requests/$requestId/responses');
+      final res = await _apiClient.get<Map<String, dynamic>>(
+          '/api/requests/$requestId/responses',
+          queryParameters: {
+            'page': page.toString(),
+            'limit': limit.toString()
+          });
       if (res.isSuccess && res.data != null) {
-        final data = res.data!['data'] as List? ?? [];
-        return data.map((e) => ResponseModel.fromJson(e)).toList();
+        final data = res.data!['data'] as Map<String, dynamic>?;
+        if (data != null) {
+          final list = (data['responses'] as List? ?? [])
+              .map((e) => ResponseModel.fromJson(e))
+              .toList();
+          final pag = data['pagination'] as Map<String, dynamic>?;
+          return ResponsesPage(
+            responses: list,
+            page: pag?['page'] ?? page,
+            limit: pag?['limit'] ?? limit,
+            total: pag?['total'] ?? list.length,
+            totalPages: pag?['totalPages'] ?? 1,
+          );
+        }
       }
-      return [];
+      return ResponsesPage.empty();
     } catch (e) {
       print('Error fetching responses: $e');
-      return [];
+      return ResponsesPage.empty();
     }
   }
 

@@ -19,10 +19,14 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
   bool _isOwner = false;
   // Added state
   List<rest.ResponseModel> _responses = [];
+  int _responsesPage = 1;
+  int _responsesTotalPages = 1;
   bool _responsesLoading = false;
   bool _creating = false;
   final Set<String> _updating = {};
   final Set<String> _deleting = {};
+  bool _updatingRequest = false;
+  bool _deletingRequest = false;
 
   @override
   void initState() {
@@ -38,7 +42,14 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
       bool owner =
           r != null && currentUserId != null && r.userId == currentUserId;
       List<rest.ResponseModel> responses = [];
-      if (r != null) responses = await _service.getResponses(r.id);
+      int totalPages = 1;
+      if (r != null) {
+        final page = await _service.getResponses(r.id, page: 1, limit: 10);
+        responses = page.responses;
+        totalPages = page.totalPages;
+        _responsesPage = 2; // next page
+        _responsesTotalPages = totalPages;
+      }
       if (mounted) {
         setState(() {
           _request = r;
@@ -58,12 +69,32 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
 
   Future<void> _reloadResponses() async {
     if (_request == null) return;
+    _responsesPage = 1;
+    _responsesTotalPages = 1;
+    _responses.clear();
+    await _fetchResponses(reset: true);
+  }
+
+  Future<void> _fetchResponses({bool reset = false}) async {
+    if (_request == null) return;
+    if (_responsesLoading) return;
+    if (!reset && _responsesPage > _responsesTotalPages) return;
     setState(() => _responsesLoading = true);
-    try {
-      final list = await _service.getResponses(_request!.id);
-      if (mounted) setState(() => _responses = list);
-    } finally {
-      if (mounted) setState(() => _responsesLoading = false);
+    final pageToLoad = reset ? 1 : _responsesPage;
+    final page =
+        await _service.getResponses(_request!.id, page: pageToLoad, limit: 10);
+    if (mounted) {
+      setState(() {
+        if (reset) {
+          _responses = page.responses;
+          _responsesPage = 2;
+        } else {
+          _responses.addAll(page.responses);
+          _responsesPage = page.page + 1;
+        }
+        _responsesTotalPages = page.totalPages;
+        _responsesLoading = false;
+      });
     }
   }
 
@@ -317,6 +348,179 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
     if (mounted) setState(() => _deleting.remove(response.id));
   }
 
+  void _openEditRequestSheet() {
+    if (_request == null) return;
+    final r = _request!;
+    final titleController = TextEditingController(text: r.title);
+    final descController = TextEditingController(text: r.description);
+    final minController =
+        TextEditingController(text: r.budgetMin?.toStringAsFixed(0) ?? '');
+    final maxController =
+        TextEditingController(text: r.budgetMax?.toStringAsFixed(0) ?? '');
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: StatefulBuilder(builder: (ctx, setSheet) {
+          final busy = _updatingRequest;
+          return Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    const Expanded(
+                        child: Text('Edit Request',
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold))),
+                    IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(ctx))
+                  ]),
+                  TextField(
+                      controller: titleController,
+                      maxLength: 80,
+                      decoration: const InputDecoration(labelText: 'Title')),
+                  TextField(
+                      controller: descController,
+                      maxLines: 4,
+                      decoration:
+                          const InputDecoration(labelText: 'Description')),
+                  const SizedBox(height: 12),
+                  Row(children: [
+                    Expanded(
+                        child: TextField(
+                            controller: minController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                                labelText: 'Budget Min'))),
+                    const SizedBox(width: 12),
+                    Expanded(
+                        child: TextField(
+                            controller: maxController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                                labelText: 'Budget Max'))),
+                  ]),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: busy
+                            ? null
+                            : () async {
+                                final title = titleController.text.trim();
+                                final desc = descController.text.trim();
+                                if (title.isEmpty || desc.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text(
+                                              'Title & description required')));
+                                  return;
+                                }
+                                final min =
+                                    double.tryParse(minController.text.trim());
+                                final max =
+                                    double.tryParse(maxController.text.trim());
+                                setState(() => _updatingRequest = true);
+                                setSheet(() => {});
+                                final updates = <String, dynamic>{
+                                  'title': title,
+                                  'description': desc,
+                                  'budget_min': min,
+                                  'budget_max': max
+                                };
+                                final updated =
+                                    await _service.updateRequest(r.id, updates);
+                                if (updated != null) {
+                                  setState(() => _request = updated);
+                                  if (mounted) Navigator.pop(ctx);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text('Request updated')));
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text(
+                                              'Failed to update request')));
+                                }
+                                if (mounted)
+                                  setState(() => _updatingRequest = false);
+                              },
+                        icon: busy
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white))
+                            : const Icon(Icons.save),
+                        label: Text(busy ? 'Saving...' : 'Save Changes'),
+                      )),
+                  const SizedBox(height: 12),
+                ]),
+          );
+        }),
+      ),
+    );
+  }
+
+  Future<void> _toggleStatus() async {
+    if (_request == null) return;
+    if (_updatingRequest) return;
+    final cur = _request!.status.toLowerCase();
+    final newStatus = cur == 'active' ? 'closed' : 'active';
+    setState(() => _updatingRequest = true);
+    final updated =
+        await _service.updateRequest(_request!.id, {'status': newStatus});
+    if (updated != null) {
+      setState(() => _request = updated);
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Status set to ${updated.status}')));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update status')));
+    }
+    if (mounted) setState(() => _updatingRequest = false);
+  }
+
+  Future<void> _confirmDeleteRequest() async {
+    if (_request == null) return;
+    if (_deletingRequest) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Request'),
+        content: const Text(
+            'Delete this request permanently? This cannot be undone.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    setState(() => _deletingRequest = true);
+    final success = await _service.deleteRequest(_request!.id);
+    if (success) {
+      if (mounted) Navigator.pop(context);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Request deleted')));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to delete request')));
+    }
+    if (mounted) setState(() => _deletingRequest = false);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -337,7 +541,34 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
             IconButton(
                 onPressed: _load,
                 icon: const Icon(Icons.refresh),
-                tooltip: 'Reload')
+                tooltip: 'Reload'),
+            if (_isOwner)
+              PopupMenuButton<String>(
+                onSelected: (val) {
+                  switch (val) {
+                    case 'edit':
+                      _openEditRequestSheet();
+                      break;
+                    case 'status':
+                      _toggleStatus();
+                      break;
+                    case 'delete':
+                      _confirmDeleteRequest();
+                      break;
+                  }
+                },
+                itemBuilder: (ctx) => [
+                  const PopupMenuItem(
+                      value: 'edit', child: Text('Edit Request')),
+                  PopupMenuItem(
+                      value: 'status',
+                      child: Text(_request!.status.toLowerCase() == 'active'
+                          ? 'Close Request'
+                          : 'Reopen Request')),
+                  const PopupMenuItem(
+                      value: 'delete', child: Text('Delete Request')),
+                ],
+              ),
           ]),
       body: RefreshIndicator(
         onRefresh: _load,
@@ -400,9 +631,35 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                   ],
                   if (_isOwner) ...[
                     const SizedBox(height: 24),
-                    const Text('Owner features (edit / responses) coming soon',
-                        style: TextStyle(
-                            fontSize: 12, fontStyle: FontStyle.italic)),
+                    Row(children: [
+                      if (_updatingRequest)
+                        const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2)),
+                      Text('Status: ${r.status}',
+                          style: const TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w600)),
+                      const SizedBox(width: 12),
+                      TextButton.icon(
+                          onPressed: _toggleStatus,
+                          icon: Icon(
+                              r.status.toLowerCase() == 'active'
+                                  ? Icons.lock
+                                  : Icons.lock_open,
+                              size: 16),
+                          label: Text(r.status.toLowerCase() == 'active'
+                              ? 'Close'
+                              : 'Reopen')),
+                      TextButton.icon(
+                          onPressed: _openEditRequestSheet,
+                          icon: const Icon(Icons.edit, size: 16),
+                          label: const Text('Edit')),
+                      TextButton.icon(
+                          onPressed: _confirmDeleteRequest,
+                          icon: const Icon(Icons.delete_outline, size: 16),
+                          label: const Text('Delete')),
+                    ])
                   ],
                 ])),
             const SizedBox(height: 20),
@@ -459,45 +716,35 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
   }
 
   Widget _responsesSection() {
-    if (_responsesLoading)
-      return _sectionCard(
-          child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
-              child: Center(child: CircularProgressIndicator())));
+    final canLoadMore =
+        _responsesPage <= _responsesTotalPages && !_responsesLoading;
     return _sectionCard(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
         const Text('Responses',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        const SizedBox(width: 8),
-        if (_responses.isNotEmpty)
-          Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  borderRadius: BorderRadius.circular(12)),
-              child: Text(_responses.length.toString(),
-                  style: TextStyle(
-                      color: Colors.blue[700],
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500))),
         const Spacer(),
         IconButton(
             onPressed: _reloadResponses,
             icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh responses')
+            tooltip: 'Reload')
       ]),
       const SizedBox(height: 8),
-      if (_responses.isEmpty)
+      if (_responses.isEmpty && !_responsesLoading)
         Text(_canRespond ? 'Be the first to respond.' : 'No responses yet.',
-            style: TextStyle(color: Colors.grey[600]))
-      else
-        ..._responses.take(5).map(_responseTile),
-      if (_responses.length > 5)
-        Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text('+${_responses.length - 5} more (pagination coming)',
-                style: TextStyle(color: Colors.grey[600], fontSize: 12)))
+            style: TextStyle(color: Colors.grey[600])),
+      ..._responses.map(_responseTile),
+      if (_responsesLoading)
+        const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Center(child: CircularProgressIndicator())),
+      if (canLoadMore)
+        Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+                onPressed: () => _fetchResponses(),
+                icon: const Icon(Icons.more_horiz),
+                label: const Text('Load more'))),
     ]));
   }
 
