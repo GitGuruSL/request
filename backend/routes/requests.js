@@ -123,12 +123,14 @@ router.get('/:id', async (req, res) => {
         u.phone as user_phone,
         c.name as category_name,
         sc.name as subcategory_name,
-        ct.name as city_name
+        ct.name as city_name,
+        ar.user_id as accepted_response_user_id
       FROM requests r
       LEFT JOIN users u ON r.user_id = u.id
       LEFT JOIN categories c ON r.category_id = c.id
       LEFT JOIN subcategories sc ON r.subcategory_id = sc.id
       LEFT JOIN cities ct ON r.location_city_id = ct.id
+      LEFT JOIN responses ar ON r.accepted_response_id = ar.id
       WHERE r.id = $1
     `, [requestId]);
 
@@ -407,6 +409,47 @@ router.delete('/:id', auth.authMiddleware(), async (req, res) => {
       message: 'Error deleting request',
       error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
+  }
+});
+
+// Accept a response (owner only)
+router.put('/:id/accept-response', auth.authMiddleware(), async (req, res) => {
+  try {
+    const requestId = req.params.id;
+    const { response_id } = req.body;
+    const userId = req.user.userId;
+    if (!response_id) {
+      return res.status(400).json({ success: false, message: 'response_id required' });
+    }
+    const request = await database.queryOne('SELECT * FROM requests WHERE id=$1', [requestId]);
+    if (!request) return res.status(404).json({ success: false, message: 'Request not found' });
+    if (request.user_id !== userId && req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Not permitted' });
+    // Ensure response belongs to request
+    const resp = await database.queryOne('SELECT * FROM responses WHERE id=$1 AND request_id=$2', [response_id, requestId]);
+    if (!resp) return res.status(404).json({ success: false, message: 'Response not found for this request' });
+  // Auto-close if currently active
+  const updated = await database.queryOne("UPDATE requests SET accepted_response_id=$1, status=CASE WHEN status='active' THEN 'closed' ELSE status END, updated_at=NOW() WHERE id=$2 RETURNING *", [response_id, requestId]);
+    return res.json({ success: true, message: 'Response accepted', data: updated });
+  } catch (error) {
+    console.error('Error accepting response:', error);
+    res.status(500).json({ success: false, message: 'Error accepting response', error: error.message });
+  }
+});
+
+// Clear accepted response
+router.put('/:id/clear-accepted', auth.authMiddleware(), async (req, res) => {
+  try {
+    const requestId = req.params.id;
+    const userId = req.user.userId;
+    const request = await database.queryOne('SELECT * FROM requests WHERE id=$1', [requestId]);
+    if (!request) return res.status(404).json({ success: false, message: 'Request not found' });
+    if (request.user_id !== userId && req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Not permitted' });
+  // Re-open if it was closed due to acceptance
+  const updated = await database.queryOne("UPDATE requests SET accepted_response_id=NULL, status=CASE WHEN status='closed' THEN 'active' ELSE status END, updated_at=NOW() WHERE id=$1 RETURNING *", [requestId]);
+    return res.json({ success: true, message: 'Accepted response cleared', data: updated });
+  } catch (error) {
+    console.error('Error clearing accepted response:', error);
+    res.status(500).json({ success: false, message: 'Error clearing accepted response', error: error.message });
   }
 });
 

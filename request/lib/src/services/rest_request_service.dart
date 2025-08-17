@@ -5,6 +5,7 @@ class RequestModel {
   final String userId;
   final String? userName;
   final String? userEmail;
+  final String? acceptedResponseId;
   final String title;
   final String description;
   final String categoryId;
@@ -29,6 +30,7 @@ class RequestModel {
     required this.userId,
     this.userName,
     this.userEmail,
+    this.acceptedResponseId,
     required this.title,
     required this.description,
     required this.categoryId,
@@ -55,6 +57,7 @@ class RequestModel {
       userId: json['user_id'].toString(),
       userName: json['user_name'],
       userEmail: json['user_email'],
+      acceptedResponseId: json['accepted_response_id']?.toString(),
       title: json['title'] ?? '',
       description: json['description'] ?? '',
       categoryId: json['category_id'].toString(),
@@ -90,6 +93,7 @@ class RequestModel {
       'location_city_id': locationCityId,
       'country_code': countryCode,
       'status': status,
+      'accepted_response_id': acceptedResponseId,
       'budget_min': budgetMin,
       'budget_max': budgetMax,
       'currency': currency,
@@ -552,6 +556,40 @@ class RestRequestService {
     } catch (e) {
       print('Error deleting response: $e');
       return false;
+    }
+  }
+
+  // Accept a response
+  Future<RequestModel?> acceptResponse(
+      String requestId, String responseId) async {
+    try {
+      final res = await _apiClient.put<Map<String, dynamic>>(
+          '/api/requests/$requestId/accept-response',
+          data: {'response_id': responseId});
+      if (res.isSuccess && res.data != null) {
+        final data = res.data!['data'] as Map<String, dynamic>?;
+        if (data != null) return RequestModel.fromJson(data);
+      }
+      return null;
+    } catch (e) {
+      print('Error accepting response: $e');
+      return null;
+    }
+  }
+
+  // Clear accepted response
+  Future<RequestModel?> clearAcceptedResponse(String requestId) async {
+    try {
+      final res = await _apiClient
+          .put<Map<String, dynamic>>('/api/requests/$requestId/clear-accepted');
+      if (res.isSuccess && res.data != null) {
+        final data = res.data!['data'] as Map<String, dynamic>?;
+        if (data != null) return RequestModel.fromJson(data);
+      }
+      return null;
+    } catch (e) {
+      print('Error clearing accepted response: $e');
+      return null;
     }
   }
 }

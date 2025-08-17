@@ -751,15 +751,20 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
   Widget _responseTile(rest.ResponseModel r) {
     final myUid = RestAuthService.instance.currentUser?.uid;
     final isMine = myUid != null && r.userId == myUid;
+    final isAccepted = _request?.acceptedResponseId == r.id;
     final busy = _updating.contains(r.id) || _deleting.contains(r.id);
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isMine ? Colors.blue[50] : Colors.grey[50],
+        color: isAccepted
+            ? Colors.green[50]
+            : (isMine ? Colors.blue[50] : Colors.grey[50]),
         borderRadius: BorderRadius.circular(12),
-        border:
-            Border.all(color: (isMine ? Colors.blue[100] : Colors.grey[200])!),
+        border: Border.all(
+            color: isAccepted
+                ? Colors.green
+                : (isMine ? Colors.blue[100]! : Colors.grey[200]!)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
@@ -770,7 +775,9 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
               child: Text(r.userName ?? 'User ${r.userId}',
                   style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      color: isMine ? Colors.blue[800] : null))),
+                      color: isAccepted
+                          ? Colors.green[800]
+                          : (isMine ? Colors.blue[800] : null)))),
           if (busy)
             const SizedBox(
                 width: 16,
@@ -778,17 +785,38 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                 child: CircularProgressIndicator(strokeWidth: 2)),
           Text(_relativeTime(r.createdAt),
               style: TextStyle(fontSize: 11, color: Colors.grey[500])),
-          if (isMine && !busy)
+          if (!busy)
             PopupMenuButton<String>(
               onSelected: (val) {
-                if (val == 'edit')
+                if (val == 'edit') {
                   _openEditResponseSheet(r);
-                else if (val == 'delete') _confirmDelete(r);
+                } else if (val == 'delete') {
+                  _confirmDelete(r);
+                } else if (val == 'accept') {
+                  _acceptResponse(r.id);
+                } else if (val == 'unaccept') {
+                  _clearAccepted();
+                }
               },
-              itemBuilder: (ctx) => [
-                const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                const PopupMenuItem(value: 'delete', child: Text('Delete')),
-              ],
+              itemBuilder: (ctx) {
+                final items = <PopupMenuEntry<String>>[];
+                if (isMine) {
+                  items.add(
+                      const PopupMenuItem(value: 'edit', child: Text('Edit')));
+                  items.add(const PopupMenuItem(
+                      value: 'delete', child: Text('Delete')));
+                }
+                if (_isOwner) {
+                  if (isAccepted) {
+                    items.add(const PopupMenuItem(
+                        value: 'unaccept', child: Text('Unaccept')));
+                  } else {
+                    items.add(const PopupMenuItem(
+                        value: 'accept', child: Text('Accept')));
+                  }
+                }
+                return items;
+              },
             ),
         ]),
         const SizedBox(height: 6),
@@ -801,8 +829,56 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                 '${r.currency ?? _request?.currency ?? ''}${r.price!.toStringAsFixed(0)}',
                 style: const TextStyle(fontWeight: FontWeight.w600))
           ])
+        ],
+        if (isAccepted) ...[
+          const SizedBox(height: 8),
+          Row(children: const [
+            Icon(Icons.verified, size: 16, color: Colors.green),
+            SizedBox(width: 4),
+            Text('ACCEPTED',
+                style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green))
+          ])
         ]
       ]),
     );
+  }
+
+  Future<void> _acceptResponse(String responseId) async {
+    if (_request == null) return;
+    try {
+      final res = await _service.acceptResponse(_request!.id, responseId);
+      if (res != null) {
+        setState(() => _request = res);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Response accepted')));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to accept response')));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
+  Future<void> _clearAccepted() async {
+    if (_request == null) return;
+    try {
+      final res = await _service.clearAcceptedResponse(_request!.id);
+      if (res != null) {
+        setState(() => _request = res);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Cleared acceptance')));
+      } else {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Failed to unaccept')));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
   }
 }
