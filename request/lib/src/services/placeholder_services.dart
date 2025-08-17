@@ -3,17 +3,16 @@
 
 class ComprehensiveNotificationService {
   // Placeholder methods
-  Future<List<dynamic>> getNotifications() async {
-    return [];
+  Future<List<dynamic>> getNotifications() async => [];
+  Future<void> markAsRead(String id) async {}
+  Future<void> deleteNotification(String id) async {}
+
+  // Added for notification_screen
+  Stream<List<dynamic>> getUserNotifications(String userId) async* {
+    yield const [];
   }
 
-  Future<void> markAsRead(String id) async {
-    // TODO: Implement
-  }
-
-  Future<void> deleteNotification(String id) async {
-    // TODO: Implement
-  }
+  Future<void> markAllAsRead(String userId) async {}
 }
 
 class EnhancedUserService {

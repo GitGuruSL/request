@@ -52,10 +52,14 @@ class RestAuthService {
       if (response.isSuccess && response.data != null) {
         final data = response.data!;
         final token = data['token'] as String?;
+        final refreshToken = data['refreshToken'] as String?;
         final userData = data['user'] as Map<String, dynamic>?;
 
         if (token != null && userData != null) {
           await _apiClient.saveToken(token);
+          if (refreshToken != null) {
+            await _apiClient.saveRefreshToken(refreshToken);
+          }
           _currentUser = UserModel.fromJson(userData);
 
           return AuthResult(
@@ -99,10 +103,14 @@ class RestAuthService {
       if (response.isSuccess && response.data != null) {
         final data = response.data!;
         final token = data['token'] as String?;
+        final refreshToken = data['refreshToken'] as String?;
         final userData = data['user'] as Map<String, dynamic>?;
 
         if (token != null && userData != null) {
           await _apiClient.saveToken(token);
+          if (refreshToken != null) {
+            await _apiClient.saveRefreshToken(refreshToken);
+          }
           _currentUser = UserModel.fromJson(userData);
 
           return AuthResult(

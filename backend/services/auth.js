@@ -8,6 +8,7 @@ class AuthService {
         this.jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key';
         this.jwtExpiry = process.env.JWT_EXPIRY || '24h';
         this.otpExpiry = 5 * 60 * 1000; // 5 minutes in milliseconds
+    this.refreshExpiryMs = 30 * 24 * 60 * 60 * 1000; // 30 days
     }
 
     /**
@@ -24,6 +25,32 @@ class AuthService {
 
         return jwt.sign(payload, this.jwtSecret, { expiresIn: this.jwtExpiry });
     }
+
+        /**
+         * Generate a secure refresh token (random string) and store hashed version
+         */
+        async generateAndStoreRefreshToken(userId) {
+                const raw = crypto.randomBytes(48).toString('hex');
+                const hash = crypto.createHash('sha256').update(raw).digest('hex');
+                // Persist (one active per user for simplicity) - upsert pattern
+                await dbService.query(`
+                    INSERT INTO user_refresh_tokens (user_id, token_hash, expires_at, created_at)
+                    VALUES ($1,$2,$3,NOW())
+                    ON CONFLICT (user_id)
+                    DO UPDATE SET token_hash = EXCLUDED.token_hash, expires_at = EXCLUDED.expires_at, created_at = NOW()
+                `, [userId, hash, new Date(Date.now() + this.refreshExpiryMs)]);
+                return raw; // return raw to client (only time we reveal it)
+        }
+
+        async verifyAndRotateRefreshToken(userId, providedToken) {
+                const hash = crypto.createHash('sha256').update(providedToken).digest('hex');
+                const row = await dbService.query(`
+                    SELECT * FROM user_refresh_tokens WHERE user_id=$1 AND token_hash=$2 AND expires_at > NOW()
+                `, [userId, hash]);
+                if (row.rows.length === 0) throw new Error('Invalid or expired refresh token');
+                // Rotate (invalidate old by replacing)
+                return await this.generateAndStoreRefreshToken(userId);
+        }
 
     /**
      * Verify JWT token
@@ -108,10 +135,12 @@ class AuthService {
 
         // Generate token
         const token = this.generateToken(newUser);
+    const refreshToken = await this.generateAndStoreRefreshToken(newUser.id);
 
         return {
             user: this.sanitizeUser(newUser),
-            token
+            token,
+            refreshToken
         };
     }
 
@@ -157,10 +186,11 @@ class AuthService {
 
         // Generate token
         const token = this.generateToken(user);
-
+        const refreshToken = await this.generateAndStoreRefreshToken(user.id);
         return {
             user: this.sanitizeUser(user),
-            token
+            token,
+            refreshToken
         };
     }
 

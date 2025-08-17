@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/foundation.dart';
@@ -11,6 +10,7 @@ class ApiClient {
   static const String _baseUrl =
       'http://10.0.2.2:3001'; // Development URL for Android emulator
   static const String _tokenKey = 'jwt_token';
+  static const String _refreshTokenKey = 'refresh_token';
   static const FlutterSecureStorage _storage = FlutterSecureStorage();
 
   static ApiClient? _instance;
@@ -56,7 +56,7 @@ class ApiClient {
         }
         handler.next(response);
       },
-      onError: (error, handler) {
+      onError: (error, handler) async {
         if (kDebugMode) {
           print(
               '❌ API Error: ${error.response?.statusCode} ${error.requestOptions.path}');
@@ -65,9 +65,26 @@ class ApiClient {
 
         // Handle 401 Unauthorized - token expired
         if (error.response?.statusCode == 401) {
-          _handleTokenExpired();
+          final reqOptions = error.requestOptions;
+          // Avoid infinite loop by marking retried flag
+          if (reqOptions.extra['retried'] == true) {
+            return handler.next(error);
+          }
+          final refreshed = await _handleTokenExpired();
+          if (refreshed) {
+            try {
+              reqOptions.extra['retried'] = true;
+              final newToken = await getToken();
+              if (newToken != null) {
+                reqOptions.headers['Authorization'] = 'Bearer $newToken';
+              }
+              final cloneResponse = await _dio.fetch(reqOptions);
+              return handler.resolve(cloneResponse);
+            } catch (e) {
+              // fall through to next
+            }
+          }
         }
-
         handler.next(error);
       },
     ));
@@ -78,14 +95,23 @@ class ApiClient {
     await _storage.write(key: _tokenKey, value: token);
   }
 
+  Future<void> saveRefreshToken(String token) async {
+    await _storage.write(key: _refreshTokenKey, value: token);
+  }
+
   /// Retrieve stored JWT token
   Future<String?> getToken() async {
     return await _storage.read(key: _tokenKey);
   }
 
+  Future<String?> getRefreshToken() async {
+    return await _storage.read(key: _refreshTokenKey);
+  }
+
   /// Clear stored token (logout)
   Future<void> clearToken() async {
     await _storage.delete(key: _tokenKey);
+    await _storage.delete(key: _refreshTokenKey);
   }
 
   /// Check if user is authenticated
@@ -95,10 +121,63 @@ class ApiClient {
   }
 
   /// Handle token expiration
-  void _handleTokenExpired() {
-    clearToken();
-    // Navigate to login screen - implement based on your navigation
-    // NavigationService.instance.navigateToLogin();
+  Future<bool> _handleTokenExpired() async {
+    return await _attemptRefresh();
+  }
+
+  bool _refreshInProgress = false;
+  Future<bool> _attemptRefresh() async {
+    if (_refreshInProgress) {
+      // Wait for existing refresh to complete
+      while (_refreshInProgress) {
+        await Future.delayed(const Duration(milliseconds: 50));
+      }
+      return (await getToken()) != null; // if token present assume success
+    }
+    _refreshInProgress = true;
+    try {
+      final refresh = await getRefreshToken();
+      final token = await getToken();
+      if (refresh == null || token == null) {
+        await clearToken();
+        return false;
+      }
+      final payload = _decodeJwt(token);
+      final userId = payload['userId'];
+      final dioLocal = Dio(BaseOptions(baseUrl: _baseUrl));
+      final resp = await dioLocal.post('/api/auth/refresh', data: {
+        'userId': userId,
+        'refreshToken': refresh,
+      });
+      if (resp.data is Map && resp.data['success'] == true) {
+        final data = resp.data['data'] as Map<String, dynamic>;
+        final newToken = data['token'];
+        final newRefresh = data['refreshToken'];
+        if (newToken != null) await saveToken(newToken);
+        if (newRefresh != null) await saveRefreshToken(newRefresh);
+        return true;
+      } else {
+        await clearToken();
+        return false;
+      }
+    } catch (_) {
+      await clearToken();
+      return false;
+    } finally {
+      _refreshInProgress = false;
+    }
+  }
+
+  Map<String, dynamic> _decodeJwt(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return {};
+      final payload =
+          utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
+      return jsonDecode(payload) as Map<String, dynamic>;
+    } catch (_) {
+      return {};
+    }
   }
 
   /// Generic GET request

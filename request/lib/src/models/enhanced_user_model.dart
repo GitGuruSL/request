@@ -2,28 +2,19 @@
 // REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'src/utils/firebase_shim.dart'; // Added by migration script
-enum UserRole { 
-  general, 
-  driver, 
-  delivery, 
-  business 
+
+enum UserRole { general, driver, delivery, business }
+
+enum RequestType {
+  item, // General items
+  service, // Services
+  delivery, // Package delivery
+  rental, // Rent/lease items
+  ride, // Transportation
+  price // Price comparison
 }
 
-enum RequestType { 
-  item,      // General items
-  service,   // Services
-  delivery,  // Package delivery
-  rental,    // Rent/lease items
-  ride,      // Transportation
-  price      // Price comparison
-}
-
-enum VerificationStatus {
-  pending,
-  approved,
-  rejected,
-  notRequired
-}
+enum VerificationStatus { pending, approved, rejected, notRequired }
 
 class UserModel {
   final String id;
@@ -58,21 +49,24 @@ class UserModel {
     required this.updatedAt,
   });
 
+  // Legacy getter expected by screens
+  String get uid => id;
+
   // Check if user has specific role
   bool hasRole(UserRole role) => roles.contains(role);
-  
+
   // Check if user has any of the specified roles
-  bool hasAnyRole(List<UserRole> checkRoles) => 
+  bool hasAnyRole(List<UserRole> checkRoles) =>
       roles.any((role) => checkRoles.contains(role));
-  
+
   // Get role-specific data
   T? getRoleData<T>(UserRole role) => roleData[role]?.data as T?;
-  
+
   // Get role data object
   RoleData? getRoleInfo(UserRole role) => roleData[role];
-  
+
   // Check if role is verified
-  bool isRoleVerified(UserRole role) => 
+  bool isRoleVerified(UserRole role) =>
       roleData[role]?.verificationStatus == VerificationStatus.approved;
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
@@ -102,8 +96,8 @@ class UserModel {
       'phoneNumber': phoneNumber,
       'roles': roles.map((e) => e.name).toList(),
       'activeRole': activeRole.name,
-      'roleData': roleData.map((key, value) => 
-          MapEntry(key.name, value.toMap())),
+      'roleData':
+          roleData.map((key, value) => MapEntry(key.name, value.toMap())),
       'isEmailVerified': isEmailVerified,
       'isPhoneVerified': isPhoneVerified,
       'profileComplete': profileComplete,
@@ -130,7 +124,7 @@ class UserModel {
   // Helper method to safely parse roles from different data types
   static List<UserRole>? _parseRoles(dynamic rolesData) {
     if (rolesData == null) return null;
-    
+
     if (rolesData is List) {
       try {
         return rolesData
@@ -159,7 +153,7 @@ class UserModel {
   // Helper method to safely parse roleData from different data types
   static Map<UserRole, RoleData>? _parseRoleData(dynamic roleDataRaw) {
     if (roleDataRaw == null) return null;
-    
+
     try {
       if (roleDataRaw is Map<String, dynamic>) {
         Map<UserRole, RoleData> result = {};
@@ -169,7 +163,8 @@ class UserModel {
             if (entry.value is Map<String, dynamic>) {
               result[role] = RoleData.fromMap(entry.value);
             } else {
-              print('Invalid role data format for role ${entry.key}: ${entry.value.runtimeType}');
+              print(
+                  'Invalid role data format for role ${entry.key}: ${entry.value.runtimeType}');
             }
           } catch (e) {
             print('Error parsing role ${entry.key}: $e');
@@ -202,12 +197,11 @@ class RoleData {
 
   factory RoleData.fromMap(Map<String, dynamic> map) {
     return RoleData(
-      verificationStatus: VerificationStatus.values.byName(
-        map['verificationStatus'] ?? 'notRequired'
-      ),
+      verificationStatus: VerificationStatus.values
+          .byName(map['verificationStatus'] ?? 'notRequired'),
       data: map['data'] ?? {},
-      verifiedAt: map['verifiedAt'] != null 
-          ? UserModel._parseDateTime(map['verifiedAt']) 
+      verifiedAt: map['verifiedAt'] != null
+          ? UserModel._parseDateTime(map['verifiedAt'])
           : null,
       verificationNotes: map['verificationNotes'],
     );
@@ -478,8 +472,8 @@ class BusinessHours {
   factory BusinessHours.fromMap(Map<String, dynamic> map) {
     return BusinessHours(
       weeklyHours: (map['weeklyHours'] as Map<String, dynamic>?)
-          ?.map((key, value) => MapEntry(key, TimeSlot.fromMap(value)))
-          ?? {},
+              ?.map((key, value) => MapEntry(key, TimeSlot.fromMap(value))) ??
+          {},
       is24x7: map['is24x7'] ?? false,
       holidays: List<String>.from(map['holidays'] ?? []),
     );
@@ -487,8 +481,8 @@ class BusinessHours {
 
   Map<String, dynamic> toMap() {
     return {
-      'weeklyHours': weeklyHours.map((key, value) => 
-          MapEntry(key, value.toMap())),
+      'weeklyHours':
+          weeklyHours.map((key, value) => MapEntry(key, value.toMap())),
       'is24x7': is24x7,
       'holidays': holidays,
     };
@@ -497,7 +491,7 @@ class BusinessHours {
 
 class TimeSlot {
   final String startTime; // "09:00"
-  final String endTime;   // "18:00"
+  final String endTime; // "18:00"
   final bool isClosed;
 
   TimeSlot({

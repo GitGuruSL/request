@@ -68,6 +68,28 @@ router.post('/login', async (req, res) => {
 });
 
 /**
+ * @route POST /api/auth/refresh
+ * @desc Rotate refresh token and issue new access & refresh tokens
+ */
+router.post('/refresh', async (req, res) => {
+    try {
+        const { userId, refreshToken } = req.body;
+        if (!userId || !refreshToken) {
+            return res.status(400).json({ success: false, error: 'userId and refreshToken required' });
+        }
+        // Verify user exists
+        const users = await authService.sanitizeUser(await require('../services/database').findById('users', userId));
+        if (!users) return res.status(401).json({ success: false, error: 'Invalid user' });
+        const newRawRefresh = await authService.verifyAndRotateRefreshToken(userId, refreshToken);
+        const newAccess = authService.generateToken({ id: userId, email: users.email, phone: users.phone, role: users.role, email_verified: users.email_verified, phone_verified: users.phone_verified });
+        res.json({ success: true, message: 'Token refreshed', data: { token: newAccess, refreshToken: newRawRefresh } });
+    } catch (error) {
+        console.error('Refresh error:', error);
+        res.status(401).json({ success: false, error: error.message });
+    }
+});
+
+/**
  * @route POST /api/auth/send-email-otp
  * @desc Send OTP to email
  */

@@ -22,9 +22,19 @@ router.get('/', async (req, res) => {
     } = req.query;
 
     // Build dynamic query
-    const conditions = ['r.status = $1'];
-    const values = ['active'];
-    let paramCounter = 2;
+    const conditions = [];
+    const values = [];
+    let paramCounter = 1;
+    // Default: only active unless explicitly filtering accepted or specifying status
+    if (status) {
+      conditions.push(`r.status = $${paramCounter++}`);
+      values.push(status);
+    } else if (has_accepted === 'true') {
+      // don't force status; accepted requests are typically closed
+    } else {
+      conditions.push(`r.status = $${paramCounter++}`);
+      values.push('active');
+    }
 
     if (category_id) {
       conditions.push(`r.category_id = $${paramCounter++}`);
@@ -41,10 +51,6 @@ router.get('/', async (req, res) => {
     if (country_code) {
       conditions.push(`r.country_code = $${paramCounter++}`);
       values.push(country_code);
-    }
-    if (status) {
-      conditions.push(`r.status = $${paramCounter++}`);
-      values.push(status);
     }
     if (user_id) {
       conditions.push(`r.user_id = $${paramCounter++}`);
@@ -138,9 +144,18 @@ router.get('/search', async (req, res) => {
 
     const search = `%${q.trim()}%`;
 
-    const conditions = ['r.status = $1', '(r.title ILIKE $2 OR r.description ILIKE $2)'];
-    const values = ['active', search];
-    let paramCounter = 3;
+    const conditions = ['(r.title ILIKE $1 OR r.description ILIKE $1)'];
+    const values = [search];
+    let paramCounter = 2;
+    if (status) {
+      conditions.push(`r.status = $${paramCounter++}`);
+      values.push(status);
+    } else if (has_accepted === 'true') {
+      // allow closed accepted requests
+    } else {
+      conditions.push(`r.status = $${paramCounter++}`);
+      values.push('active');
+    }
 
     if (category_id) { conditions.push(`r.category_id = $${paramCounter++}`); values.push(category_id); }
     if (subcategory_id) { conditions.push(`r.subcategory_id = $${paramCounter++}`); values.push(subcategory_id); }
@@ -359,11 +374,11 @@ router.put('/:id', auth.authMiddleware(), async (req, res) => {
       description,
       category_id,
       subcategory_id,
-      city_id,
+  city_id, // client may send city_id; map to location_city_id
       budget_min,
       budget_max,
-      currency_code,
-      urgency_level,
+  currency,
+  priority,
       status,
       is_active
     } = req.body;
@@ -390,7 +405,7 @@ router.put('/:id', auth.authMiddleware(), async (req, res) => {
       values.push(subcategory_id);
     }
     if (city_id !== undefined) {
-      updates.push(`city_id = $${paramCounter++}`);
+      updates.push(`location_city_id = $${paramCounter++}`);
       values.push(city_id);
     }
     if (budget_min !== undefined) {
@@ -401,13 +416,13 @@ router.put('/:id', auth.authMiddleware(), async (req, res) => {
       updates.push(`budget_max = $${paramCounter++}`);
       values.push(budget_max);
     }
-    if (currency_code !== undefined) {
-      updates.push(`currency_code = $${paramCounter++}`);
-      values.push(currency_code);
+    if (currency !== undefined) {
+      updates.push(`currency = $${paramCounter++}`);
+      values.push(currency);
     }
-    if (urgency_level !== undefined) {
-      updates.push(`urgency_level = $${paramCounter++}`);
-      values.push(urgency_level);
+    if (priority !== undefined) {
+      updates.push(`priority = $${paramCounter++}`);
+      values.push(priority);
     }
     if (status !== undefined) {
       updates.push(`status = $${paramCounter++}`);

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/enhanced_user_model.dart';
-import 'rest_auth_service.dart';
+// Import only the needed auth service (hide its UserModel to avoid symbol clash)
+import 'rest_auth_service.dart' show RestAuthService;
 
 /// Enhanced User Service for REST API
 /// Provides user management functionality using REST endpoints
@@ -13,13 +14,38 @@ class EnhancedUserService {
 
   final RestAuthService _authService = RestAuthService.instance;
 
+  UserModel? _cachedUser; // simple in-memory cache
+
+  /// Getter used by legacy screens expecting synchronous access (nullable)
+  UserModel? get currentUser => _cachedUser;
+
   /// Get current user model
   Future<UserModel?> getCurrentUserModel() async {
     try {
       if (!await _authService.isAuthenticated()) {
         return null;
       }
-      return _authService.currentUser;
+      final authUser = _authService.currentUser;
+      if (authUser == null) return null;
+      // Map lightweight auth user to enhanced model (legacy screens expect richer model)
+      final mapped = UserModel(
+        id: authUser.id,
+        name: authUser.fullName,
+        email: authUser.email,
+        phoneNumber: authUser.phoneNumber,
+        roles: const [UserRole.general],
+        activeRole: UserRole.general,
+        roleData: const {},
+        isEmailVerified: authUser.emailVerified,
+        isPhoneVerified: authUser.phoneVerified,
+        profileComplete: true,
+        countryCode: authUser.countryCode,
+        countryName: null,
+        createdAt: authUser.createdAt,
+        updatedAt: authUser.updatedAt,
+      );
+      _cachedUser = mapped;
+      return mapped;
     } catch (e) {
       if (kDebugMode) {
         print('Error getting current user model: $e');
@@ -70,5 +96,65 @@ class EnhancedUserService {
       }
       return false;
     }
+  }
+
+  // ---- Stubs to satisfy legacy verification / role management screens ----
+
+  Future<void> submitDriverVerification(Map<String, dynamic> driverData) async {
+    if (kDebugMode) {
+      print('submitDriverVerification stub called with: ${driverData.keys}');
+    }
+  }
+
+  Future<void> submitBusinessVerification(
+      Map<String, dynamic> businessData) async {
+    if (kDebugMode) {
+      print(
+          'submitBusinessVerification stub called with: ${businessData.keys}');
+    }
+  }
+
+  Future<void> updateRoleData(String role, Map<String, dynamic> data) async {
+    if (kDebugMode) {
+      print('updateRoleData stub role=$role keys=${data.keys}');
+    }
+  }
+
+  Future<void> submitRoleForVerification(String role) async {
+    if (kDebugMode) {
+      print('submitRoleForVerification stub role=$role');
+    }
+  }
+
+  Future<void> switchActiveRole(String userId, String role) async {
+    if (kDebugMode) {
+      print('switchActiveRole stub userId=$userId role=$role');
+    }
+    // Update cached user activeRole if matches
+    if (_cachedUser != null) {
+      _cachedUser = UserModel(
+        id: _cachedUser!.id,
+        name: _cachedUser!.name,
+        email: _cachedUser!.email,
+        phoneNumber: _cachedUser!.phoneNumber,
+        roles: _cachedUser!.roles,
+        activeRole: _parseRole(role),
+        roleData: _cachedUser!.roleData,
+        isEmailVerified: _cachedUser!.isEmailVerified,
+        isPhoneVerified: _cachedUser!.isPhoneVerified,
+        profileComplete: _cachedUser!.profileComplete,
+        countryCode: _cachedUser!.countryCode,
+        countryName: _cachedUser!.countryName,
+        createdAt: _cachedUser!.createdAt,
+        updatedAt: DateTime.now(),
+      );
+    }
+  }
+
+  UserRole _parseRole(String role) {
+    return UserRole.values.firstWhere(
+      (r) => describeEnum(r) == role,
+      orElse: () => UserRole.general,
+    );
   }
 }
