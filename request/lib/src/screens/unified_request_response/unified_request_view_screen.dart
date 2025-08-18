@@ -1015,6 +1015,8 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
   }
 
   bool _shouldHideField(String key) {
+    final keyLower = key.toLowerCase();
+    
     // Hide internal ID fields that users don't need to see
     final hiddenFields = [
       'categoryId',
@@ -1028,10 +1030,14 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
       'type', // Also hide the type since it's already shown in the header
     ];
     
+    // Also hide any field that ends with "id" or contains "categoryid" or "subcategoryid"
+    final shouldHide = hiddenFields.contains(keyLower) ||
+        keyLower.endsWith('id') && (keyLower.contains('category') || keyLower.contains('subcategory'));
+    
     // Debug: print the key to see what we're getting
-    print('Checking field: "$key" - should hide: ${hiddenFields.contains(key.toLowerCase())}');
+    print('Checking field: "$key" (lowercase: "$keyLower") - should hide: $shouldHide');
 
-    return hiddenFields.contains(key.toLowerCase());
+    return shouldHide;
   }
 
   Widget _responsesSection() {
