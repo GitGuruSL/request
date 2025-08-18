@@ -352,10 +352,14 @@ router.post('/register', async (req, res) => {
       { expiresIn: '24h' }
     );
 
+    // Generate refresh token (simple random string for now)
+    const refreshToken = crypto.randomBytes(48).toString('hex');
+
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
       token: token,
+      refreshToken: refreshToken,
       user: {
         id: newUser.id,
         email: newUser.email || '',

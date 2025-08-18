@@ -455,19 +455,21 @@ class UserModel {
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['id'] as String,
-      email: json['email'] as String,
-      phone: json['phone'] as String?,
-      displayName: json['display_name'] as String?,
-      firstName: json['first_name'] as String?,
-      lastName: json['last_name'] as String?,
+      id: json['id']?.toString() ?? '',
+      email: json['email']?.toString() ?? '',
+      phone: json['phone']?.toString(),
+      displayName: json['display_name']?.toString(),
+      firstName: json['first_name']?.toString(),
+      lastName: json['last_name']?.toString(),
       emailVerified: json['email_verified'] as bool? ?? false,
       phoneVerified: json['phone_verified'] as bool? ?? false,
       isActive: json['is_active'] as bool? ?? true,
-      role: json['role'] as String? ?? 'user',
-      countryCode: json['country_code'] as String? ?? 'LK',
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      role: json['role']?.toString() ?? 'user',
+      countryCode: json['country_code']?.toString() ?? 'LK',
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+          DateTime.now(),
+      updatedAt: DateTime.tryParse(json['updated_at']?.toString() ?? '') ??
+          DateTime.now(),
     );
   }
 
