@@ -23,6 +23,7 @@ const brandRoutes = require('./routes/brands');
 const masterProductRoutes = require('./routes/master-products');
 const entityActivationRoutes = require('./routes/entity-activations');
 const subscriptionPlansNewRoutes = require('./routes/subscription-plans-new');
+const authService = require('./services/auth');
 
 const app = express();
 
@@ -177,6 +178,39 @@ function start(port){
         console.log(`🚀 Server running on port ${port}`);
         console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
         console.log(`🔗 Health check: http://localhost:${port}/health`);
+        // Optionally auto-seed a super admin for development
+        if(process.env.NODE_ENV !== 'production' && process.env.DEV_AUTO_SEED_ADMIN === 'true'){
+            (async () => {
+                try {
+                    const existing = await dbService.query("SELECT id,email FROM users WHERE role='super_admin' LIMIT 1");
+                    if(existing.rows.length === 0){
+                        console.log('[DEV_AUTO_SEED_ADMIN] No super_admin found. Creating default admin...');
+                        const password = process.env.DEV_ADMIN_PASSWORD || 'Admin123!';
+                        const email = process.env.DEV_ADMIN_EMAIL || 'admin@example.com';
+                        const created = await dbService.insert('users', {
+                            email,
+                            phone: null,
+                            password_hash: await authService.hashPassword(password),
+                            display_name: 'Super Admin',
+                            first_name: 'Super',
+                            last_name: 'Admin',
+                            role: 'super_admin',
+                            is_active: true,
+                            email_verified: true,
+                            phone_verified: false,
+                            country_code: 'LK',
+                            created_at: new Date().toISOString(),
+                            updated_at: new Date().toISOString()
+                        });
+                        console.log('[DEV_AUTO_SEED_ADMIN] Super admin created:', created.email, 'password:', password);
+                    } else {
+                        console.log('[DEV_AUTO_SEED_ADMIN] Super admin already exists, skipping.');
+                    }
+                } catch (e){
+                    console.error('[DEV_AUTO_SEED_ADMIN] Failed to seed super admin:', e.message);
+                }
+            })();
+        }
     });
     server.on('error', (err) => {
         if(err.code === 'EADDRINUSE' && !attemptedFallback && process.env.AUTO_FALLBACK !== 'false'){
