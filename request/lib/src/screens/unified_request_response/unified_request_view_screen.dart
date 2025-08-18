@@ -798,16 +798,6 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                     ),
                   ),
 
-                  if (r.budget != null) ...[
-                    const SizedBox(height: 16),
-                    Row(children: [
-                      const Icon(Icons.account_balance_wallet,
-                          size: 18, color: Colors.blue),
-                      const SizedBox(width: 6),
-                      Text(_formatBudget(r),
-                          style: const TextStyle(fontWeight: FontWeight.w600)),
-                    ])
-                  ],
                   if (r.metadata != null && r.metadata!.isNotEmpty) ...[
                     const SizedBox(height: 24),
                     const Text('Request Details',
@@ -819,31 +809,55 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                       decoration: BoxDecoration(
                         color: Colors.grey[50],
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey[200]!),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          ...r.metadata!.entries.take(10).map((e) => Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      SizedBox(
-                                        width: 80,
-                                        child: Text('${e.key}:',
-                                            style: const TextStyle(
-                                                fontWeight: FontWeight.w500,
-                                                fontSize: 12)),
-                                      ),
-                                      Expanded(
-                                        child: Text(e.value.toString(),
-                                            style:
-                                                const TextStyle(fontSize: 12)),
-                                      ),
-                                    ]),
-                              )),
+                          // Budget first
+                          if (r.budget != null)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(
+                                    width: 80,
+                                    child: Text('Budget:',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: 12)),
+                                  ),
+                                  Expanded(
+                                    child: Text(_formatBudget(r),
+                                        style: const TextStyle(fontSize: 12)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          // Then metadata entries with proper formatting (excluding IDs)
+                          ...r.metadata!.entries
+                              .where((e) => !_shouldHideField(e.key))
+                              .take(10)
+                              .map((e) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 8),
+                                    child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          SizedBox(
+                                            width: 80,
+                                            child: Text('${_formatKey(e.key)}:',
+                                                style: const TextStyle(
+                                                    fontWeight: FontWeight.w500,
+                                                    fontSize: 12)),
+                                          ),
+                                          Expanded(
+                                            child: Text(_formatValue(e.value),
+                                                style: const TextStyle(
+                                                    fontSize: 12)),
+                                          ),
+                                        ]),
+                                  )),
                           if (r.metadata!.length > 10)
                             Padding(
                               padding: const EdgeInsets.only(top: 4),
@@ -941,6 +955,83 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
     final cur = r.currency ?? '';
     if (r.budget == null) return 'No budget';
     return '$cur${r.budget!.toStringAsFixed(0)}';
+  }
+
+  String _formatKey(String key) {
+    // Convert camelCase to readable text
+    switch (key.toLowerCase()) {
+      case 'itemname':
+        return 'Item Name';
+      case 'categoryid':
+        return 'Category ID';
+      case 'subcategoryid':
+      case 'subcategory_id':
+        return 'Subcategory ID';
+      case 'startdate':
+        return 'Start Date';
+      case 'enddate':
+        return 'End Date';
+      case 'pickupdropoffpreference':
+        return 'Pickup/Dropoff';
+      default:
+        // Convert camelCase to space-separated words
+        return key
+            .replaceAllMapped(
+              RegExp(r'([A-Z])'),
+              (match) => ' ${match.group(1)}',
+            )
+            .trim()
+            .split(' ')
+            .map((word) =>
+                word[0].toUpperCase() + word.substring(1).toLowerCase())
+            .join(' ');
+    }
+  }
+
+  String _formatValue(dynamic value) {
+    if (value == null) return 'N/A';
+
+    // Handle timestamp values (large numbers that look like epoch timestamps)
+    if (value is int && value > 1000000000000) {
+      try {
+        final date = DateTime.fromMillisecondsSinceEpoch(value);
+        return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      } catch (e) {
+        return value.toString();
+      }
+    }
+
+    // Handle boolean values
+    if (value is bool) {
+      return value ? 'Yes' : 'No';
+    }
+
+    // Handle RequestType enum values
+    if (value.toString().startsWith('RequestType.')) {
+      return value.toString().split('.').last.toUpperCase();
+    }
+
+    return value.toString();
+  }
+
+  bool _shouldHideField(String key) {
+    // Hide internal ID fields that users don't need to see
+    final hiddenFields = [
+      'categoryId',
+      'categoryid',
+      'category_id',
+      'subCategoryId',
+      'subcategoryId',
+      'subcategory_id',
+      'subcategoryid',
+      'sub_category_id',
+      'type', // Also hide the type since it's already shown in the header
+    ];
+    
+    // Debug: print the key to see what we're getting
+    print('Checking field: "$key" - should hide: ${hiddenFields.contains(key.toLowerCase())}');
+
+    return hiddenFields.contains(key.toLowerCase());
   }
 
   Widget _responsesSection() {
