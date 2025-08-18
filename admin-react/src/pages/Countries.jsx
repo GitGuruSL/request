@@ -23,8 +23,7 @@ import {
   Paper,
 } from '@mui/material';
 import { Add as AddIcon, Edit as EditIcon } from '@mui/icons-material';
-import { collection, getDocs, addDoc, updateDoc, doc } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import api from '../services/apiClient';
 
 // Comprehensive list of all countries with codes and flags
 const AVAILABLE_COUNTRIES = [
@@ -245,17 +244,9 @@ const Countries = () => {
 
   const fetchCountries = async () => {
     try {
-      const snapshot = await getDocs(collection(db, 'app_countries'));
-      const countriesData = [];
-      
-      snapshot.forEach(doc => {
-        countriesData.push({
-          id: doc.id,
-          ...doc.data()
-        });
-      });
-      
-      setCountries(countriesData);
+      const res = await api.get('/countries');
+      const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+      setCountries(list);
     } catch (error) {
       console.error('Error fetching countries:', error);
       showSnackbar('Error fetching countries', 'error');
@@ -270,11 +261,7 @@ const Countries = () => {
 
   const handleToggleStatus = async (countryId, currentStatus) => {
     try {
-      await updateDoc(doc(db, 'app_countries', countryId), {
-        isEnabled: !currentStatus,
-        updatedAt: new Date()
-      });
-      
+      await api.put(`/countries/${countryId}/status`, { isEnabled: !currentStatus });
       fetchCountries();
       showSnackbar(`Country ${!currentStatus ? 'enabled' : 'disabled'} successfully`);
     } catch (error) {
@@ -315,20 +302,15 @@ const Countries = () => {
       };
 
       if (editingCountry) {
-        await updateDoc(doc(db, 'app_countries', editingCountry.id), countryData);
+        await api.put(`/countries/${editingCountry.id}`, countryData);
         showSnackbar('Country updated successfully');
       } else {
-        // Check if country already exists
         const existingCountry = countries.find(c => c.code === selectedCountry.code);
         if (existingCountry) {
           showSnackbar('Country already exists', 'error');
           return;
         }
-        
-        await addDoc(collection(db, 'app_countries'), {
-          ...countryData,
-          createdAt: new Date()
-        });
+        await api.post('/countries', countryData);
         showSnackbar('Country added successfully');
       }
 

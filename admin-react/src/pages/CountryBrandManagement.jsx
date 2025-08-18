@@ -30,8 +30,7 @@ import {
   Cancel,
   BrandingWatermark
 } from '@mui/icons-material';
-import { collection, addDoc, updateDoc, doc } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import api from '../services/apiClient';
 import useCountryFilter from '../hooks/useCountryFilter.jsx';
 import { DataLookupService } from '../services/DataLookupService.js';
 
@@ -118,21 +117,12 @@ const CountryBrandManagement = () => {
       };
 
       if (existingRecord) {
-        // Update existing record
-        await updateDoc(doc(db, 'country_brands', existingRecord.id), updateData);
-        
-        setCountryBrands(prev => prev.map(cb => 
-          cb.id === existingRecord.id ? { ...cb, ...updateData } : cb
-        ));
+        await api.put(`/country-brands/${existingRecord.id}`, updateData);
+        setCountryBrands(prev => prev.map(cb => cb.id === existingRecord.id ? { ...cb, ...updateData } : cb));
       } else {
-        // Create new record
-        updateData.createdAt = new Date();
-        updateData.createdBy = adminData.uid;
-        updateData.createdByName = adminData.displayName || adminData.email;
-        
-        const docRef = await addDoc(collection(db, 'country_brands'), updateData);
-        
-        setCountryBrands(prev => [...prev, { id: docRef.id, ...updateData }]);
+        const createRes = await api.post('/country-brands', updateData);
+        const created = createRes.data?.data || createRes.data;
+        setCountryBrands(prev => [...prev, { id: created?.id || created?.uuid || Math.random().toString(36).slice(2), ...updateData }]);
       }
 
       console.log(`🔄 Toggled brand ${brandName} to ${newStatus ? 'active' : 'inactive'} in ${userCountry}`);

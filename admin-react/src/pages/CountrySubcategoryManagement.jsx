@@ -31,8 +31,7 @@ import {
   Category,
   SubdirectoryArrowRight
 } from '@mui/icons-material';
-import { collection, addDoc, updateDoc, doc } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import api from '../services/apiClient';
 import useCountryFilter from '../hooks/useCountryFilter.jsx';
 import { DataLookupService } from '../services/DataLookupService.js';
 
@@ -131,21 +130,12 @@ const CountrySubcategoryManagement = () => {
       };
 
       if (existingRecord) {
-        // Update existing record
-        await updateDoc(doc(db, 'country_subcategories', existingRecord.id), updateData);
-        
-        setCountrySubcategories(prev => prev.map(cs => 
-          cs.id === existingRecord.id ? { ...cs, ...updateData } : cs
-        ));
+        await api.put(`/country-subcategories/${existingRecord.id}`, updateData);
+        setCountrySubcategories(prev => prev.map(cs => cs.id === existingRecord.id ? { ...cs, ...updateData } : cs));
       } else {
-        // Create new record
-        updateData.createdAt = new Date();
-        updateData.createdBy = adminData.uid;
-        updateData.createdByName = adminData.displayName || adminData.email;
-        
-        const docRef = await addDoc(collection(db, 'country_subcategories'), updateData);
-        
-        setCountrySubcategories(prev => [...prev, { id: docRef.id, ...updateData }]);
+        const createRes = await api.post('/country-subcategories', updateData);
+        const created = createRes.data?.data || createRes.data;
+        setCountrySubcategories(prev => [...prev, { id: created?.id || created?.uuid || Math.random().toString(36).slice(2), ...updateData }]);
       }
 
       console.log(`🔄 Toggled subcategory ${subcategoryName} to ${newStatus ? 'active' : 'inactive'} in ${userCountry}`);

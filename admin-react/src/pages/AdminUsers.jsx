@@ -38,21 +38,7 @@ import {
   Person as PersonIcon,
   LockReset as LockResetIcon
 } from '@mui/icons-material';
-import { db } from '../firebase/config';
-import { 
-  collection, 
-  addDoc, 
-  getDocs, 
-  updateDoc, 
-  deleteDoc, 
-  doc,
-  query,
-  where,
-  orderBy 
-} from 'firebase/firestore';
-import { sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '../firebase/config';
-import { createAdminUser } from '../firebase/auth';
+import api from '../services/apiClient';
 import { useAuth } from '../contexts/AuthContext';
 import { generateSecurePassword } from '../utils/passwordUtils';
 import { sendCredentialsEmail } from '../utils/emailService';
@@ -135,82 +121,31 @@ const AdminUsers = () => {
 
   const fetchAdminUsers = async () => {
     try {
-      console.log('Fetching admin users...');
-      console.log('Current user role:', userRole);
-      console.log('Current user country:', userCountry);
-      
-      let q;
-      if (userRole === 'super_admin') {
-        // Super admin sees all users
-        q = query(collection(db, 'admin_users'));
-        console.log('Fetching all admin users for super admin');
-      } else {
-        // Country admin sees their country's users
-        q = query(
-          collection(db, 'admin_users'), 
-          where('country', '==', userCountry || 'LK')
-        );
-        console.log('Fetching admin users for country:', userCountry || 'LK');
-      }
-      
-      const snapshot = await getDocs(q);
-      console.log('Query snapshot size:', snapshot.size);
-      
-      const users = snapshot.docs.map(doc => {
-        const data = doc.data();
-        console.log('User document:', doc.id, data);
-        return {
-          id: doc.id,
-          ...data
-        };
-      });
-      
-      console.log('Processed users:', users);
-      setAdminUsers(users);
-      
+      const params = {};
+      if (userRole !== 'super_admin') params.country = userCountry || 'LK';
+      const res = await api.get('/admin-users', { params });
+      const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+      setAdminUsers(list);
     } catch (error) {
       console.error('Error fetching admin users:', error);
-      setSnackbar({ 
-        open: true, 
-        message: 'Error fetching admin users: ' + error.message, 
-        severity: 'error' 
-      });
+      setSnackbar({ open: true, message: 'Error fetching admin users: ' + (error.response?.data?.message || error.message), severity: 'error' });
     }
   };
 
   const fetchCountries = async () => {
     try {
-      console.log('Fetching countries...');
-      const snapshot = await getDocs(collection(db, 'app_countries'));
-      const countriesList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      
-      // If no countries in Firebase, provide fallback
-      if (countriesList.length === 0) {
-        console.log('No countries in Firebase, using fallback');
-        const fallbackCountries = [
-          { id: 'LK', code: 'LK', name: 'Sri Lanka', isEnabled: true },
-          { id: 'US', code: 'US', name: 'United States', isEnabled: true },
-          { id: 'GB', code: 'GB', name: 'United Kingdom', isEnabled: true },
-          { id: 'IN', code: 'IN', name: 'India', isEnabled: true }
-        ];
-        setCountries(fallbackCountries);
-      } else {
-        console.log('Fetched countries from Firebase:', countriesList);
-        setCountries(countriesList);
-      }
-      
+      const res = await api.get('/countries');
+      const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+      if (list.length === 0) throw new Error('No countries');
+      setCountries(list.map(c => ({ id: c.id || c.code, ...c })));
     } catch (error) {
       console.error('Error fetching countries:', error);
-      // Provide fallback countries in case of error
       const fallbackCountries = [
         { id: 'LK', code: 'LK', name: 'Sri Lanka', isEnabled: true },
         { id: 'US', code: 'US', name: 'United States', isEnabled: true }
       ];
       setCountries(fallbackCountries);
-      setSnackbar({ open: true, message: 'Using fallback countries due to fetch error', severity: 'warning' });
+      setSnackbar({ open: true, message: 'Using fallback countries (fetch failed)', severity: 'warning' });
     }
   };
 
@@ -303,7 +238,7 @@ const AdminUsers = () => {
         };
 
         console.log('Updating user:', editingUser.id);
-        await updateDoc(doc(db, 'admin_users', editingUser.id), userData);
+  await api.put(`/admin-users/${editingUser.id}`, userData);
         console.log('User updated successfully');
         
         setSnackbar({ 
@@ -318,15 +253,9 @@ const AdminUsers = () => {
 
         // Check if email already exists in Firestore first
         console.log('🔍 Checking if email already exists in admin_users...');
-        const emailQuery = query(
-          collection(db, 'admin_users'),
-          where('email', '==', formData.email.toLowerCase().trim())
-        );
-        const emailSnapshot = await getDocs(emailQuery);
-        
-        if (!emailSnapshot.empty) {
-          throw new Error('This email is already registered as an admin user.');
-        }
+  const emailCheck = await api.get('/admin-users', { params: { email: formData.email.toLowerCase().trim() } });
+  const existing = Array.isArray(emailCheck.data) ? emailCheck.data : (emailCheck.data?.data || []);
+  if (existing.length > 0) throw new Error('This email is already registered as an admin user.');
 
         const adminUserData = {
           displayName: formData.displayName.trim(),
@@ -378,9 +307,10 @@ const AdminUsers = () => {
           }
         };
 
-        console.log('Creating new admin user with Firebase Auth...');
-        const newUser = await createAdminUser(adminUserData);
-        console.log('Admin user created successfully with ID:', newUser.uid);
+  console.log('Creating new admin user via REST...');
+  const createRes = await api.post('/admin-users', adminUserData);
+  const newUser = createRes.data?.data || createRes.data;
+  console.log('Admin user created successfully with ID:', newUser?.id);
 
         // Store credentials to show in dialog
         setGeneratedCredentials({
@@ -500,10 +430,7 @@ const AdminUsers = () => {
       const newActiveStatus = !user.isActive;
       console.log(`Toggling user ${user.id} active status from ${user.isActive} to ${newActiveStatus}`);
       
-      await updateDoc(doc(db, 'admin_users', user.id), {
-        isActive: newActiveStatus,
-        updatedAt: new Date()
-      });
+  await api.put(`/admin-users/${user.id}/status`, { isActive: newActiveStatus });
       
       await fetchAdminUsers(); // Refresh the list
       setSnackbar({ 
@@ -525,7 +452,7 @@ const AdminUsers = () => {
     if (window.confirm(`Are you sure you want to delete user ${user.displayName || user.email}? This action cannot be undone.`)) {
       try {
         console.log(`Deleting user ${user.id}`);
-        await deleteDoc(doc(db, 'admin_users', user.id));
+  await api.delete(`/admin-users/${user.id}`);
         
         await fetchAdminUsers(); // Refresh the list
         setSnackbar({ 
@@ -547,21 +474,11 @@ const AdminUsers = () => {
   const handlePasswordReset = async (user) => {
     if (window.confirm(`Send password reset email to ${user.displayName || user.email}?`)) {
       try {
-        console.log(`Sending password reset email to ${user.email}`);
-        await sendPasswordResetEmail(auth, user.email);
-        
-        setSnackbar({ 
-          open: true, 
-          message: `Password reset email sent to ${user.email}!`, 
-          severity: 'success' 
-        });
+        await api.post(`/admin-users/${user.id}/password-reset`);
+        setSnackbar({ open: true, message: `Password reset initiated for ${user.email}!`, severity: 'success' });
       } catch (error) {
-        console.error('Error sending password reset email:', error);
-        setSnackbar({ 
-          open: true, 
-          message: 'Error sending password reset email: ' + error.message, 
-          severity: 'error' 
-        });
+        console.error('Error sending password reset:', error);
+        setSnackbar({ open: true, message: 'Error sending password reset: ' + (error.response?.data?.message || error.message), severity: 'error' });
       }
     }
   };
@@ -621,7 +538,7 @@ const AdminUsers = () => {
               onClick={() => {
                 if (window.confirm('Send password reset emails to all admin users?')) {
                   adminUsers.forEach(admin => {
-                    sendPasswordResetEmail(auth, admin.email).catch(console.error);
+                    api.post(`/admin-users/${admin.id}/password-reset`).catch(console.error);
                   });
                   setSnackbar({
                     open: true,
