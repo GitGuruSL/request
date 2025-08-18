@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/foundation.dart';
@@ -6,9 +7,20 @@ import 'package:flutter/foundation.dart';
 /// Base API client for REST API communication
 class ApiClient {
   late final Dio _dio;
-  // Use 10.0.2.2 for Android emulator to connect to host localhost
-  static const String _baseUrl =
-      'http://10.0.2.2:3001'; // Development URL for Android emulator
+
+  // Platform-specific base URLs
+  static String get _baseUrl {
+    if (kIsWeb) {
+      return 'http://localhost:3001'; // Web
+    } else if (Platform.isAndroid) {
+      return 'http://10.0.2.2:3001'; // Android emulator
+    } else if (Platform.isIOS) {
+      return 'http://localhost:3001'; // iOS simulator
+    } else {
+      return 'http://localhost:3001'; // Desktop/other
+    }
+  }
+
   static const String _tokenKey = 'jwt_token';
   static const String _refreshTokenKey = 'refresh_token';
   static const FlutterSecureStorage _storage = FlutterSecureStorage();
@@ -252,27 +264,58 @@ class ApiClient {
     Response response,
     T Function(Map<String, dynamic>)? fromJson,
   ) {
+    if (kDebugMode) {
+      print('🌐 [ApiClient._handleResponse] Processing response...');
+      print('🌐   statusCode: ${response.statusCode}');
+      print('🌐   response.data type: ${response.data.runtimeType}');
+      print('🌐   response.data: ${response.data}');
+    }
+
     final data = response.data;
 
     if (data is Map<String, dynamic>) {
       final success = data['success'] ?? false;
       final message = data['message'] ?? '';
 
+      if (kDebugMode) {
+        print(
+            '🌐 [ApiClient._handleResponse] Response is Map<String, dynamic>');
+        print('🌐   success field: $success');
+        print('🌐   message field: $message');
+      }
+
       if (success) {
         T? parsedData;
         // If a transformer is provided AND a nested 'data' object exists, parse that.
         if (fromJson != null && data['data'] is Map<String, dynamic>) {
+          if (kDebugMode) {
+            print(
+                '🌐 [ApiClient._handleResponse] Using fromJson transformer with data["data"]');
+          }
           parsedData = fromJson(data['data'] as Map<String, dynamic>);
         } else {
           // Otherwise, if caller expects a Map (common for simple endpoints), return full map.
           try {
             // If caller didn't supply a fromJson parser, assume they want the raw map.
             if (fromJson == null) {
+              if (kDebugMode) {
+                print(
+                    '🌐 [ApiClient._handleResponse] No fromJson, returning raw data as T');
+              }
               parsedData = data as T; // includes fields like otpToken
             }
-          } catch (_) {
+          } catch (e) {
+            if (kDebugMode) {
+              print('🌐 [ApiClient._handleResponse] Cast error: $e');
+            }
             // Ignore cast issues; parsedData stays null.
           }
+        }
+
+        if (kDebugMode) {
+          print(
+              '🌐 [ApiClient._handleResponse] parsedData type: ${parsedData.runtimeType}');
+          print('🌐 [ApiClient._handleResponse] parsedData: $parsedData');
         }
 
         return ApiResponse<T>(
@@ -281,11 +324,20 @@ class ApiClient {
           message: message,
         );
       } else {
+        if (kDebugMode) {
+          print(
+              '🌐 [ApiClient._handleResponse] Response success=false, returning error');
+        }
         return ApiResponse<T>(
           success: false,
           error: message,
         );
       }
+    }
+
+    if (kDebugMode) {
+      print(
+          '🌐 [ApiClient._handleResponse] Response data is not Map<String, dynamic>, returning error');
     }
 
     return ApiResponse<T>(

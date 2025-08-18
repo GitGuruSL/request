@@ -29,37 +29,62 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
   }
 
   Future<void> _completeProfile() async {
+    print('🔧 [ProfileCompletion] Starting profile completion...');
+    print('🔧 [ProfileCompletion] Form validation check...');
+
     if (!_formKey.currentState!.validate()) {
+      print('🔧 [ProfileCompletion] Form validation failed');
       return;
     }
+    print('🔧 [ProfileCompletion] Form validation passed');
 
     // Validate password confirmation
     if (_passwordController.text != _confirmPasswordController.text) {
+      print('🔧 [ProfileCompletion] Password confirmation mismatch');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Passwords do not match')),
       );
       return;
     }
+    print('🔧 [ProfileCompletion] Password confirmation matched');
+
+    // Log form data
+    final firstName = _firstNameController.text.trim();
+    final lastName = _lastNameController.text.trim();
+    final password = _passwordController.text.trim();
+    final displayName = '$firstName $lastName';
+
+    print('🔧 [ProfileCompletion] Form data:');
+    print('🔧   firstName: "$firstName"');
+    print('🔧   lastName: "$lastName"');
+    print('🔧   displayName: "$displayName"');
+    print('🔧   password length: ${password.length}');
 
     setState(() {
       _isLoading = true;
     });
 
     try {
-      // Get arguments passed from previous screen
-      final arguments =
-          ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-      final emailOrPhone = arguments?['emailOrPhone'];
+      print(
+          '🔧 [ProfileCompletion] Calling RestAuthService.completeProfile...');
 
       // Complete profile using REST auth service
-      final result = await RestAuthService.instance.register(
-        email: emailOrPhone,
-        password: _passwordController.text.trim(),
-        displayName:
-            '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}',
+      final result = await RestAuthService.instance.completeProfile(
+        firstName: firstName,
+        lastName: lastName,
+        displayName: displayName,
+        password: password,
       );
 
+      print('🔧 [ProfileCompletion] RestAuthService.completeProfile returned:');
+      print('🔧   success: ${result.success}');
+      print('🔧   error: ${result.error}');
+      print('🔧   message: ${result.message}');
+      print('🔧   user: ${result.user}');
+
       if (result.success) {
+        print(
+            '🔧 [ProfileCompletion] Profile completed successfully, navigating to home...');
         // Profile completed successfully
         Navigator.pushNamedAndRemoveUntil(
           context,
@@ -67,9 +92,14 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
           (route) => false,
         );
       } else {
+        print(
+            '🔧 [ProfileCompletion] Profile completion failed: ${result.error}');
         throw Exception(result.error ?? 'Failed to complete profile');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('🔧 [ProfileCompletion] Exception caught: $e');
+      print('🔧 [ProfileCompletion] Stack trace: $stackTrace');
+
       setState(() {
         _isLoading = false;
       });

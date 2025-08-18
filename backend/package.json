@@ -9,8 +9,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "eslint .",
-  "lint:fix": "eslint . --fix",
-  "schema:audit": "node tools/schema_audit.js"
+    "lint:fix": "eslint . --fix",
+    "schema:audit": "node tools/schema_audit.js"
   },
   "keywords": [
     "nodejs",
@@ -23,6 +23,7 @@
   "license": "MIT",
   "dependencies": {
     "aws-sdk": "^2.1449.0",
+    "axios": "^1.11.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",

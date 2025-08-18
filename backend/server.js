@@ -1,7 +1,27 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const morgan = require('morgan');
+// API routes
+app.use('/api/auth', authRoutes);
+app.use('/api/auth', flutterAuthRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/subcategories', subcategoryRoutes);
+app.use('/api/cities', cityRoutes);
+app.use('/api/requests', requestRoutes);
+app.use('/api/vehicle-types', vehicleTypeRoutes);
+app.use('/api/country-modules', countryModuleRoutes);
+app.use('/api/brands', brandRoutes);
+app.use('/api/master-products', masterProductRoutes);
+app.use('/api/entity-activations', entityActivationRoutes);
+app.use('/api/subscription-plans-new', subscriptionPlansNewRoutes);
+
+// Country-specific routes
+app.use('/api/country-products', countryProductRoutes);
+app.use('/api/country-categories', countryCategoryRoutes);
+app.use('/api/country-subcategories', countrySubcategoryRoutes);
+app.use('/api/country-brands', countryBrandRoutes);
+app.use('/api/country-variable-types', countryVariableTypeRoutes);
+app.use('/api/admin-users', adminUserRoutes);= require('morgan');
 const rateLimit = require('express-rate-limit');
 const dotenv = require('dotenv');
 
@@ -24,6 +44,14 @@ const brandRoutes = require('./routes/brands');
 const masterProductRoutes = require('./routes/master-products');
 const entityActivationRoutes = require('./routes/entity-activations');
 const subscriptionPlansNewRoutes = require('./routes/subscription-plans-new');
+
+// New country-specific routes
+const countryProductRoutes = require('./routes/country-products');
+const countryCategoryRoutes = require('./routes/country-categories');
+const countrySubcategoryRoutes = require('./routes/country-subcategories');
+const countryBrandRoutes = require('./routes/country-brands');
+const countryVariableTypeRoutes = require('./routes/country-variable-types');
+const adminUserRoutes = require('./routes/admin-users');
 
 const app = express();
 
@@ -106,6 +134,14 @@ app.use('/api/brands', brandRoutes);
 app.use('/api/master-products', masterProductRoutes);
 app.use('/api/entity-activations', entityActivationRoutes);
 app.use('/api/subscription-plans-new', subscriptionPlansNewRoutes);
+
+// Country-specific routes
+app.use('/api/country-products', countryProductRoutes);
+app.use('/api/country-categories', countryCategoryRoutes);
+app.use('/api/country-subcategories', countrySubcategoryRoutes);
+app.use('/api/country-brands', countryBrandRoutes);
+app.use('/api/country-variable-types', countryVariableTypeRoutes);
+app.use('/api/admin-users', adminUserRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

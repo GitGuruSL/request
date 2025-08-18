@@ -29,7 +29,7 @@ router.post('/register', async (req, res) => {
         res.status(201).json({
             success: true,
             message: 'User registered successfully',
-            data: result
+            ...result
         });
     } catch (error) {
         console.error('Registration error:', error);
@@ -239,17 +239,30 @@ router.get('/profile', authService.authMiddleware(), async (req, res) => {
  */
 router.put('/profile', authService.authMiddleware(), async (req, res) => {
     try {
-        const { displayName, photoUrl } = req.body;
+        const { displayName, photoUrl, firstName, lastName, first_name, last_name, password } = req.body;
 
-        const updatedUser = await authService.updateProfile(req.user.id, {
+        // Support both camelCase and snake_case field names
+        const updateData = {
             displayName,
-            photoUrl
+            photoUrl,
+            firstName: firstName || first_name,
+            lastName: lastName || last_name,
+            password
+        };
+
+        // Remove undefined values
+        Object.keys(updateData).forEach(key => {
+            if (updateData[key] === undefined) {
+                delete updateData[key];
+            }
         });
+
+        const updatedUser = await authService.updateProfile(req.user.id, updateData);
 
         res.json({
             success: true,
             message: 'Profile updated successfully',
-            data: updatedUser
+            user: updatedUser
         });
     } catch (error) {
         console.error('Update profile error:', error);

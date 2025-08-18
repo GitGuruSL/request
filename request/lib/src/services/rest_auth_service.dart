@@ -38,6 +38,10 @@ class RestAuthService {
     Map<String, dynamic>? extra,
   }) async {
     try {
+      if (kDebugMode) {
+        print(
+            '🔐 [register] email param runtimeType=${email.runtimeType} value="$email" displayName="$displayName" phone="$phone"');
+      }
       final response = await _apiClient.post<Map<String, dynamic>>(
         '/api/auth/register',
         data: {
@@ -49,6 +53,11 @@ class RestAuthService {
         },
       );
 
+      if (kDebugMode) {
+        print(
+            '🔐 [register] raw api response success=${response.isSuccess} dataType=${response.data.runtimeType} data=${response.data} error=${response.error}');
+      }
+
       if (response.isSuccess && response.data != null) {
         final raw = response.data!;
         Map<String, dynamic>? container;
@@ -58,10 +67,18 @@ class RestAuthService {
         } else if (raw['data'] is Map<String, dynamic>) {
           container = raw['data'] as Map<String, dynamic>;
         }
+        if (kDebugMode) {
+          print('🔐 [register] container keys=${container?.keys}');
+        }
         if (container != null) {
           final token = container['token'] as String?;
           final refreshToken = container['refreshToken'] as String?;
           final userData = container['user'] as Map<String, dynamic>?;
+          if (kDebugMode) {
+            print(
+                '🔐 [register] tokenType=${token.runtimeType} refreshType=${refreshToken.runtimeType} userDataType=${userData.runtimeType}');
+            print('🔐 [register] userData=$userData');
+          }
           if (token != null && userData != null) {
             await _apiClient.saveToken(token);
             if (refreshToken != null) {
@@ -82,9 +99,10 @@ class RestAuthService {
         success: false,
         error: response.error ?? 'Registration failed',
       );
-    } catch (e) {
+    } catch (e, st) {
       if (kDebugMode) {
-        print('Registration error: $e');
+        print('❌ [register] exception=$e');
+        print(st);
       }
       return AuthResult(
         success: false,
@@ -393,6 +411,134 @@ class RestAuthService {
       return AuthResult(
         success: false,
         error: 'Failed to get profile: ${e.toString()}',
+      );
+    }
+  }
+
+  /// Complete user profile (update profile info and set password)
+  Future<AuthResult> completeProfile({
+    String? firstName,
+    String? lastName,
+    String? displayName,
+    String? password,
+    Map<String, dynamic>? extra,
+  }) async {
+    try {
+      if (kDebugMode) {
+        print('🔐 [completeProfile] Starting profile completion...');
+        print('🔐 [completeProfile] Parameters received:');
+        print('🔐   firstName: "$firstName"');
+        print('🔐   lastName: "$lastName"');
+        print('🔐   displayName: "$displayName"');
+        print(
+            '🔐   password: ${password != null ? "[${password.length} chars]" : "null"}');
+        print('🔐   extra: $extra');
+      }
+
+      // Check if user is authenticated
+      final isAuth = await _apiClient.isAuthenticated();
+      if (kDebugMode) {
+        print('🔐 [completeProfile] User authenticated: $isAuth');
+      }
+
+      if (!isAuth) {
+        throw Exception('User not authenticated');
+      }
+
+      final data = <String, dynamic>{};
+
+      if (firstName != null) data['first_name'] = firstName;
+      if (lastName != null) data['last_name'] = lastName;
+      if (displayName != null) data['display_name'] = displayName;
+      if (password != null) data['password'] = password;
+      if (extra != null) data.addAll(extra);
+
+      if (kDebugMode) {
+        print('🔐 [completeProfile] Request data prepared: $data');
+        print(
+            '🔐 [completeProfile] Making PUT request to /api/auth/profile...');
+      }
+
+      final response = await _apiClient.put<Map<String, dynamic>>(
+        '/api/auth/profile',
+        data: data,
+      );
+
+      if (kDebugMode) {
+        print('🔐 [completeProfile] API Response received:');
+        print('🔐   success: ${response.isSuccess}');
+        print('🔐   statusCode: ${response.statusCode}');
+        print('🔐   message: ${response.message}');
+        print('🔐   error: ${response.error}');
+        print('🔐   data type: ${response.data.runtimeType}');
+        print('🔐   data: ${response.data}');
+      }
+
+      if (response.isSuccess && response.data != null) {
+        if (kDebugMode) {
+          print('🔐 [completeProfile] Parsing user from response data...');
+          print(
+              '🔐 [completeProfile] Response data keys: ${response.data!.keys}');
+        }
+
+        // Handle different response formats
+        Map<String, dynamic> userData;
+        if (response.data!.containsKey('user')) {
+          userData = response.data!['user'] as Map<String, dynamic>;
+          if (kDebugMode) {
+            print('🔐 [completeProfile] Found user in response.data["user"]');
+          }
+        } else if (response.data!.containsKey('data')) {
+          userData = response.data!['data'] as Map<String, dynamic>;
+          if (kDebugMode) {
+            print('🔐 [completeProfile] Found user in response.data["data"]');
+          }
+        } else {
+          userData = response.data!;
+          if (kDebugMode) {
+            print(
+                '🔐 [completeProfile] Using response.data directly as user data');
+          }
+        }
+
+        if (kDebugMode) {
+          print('🔐 [completeProfile] userData to parse: $userData');
+        }
+
+        _currentUser = UserModel.fromJson(userData);
+
+        if (kDebugMode) {
+          print('🔐 [completeProfile] UserModel created successfully:');
+          print('🔐   id: ${_currentUser!.id}');
+          print('🔐   email: ${_currentUser!.email}');
+          print('🔐   firstName: ${_currentUser!.firstName}');
+          print('🔐   lastName: ${_currentUser!.lastName}');
+          print('🔐   displayName: ${_currentUser!.displayName}');
+        }
+
+        return AuthResult(
+          success: true,
+          user: _currentUser,
+          message: response.message ?? 'Profile completed successfully',
+        );
+      }
+
+      if (kDebugMode) {
+        print('🔐 [completeProfile] Request failed - returning error result');
+      }
+
+      return AuthResult(
+        success: false,
+        error: response.error ?? 'Failed to complete profile',
+      );
+    } catch (e, stackTrace) {
+      if (kDebugMode) {
+        print('❌ [completeProfile] Exception caught: $e');
+        print('❌ [completeProfile] Stack trace: $stackTrace');
+      }
+      return AuthResult(
+        success: false,
+        error: 'Failed to complete profile: ${e.toString()}',
       );
     }
   }

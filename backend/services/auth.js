@@ -401,14 +401,35 @@ class AuthService {
      * Update user profile
      */
     async updateProfile(userId, updateData) {
-        const { displayName, photoUrl } = updateData;
+        console.log('🔄 updateProfile called with:', { userId, updateData });
         
-        const user = await dbService.update('users', userId, {
-            display_name: displayName,
-            photo_url: photoUrl
-        });
+        const { displayName, photoUrl, firstName, lastName, password } = updateData;
+        
+        const updateFields = {};
+        
+        if (displayName !== undefined) updateFields.display_name = displayName;
+        if (photoUrl !== undefined) updateFields.photo_url = photoUrl;
+        if (firstName !== undefined) updateFields.first_name = firstName;
+        if (lastName !== undefined) updateFields.last_name = lastName;
+        
+        console.log('🔄 updateFields prepared:', updateFields);
+        
+        // Handle password separately with hashing
+        if (password !== undefined && password !== null && password.trim() !== '') {
+            if (password.length < 6) {
+                throw new Error('Password must be at least 6 characters');
+            }
+            updateFields.password_hash = await this.hashPassword(password.trim());
+            console.log('🔄 Password hashed and added to updateFields');
+        }
 
-        return this.sanitizeUser(user);
+        console.log('🔄 Final updateFields:', updateFields);
+        const user = await dbService.update('users', userId, updateFields);
+        console.log('🔄 Updated user from DB:', user);
+
+        const sanitized = this.sanitizeUser(user);
+        console.log('🔄 Sanitized user:', sanitized);
+        return sanitized;
     }
 
     /**
@@ -442,13 +463,26 @@ class AuthService {
     }
 
     /**
-     * Remove sensitive data from user object
+     * Remove sensitive data from user object and convert nulls to empty strings
      */
     sanitizeUser(user) {
         if (!user) return null;
         
         const { password_hash, ...sanitizedUser } = user;
-        return sanitizedUser;
+        
+        // Convert null values to empty strings for Flutter compatibility
+        return {
+            ...sanitizedUser,
+            email: sanitizedUser.email || '',
+            phone: sanitizedUser.phone || '',
+            display_name: sanitizedUser.display_name || '',
+            first_name: sanitizedUser.first_name || '',
+            last_name: sanitizedUser.last_name || '',
+            country_code: sanitizedUser.country_code || '',
+            photo_url: sanitizedUser.photo_url || '',
+            firebase_uid: sanitizedUser.firebase_uid || '',
+            permissions: sanitizedUser.permissions || {}
+        };
     }
 
     /**
