@@ -56,8 +56,8 @@ import {
   FilterList,
   Search
 } from '@mui/icons-material';
-import { collection, query, where, orderBy, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, getDocs } from 'firebase/firestore';
-import { db } from '../firebase/config';
+// Migrated from Firestore to REST API
+import api from '../services/apiClient';
 import useCountryFilter from '../hooks/useCountryFilter';
 
 const PromoCodes = () => {
@@ -125,37 +125,19 @@ const PromoCodes = () => {
 
   // Load promo codes
   useEffect(() => {
-    const loadPromoCodes = () => {
-      let promoQuery;
-      
-      if (isSuperAdmin) {
-        // Super admin sees all promo codes
-        promoQuery = query(
-          collection(db, 'promoCodes'),
-          orderBy('createdAt', 'desc')
-        );
-      } else {
-        // Country admin sees only their country's promo codes
-        promoQuery = query(
-          collection(db, 'promoCodes'),
-          where('countries', 'array-contains', userCountry),
-          orderBy('createdAt', 'desc')
-        );
-      }
-
-      const unsubscribe = onSnapshot(promoQuery, (snapshot) => {
-        const promoCodesData = [];
-        snapshot.forEach((doc) => {
-          promoCodesData.push({ id: doc.id, ...doc.data() });
-        });
-        setPromoCodes(promoCodesData);
-        setLoading(false);
-      });
-
-      return unsubscribe;
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const params = {};
+        if (!isSuperAdmin) params.country = userCountry;
+        const res = await api.get('/promo-codes', { params });
+        const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
+        setPromoCodes(list);
+      } catch (e) {
+        console.error('Error fetching promo codes', e);
+      } finally { setLoading(false); }
     };
-
-    loadPromoCodes();
+    fetchData();
   }, [isSuperAdmin, userCountry]);
 
   // Filter promo codes based on search, status, and country
@@ -239,35 +221,35 @@ const PromoCodes = () => {
   // Handle form submission
   const handleSubmit = async () => {
     try {
-      const promoData = {
-        ...formData,
+      const payload = {
+        code: formData.code,
+        title: formData.title,
+        description: formData.description,
+        type: formData.type,
         value: parseFloat(formData.value) || 0,
-        maxUses: parseInt(formData.maxUses) || null,
+        maxUses: formData.maxUses ? parseInt(formData.maxUses) : undefined,
         maxUsesPerUser: parseInt(formData.maxUsesPerUser) || 1,
-        minOrderValue: parseFloat(formData.minOrderValue) || 0,
+        minOrderValue: formData.minOrderValue ? parseFloat(formData.minOrderValue) : 0,
         countries: formData.countries,
-        createdBy: adminData?.uid || adminData?.id,
+        startDate: formData.startDate || undefined,
+        endDate: formData.endDate || undefined,
+        isActive: formData.isActive,
+        status: isSuperAdmin ? 'active' : 'pendingApproval',
+        requiresApproval: !isSuperAdmin,
+        createdBy: adminData?.id || adminData?.uid,
         createdByName: adminData?.name || adminData?.email,
-        createdByCountry: userCountry,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        usedCount: 0,
-        totalSavings: 0,
-        status: isSuperAdmin ? 'active' : 'pendingApproval'
+        createdByCountry: userCountry
       };
-
       if (editingPromoCode) {
-        // Update existing promo code
-        await updateDoc(doc(db, 'promoCodes', editingPromoCode.id), {
-          ...promoData,
-          updatedAt: serverTimestamp()
-        });
+        await api.put(`/promo-codes/${editingPromoCode.id}`, payload);
       } else {
-        // Create new promo code
-        await addDoc(collection(db, 'promoCodes'), promoData);
+        await api.post('/promo-codes', payload);
       }
-
       handleClose();
+      // reload list
+      const res = await api.get('/promo-codes', { params: !isSuperAdmin ? { country: userCountry } : {} });
+      const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      setPromoCodes(list);
     } catch (error) {
       console.error('Error saving promo code:', error);
     }
@@ -276,22 +258,11 @@ const PromoCodes = () => {
   // Handle approval/rejection (Super Admin only)
   const handleApproval = async (promoCodeId, action, rejectionReason = '') => {
     try {
-      const updateData = {
-        status: action,
-        updatedAt: serverTimestamp(),
-        reviewedBy: adminData?.uid || adminData?.id,
-        reviewedByName: adminData?.name || adminData?.email,
-        reviewedAt: serverTimestamp()
-      };
-
-      if (action === 'rejected') {
-        updateData.rejectionReason = rejectionReason;
-      }
-
-      await updateDoc(doc(db, 'promoCodes', promoCodeId), updateData);
-    } catch (error) {
-      console.error('Error updating promo code status:', error);
-    }
+      await api.put(`/promo-codes/${promoCodeId}/status`, { status: action, rejectionReason });
+      const res = await api.get('/promo-codes', { params: !isSuperAdmin ? { country: userCountry } : {} });
+      const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      setPromoCodes(list);
+    } catch (error) { console.error('Error updating promo code status:', error); }
   };
 
   // Handle edit
@@ -318,13 +289,13 @@ const PromoCodes = () => {
 
   // Handle delete
   const handleDelete = async (promoCodeId) => {
-    if (window.confirm('Are you sure you want to delete this promo code?')) {
-      try {
-        await deleteDoc(doc(db, 'promoCodes', promoCodeId));
-      } catch (error) {
-        console.error('Error deleting promo code:', error);
-      }
-    }
+    if (!window.confirm('Are you sure you want to delete this promo code?')) return;
+    try {
+      await api.delete(`/promo-codes/${promoCodeId}`);
+      const res = await api.get('/promo-codes', { params: !isSuperAdmin ? { country: userCountry } : {} });
+      const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      setPromoCodes(list);
+    } catch (error) { console.error('Error deleting promo code:', error); }
   };
 
   // Handle close dialog

@@ -48,15 +48,8 @@ import {
   ToggleOn,
   ToggleOff
 } from '@mui/icons-material';
-import { 
-  collection, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  serverTimestamp 
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+// Migrated from Firestore to REST API
+import api from '../services/apiClient';
 import useCountryFilter from '../hooks/useCountryFilter.jsx';
 
 const VariablesModule = () => {
@@ -163,7 +156,7 @@ const VariablesModule = () => {
     try {
       setOperationLoading(true);
       
-      const variableData = {
+      const payload = {
         name: formData.name,
         description: formData.description,
         type: formData.type,
@@ -171,31 +164,16 @@ const VariablesModule = () => {
         isRequired: formData.isRequired,
         possibleValues: formData.possibleValues,
         isActive: true,
-        usageCount: 0,
-        updatedAt: serverTimestamp(),
+        usageCount: selectedVariable?.usageCount || 0,
         updatedBy: adminData?.email || 'admin'
       };
 
       if (selectedVariable) {
-        // Update existing variable
-        await updateDoc(doc(db, 'custom_product_variables', selectedVariable.id), variableData);
-        setSnackbar({
-          open: true,
-          message: 'Variable updated successfully!',
-          severity: 'success'
-        });
+        await api.put(`/custom-product-variables/${selectedVariable.id}`, payload);
+        setSnackbar({ open: true, message: 'Variable updated successfully!', severity: 'success' });
       } else {
-        // Add new variable
-        await addDoc(collection(db, 'custom_product_variables'), {
-          ...variableData,
-          createdAt: serverTimestamp(),
-          categoryIds: [] // Initialize empty array for category assignments
-        });
-        setSnackbar({
-          open: true,
-          message: 'Variable added successfully!',
-          severity: 'success'
-        });
+        await api.post('/custom-product-variables', { ...payload, createdBy: adminData?.email || 'admin' });
+        setSnackbar({ open: true, message: 'Variable added successfully!', severity: 'success' });
       }
 
       setEditDialogOpen(false);
@@ -216,7 +194,7 @@ const VariablesModule = () => {
     try {
       setOperationLoading(true);
       
-      await deleteDoc(doc(db, 'custom_product_variables', selectedVariable.id));
+  await api.delete(`/custom-product-variables/${selectedVariable.id}`);
       setSnackbar({
         open: true,
         message: 'Variable deleted successfully!',

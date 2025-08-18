@@ -37,19 +37,8 @@ import {
   People
 } from '@mui/icons-material';
 import useCountryFilter from '../hooks/useCountryFilter';
-import { 
-  collection, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  getDocs, 
-  query, 
-  orderBy,
-  where,
-  serverTimestamp 
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+// Migrated from Firestore to REST API
+import api from '../services/apiClient';
 
 const Vehicles = () => {
   const { getFilteredData, adminData, isSuperAdmin, userCountry } = useCountryFilter();
@@ -105,71 +94,32 @@ const Vehicles = () => {
 
   const fetchVehicles = async () => {
     try {
-      console.log('🚗 Fetching vehicles for admin:', adminData);
-      const data = await getFilteredData('vehicle_types', adminData);
-      console.log('🚗 Fetched vehicle data:', data);
-      const vehiclesData = (data || []).sort((a, b) => 
-        (a.displayOrder || 0) - (b.displayOrder || 0)
-      );
-      console.log('🚗 Processed vehicles data:', vehiclesData);
-      setVehicles(vehiclesData);
+      const res = await api.get('/vehicle-types');
+      const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      setVehicles(list.sort((a,b)=> (a.displayOrder||0)-(b.displayOrder||0)));
     } catch (error) {
       console.error('Error fetching vehicles:', error);
       showSnackbar('Error fetching vehicles', 'error');
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   const fetchCountryVehicles = async () => {
     try {
-      if (!adminData?.country) {
-        console.log('No country data available');
-        return;
-      }
-
-      console.log('Fetching country vehicles for:', adminData.country);
-      
-      const countryQuery = query(
-        collection(db, 'country_vehicles'),
-        where('countryCode', '==', adminData.country)
-      );
-      const snapshot = await getDocs(countryQuery);
-      
-      if (!snapshot.empty) {
-        const data = snapshot.docs[0].data();
-        console.log('Found country vehicles:', data);
-        setCountryVehicles(data.enabledVehicles || []);
-      } else {
-        console.log('No country vehicles found, starting with empty list');
-        setCountryVehicles([]);
-      }
-    } catch (error) {
-      console.error('Error fetching country vehicles:', error);
-      setCountryVehicles([]);
-    }
-  };
+      if (!adminData?.country) return;
+      const res = await api.get(`/country-vehicles?country=${adminData.country}`);
+      setCountryVehicles(res.data?.enabledVehicles || res.data?.data?.enabledVehicles || []);
+    } catch (e) { console.error('Error fetching country vehicles', e); setCountryVehicles([]);} }
 
   const handleSubmit = async () => {
     try {
-      const vehicleData = {
-        ...formData,
-        updatedAt: serverTimestamp(),
-        updatedBy: adminData.email
-      };
-
+      const payload = { ...formData, updatedBy: adminData?.email };
       if (editingVehicle) {
-        await updateDoc(doc(db, 'vehicle_types', editingVehicle.id), vehicleData);
+        await api.put(`/vehicle-types/${editingVehicle.id}`, payload);
         showSnackbar('Vehicle type updated successfully');
       } else {
-        await addDoc(collection(db, 'vehicle_types'), {
-          ...vehicleData,
-          createdAt: serverTimestamp(),
-          createdBy: adminData.email
-        });
+        await api.post('/vehicle-types', { ...payload, createdBy: adminData?.email });
         showSnackbar('Vehicle type added successfully');
       }
-
       handleCloseDialog();
       fetchVehicles();
     } catch (error) {
@@ -192,76 +142,18 @@ const Vehicles = () => {
   };
 
   const handleDelete = async (vehicleId) => {
-    if (!window.confirm('Are you sure you want to delete this vehicle type?')) {
-      return;
-    }
-
-    try {
-      await deleteDoc(doc(db, 'vehicle_types', vehicleId));
-      showSnackbar('Vehicle type deleted successfully');
-      fetchVehicles();
-    } catch (error) {
-      console.error('Error deleting vehicle:', error);
-      showSnackbar('Error deleting vehicle type', 'error');
-    }
+    if (!window.confirm('Are you sure you want to delete this vehicle type?')) return;
+    try { await api.delete(`/vehicle-types/${vehicleId}`); showSnackbar('Vehicle type deleted successfully'); fetchVehicles(); }
+    catch (error) { console.error('Error deleting vehicle:', error); showSnackbar('Error deleting vehicle type', 'error'); }
   };
 
   const handleToggleCountryVehicle = async (vehicleId, enabled) => {
-    console.log('🔄 TOGGLE DEBUG:', {
-      vehicleId,
-      vehicleIdType: typeof vehicleId,
-      enabled,
-      currentCountryVehicles: countryVehicles,
-      countryVehiclesTypes: countryVehicles.map(id => typeof id)
-    });
-    
     try {
-      // Validate adminData
-      if (!adminData?.country) {
-        throw new Error('Country information not available');
-      }
-
-      const updatedVehicles = enabled
-        ? [...countryVehicles, vehicleId]
-        : countryVehicles.filter(id => id !== vehicleId);
-
-      console.log('Updating country vehicles:', {
-        country: adminData.country,
-        vehicleId,
-        enabled,
-        updatedVehicles
-      });
-
-      const countryQuery = query(
-        collection(db, 'country_vehicles'),
-        where('countryCode', '==', adminData.country)
-      );
-      const snapshot = await getDocs(countryQuery);
-
-      const countryData = {
-        countryCode: adminData.country,
-        countryName: adminData.countryName || adminData.country,
-        enabledVehicles: updatedVehicles,
-        updatedAt: serverTimestamp(),
-        updatedBy: adminData.email || 'unknown'
-      };
-
-      if (snapshot.empty) {
-        console.log('Creating new country vehicles document');
-        await addDoc(collection(db, 'country_vehicles'), {
-          ...countryData,
-          createdAt: serverTimestamp(),
-          createdBy: adminData.email || 'unknown'
-        });
-      } else {
-        console.log('Updating existing country vehicles document');
-        await updateDoc(doc(db, 'country_vehicles', snapshot.docs[0].id), countryData);
-      }
-
-      // Refetch country vehicles to get fresh data from database
+      if (!adminData?.country) throw new Error('Country information not available');
+      const updatedVehicles = enabled ? [...countryVehicles, vehicleId] : countryVehicles.filter(id => id !== vehicleId);
+      await api.put('/country-vehicles', { countryCode: adminData.country, enabledVehicles: updatedVehicles });
       await fetchCountryVehicles();
       showSnackbar(`Vehicle ${enabled ? 'enabled' : 'disabled'} for ${adminData.country}`);
-      
     } catch (error) {
       console.error('Error updating country vehicles:', error);
       showSnackbar(`Error updating country vehicles: ${error.message}`, 'error');
@@ -338,23 +230,11 @@ const Vehicles = () => {
 
     setLoading(true);
     try {
-      for (const vehicle of missingVehicles) {
-        await addDoc(collection(db, 'vehicle_types'), {
-          ...vehicle,
-          isActive: true,
-          createdAt: serverTimestamp(),
-          createdBy: adminData?.email || 'super-admin'
-        });
-      }
-      
+      await api.post('/vehicle-types/bulk-defaults', { vehicles: missingVehicles, createdBy: adminData?.email });
       showSnackbar(`${missingVehicles.length} default vehicle types added successfully!`);
       fetchVehicles();
-    } catch (error) {
-      console.error('Error adding default vehicles:', error);
-      showSnackbar('Error adding default vehicle types', 'error');
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) { console.error('Error adding default vehicles:', error); showSnackbar('Error adding default vehicle types', 'error'); }
+    finally { setLoading(false);} 
   };
 
   const handleCloseDialog = () => {

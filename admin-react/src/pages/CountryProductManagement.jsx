@@ -31,8 +31,7 @@ import {
   Category,
   Inventory
 } from '@mui/icons-material';
-import { collection, addDoc, updateDoc, doc } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import api from '../services/apiClient';
 import useCountryFilter from '../hooks/useCountryFilter.jsx';
 import { DataLookupService } from '../services/DataLookupService.js';
 
@@ -119,21 +118,12 @@ const CountryProductManagement = () => {
       };
 
       if (existingRecord) {
-        // Update existing record
-        await updateDoc(doc(db, 'country_products', existingRecord.id), updateData);
-        
-        setCountryProducts(prev => prev.map(cp => 
-          cp.id === existingRecord.id ? { ...cp, ...updateData } : cp
-        ));
+        await api.put(`/country-products/${existingRecord.id}`, updateData);
+        setCountryProducts(prev => prev.map(cp => cp.id === existingRecord.id ? { ...cp, ...updateData } : cp));
       } else {
-        // Create new record
-        updateData.createdAt = new Date();
-        updateData.createdBy = adminData.uid;
-        updateData.createdByName = adminData.displayName || adminData.email;
-        
-        const docRef = await addDoc(collection(db, 'country_products'), updateData);
-        
-        setCountryProducts(prev => [...prev, { id: docRef.id, ...updateData }]);
+        const createRes = await api.post('/country-products', updateData);
+        const created = createRes.data?.data || createRes.data;
+        setCountryProducts(prev => [...prev, { id: created?.id || created?.uuid || Math.random().toString(36).slice(2), ...updateData }]);
       }
 
       console.log(`✅ Product ${productName} ${newStatus ? 'activated' : 'deactivated'} for ${userCountry}`);

@@ -46,15 +46,8 @@ import {
   FolderOpen,
   SubdirectoryArrowRight
 } from '@mui/icons-material';
-import { 
-  collection, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  serverTimestamp 
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+// Migrated from Firestore to REST API
+import api from '../services/apiClient';
 import useCountryFilter from '../hooks/useCountryFilter.jsx';
 
 const SubcategoriesModule = () => {
@@ -152,40 +145,21 @@ const SubcategoriesModule = () => {
     try {
       setOperationLoading(true);
       
-      const subcategoryData = {
+      const payload = {
         name: formData.name,
-        subcategory: formData.name, // Store in both fields for compatibility
         description: formData.description,
         categoryId: formData.categoryId,
-        category_id: formData.categoryId, // Store in both fields for compatibility
         country: formData.country,
         isActive: true,
-        updatedAt: serverTimestamp()
+        updatedBy: adminData?.email || 'admin'
       };
 
       if (selectedSubcategory) {
-        // Update existing subcategory
-        await updateDoc(doc(db, 'subcategories', selectedSubcategory.id), {
-          ...subcategoryData,
-          updatedBy: adminData?.email || 'admin'
-        });
-        setSnackbar({
-          open: true,
-          message: 'Subcategory updated successfully!',
-          severity: 'success'
-        });
+        await api.put(`/subcategories/${selectedSubcategory.id}`, payload);
+        setSnackbar({ open: true, message: 'Subcategory updated successfully!', severity: 'success' });
       } else {
-        // Add new subcategory
-        await addDoc(collection(db, 'subcategories'), {
-          ...subcategoryData,
-          createdAt: serverTimestamp(),
-          createdBy: adminData?.email || 'admin'
-        });
-        setSnackbar({
-          open: true,
-          message: 'Subcategory added successfully!',
-          severity: 'success'
-        });
+        await api.post('/subcategories', { ...payload, createdBy: adminData?.email || 'admin' });
+        setSnackbar({ open: true, message: 'Subcategory added successfully!', severity: 'success' });
       }
 
       setEditDialogOpen(false);
@@ -206,7 +180,7 @@ const SubcategoriesModule = () => {
     try {
       setOperationLoading(true);
       
-      await deleteDoc(doc(db, 'subcategories', selectedSubcategory.id));
+  await api.delete(`/subcategories/${selectedSubcategory.id}`);
       setSnackbar({
         open: true,
         message: 'Subcategory deleted successfully!',

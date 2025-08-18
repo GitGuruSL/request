@@ -43,20 +43,7 @@ import {
   PhotoCamera,
   Close
 } from '@mui/icons-material';
-import { 
-  collection, 
-  getDocs, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc,
-  doc, 
-  serverTimestamp,
-  query,
-  orderBy,
-  where 
-} from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../firebase/config';
+import api from '../services/apiClient';
 import useCountryFilter from '../hooks/useCountryFilter';
 
 const Products = () => {
@@ -142,41 +129,9 @@ const Products = () => {
     }
     
     try {
-      // Try different possible field names for the category relationship
-      const queries = [
-        query(collection(db, 'subcategories'), where('categoryId', '==', categoryId)),
-        query(collection(db, 'subcategories'), where('category_id', '==', categoryId)),
-        query(collection(db, 'subcategories'), where('parentCategoryId', '==', categoryId)),
-        query(collection(db, 'subcategories'), where('parentId', '==', categoryId))
-      ];
-      
-      let subcategoriesData = [];
-      
-      // Try each query until we find subcategories
-      for (const q of queries) {
-        try {
-          const snapshot = await getDocs(q);
-          if (!snapshot.empty) {
-            snapshot.forEach(doc => {
-              const data = { id: doc.id, ...doc.data() };
-              // Avoid duplicates
-              if (!subcategoriesData.find(sub => sub.id === data.id)) {
-                subcategoriesData.push(data);
-              }
-            });
-            if (subcategoriesData.length > 0) break; // Found some, stop trying
-          }
-        } catch (err) {
-          console.log('Query failed, trying next:', err.message);
-        }
-      }
-      
-      console.log('Loaded subcategories for category', categoryId, ':', subcategoriesData);
-      setSubcategories(subcategoriesData.sort((a, b) => {
-        const aName = a.name || a.subcategory || '';
-        const bName = b.name || b.subcategory || '';
-        return aName.localeCompare(bName);
-      }));
+      const res = await api.get('/subcategories', { params: { categoryId } });
+      const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+      setSubcategories(list.sort((a,b)=> (a.name||'').localeCompare(b.name||'')));
     } catch (error) {
       console.error('Error loading subcategories:', error);
       setSubcategories([]);
@@ -271,31 +226,16 @@ const Products = () => {
     if (files.length === 0) return;
 
     try {
-      const uploadedUrls = [];
-      
-      for (const file of files) {
-        const fileExtension = file.name.split('.').pop();
-        const fileName = `products/${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExtension}`;
-        const storageRef = ref(storage, fileName);
-        
-        const snapshot = await uploadBytes(storageRef, file);
-        const downloadURL = await getDownloadURL(snapshot.ref);
-        uploadedUrls.push(downloadURL);
-      }
-      
-      // Store uploaded URLs in state
-      setUploadedImages(prev => [...prev, ...uploadedUrls]);
-      
-      // Also add to form data
-      setFormData(prev => ({
-        ...prev,
-        images: [...(prev.images || []), ...uploadedUrls]
-      }));
-
-      console.log('Images uploaded successfully:', uploadedUrls);
+      const form = new FormData();
+      files.forEach(f => form.append('files', f));
+      const res = await api.post('/uploads/products', form, { headers: { 'Content-Type': 'multipart/form-data' }});
+      const uploaded = res.data?.files || res.data?.data || res.data || [];
+      const urls = uploaded.map(f => f.url || f.location || f.path || f);
+      setUploadedImages(prev => [...prev, ...urls]);
+      setFormData(prev => ({ ...prev, images: [...(prev.images||[]), ...urls] }));
     } catch (error) {
       console.error('Error uploading images:', error);
-      alert('Error uploading images: ' + error.message);
+      alert('Error uploading images: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -320,20 +260,15 @@ const Products = () => {
       const productData = {
         ...formData,
         images: formData.images || [],
-        updatedAt: serverTimestamp(),
         updatedBy: adminData.email
       };
 
       console.log('Saving product with data:', productData);
 
       if (editingProduct) {
-        await updateDoc(doc(db, 'master_products', editingProduct), productData);
-        console.log('Product updated successfully');
+        await api.put(`/master-products/${editingProduct}`, productData);
       } else {
-        productData.createdAt = serverTimestamp();
-        productData.createdBy = adminData.email;
-        await addDoc(collection(db, 'master_products'), productData);
-        console.log('Product created successfully');
+        await api.post('/master-products', { ...productData, createdBy: adminData.email });
       }
 
       handleCloseDialog();
@@ -347,24 +282,22 @@ const Products = () => {
   const handleDelete = async (productId) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
       try {
-        await deleteDoc(doc(db, 'master_products', productId));
+        await api.delete(`/master-products/${productId}`);
         loadProducts();
       } catch (error) {
         console.error('Error deleting product:', error);
+        alert('Delete failed: ' + (error.response?.data?.message || error.message));
       }
     }
   };
 
   const toggleProductStatus = async (product) => {
     try {
-      await updateDoc(doc(db, 'master_products', product.id), {
-        isActive: !product.isActive,
-        updatedAt: serverTimestamp(),
-        updatedBy: adminData.email
-      });
+      await api.put(`/master-products/${product.id}/status`, { isActive: !product.isActive, updatedBy: adminData.email });
       loadProducts();
     } catch (error) {
       console.error('Error updating product status:', error);
+      alert('Status update failed: ' + (error.response?.data?.message || error.message));
     }
   };
 

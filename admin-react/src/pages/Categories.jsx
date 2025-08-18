@@ -36,22 +36,12 @@ import {
   ShoppingCart,
   Build
 } from '@mui/icons-material';
-import { 
-  collection, 
-  getDocs, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc,
-  doc, 
-  serverTimestamp,
-  query,
-  where 
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
-import { useAuth } from '../contexts/AuthContext';
+// Migrated off Firebase: using REST API client
+import api from '../services/apiClient';
+import useCountryFilter from '../hooks/useCountryFilter';
 
 const Categories = () => {
-  const { adminData } = useAuth();
+  const { adminData, isSuperAdmin, userCountry } = useCountryFilter();
   
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
@@ -90,13 +80,10 @@ const Categories = () => {
 
   const loadCategories = async () => {
     try {
-      const data = await getFilteredData('categories', adminData);
-      console.log('Filtered categories data:', data);
-      setCategories((data || []).sort((a, b) => {
-        const aName = a.name || a.category || a.title || '';
-        const bName = b.name || b.category || b.title || '';
-        return aName.localeCompare(bName);
-      }));
+      // Fetch all categories; backend expected to handle role-based filtering
+      const res = await api.get('/categories');
+      const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      setCategories(data.sort((a, b) => (a.name || '').localeCompare(b.name || '')));
     } catch (error) {
       console.error('Error loading categories:', error);
     }
@@ -104,16 +91,9 @@ const Categories = () => {
 
   const loadSubcategories = async () => {
     try {
-      const data = await getFilteredData('subcategories', adminData);
-      const subcategoriesData = data || [];
-      console.log('Filtered subcategories data:', subcategoriesData);
-      console.log('Sample subcategory:', subcategoriesData[0]);
-      console.log('Available categories:', categories.map(c => ({id: c.id, name: c.name || c.category})));
-      setSubcategories(subcategoriesData.sort((a, b) => {
-        const aName = a.name || a.subcategory || a.title || '';
-        const bName = b.name || b.subcategory || b.title || '';
-        return aName.localeCompare(bName);
-      }));
+      const res = await api.get('/subcategories');
+      const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      setSubcategories(data.sort((a, b) => (a.name || '').localeCompare(b.name || '')));
     } catch (error) {
       console.error('Error loading subcategories:', error);
     }
@@ -163,63 +143,68 @@ const Categories = () => {
 
   const handleSaveCategory = async () => {
     try {
-      const categoryData = {
-        ...categoryFormData,
-        updatedAt: serverTimestamp(),
-        updatedBy: adminData.email
+      const payload = {
+        name: categoryFormData.name,
+        description: categoryFormData.description,
+        applicableFor: categoryFormData.applicableFor,
+        type: categoryFormData.applicableFor?.toLowerCase() || 'item',
+        isActive: categoryFormData.isActive,
+        updatedBy: adminData?.email
       };
-
       if (editingCategory) {
-        await updateDoc(doc(db, 'categories', editingCategory), categoryData);
+        await api.put(`/categories/${editingCategory}`, payload);
       } else {
-        categoryData.createdAt = serverTimestamp();
-        categoryData.createdBy = adminData.email;
-        await addDoc(collection(db, 'categories'), categoryData);
+        await api.post('/categories', { ...payload, createdBy: adminData?.email });
       }
-
       setOpenDialog(false);
-      loadCategories();
+      await loadCategories();
     } catch (error) {
       console.error('Error saving category:', error);
-      alert('Error saving category: ' + error.message);
+      alert('Error saving category: ' + (error.response?.data?.message || error.message));
     }
   };
 
   const handleSaveSubcategory = async () => {
     try {
-      const subcategoryData = {
-        ...subcategoryFormData,
-        updatedAt: serverTimestamp(),
-        updatedBy: adminData.email
+      const payload = {
+        name: subcategoryFormData.name,
+        description: subcategoryFormData.description,
+        categoryId: subcategoryFormData.categoryId,
+        isActive: subcategoryFormData.isActive,
+        updatedBy: adminData?.email
       };
-
       if (editingSubcategory) {
-        await updateDoc(doc(db, 'subcategories', editingSubcategory), subcategoryData);
+        await api.put(`/subcategories/${editingSubcategory}`, payload);
       } else {
-        subcategoryData.createdAt = serverTimestamp();
-        subcategoryData.createdBy = adminData.email;
-        await addDoc(collection(db, 'subcategories'), subcategoryData);
+        await api.post('/subcategories', { ...payload, createdBy: adminData?.email });
       }
-
       setOpenSubcategoryDialog(false);
-      loadSubcategories();
+      await loadSubcategories();
     } catch (error) {
       console.error('Error saving subcategory:', error);
-      alert('Error saving subcategory: ' + error.message);
+      alert('Error saving subcategory: ' + (error.response?.data?.message || error.message));
     }
   };
 
   const handleDeleteCategory = async (categoryId, categoryName) => {
-    if (!confirm(`Are you sure you want to delete "${categoryName}"? This action cannot be undone.`)) {
-      return;
-    }
-
+    if (!confirm(`Are you sure you want to delete "${categoryName}"? This action cannot be undone.`)) return;
     try {
-      await deleteDoc(doc(db, 'categories', categoryId));
-      loadCategories();
+      await api.delete(`/categories/${categoryId}`);
+      await loadCategories();
     } catch (error) {
       console.error('Error deleting category:', error);
-      alert('Error deleting category: ' + error.message);
+      alert('Error deleting category: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleDeleteSubcategory = async (subcategoryId, subcategoryName) => {
+    if (!confirm(`Are you sure you want to delete subcategory "${subcategoryName}"? This action cannot be undone.`)) return;
+    try {
+      await api.delete(`/subcategories/${subcategoryId}`);
+      await loadSubcategories();
+    } catch (error) {
+      console.error('Error deleting subcategory:', error);
+      alert('Error deleting subcategory: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -481,7 +466,7 @@ const Categories = () => {
                           </IconButton>
                           <IconButton 
                             size="small" 
-                            onClick={() => handleDeleteCategory(subcategory.id, subcategory.name)}
+                            onClick={() => handleDeleteSubcategory(subcategory.id, subcategory.name)}
                             color="error"
                           >
                             <Delete />

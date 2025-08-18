@@ -40,18 +40,8 @@ import {
   Search,
   Close
 } from '@mui/icons-material';
-import {
-  collection,
-  getDocs,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
-  serverTimestamp,
-  query,
-  orderBy
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+// Migrated off Firestore to REST API
+import api from '../services/apiClient';
 import useCountryFilter from '../hooks/useCountryFilter';
 
 const Variables = () => {
@@ -97,7 +87,8 @@ const Variables = () => {
       setLoading(true);
       
       // Load variables using country filter system
-      const variablesData = await getFilteredData('custom_product_variables', adminData);
+  const res = await api.get('/custom-product-variables');
+  const variablesData = Array.isArray(res.data) ? res.data : res.data?.data || [];
       console.log('Loaded variables:', variablesData);
       setVariables(variablesData || []);
     } catch (error) {
@@ -171,50 +162,44 @@ const Variables = () => {
 
   const handleSave = async () => {
     try {
-      const variableData = {
-        ...formData,
-        updatedAt: serverTimestamp(),
-        updatedBy: adminData.email
+      const payload = {
+        name: formData.name,
+        type: formData.type,
+        unit: formData.unit,
+        possibleValues: formData.possibleValues,
+        isRequired: formData.isRequired,
+        isActive: formData.isActive,
+        description: formData.description,
+        updatedBy: adminData?.email
       };
-
       if (editingVariable) {
-        await updateDoc(doc(db, 'custom_product_variables', editingVariable), variableData);
-        console.log('Variable updated successfully');
+        await api.put(`/custom-product-variables/${editingVariable}`, payload);
       } else {
-        variableData.createdAt = serverTimestamp();
-        variableData.createdBy = adminData.email;
-        await addDoc(collection(db, 'custom_product_variables'), variableData);
-        console.log('Variable created successfully');
+        await api.post('/custom-product-variables', { ...payload, createdBy: adminData?.email });
       }
-
       handleCloseDialog();
-      loadData();
+      await loadData();
     } catch (error) {
       console.error('Error saving variable:', error);
-      alert('Error saving variable: ' + error.message);
+      alert('Error saving variable: ' + (error.response?.data?.message || error.message));
     }
   };
 
   const handleDelete = async (variableId, variableName) => {
-    if (window.confirm(`Are you sure you want to delete "${variableName}"?`)) {
-      try {
-        await deleteDoc(doc(db, 'custom_product_variables', variableId));
-        loadData();
-      } catch (error) {
-        console.error('Error deleting variable:', error);
-        alert('Error deleting variable: ' + error.message);
-      }
+    if (!window.confirm(`Are you sure you want to delete "${variableName}"?`)) return;
+    try {
+      await api.delete(`/custom-product-variables/${variableId}`);
+      await loadData();
+    } catch (error) {
+      console.error('Error deleting variable:', error);
+      alert('Error deleting variable: ' + (error.response?.data?.message || error.message));
     }
   };
 
   const toggleVariableStatus = async (variable) => {
     try {
-      await updateDoc(doc(db, 'custom_product_variables', variable.id), {
-        isActive: !variable.isActive,
-        updatedAt: serverTimestamp(),
-        updatedBy: adminData.email
-      });
-      loadData();
+      await api.put(`/custom-product-variables/${variable.id}/status`, { isActive: !variable.isActive });
+      await loadData();
     } catch (error) {
       console.error('Error updating variable status:', error);
     }

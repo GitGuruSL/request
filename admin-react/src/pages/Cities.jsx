@@ -38,19 +38,8 @@ import {
   VisibilityOff as VisibilityOffIcon,
   LocationCity as LocationCityIcon,
 } from '@mui/icons-material';
-import { 
-  collection, 
-  getDocs, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  query, 
-  where, 
-  orderBy,
-  Timestamp 
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+// Migrated off Firestore to REST API
+import api from '../services/apiClient';
 import useCountryFilter from '../hooks/useCountryFilter';
 
 const Cities = () => {
@@ -89,39 +78,15 @@ const Cities = () => {
   const loadCities = async () => {
     try {
       setLoading(true);
-      console.log('Loading cities for admin:', { 
-        role: adminData?.role, 
-        country: adminData?.country, 
-        userCountry 
-      });
-      
-      const data = await getFilteredData('cities', adminData);
-      console.log('Cities data received:', data);
-      
-      // Manual client-side filtering as backup for country admins
-      let filteredData = data || [];
-      if (!isSuperAdmin && userCountry) {
-        console.log('Applying client-side filter for country:', userCountry);
-        filteredData = filteredData.filter(city => city.countryCode === userCountry);
-        console.log('Cities after client-side filtering:', filteredData.length);
-      }
-      
-      const citiesData = filteredData.sort((a, b) => {
-        const aName = a.name || '';
-        const bName = b.name || '';
-        return aName.localeCompare(bName);
-      });
+      const res = await api.get('/cities');
+      const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      const filteredData = (!isSuperAdmin && userCountry)
+        ? data.filter(c => c.countryCode === userCountry)
+        : data;
+      const citiesData = filteredData.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
       setCities(citiesData);
       setFilteredCities(citiesData);
-      
-      console.log('Cities after processing:', citiesData.length);
-      
-      // If no cities exist for this country, suggest adding default cities
-      if (citiesData.length === 0 && userCountry === 'LK') {
-        setSuccess('No cities found. Consider adding default Sri Lankan cities.');
-      }
-      
-      console.log(`Loaded ${citiesData.length} cities`);
+      if (citiesData.length === 0 && userCountry === 'LK') setSuccess('No cities found. Consider adding default Sri Lankan cities.');
     } catch (error) {
       console.error('Error loading cities:', error);
       setError('Failed to load cities');
@@ -180,29 +145,23 @@ const Cities = () => {
         return;
       }
 
-      const cityData = {
+      const payload = {
         name: formData.name.trim(),
         countryCode: formData.countryCode,
         isActive: formData.isActive,
-        population: formData.population ? parseInt(formData.population) : null,
+        population: formData.population ? parseInt(formData.population) : undefined,
         coordinates: {
-          lat: formData.coordinates.lat ? parseFloat(formData.coordinates.lat) : null,
-          lng: formData.coordinates.lng ? parseFloat(formData.coordinates.lng) : null
+          lat: formData.coordinates.lat ? parseFloat(formData.coordinates.lat) : undefined,
+          lng: formData.coordinates.lng ? parseFloat(formData.coordinates.lng) : undefined
         },
         description: formData.description.trim(),
-        updatedAt: Timestamp.now(),
         updatedBy: adminData?.email || adminData?.role || 'admin'
       };
-
       if (editingCity) {
-        // Update existing city
-        await updateDoc(doc(db, 'cities', editingCity.id), cityData);
+        await api.put(`/cities/${editingCity.id}`, payload);
         setSuccess('City updated successfully');
       } else {
-        // Create new city
-        cityData.createdAt = Timestamp.now();
-        cityData.createdBy = adminData?.email || adminData?.role || 'admin';
-        await addDoc(collection(db, 'cities'), cityData);
+        await api.post('/cities', { ...payload, createdBy: adminData?.email || adminData?.role || 'admin' });
         setSuccess('City added successfully');
       }
 
@@ -221,7 +180,7 @@ const Cities = () => {
 
   const handleDeleteConfirm = async () => {
     try {
-      await deleteDoc(doc(db, 'cities', cityToDelete.id));
+  await api.delete(`/cities/${cityToDelete.id}`);
       setSuccess('City deleted successfully');
       setDeleteConfirmOpen(false);
       setCityToDelete(null);

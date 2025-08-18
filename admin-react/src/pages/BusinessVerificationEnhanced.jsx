@@ -86,19 +86,7 @@ import {
   Close as CloseIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
-import { db } from '../firebase/config';
-import { 
-  collection, 
-  getDocs, 
-  doc, 
-  updateDoc,
-  query,
-  where,
-  orderBy,
-  Timestamp,
-  getDoc
-} from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import api from '../services/apiClient';
 
 const BusinessVerificationEnhanced = () => {
   const { adminData, isCountryAdmin, isSuperAdmin } = useAuth();
@@ -128,87 +116,13 @@ const BusinessVerificationEnhanced = () => {
   const loadBusinesses = async () => {
     try {
       setLoading(true);
-      console.log('🔄 Loading businesses...');
-      
-      let businessQuery = collection(db, 'new_business_verifications');
-      const conditions = [];
-      
-      // Country-based filtering for country admins
-      if (isCountryAdmin && adminData?.country) {
-        conditions.push(where('country', '==', adminData.country));
-      }
-      
-      // Status filtering
-      if (filterStatus !== 'all') {
-        conditions.push(where('status', '==', filterStatus));
-      }
-      
-      if (conditions.length > 0) {
-        businessQuery = query(businessQuery, ...conditions);
-      }
-
-      const snapshot = await getDocs(businessQuery);
-      const businessList = [];
-      const missingCountryBusinesses = [];
-      
-      for (const docSnapshot of snapshot.docs) {
-        const data = docSnapshot.data();
-        const businessData = { id: docSnapshot.id, ...data };
-        
-        // Auto-migrate missing country field
-        if (!data.country && data.userId && isSuperAdmin) {
-          missingCountryBusinesses.push({ docRef: docSnapshot.ref, data: businessData });
-        }
-        
-        businessList.push(businessData);
-      }
-      
-      // Fix missing country data
-      for (const { docRef, data } of missingCountryBusinesses) {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', data.userId));
-          let countryToSet = 'LK';
-          let countryNameToSet = 'Sri Lanka';
-          
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            if (userData.countryCode) {
-              countryToSet = userData.countryCode;
-              countryNameToSet = userData.countryName || 'Unknown';
-            }
-          }
-          
-          await updateDoc(docRef, {
-            country: countryToSet,
-            countryName: countryNameToSet,
-            updatedAt: Timestamp.now()
-          });
-          
-          const businessIndex = businessList.findIndex(b => b.id === data.id);
-          if (businessIndex !== -1) {
-            businessList[businessIndex].country = countryToSet;
-            businessList[businessIndex].countryName = countryNameToSet;
-          }
-        } catch (error) {
-          console.error(`Failed to update country for ${data.businessName}:`, error);
-        }
-      }
-      
-      // Sort by created date
-      businessList.sort((a, b) => {
-        const aTime = a.submittedAt?.toDate?.() || a.createdAt?.toDate?.() || new Date(0);
-        const bTime = b.submittedAt?.toDate?.() || b.createdAt?.toDate?.() || new Date(0);
-        return bTime - aTime;
-      });
-      
-      setBusinesses(businessList);
-      console.log(`Loaded ${businessList.length} businesses`);
-    } catch (error) {
-      console.error('Error loading businesses:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      const params = {};
+      if (isCountryAdmin && adminData?.country) params.country = adminData.country;
+      if (filterStatus !== 'all') params.status = filterStatus;
+      const res = await api.get('/business-verifications', { params });
+      const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      setBusinesses(list.sort((a,b)=> new Date(b.submittedAt||b.createdAt||0)- new Date(a.submittedAt||a.createdAt||0)));
+    } catch (e) { console.error('Error loading businesses', e);} finally { setLoading(false);} };
 
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
@@ -275,8 +189,8 @@ const BusinessVerificationEnhanced = () => {
         updateData[`documentVerification.${docType}.approvedAt`] = Timestamp.now();
       }
 
-      await updateDoc(doc(db, 'new_business_verifications', business.id), updateData);
-      await loadBusinesses(); // Refresh data
+  await api.put(`/business-verifications/${business.id}/documents/${docType}`, { status: action });
+  await loadBusinesses();
       console.log(`✅ Document ${docType} ${action} for ${business.businessName}`);
     } catch (error) {
       console.error(`Error updating document status:`, error);
@@ -343,7 +257,7 @@ const BusinessVerificationEnhanced = () => {
         updateData.isVerified = true;
       }
 
-      await updateDoc(doc(db, 'new_business_verifications', business.id), updateData);
+  await api.put(`/business-verifications/${business.id}/status`, { status: action });
       await loadBusinesses();
       console.log(`✅ Business ${action}: ${business.businessName}`);
     } catch (error) {
@@ -380,7 +294,11 @@ const BusinessVerificationEnhanced = () => {
         updateData.isVerified = false;
       }
 
-      await updateDoc(doc(db, 'new_business_verifications', target.id), updateData);
+      if (type === 'document') {
+        await api.put(`/business-verifications/${target.id}/documents/${docType}`, { status: 'rejected', rejectionReason });
+      } else {
+        await api.put(`/business-verifications/${target.id}/status`, { status: 'rejected', rejectionReason });
+      }
       await loadBusinesses();
       
       setRejectionDialog({ open: false, target: null, type: '' });
