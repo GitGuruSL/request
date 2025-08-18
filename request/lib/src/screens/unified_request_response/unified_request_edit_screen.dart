@@ -559,6 +559,12 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
                 isRequired: true,
                 prefixIcon: Icons.location_on,
                 onLocationSelected: (address, lat, lng) {
+                  print('=== EDIT ITEM LOCATION CALLBACK ===');
+                  print('Address: "$address"');
+                  print('Latitude: $lat');
+                  print('Longitude: $lng');
+                  print('==================================');
+
                   setState(() {
                     _locationController.text = address;
                     _selectedLatitude = lat;
@@ -1536,6 +1542,11 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
             latitude: _selectedLatitude!,
             longitude: _selectedLongitude!,
           );
+          print('=== EDIT SCREEN LOCATION DEBUG ===');
+          print('Using coordinates - address: "${locationInfo.address}"');
+          print('latitude: ${locationInfo.latitude}');
+          print('longitude: ${locationInfo.longitude}');
+          print('===================================');
         } else {
           // Create location with just address if coordinates are not available
           locationInfo = LocationInfo(
@@ -1543,6 +1554,11 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
             latitude: 0.0, // Default coordinates
             longitude: 0.0,
           );
+          print('=== EDIT SCREEN LOCATION WARNING ===');
+          print(
+              'No coordinates available for address: "${_locationController.text.trim()}"');
+          print('Using fallback coordinates: 0.0, 0.0');
+          print('====================================');
         }
       }
 
