@@ -327,18 +327,14 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
     const request = await database.queryOne(`
       INSERT INTO requests (
         user_id, title, description, category_id, subcategory_id, location_city_id,
-        budget, country_code, metadata, location_address, location_latitude, 
-        location_longitude, currency, deadline, image_urls,
-        status, created_at, updated_at
+        budget, country_code, metadata, status, created_at, updated_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'active',
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, 'active',
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
       ) RETURNING *
     `, [
       user_id, title, description, category_id, subcategory_id, city_id,
-      budget, country_code, metadata ? JSON.stringify(metadata) : null,
-      location_address, location_latitude, location_longitude, currency, 
-      deadline, image_urls ? JSON.stringify(image_urls) : null
+      budget, country_code, metadata ? JSON.stringify(metadata) : null
     ]);
 
     res.status(201).json({
