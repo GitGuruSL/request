@@ -183,15 +183,20 @@ For setup issues or questions, refer to the Firebase console and ensure all Fire
 2. Add data export/import functionality
 3. Implement audit logging
 4. Add real-time notifications
-5. Create comprehensive analytics dashboard+ Vite
+5. Create comprehensive analytics dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## New Subscription Plans (Normalized Table)
+A new table `subscription_plans_new` was introduced (migration 021) to normalize plan storage.
 
-Currently, two official plugins are available:
+Schema highlights:
+- code (unique), name
+- type (rider|business)
+- plan_type (monthly|yearly|pay_per_click)
+- price / currency / duration_days
+- features (JSON array), limitations (JSON object)
+- countries (string array) for scoping, null = global
+- pricing_by_country JSON (future use)
+- flags: is_active, is_default_plan, requires_country_pricing
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Admin UI route: `/subscriptions-new` (Component `SubscriptionPlansNew.jsx`).
+Provides CRUD with JSON editors for features & limitations.

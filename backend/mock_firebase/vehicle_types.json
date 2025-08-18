@@ -1,0 +1,4 @@
+[
+  {"id":"veh1","name":"Sedan","description":"Comfort car","icon":"sedan.png","passenger_capacity":4,"display_order":1,"is_active":true,"country_code":"LK"},
+  {"id":"veh2","name":"Van","description":"Spacious van","icon":"van.png","passenger_capacity":8,"display_order":2,"is_active":true,"country_code":"LK"}
+]

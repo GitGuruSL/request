@@ -1,0 +1,4 @@
+[
+  {"id":"plan_basic","name":"Basic","description":"Basic plan","price":9.99,"currency":"usd","duration_days":30,"features":{"limits":{"requests":10}},"is_active":true,"country_code":"LK"},
+  {"id":"plan_pro","name":"Pro","description":"Pro plan","price":19.99,"currency":"usd","duration_days":30,"features":{"limits":{"requests":100}},"is_active":true,"country_code":"LK"}
+]

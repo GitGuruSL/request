@@ -40,6 +40,7 @@ import CountryVariableTypeManagement from './pages/CountryVariableTypeManagement
 import SMSConfigurationModule from './pages/SMSConfigurationModule';
 import SuperAdminSMSManagement from './pages/SuperAdminSMSManagement';
 import DebugAuth from './components/DebugAuth';
+import SubscriptionPlansNew from './pages/SubscriptionPlansNew.jsx';
 
 const theme = createTheme({
   palette: {
@@ -112,6 +113,7 @@ function App() {
               <Route path="sms-management" element={<SuperAdminSMSManagement />} />
               
               {/* Add more protected routes here */}
+              <Route path="subscriptions-new" element={<SubscriptionPlansNew />} />
             </Route>
           </Routes>
         </Router>

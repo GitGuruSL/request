@@ -22,6 +22,7 @@ const vehicleTypeRoutes = require('./routes/vehicle-types');
 const brandRoutes = require('./routes/brands');
 const masterProductRoutes = require('./routes/master-products');
 const entityActivationRoutes = require('./routes/entity-activations');
+const subscriptionPlansNewRoutes = require('./routes/subscription-plans-new');
 
 const app = express();
 
@@ -92,6 +93,7 @@ app.use('/api/country-modules', countryModuleRoutes);
 app.use('/api/brands', brandRoutes);
 app.use('/api/master-products', masterProductRoutes);
 app.use('/api/entity-activations', entityActivationRoutes);
+app.use('/api/subscription-plans-new', subscriptionPlansNewRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

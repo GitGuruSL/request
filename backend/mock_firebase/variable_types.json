@@ -1,0 +1,4 @@
+[
+  {"id":"var1","name":"Color","data_type":"text","options":{"values":["Red","Blue"]},"is_required":true,"display_order":1,"is_active":true,"country_code":"LK"},
+  {"id":"var2","name":"Size","data_type":"number","options":{"min":1,"max":10},"is_required":false,"display_order":2,"is_active":true,"country_code":"LK"}
+]
