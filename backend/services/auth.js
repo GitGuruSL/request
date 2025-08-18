@@ -156,11 +156,23 @@ class AuthService {
             throw new Error('Email or phone is required');
         }
 
-        // Find user
+        // Find user - check both regular users and admin users
         let user = null;
+        let isAdmin = false;
+        
         if (email) {
+            // First check regular users table
             const users = await dbService.findMany('users', { email });
             user = users[0];
+            
+            // If not found in users, check admin_users table
+            if (!user) {
+                const adminUsers = await dbService.findMany('admin_users', { email });
+                if (adminUsers[0]) {
+                    user = adminUsers[0];
+                    isAdmin = true;
+                }
+            }
         } else if (phone) {
             const users = await dbService.findMany('users', { phone });
             user = users[0];
@@ -188,7 +200,13 @@ class AuthService {
 
         // Generate token
         const token = this.generateToken(user);
-        const refreshToken = await this.generateAndStoreRefreshToken(user.id);
+        
+        // Skip refresh token for admin users to avoid foreign key constraint
+        let refreshToken = null;
+        if (!isAdmin) {
+            refreshToken = await this.generateAndStoreRefreshToken(user.id);
+        }
+        
         return {
             user: this.sanitizeUser(user),
             token,
