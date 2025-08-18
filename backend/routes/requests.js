@@ -76,7 +76,7 @@ router.get('/', async (req, res) => {
       FROM requests r
       LEFT JOIN users u ON r.user_id = u.id
       LEFT JOIN categories c ON r.category_id = c.id
-      LEFT JOIN subcategories sc ON r.subcategory_id = sc.id
+      LEFT JOIN sub_categories sc ON r.subcategory_id = sc.id
       LEFT JOIN cities ct ON r.location_city_id = ct.id
       WHERE ${conditions.join(' AND ')}
       ORDER BY r.${finalSortBy} ${finalSortOrder}
@@ -181,7 +181,7 @@ router.get('/search', async (req, res) => {
       FROM requests r
       LEFT JOIN users u ON r.user_id = u.id
       LEFT JOIN categories c ON r.category_id = c.id
-      LEFT JOIN subcategories sc ON r.subcategory_id = sc.id
+      LEFT JOIN sub_categories sc ON r.subcategory_id = sc.id
       LEFT JOIN cities ct ON r.location_city_id = ct.id
       WHERE ${conditions.join(' AND ')}
       ORDER BY r.${finalSortBy} ${finalSortOrder}
@@ -231,7 +231,7 @@ router.get('/:id', async (req, res) => {
       FROM requests r
       LEFT JOIN users u ON r.user_id = u.id
       LEFT JOIN categories c ON r.category_id = c.id
-      LEFT JOIN subcategories sc ON r.subcategory_id = sc.id
+      LEFT JOIN sub_categories sc ON r.subcategory_id = sc.id
       LEFT JOIN cities ct ON r.location_city_id = ct.id
       LEFT JOIN responses ar ON r.accepted_response_id = ar.id
       WHERE r.id = $1
@@ -603,7 +603,7 @@ router.get('/user/my-requests', auth.authMiddleware(), async (req, res) => {
         ct.name as city_name
       FROM requests r
       LEFT JOIN categories c ON r.category_id = c.id
-      LEFT JOIN subcategories sc ON r.subcategory_id = sc.id
+      LEFT JOIN sub_categories sc ON r.subcategory_id = sc.id
       LEFT JOIN cities ct ON r.location_city_id = ct.id
       WHERE ${conditions.join(' AND ')}
       ORDER BY r.created_at DESC
