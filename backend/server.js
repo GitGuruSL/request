@@ -28,11 +28,21 @@ const app = express();
 
 // Security middleware
 app.use(helmet());
-// CORS: include common dev origins (CRA 3000, Vite 5173) unless overridden
+// CORS setup: always include common dev origins, merge with ALLOWED_ORIGINS if provided
 const defaultOrigins = ['http://localhost:3000', 'http://localhost:5173'];
+const envOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(Boolean)
+    : [];
+const allowedOrigins = Array.from(new Set([...defaultOrigins, ...envOrigins]));
 app.use(cors({
-    origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : defaultOrigins,
-    credentials: true
+        origin: (origin, callback) => {
+                // Allow non-browser or same-origin requests (like curl / server-to-server)
+                if (!origin) return callback(null, true);
+                if (allowedOrigins.includes(origin)) return callback(null, true);
+                console.warn(`CORS blocked origin: ${origin}`);
+                return callback(new Error('Not allowed by CORS'));
+        },
+        credentials: true
 }));
 
 // Rate limiting
@@ -157,12 +167,28 @@ process.on('SIGINT', async () => {
     }
 })();
 
-const PORT = process.env.PORT || 3001;
+// Preferred port logic: try desired (PORT or 3001). If in use and AUTO_FALLBACK not disabled, try fallback (3010 or FALLBACK_PORT)
+const desiredPort = process.env.ENV_FORCE_PORT || process.env.PORT || '3001';
+const fallbackPort = process.env.FALLBACK_PORT || '3010';
+let attemptedFallback = false;
 
-app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-});
+function start(port){
+    const server = app.listen(port, () => {
+        console.log(`🚀 Server running on port ${port}`);
+        console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+        console.log(`🔗 Health check: http://localhost:${port}/health`);
+    });
+    server.on('error', (err) => {
+        if(err.code === 'EADDRINUSE' && !attemptedFallback && process.env.AUTO_FALLBACK !== 'false'){
+            console.warn(`Port ${port} in use. Attempting fallback ${fallbackPort}...`);
+            attemptedFallback = true;
+            setTimeout(()=> start(fallbackPort), 500);
+        } else {
+            console.error('Failed to start server:', err);
+            process.exit(1);
+        }
+    });
+}
+start(desiredPort);
 
 module.exports = app;

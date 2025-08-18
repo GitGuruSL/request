@@ -1,5 +1,6 @@
 const express = require('express');
 const authService = require('../services/auth');
+const dbService = require('../services/database');
 
 const router = express.Router();
 
@@ -311,6 +312,70 @@ router.post('/logout', authService.authMiddleware(), async (req, res) => {
             success: false,
             error: error.message
         });
+    }
+});
+
+/**
+ * @route POST /api/auth/dev/seed-admin
+ * @desc Development helper: create a default super admin user if none exists
+ * Body (optional): { email, password, displayName }
+ * Safeguards: Disabled in production (NODE_ENV==='production')
+ */
+router.post('/dev/seed-admin', async (req, res) => {
+    try {
+        if (process.env.NODE_ENV === 'production') {
+            return res.status(403).json({ success: false, error: 'Not available in production' });
+        }
+        const {
+            email = 'admin@example.com',
+            password = 'Admin123!',
+            displayName = 'Super Admin'
+        } = req.body || {};
+
+        // Check existing super admin
+        const existingAdmins = await dbService.query(`SELECT id, email FROM users WHERE role = 'super_admin' LIMIT 1`);
+        if (existingAdmins.rows.length > 0) {
+            return res.json({ success: true, message: 'Super admin already exists', data: existingAdmins.rows[0] });
+        }
+
+        // Check existing by email
+        const existingByEmail = await dbService.findMany('users', { email });
+        if (existingByEmail.length > 0) {
+            // Promote existing user
+            const promoted = await dbService.update('users', existingByEmail[0].id, {
+                role: 'super_admin',
+                email_verified: true,
+                is_active: true,
+                updated_at: new Date().toISOString()
+            });
+            const token = authService.generateToken(promoted);
+            const refreshToken = await authService.generateAndStoreRefreshToken(promoted.id);
+            return res.json({ success: true, message: 'Existing user promoted to super_admin', data: { user: authService.sanitizeUser(promoted), token, refreshToken } });
+        }
+
+        // Create fresh user (manual to ensure role & verification flags)
+        const passwordHash = password ? await authService.hashPassword(password) : null;
+        const newUser = await dbService.insert('users', {
+            email,
+            phone: null,
+            password_hash: passwordHash,
+            display_name: displayName,
+            first_name: displayName.split(' ')[0],
+            last_name: displayName.split(' ').slice(1).join(' ') || null,
+            role: 'super_admin',
+            is_active: true,
+            email_verified: true,
+            phone_verified: false,
+            country_code: 'LK',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        });
+        const token = authService.generateToken(newUser);
+        const refreshToken = await authService.generateAndStoreRefreshToken(newUser.id);
+        res.status(201).json({ success: true, message: 'Super admin user created', data: { user: authService.sanitizeUser(newUser), token, refreshToken, credentials: { email, password } } });
+    } catch (error) {
+        console.error('Seed admin error:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 

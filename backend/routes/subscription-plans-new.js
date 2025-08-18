@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../services/database');
+const authService = require('../services/auth');
 
 // Basic list
 router.get('/', async (req,res)=>{
@@ -20,7 +21,7 @@ router.get('/:id', async (req,res)=>{
 });
 
 // Create
-router.post('/', async (req,res)=>{
+router.post('/', authService.authMiddleware(), authService.roleMiddleware(['admin','super_admin']), async (req,res)=>{
   try {
     const data = req.body || {};
     if(!data.code || !data.name) return res.status(400).json({error:'code and name required'});
@@ -34,7 +35,7 @@ router.post('/', async (req,res)=>{
 });
 
 // Update
-router.put('/:id', async (req,res)=>{
+router.put('/:id', authService.authMiddleware(), authService.roleMiddleware(['admin','super_admin']), async (req,res)=>{
   try {
     const data = req.body || {};
     if(data.code){ // ensure uniqueness
@@ -48,8 +49,25 @@ router.put('/:id', async (req,res)=>{
 });
 
 // Delete
-router.delete('/:id', async (req,res)=>{
+router.delete('/:id', authService.authMiddleware(), authService.roleMiddleware(['admin','super_admin']), async (req,res)=>{
   try { const row = await db.delete('subscription_plans_new', req.params.id); if(!row) return res.status(404).json({error:'Not found'}); res.json({ success:true }); } catch(e){ res.status(500).json({ error:e.message }); }
+});
+
+// Seed default plans (idempotent)
+router.post('/defaults/seed', authService.authMiddleware(), authService.roleMiddleware(['super_admin']), async (req,res)=>{
+  const defaults = [
+    { code:'rider_free', name:'Rider Free Plan', type:'rider', plan_type:'monthly', description:'Limited free plan for riders with basic features', price:0, currency:'USD', duration_days:30, features:['Browse service requests','Up to 2 responses per month','Basic profile creation','View contact information after selection'], limitations:{ maxResponsesPerMonth:2, riderRequestNotifications:false, unlimitedResponses:false }, is_active:true, is_default_plan:true, requires_country_pricing:false },
+    { code:'rider_premium', name:'Rider Premium Plan', type:'rider', plan_type:'monthly', description:'Unlimited plan for active riders', price:10, currency:'USD', duration_days:30, features:['Browse all service requests','Unlimited responses per month','Priority listing in search results','Instant rider request notifications','Advanced profile features','Analytics and insights'], limitations:{ maxResponsesPerMonth:-1, riderRequestNotifications:true, unlimitedResponses:true }, is_active:true, is_default_plan:true, requires_country_pricing:true },
+    { code:'business_pay_per_click', name:'Business Pay Per Click', type:'business', plan_type:'pay_per_click', description:'Pay only when someone responds to your requests', price:2, currency:'USD', duration_days:30, features:['Post unlimited service requests','Pay only for responses received','Business profile verification','Priority customer support','Request analytics and reporting'], limitations:{ payPerResponse:true, unlimitedRequests:true }, is_active:true, is_default_plan:true, requires_country_pricing:true }
+  ];
+  const created=[]; const skipped=[]; try {
+    for(const def of defaults){
+      const existing = await db.findMany('subscription_plans_new',{ code:def.code });
+      if(existing.length){ skipped.push(def.code); continue; }
+      const row = await db.insert('subscription_plans_new', def); created.push(row.code);
+    }
+    res.json({ success:true, created, skipped });
+  } catch(e){ res.status(500).json({ error:e.message, created, skipped }); }
 });
 
 module.exports = router;
