@@ -247,14 +247,30 @@ router.post('/login', async (req, res) => {
       { expiresIn: '24h' }
     );
 
-    // Remove password from response
+    // Remove password from response and ensure no null values
     const { password_hash, ...userWithoutPassword } = user;
 
     res.json({
       success: true,
       message: 'Login successful',
       token: token,
-      user: userWithoutPassword
+      user: {
+        id: userWithoutPassword.id,
+        email: userWithoutPassword.email || '',
+        phone: userWithoutPassword.phone || '',
+        display_name: userWithoutPassword.display_name || '',
+        first_name: userWithoutPassword.first_name || '',
+        last_name: userWithoutPassword.last_name || '',
+        role: userWithoutPassword.role || 'user',
+        country_code: userWithoutPassword.country_code || '',
+        email_verified: userWithoutPassword.email_verified || false,
+        phone_verified: userWithoutPassword.phone_verified || false,
+        is_active: userWithoutPassword.is_active || true,
+        photo_url: userWithoutPassword.photo_url || '',
+        created_at: userWithoutPassword.created_at,
+        updated_at: userWithoutPassword.updated_at,
+        permissions: userWithoutPassword.permissions || {}
+      }
     });
 
   } catch (error) {
@@ -308,8 +324,18 @@ router.post('/register', async (req, res) => {
     const userResult = await dbService.query(
       `INSERT INTO users (email, password_hash, display_name, first_name, last_name, phone, country_code, email_verified, phone_verified)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-       RETURNING id, email, phone, display_name, first_name, last_name, email_verified, phone_verified, is_active, role, country_code, created_at, updated_at`,
-      [email, hashedPassword, display_name, first_name || display_name?.split(' ')[0] || null, last_name || (display_name?.split(' ').slice(1).join(' ') || null), phone, 'LK', false, false]
+       RETURNING id, email, phone, display_name, first_name, last_name, email_verified, phone_verified, is_active, role, country_code, photo_url, created_at, updated_at`,
+      [
+        email, 
+        hashedPassword, 
+        display_name || '', 
+        first_name || (display_name ? display_name.split(' ')[0] : '') || '', 
+        last_name || (display_name ? display_name.split(' ').slice(1).join(' ') : '') || '', 
+        phone || '', 
+        'LK', 
+        false, 
+        false
+      ]
     );
 
     const newUser = userResult.rows[0];
@@ -331,9 +357,20 @@ router.post('/register', async (req, res) => {
       message: 'User registered successfully',
       token: token,
       user: {
-        ...newUser,
-        first_name: first_name || (display_name ? display_name.split(' ')[0] : null),
-        last_name: last_name || (display_name ? display_name.split(' ').slice(1).join(' ') || null : null)
+        id: newUser.id,
+        email: newUser.email || '',
+        phone: newUser.phone || '',
+        display_name: newUser.display_name || '',
+        first_name: newUser.first_name || '',
+        last_name: newUser.last_name || '',
+        role: newUser.role || 'user',
+        country_code: newUser.country_code || '',
+        email_verified: newUser.email_verified || false,
+        phone_verified: newUser.phone_verified || false,
+        is_active: newUser.is_active || true,
+        photo_url: newUser.photo_url || '',
+        created_at: newUser.created_at,
+        updated_at: newUser.updated_at
       }
     });
 

@@ -15,6 +15,7 @@ const dbService = require('./services/database');
 const authRoutes = require('./routes/auth');
 const flutterAuthRoutes = require('./routes/flutter-auth');
 const categoryRoutes = require('./routes/categories');
+const subcategoryRoutes = require('./routes/subcategories');
 const countryModuleRoutes = require('./routes/country-modules');
 const cityRoutes = require('./routes/cities');
 const requestRoutes = require('./routes/requests');
@@ -96,6 +97,7 @@ app.get('/health', async (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/auth', flutterAuthRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/subcategories', subcategoryRoutes);
 app.use('/api/cities', cityRoutes);
 app.use('/api/requests', requestRoutes);
 app.use('/api/vehicle-types', vehicleTypeRoutes);
