@@ -338,12 +338,16 @@ class RequestModel {
       subcategoryId: json['subcategory_id'] as String?,
       title: json['title'] as String,
       description: json['description'] as String,
-      budgetMin: json['budget_min'] != null
-          ? double.tryParse(json['budget_min'].toString())
-          : null,
-      budgetMax: json['budget_max'] != null
-          ? double.tryParse(json['budget_max'].toString())
-          : null,
+      budgetMin: json['budget'] != null
+          ? double.tryParse(json['budget'].toString())
+          : (json['budget_min'] != null
+              ? double.tryParse(json['budget_min'].toString())
+              : null),
+      budgetMax: json['budget'] != null
+          ? double.tryParse(json['budget'].toString())
+          : (json['budget_max'] != null
+              ? double.tryParse(json['budget_max'].toString())
+              : null),
       currency: json['currency'] as String? ?? 'LKR',
       locationCityId: json['location_city_id'] as String,
       locationAddress: json['location_address'] as String?,

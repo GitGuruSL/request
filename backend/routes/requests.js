@@ -8,16 +8,13 @@ const responsesRouter = require('./responses');
 router.get('/', async (req, res) => {
   try {
     const {
-      ], [
-      user_id, title, description, category_id, subcategory_id, city_id,
-      budget, currency, priority, country_code
-    ]);category_id,
+      category_id,
       subcategory_id,
       city_id,
       country_code = 'LK',
       status,
       user_id,
-  has_accepted,
+      has_accepted,
       page = 1,
       limit = 20,
       sort_by = 'created_at',
