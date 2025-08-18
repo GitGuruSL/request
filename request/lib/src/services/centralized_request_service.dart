@@ -39,9 +39,8 @@ class CentralizedRequestService {
         categoryId = '';
       }
 
-      // Budget can be provided as single value; we store as both min & max for now
-      final budgetRaw =
-          data['budget'] ?? data['budgetMax'] ?? data['budgetMin'];
+      // Budget as single value
+      final budgetRaw = data['budget'];
       double? budget = _asDoubleInternal(budgetRaw);
 
       // Resolve city id (backend requires city_id). Accept multiple key names.
@@ -177,7 +176,7 @@ class CentralizedRequestService {
       priority: ui.Priority.medium,
       location: null,
       destinationLocation: null,
-      budget: r.budgetMax ?? r.budgetMin,
+      budget: r.budget,
       currency: r.currency,
       deadline: r.deadline,
       images: r.imageUrls ?? const [],

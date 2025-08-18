@@ -38,7 +38,7 @@ class CountryFilteredDataService {
       updatedAt: r.updatedAt,
       images: r.imageUrls ?? const [],
       typeSpecificData: r.metadata ?? const {},
-      budget: r.budgetMax ?? r.budgetMin,
+      budget: r.budget,
       currency: r.currency,
       country: r.countryCode,
       countryName: null,

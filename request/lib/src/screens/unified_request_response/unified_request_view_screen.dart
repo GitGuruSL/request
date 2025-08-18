@@ -190,7 +190,7 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
       status: _getRequestStatusFromString(restRequest.status),
       createdAt: restRequest.createdAt,
       updatedAt: restRequest.updatedAt,
-      budget: restRequest.budgetMin ?? restRequest.budgetMax,
+      budget: restRequest.budget,
       currency: restRequest.currency,
       images: restRequest.imageUrls ?? [],
       tags: [],
@@ -407,10 +407,8 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
     final r = _request!;
     final titleController = TextEditingController(text: r.title);
     final descController = TextEditingController(text: r.description);
-    final minController =
-        TextEditingController(text: r.budgetMin?.toStringAsFixed(0) ?? '');
-    final maxController =
-        TextEditingController(text: r.budgetMax?.toStringAsFixed(0) ?? '');
+    final budgetController =
+        TextEditingController(text: r.budget?.toStringAsFixed(0) ?? '');
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -445,21 +443,10 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                       decoration:
                           const InputDecoration(labelText: 'Description')),
                   const SizedBox(height: 12),
-                  Row(children: [
-                    Expanded(
-                        child: TextField(
-                            controller: minController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                                labelText: 'Budget Min'))),
-                    const SizedBox(width: 12),
-                    Expanded(
-                        child: TextField(
-                            controller: maxController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                                labelText: 'Budget Max'))),
-                  ]),
+                  TextField(
+                      controller: budgetController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Budget')),
                   const SizedBox(height: 16),
                   SizedBox(
                       width: double.infinity,
@@ -476,15 +463,10 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                                               'Title & description required')));
                                   return;
                                 }
-                                final min =
-                                    double.tryParse(minController.text.trim());
-                                final max =
-                                    double.tryParse(maxController.text.trim());
+                                final budget = double.tryParse(
+                                    budgetController.text.trim());
                                 setState(() => _updatingRequest = true);
                                 setSheet(() => {});
-
-                                // Use single budget value (prefer min if both provided, or use whichever is available)
-                                final budget = min ?? max;
 
                                 final updates = <String, dynamic>{
                                   'title': title,
@@ -750,7 +732,11 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           Icon(icon, size: 14, color: Colors.grey[700]),
           const SizedBox(width: 4),
-          Text(label, style: const TextStyle(fontSize: 12)),
+          Flexible(
+            child: Text(label,
+                style: const TextStyle(fontSize: 12),
+                overflow: TextOverflow.ellipsis),
+          ),
         ]),
       );
 

@@ -101,16 +101,9 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
   }
 
   String _formatBudget(RequestModel r) {
-    if (r.budgetMin == null && r.budgetMax == null) return 'No budget';
+    if (r.budget == null) return 'No budget';
     final cur = r.currency ?? '';
-    if (r.budgetMin != null && r.budgetMax != null) {
-      if (r.budgetMin == r.budgetMax)
-        return '$cur${r.budgetMin!.toStringAsFixed(0)}';
-      return '$cur${r.budgetMin!.toStringAsFixed(0)}-${r.budgetMax!.toStringAsFixed(0)}';
-    }
-    if (r.budgetMin != null)
-      return 'From $cur${r.budgetMin!.toStringAsFixed(0)}';
-    return 'Up to $cur${r.budgetMax!.toStringAsFixed(0)}';
+    return '$cur${r.budget!.toStringAsFixed(0)}';
   }
 
   String _relativeTime(DateTime dt) {
@@ -357,11 +350,14 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                     color: Colors.grey[600],
                   ),
                   const SizedBox(width: 4),
-                  Text(
-                    request.categoryName ?? request.categoryId,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
+                  Flexible(
+                    child: Text(
+                      request.categoryName ?? request.categoryId,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -378,6 +374,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                         fontSize: 12,
                         color: Colors.grey[600],
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
@@ -386,12 +383,15 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    _formatBudget(request),
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
+                  Flexible(
+                    child: Text(
+                      _formatBudget(request),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   Text(
