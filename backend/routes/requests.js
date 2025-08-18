@@ -280,11 +280,10 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       subcategory_id,
       city_id,
       budget,
-      priority = 'normal',
       variables = []
     } = req.body;
 
-    const user_id = req.user.userId;
+    const user_id = req.user.id;
     const country_code = req.user.country_code || 'LK';
 
     console.log('Request creation data:', {
@@ -294,8 +293,7 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       description,
       category_id,
       city_id,
-      budget,
-      priority
+      budget
     });
 
     // Validate required fields
@@ -310,15 +308,15 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
     const request = await database.queryOne(`
       INSERT INTO requests (
         user_id, title, description, category_id, subcategory_id, location_city_id,
-        budget, priority, country_code,
+        budget, country_code,
         status, created_at, updated_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, 'active',
+        $1, $2, $3, $4, $5, $6, $7, $8, 'active',
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
       ) RETURNING *
     `, [
       user_id, title, description, category_id, subcategory_id, city_id,
-      budget, priority, country_code
+      budget, country_code
     ]);
 
     res.status(201).json({
@@ -341,7 +339,7 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
 router.put('/:id', auth.authMiddleware(), async (req, res) => {
   try {
     const requestId = req.params.id;
-    const userId = req.user.userId;
+    const userId = req.user.id;
     const userRole = req.user.role;
 
     // Check if request exists and user has permission
@@ -467,7 +465,7 @@ router.put('/:id', auth.authMiddleware(), async (req, res) => {
 router.delete('/:id', auth.authMiddleware(), async (req, res) => {
   try {
     const requestId = req.params.id;
-    const userId = req.user.userId;
+    const userId = req.user.id;
     const userRole = req.user.role;
 
     // Check if request exists and user has permission
@@ -516,7 +514,7 @@ router.put('/:id/accept-response', auth.authMiddleware(), async (req, res) => {
   try {
     const requestId = req.params.id;
     const { response_id } = req.body;
-    const userId = req.user.userId;
+    const userId = req.user.id;
     if (!response_id) {
       return res.status(400).json({ success: false, message: 'response_id required' });
     }
@@ -539,7 +537,7 @@ router.put('/:id/accept-response', auth.authMiddleware(), async (req, res) => {
 router.put('/:id/clear-accepted', auth.authMiddleware(), async (req, res) => {
   try {
     const requestId = req.params.id;
-    const userId = req.user.userId;
+    const userId = req.user.id;
     const request = await database.queryOne('SELECT * FROM requests WHERE id=$1', [requestId]);
     if (!request) return res.status(404).json({ success: false, message: 'Request not found' });
     if (request.user_id !== userId && req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Not permitted' });
@@ -577,7 +575,7 @@ router.post('/test', auth.authMiddleware(), async (req, res) => {
 // Get user's own requests
 router.get('/user/my-requests', auth.authMiddleware(), async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user.id;
     const { status, page = 1, limit = 20 } = req.query;
 
     const conditions = ['r.user_id = $1'];
