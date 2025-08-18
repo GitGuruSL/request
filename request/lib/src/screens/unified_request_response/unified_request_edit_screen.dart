@@ -12,11 +12,12 @@ import '../requests/ride/edit_ride_request_screen.dart';
 
 class UnifiedRequestEditScreen extends StatefulWidget {
   final RequestModel request;
-  
+
   const UnifiedRequestEditScreen({super.key, required this.request});
 
   @override
-  State<UnifiedRequestEditScreen> createState() => _UnifiedRequestEditScreenState();
+  State<UnifiedRequestEditScreen> createState() =>
+      _UnifiedRequestEditScreenState();
 }
 
 class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
@@ -29,19 +30,19 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
   final _descriptionController = TextEditingController();
   final _locationController = TextEditingController();
   final _budgetController = TextEditingController();
-  
+
   // Item-specific controllers
   final _itemNameController = TextEditingController();
   final _quantityController = TextEditingController();
   final _categoryController = TextEditingController();
-  
+
   // Service-specific controllers
   final _specialInstructionsController = TextEditingController();
-  
+
   // Rental-specific controllers
   final _itemToRentController = TextEditingController();
   final _rentalItemController = TextEditingController();
-  
+
   // Delivery-specific controllers
   final _pickupLocationController = TextEditingController();
   final _dropoffLocationController = TextEditingController();
@@ -49,8 +50,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
   final _itemDescriptionController = TextEditingController();
   final _weightController = TextEditingController();
   final _dimensionsController = TextEditingController();
-  
-  
+
   RequestType _selectedType = RequestType.item;
   String _selectedCondition = 'New';
   String _selectedUrgency = 'Flexible';
@@ -74,21 +74,44 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
   // Location coordinates storage
   double? _selectedLatitude;
   double? _selectedLongitude;
-  
+
   // Delivery specific coordinates
   double? _pickupLatitude;
   double? _pickupLongitude;
   double? _dropoffLatitude;
   double? _dropoffLongitude;
 
-  final List<String> _conditions = ['New', 'Used', 'For Parts', 'Any Condition'];
+  final List<String> _conditions = [
+    'New',
+    'Used',
+    'For Parts',
+    'Any Condition'
+  ];
   final List<String> _urgencyLevels = ['Flexible', 'ASAP', 'Specific Date'];
-  final List<String> _deliveryTimes = ['Anytime', 'Morning', 'Afternoon', 'By End of Day'];
+  final List<String> _deliveryTimes = [
+    'Anytime',
+    'Morning',
+    'Afternoon',
+    'By End of Day'
+  ];
   final List<String> _categories = [
-    'Electronics', 'Clothing & Accessories', 'Home & Garden', 'Sports & Outdoors', 
-    'Books & Media', 'Toys & Games', 'Health & Beauty', 'Automotive', 
-    'Tools & Hardware', 'Art & Crafts', 'Jewelry & Watches', 'Musical Instruments',
-    'Baby & Kids', 'Pet Supplies', 'Office Supplies', 'Food & Beverages', 'Other'
+    'Electronics',
+    'Clothing & Accessories',
+    'Home & Garden',
+    'Sports & Outdoors',
+    'Books & Media',
+    'Toys & Games',
+    'Health & Beauty',
+    'Automotive',
+    'Tools & Hardware',
+    'Art & Crafts',
+    'Jewelry & Watches',
+    'Musical Instruments',
+    'Baby & Kids',
+    'Pet Supplies',
+    'Office Supplies',
+    'Food & Beverages',
+    'Other'
   ];
 
   @override
@@ -104,70 +127,88 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
     _descriptionController.text = widget.request.description?.toString() ?? '';
     _budgetController.text = widget.request.budget?.toString() ?? '';
     _imageUrls = List<String>.from(widget.request.images ?? []);
-    
+
     // Set location if available
     if (widget.request.location != null) {
       _locationController.text = widget.request.location!.address;
       _selectedLatitude = widget.request.location!.latitude;
       _selectedLongitude = widget.request.location!.longitude;
     }
-    
+
     // Populate type-specific data
     final typeData = widget.request.typeSpecificData ?? {};
-    
+
     switch (widget.request.type) {
       case RequestType.item:
         _itemNameController.text = typeData['itemName']?.toString() ?? '';
         _selectedCategory = typeData['category']?.toString() ?? 'Electronics';
-        _selectedCategoryId = typeData['categoryId']?.toString() ?? typeData['category']?.toString();
+        _selectedCategoryId = typeData['categoryId']?.toString() ??
+            typeData['category']?.toString();
         _selectedSubcategory = typeData['subcategory']?.toString();
-        _selectedSubCategoryId = typeData['subcategoryId']?.toString() ?? typeData['subcategory']?.toString();
+        _selectedSubCategoryId = typeData['subcategoryId']?.toString() ??
+            typeData['subcategory']?.toString();
         _quantityController.text = typeData['quantity']?.toString() ?? '';
         _selectedCondition = typeData['condition']?.toString() ?? 'New';
-        
+
         // Ensure categoryId is set if we have a category
-        if (_selectedCategory.isNotEmpty == true && (_selectedCategoryId?.isEmpty ?? true)) {
+        if (_selectedCategory.isNotEmpty == true &&
+            (_selectedCategoryId?.isEmpty ?? true)) {
           _selectedCategoryId = _selectedCategory;
         }
         break;
-        
+
       case RequestType.service:
         _selectedCategory = typeData['serviceType']?.toString() ?? '';
-        _selectedCategoryId = typeData['categoryId']?.toString() ?? typeData['serviceType']?.toString();
+        _selectedCategoryId = typeData['categoryId']?.toString() ??
+            typeData['serviceType']?.toString();
         _selectedSubcategory = typeData['subcategory']?.toString();
-        _selectedSubCategoryId = typeData['subcategoryId']?.toString() ?? typeData['subcategory']?.toString();
+        _selectedSubCategoryId = typeData['subcategoryId']?.toString() ??
+            typeData['subcategory']?.toString();
         _selectedUrgency = typeData['urgency']?.toString() ?? 'Flexible';
         if (typeData['preferredDateTime'] != null) {
-          _preferredDateTime = DateTime.fromMillisecondsSinceEpoch(typeData['preferredDateTime']);
+          _preferredDateTime = DateTime.fromMillisecondsSinceEpoch(
+              typeData['preferredDateTime']);
         }
-        
+
         // Ensure categoryId is set if we have a category
-        if (_selectedCategory.isNotEmpty == true && (_selectedCategoryId?.isEmpty ?? true)) {
+        if (_selectedCategory.isNotEmpty == true &&
+            (_selectedCategoryId?.isEmpty ?? true)) {
           _selectedCategoryId = _selectedCategory;
         }
         break;
-        
+
       case RequestType.delivery:
-        _pickupLocationController.text = typeData['pickupLocation']?.toString() ?? '';
-        _dropoffLocationController.text = typeData['dropoffLocation']?.toString() ?? '';
-        
+        _pickupLocationController.text =
+            typeData['pickupLocation']?.toString() ?? '';
+        _dropoffLocationController.text =
+            typeData['dropoffLocation']?.toString() ?? '';
+
         // Load category data into the CategoryPicker variables
-        _selectedCategory = typeData['itemCategory']?.toString() ?? typeData['category']?.toString() ?? '';
-        _selectedCategoryId = typeData['categoryId']?.toString() ?? typeData['itemCategory']?.toString() ?? typeData['category']?.toString();
+        _selectedCategory = typeData['itemCategory']?.toString() ??
+            typeData['category']?.toString() ??
+            '';
+        _selectedCategoryId = typeData['categoryId']?.toString() ??
+            typeData['itemCategory']?.toString() ??
+            typeData['category']?.toString();
         _selectedSubcategory = typeData['subcategory']?.toString();
-        _selectedSubCategoryId = typeData['subcategoryId']?.toString() ?? typeData['subcategory']?.toString();
-        
-        _itemDescriptionController.text = typeData['itemDescription']?.toString() ?? '';
+        _selectedSubCategoryId = typeData['subcategoryId']?.toString() ??
+            typeData['subcategory']?.toString();
+
+        _itemDescriptionController.text =
+            typeData['itemDescription']?.toString() ?? '';
         _weightController.text = typeData['weight']?.toString() ?? '';
         _dimensionsController.text = typeData['dimensions']?.toString() ?? '';
-        _specialInstructionsController.text = typeData['specialInstructions']?.toString() ?? '';
-        
+        _specialInstructionsController.text =
+            typeData['specialInstructions']?.toString() ?? '';
+
         // Handle preferredDeliveryTime - could be either a timestamp or string
         final deliveryTimeData = typeData['preferredDeliveryTime'];
         if (deliveryTimeData is int) {
           // It's a timestamp, convert to DateTime
-          _preferredDeliveryTime = DateTime.fromMillisecondsSinceEpoch(deliveryTimeData);
-          _selectedDeliveryTime = 'Specific Date'; // Default to specific date when we have a timestamp
+          _preferredDeliveryTime =
+              DateTime.fromMillisecondsSinceEpoch(deliveryTimeData);
+          _selectedDeliveryTime =
+              'Specific Date'; // Default to specific date when we have a timestamp
         } else if (deliveryTimeData is String) {
           // It's a string selection
           _selectedDeliveryTime = deliveryTimeData;
@@ -175,37 +216,43 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           // Default fallback
           _selectedDeliveryTime = 'Anytime';
         }
-        
+
         // Ensure categoryId is set if we have a category
-        if (_selectedCategory.isNotEmpty == true && (_selectedCategoryId?.isEmpty ?? true)) {
+        if (_selectedCategory.isNotEmpty == true &&
+            (_selectedCategoryId?.isEmpty ?? true)) {
           _selectedCategoryId = _selectedCategory;
         }
         break;
-        
+
       case RequestType.rental:
         _itemToRentController.text = typeData['itemToRent']?.toString() ?? '';
         _selectedCategory = typeData['category']?.toString() ?? '';
-        _selectedCategoryId = typeData['categoryId']?.toString() ?? typeData['category']?.toString();
+        _selectedCategoryId = typeData['categoryId']?.toString() ??
+            typeData['category']?.toString();
         _selectedSubcategory = typeData['subcategory']?.toString();
-        _selectedSubCategoryId = typeData['subcategoryId']?.toString() ?? typeData['subcategory']?.toString();
-        _pickupDropoffPreference = typeData['pickupDropoffPreference']?.toString() ?? 'pickup';
-        
+        _selectedSubCategoryId = typeData['subcategoryId']?.toString() ??
+            typeData['subcategory']?.toString();
+        _pickupDropoffPreference =
+            typeData['pickupDropoffPreference']?.toString() ?? 'pickup';
+
         // Set both date formats for compatibility
         if (typeData['startDate'] != null) {
-          _startDate = DateTime.fromMillisecondsSinceEpoch(typeData['startDate']);
+          _startDate =
+              DateTime.fromMillisecondsSinceEpoch(typeData['startDate']);
           _startDateTime = _startDate; // Use same date for both
         }
         if (typeData['endDate'] != null) {
           _endDate = DateTime.fromMillisecondsSinceEpoch(typeData['endDate']);
           _endDateTime = _endDate; // Use same date for both
         }
-        
+
         // If we have category data but _selectedCategoryId is empty, set it to category name
-        if (_selectedCategory.isNotEmpty == true && (_selectedCategoryId?.isEmpty ?? true)) {
+        if (_selectedCategory.isNotEmpty == true &&
+            (_selectedCategoryId?.isEmpty ?? true)) {
           _selectedCategoryId = _selectedCategory;
         }
         break;
-        
+
       default:
         break;
     }
@@ -268,9 +315,11 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
     if (result != null && result.containsKey('category')) {
       setState(() {
         _selectedCategory = result['category'] ?? 'Electronics';
-        _selectedSubcategory = result['subcategory']; // Can be null for main categories
+        _selectedSubcategory =
+            result['subcategory']; // Can be null for main categories
         _selectedCategoryId = _selectedCategory; // Set ID same as name for now
-        _selectedSubCategoryId = _selectedSubcategory; // Set ID same as name for now
+        _selectedSubCategoryId =
+            _selectedSubcategory; // Set ID same as name for now
       });
     }
   }
@@ -281,7 +330,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
     if (_selectedType == RequestType.ride) {
       return EditRideRequestScreen(request: widget.request);
     }
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Edit ${_getTypeDisplayName(_selectedType)}'),
@@ -327,7 +376,8 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
                   )
                 : Text(
                     'Update ${_getTypeDisplayName(_selectedType)}',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w600),
                   ),
           ),
         ),
@@ -375,7 +425,6 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
             decoration: const InputDecoration(
               labelText: 'Request Title',
               hintText: 'Enter a short, descriptive title',
-              
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -386,7 +435,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Item Name
         _buildFlatField(
           child: TextFormField(
@@ -404,7 +453,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Description
         _buildFlatField(
           child: TextFormField(
@@ -413,7 +462,6 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
             decoration: const InputDecoration(
               labelText: 'Description',
               hintText: 'Provide detailed information...',
-              
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -424,7 +472,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Category (Use Category Picker)
         _buildFlatField(
           child: TextFormField(
@@ -433,16 +481,16 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
               labelText: 'Category',
               hintText: 'Select a category',
               suffixIcon: Icon(Icons.arrow_drop_down),
-              
             ),
             controller: TextEditingController(
-              text: _selectedSubcategory != null 
-                ? '$_selectedCategory > $_selectedSubcategory'
-                : _selectedCategory,
+              text: _selectedSubcategory != null
+                  ? '$_selectedCategory > $_selectedSubcategory'
+                  : _selectedCategory,
             ),
             onTap: _showCategoryPicker,
             validator: (value) {
-              if (_selectedCategory == 'Electronics' && _selectedCategoryId == null) {
+              if (_selectedCategory == 'Electronics' &&
+                  _selectedCategoryId == null) {
                 return 'Please select a category';
               }
               return null;
@@ -450,7 +498,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Quantity
         _buildFlatField(
           child: TextFormField(
@@ -459,7 +507,6 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
             decoration: const InputDecoration(
               labelText: 'Quantity',
               hintText: 'How many do you need?',
-              
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -470,14 +517,13 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Desired Condition
         _buildFlatField(
           child: DropdownButtonFormField<String>(
             value: _selectedCondition,
             decoration: const InputDecoration(
               labelText: 'Desired Condition',
-              
             ),
             items: _conditions.map((condition) {
               return DropdownMenuItem<String>(
@@ -493,7 +539,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Location (Use Location Picker Widget)
         _buildFlatField(
           child: Column(
@@ -522,7 +568,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Budget
         _buildFlatField(
           child: TextFormField(
@@ -532,12 +578,11 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
               labelText: CurrencyHelper.instance.getBudgetLabel(),
               hintText: 'Enter your budget range',
               prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
-              
             ),
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Photo/Link
         _buildFlatField(
           child: Column(
@@ -589,11 +634,12 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
                 ),
               ),
             );
-            
+
             if (result != null) {
               setState(() {
                 _selectedCategory = result['category'] ?? _selectedCategory;
-                _selectedSubcategory = result['subcategory'] ?? _selectedSubcategory;
+                _selectedSubcategory =
+                    result['subcategory'] ?? _selectedSubcategory;
                 _selectedCategoryId = result['category'];
                 _selectedSubCategoryId = result['subcategory'];
               });
@@ -621,7 +667,8 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        (_selectedCategory.isNotEmpty == true && _selectedSubcategory?.isNotEmpty == true)
+                        (_selectedCategory.isNotEmpty == true &&
+                                _selectedSubcategory?.isNotEmpty == true)
                             ? '$_selectedCategory > $_selectedSubcategory'
                             : 'Select service category',
                         style: const TextStyle(
@@ -638,7 +685,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Request Title
         _buildFlatField(
           child: TextFormField(
@@ -646,7 +693,6 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
             decoration: const InputDecoration(
               labelText: 'Request Title',
               hintText: 'Enter a short, descriptive title',
-              
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -657,7 +703,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Description
         _buildFlatField(
           child: TextFormField(
@@ -665,8 +711,8 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
             maxLines: 4,
             decoration: const InputDecoration(
               labelText: 'Description',
-              hintText: 'Provide detailed information about the service needed...',
-              
+              hintText:
+                  'Provide detailed information about the service needed...',
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -677,7 +723,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Location (Use Location Picker Widget)
         _buildFlatField(
           child: Column(
@@ -706,7 +752,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Preferred Date & Time (Remove Border)
         _buildFlatField(
           child: Column(
@@ -758,14 +804,13 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Urgency
         _buildFlatField(
           child: DropdownButtonFormField<String>(
             value: _selectedUrgency,
             decoration: const InputDecoration(
               labelText: 'Urgency',
-              
             ),
             items: _urgencyLevels.map((urgency) {
               return DropdownMenuItem<String>(
@@ -781,7 +826,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Budget
         _buildFlatField(
           child: TextFormField(
@@ -791,12 +836,11 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
               labelText: CurrencyHelper.instance.getBudgetLabel(),
               hintText: 'Enter your budget range',
               prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
-              
             ),
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Photo/Video
         _buildFlatField(
           child: Column(
@@ -839,7 +883,6 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
             decoration: const InputDecoration(
               labelText: 'Request Title',
               hintText: 'Enter a short, descriptive title',
-              
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -850,7 +893,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Description
         _buildFlatField(
           child: TextFormField(
@@ -858,8 +901,8 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
             maxLines: 4,
             decoration: const InputDecoration(
               labelText: 'Description',
-              hintText: 'Provide detailed information about the rental needed...',
-              
+              hintText:
+                  'Provide detailed information about the rental needed...',
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -870,7 +913,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Item to Rent (Use Category Picker)
         _buildFlatField(
           child: Column(
@@ -883,12 +926,14 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
               const SizedBox(height: 8),
               GestureDetector(
                 onTap: () async {
-                  final result = await showModalBottomSheet<Map<String, String>>(
+                  final result =
+                      await showModalBottomSheet<Map<String, String>>(
                     context: context,
                     isScrollControlled: true,
                     backgroundColor: Colors.white,
                     shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(20)),
                     ),
                     builder: (context) => SizedBox(
                       height: MediaQuery.of(context).size.height * 0.8,
@@ -898,12 +943,13 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
                       ),
                     ),
                   );
-                  
+
                   if (result != null && result['category'] != null) {
                     setState(() {
                       _selectedCategory = result['category']!;
                       _selectedSubcategory = result['subcategory'];
-                      _selectedCategoryId = result['category']!; // Use category name as ID
+                      _selectedCategoryId =
+                          result['category']!; // Use category name as ID
                       _selectedSubCategoryId = result['subcategory'];
                     });
                   }
@@ -918,10 +964,13 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        _selectedSubcategory ?? _selectedCategory ?? 'Select item to rent',
+                        _selectedSubcategory ??
+                            _selectedCategory ??
+                            'Select item to rent',
                         style: TextStyle(
-                          color: (_selectedSubcategory != null || _selectedCategory != null) 
-                              ? Colors.black 
+                          color: (_selectedSubcategory != null ||
+                                  _selectedCategory != null)
+                              ? Colors.black
                               : Colors.grey.shade600,
                         ),
                       ),
@@ -934,7 +983,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Start Date & Time
         _buildFlatField(
           child: Column(
@@ -986,7 +1035,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // End Date & Time
         _buildFlatField(
           child: Column(
@@ -1038,7 +1087,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Location (Use Location Picker)
         _buildFlatField(
           child: Column(
@@ -1067,7 +1116,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Budget
         _buildFlatField(
           child: TextFormField(
@@ -1077,12 +1126,11 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
               labelText: 'Budget (per day/hour)',
               hintText: 'Enter your budget',
               prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
-              
             ),
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Pickup / Dropoff
         _buildFlatField(
           child: Column(
@@ -1095,13 +1143,14 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _pickupDropoffPreference,
-                decoration: const InputDecoration(
-                  
-                ),
+                decoration: const InputDecoration(),
                 items: const [
-                  DropdownMenuItem(value: 'pickup', child: Text('I will pickup')),
-                  DropdownMenuItem(value: 'delivery', child: Text('Please deliver')),
-                  DropdownMenuItem(value: 'flexible', child: Text('Either option works')),
+                  DropdownMenuItem(
+                      value: 'pickup', child: Text('I will pickup')),
+                  DropdownMenuItem(
+                      value: 'delivery', child: Text('Please deliver')),
+                  DropdownMenuItem(
+                      value: 'flexible', child: Text('Either option works')),
                 ],
                 onChanged: (value) {
                   setState(() {
@@ -1113,7 +1162,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Photo/Link
         _buildFlatField(
           child: Column(
@@ -1156,7 +1205,6 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
             decoration: const InputDecoration(
               labelText: 'Request Title',
               hintText: 'Enter a short, descriptive title',
-              
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -1167,7 +1215,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Pickup Location
         _buildFlatField(
           child: Column(
@@ -1196,7 +1244,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Drop-off Location
         _buildFlatField(
           child: Column(
@@ -1225,7 +1273,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Item Categories (Use Category Picker)
         _buildFlatField(
           child: Column(
@@ -1238,12 +1286,14 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
               const SizedBox(height: 8),
               GestureDetector(
                 onTap: () async {
-                  final result = await showModalBottomSheet<Map<String, String>>(
+                  final result =
+                      await showModalBottomSheet<Map<String, String>>(
                     context: context,
                     isScrollControlled: true,
                     backgroundColor: Colors.white,
                     shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(20)),
                     ),
                     builder: (context) => SizedBox(
                       height: MediaQuery.of(context).size.height * 0.8,
@@ -1253,7 +1303,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
                       ),
                     ),
                   );
-                  
+
                   if (result != null && result['category'] != null) {
                     setState(() {
                       _selectedCategory = result['category']!;
@@ -1273,10 +1323,13 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        _selectedSubcategory ?? _selectedCategory ?? 'Select item category',
+                        _selectedSubcategory ??
+                            _selectedCategory ??
+                            'Select item category',
                         style: TextStyle(
-                          color: (_selectedSubcategory != null || _selectedCategory != null) 
-                              ? Colors.black 
+                          color: (_selectedSubcategory != null ||
+                                  _selectedCategory != null)
+                              ? Colors.black
                               : Colors.grey.shade600,
                         ),
                       ),
@@ -1289,7 +1342,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Item Description
         _buildFlatField(
           child: TextFormField(
@@ -1298,7 +1351,6 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
             decoration: const InputDecoration(
               labelText: 'Item Description',
               hintText: 'Describe what needs to be delivered...',
-              
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -1309,7 +1361,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Weight & Dimensions
         _buildFlatField(
           child: Column(
@@ -1328,7 +1380,6 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
                         hintText: 'Weight (kg)',
-                        
                       ),
                     ),
                   ),
@@ -1338,7 +1389,6 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
                       controller: _dimensionsController,
                       decoration: const InputDecoration(
                         hintText: 'Dimensions (L x W x H)',
-                        
                       ),
                     ),
                   ),
@@ -1348,7 +1398,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Preferred Delivery Time
         _buildFlatField(
           child: Column(
@@ -1400,7 +1450,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Special Instructions
         _buildFlatField(
           child: TextFormField(
@@ -1409,12 +1459,11 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
             decoration: const InputDecoration(
               labelText: 'Special Instructions (Optional)',
               hintText: 'Any special handling requirements, access codes, etc.',
-              
             ),
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Photo Upload
         _buildFlatField(
           child: Column(
@@ -1453,8 +1502,10 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
     }
 
     // Additional validation for category selection based on request type
-    if ((_selectedType == RequestType.service || _selectedType == RequestType.delivery || _selectedType == RequestType.rental) 
-        && (_selectedCategory.isEmpty)) {
+    if ((_selectedType == RequestType.service ||
+            _selectedType == RequestType.delivery ||
+            _selectedType == RequestType.rental) &&
+        (_selectedCategory.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Please select a ${_selectedType.name} category'),
@@ -1494,25 +1545,29 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
       }
 
       await _requestService.updateRequest(
-        requestId: widget.request.id,
-        title: _titleController.text.trim(),
-        description: _descriptionController.text.trim(),
-        location: locationInfo,
-        budget: _budgetController.text.trim().isNotEmpty 
-            ? double.tryParse(_budgetController.text.trim()) 
-            : null,
-        images: _imageUrls,
-        typeSpecificData: _getTypeSpecificData(),
+        widget.request.id,
+        {
+          'title': _titleController.text.trim(),
+          'description': _descriptionController.text.trim(),
+          'location': locationInfo?.toMap(),
+          'budget': _budgetController.text.trim().isNotEmpty
+              ? double.tryParse(_budgetController.text.trim())
+              : null,
+          'images': _imageUrls,
+          'typeSpecificData': _getTypeSpecificData(),
+        },
       );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${_getTypeDisplayName(_selectedType)} updated successfully!'),
+            content: Text(
+                '${_getTypeDisplayName(_selectedType)} updated successfully!'),
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pop(context, true); // Return true to indicate successful update
+        Navigator.pop(
+            context, true); // Return true to indicate successful update
       }
     } catch (e) {
       if (mounted) {
@@ -1543,7 +1598,9 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
         };
       case RequestType.service:
         return {
-          'serviceType': (_selectedSubcategory?.isNotEmpty == true) ? _selectedSubcategory : _selectedCategory,
+          'serviceType': (_selectedSubcategory?.isNotEmpty == true)
+              ? _selectedSubcategory
+              : _selectedCategory,
           'categoryId': _selectedCategoryId ?? '',
           'subCategoryId': _selectedSubCategoryId ?? '',
           'category': _selectedCategory,
@@ -1555,17 +1612,19 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
         return {
           'pickupLocation': _pickupLocationController.text.trim(),
           'dropoffLocation': _dropoffLocationController.text.trim(),
-          'itemCategory': _selectedCategory.trim() ?? '',
-          'category': _selectedCategory.trim() ?? '', // Store in both fields for compatibility
+          'itemCategory': _selectedCategory.trim(),
+          'category': _selectedCategory
+              .trim(), // Store in both fields for compatibility
           'categoryId': _selectedCategoryId?.trim() ?? '',
           'subcategory': _selectedSubcategory?.trim(),
           'subcategoryId': _selectedSubCategoryId?.trim() ?? '',
           'itemDescription': _descriptionController.text.trim(),
-          'weight': _weightController.text.trim().isNotEmpty 
-              ? double.tryParse(_weightController.text.trim()) 
+          'weight': _weightController.text.trim().isNotEmpty
+              ? double.tryParse(_weightController.text.trim())
               : null,
           'dimensions': _dimensionsController.text.trim(),
-          'preferredDeliveryTime': _preferredDeliveryTime?.millisecondsSinceEpoch,
+          'preferredDeliveryTime':
+              _preferredDeliveryTime?.millisecondsSinceEpoch,
           'specialInstructions': _specialInstructionsController.text.trim(),
         };
       case RequestType.rental:

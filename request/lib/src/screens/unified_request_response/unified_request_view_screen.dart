@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../services/rest_request_service.dart' as rest;
 import '../../services/rest_auth_service.dart';
+import '../../models/request_model.dart';
+import '../../models/enhanced_user_model.dart';
+import 'unified_response_create_screen.dart';
+import 'unified_request_edit_screen.dart';
+import 'unified_response_edit_screen.dart';
+import 'view_all_responses_screen.dart';
 
 /// UnifiedRequestViewScreen (Minimal REST Migration)
 /// Legacy Firebase-based logic removed. Displays core request info only.
@@ -22,7 +28,6 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
   int _responsesPage = 1;
   int _responsesTotalPages = 1;
   bool _responsesLoading = false;
-  bool _creating = false;
   final Set<String> _updating = {};
   final Set<String> _deleting = {};
   bool _updatingRequest = false;
@@ -113,104 +118,153 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
   }
 
   void _openCreateResponseSheet() {
-    final messageController = TextEditingController();
-    final priceController = TextEditingController();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => Padding(
-          padding:
-              EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-          child: StatefulBuilder(builder: (ctx, setSheet) {
-            return Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(children: [
-                      const Expanded(
-                          child: Text('New Response',
-                              style: TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.bold))),
-                      IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.pop(ctx))
-                    ]),
-                    TextField(
-                        controller: messageController,
-                        maxLines: 4,
-                        decoration: const InputDecoration(
-                            labelText: 'Message',
-                            border: OutlineInputBorder())),
-                    const SizedBox(height: 12),
-                    TextField(
-                        controller: priceController,
-                        keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
-                        decoration: const InputDecoration(
-                            labelText: 'Price (optional)',
-                            prefixIcon: Icon(Icons.attach_money))),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: _creating
-                              ? null
-                              : () async {
-                                  final msg = messageController.text.trim();
-                                  if (msg.isEmpty) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                            content: Text('Message required')));
-                                    return;
-                                  }
-                                  setState(() => _creating = true);
-                                  setSheet(() => {});
-                                  final price = double.tryParse(
-                                      priceController.text.trim());
-                                  final created = await _service.createResponse(
-                                      _request!.id,
-                                      rest.CreateResponseData(
-                                          message: msg,
-                                          price: price,
-                                          currency: _request!.currency));
-                                  if (created != null) {
-                                    if (mounted) {
-                                      Navigator.pop(ctx);
-                                      await _reloadResponses();
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(const SnackBar(
-                                              content:
-                                                  Text('Response submitted')));
-                                    }
-                                  } else {
-                                    if (mounted)
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(const SnackBar(
-                                              content: Text(
-                                                  'Failed to submit response')));
-                                  }
-                                  if (mounted)
-                                    setState(() => _creating = false);
-                                },
-                          icon: _creating
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2, color: Colors.white))
-                              : const Icon(Icons.send),
-                          label: Text(
-                              _creating ? 'Submitting...' : 'Submit Response'),
-                        )),
-                    const SizedBox(height: 12),
-                  ]),
-            );
-          })),
+    if (_request == null) return;
+
+    // Convert REST model to enhanced model
+    final requestModel = _convertToRequestModel(_request!);
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            UnifiedResponseCreateScreen(request: requestModel),
+      ),
+    ).then((_) => _reloadResponses()); // Refresh responses when returning
+  }
+
+  void _navigateToRequestEdit() {
+    if (_request == null) return;
+
+    // Convert REST model to enhanced model
+    final requestModel = _convertToRequestModel(_request!);
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => UnifiedRequestEditScreen(request: requestModel),
+      ),
+    ).then((_) => _load()); // Refresh when returning
+  }
+
+  void _navigateToViewAllResponses() {
+    if (_request == null) return;
+
+    // Convert REST model to enhanced model
+    final requestModel = _convertToRequestModel(_request!);
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ViewAllResponsesScreen(request: requestModel),
+      ),
+    ).then((_) => _reloadResponses()); // Refresh responses when returning
+  }
+
+  void _navigateToResponseEdit(rest.ResponseModel response) {
+    if (_request == null) return;
+
+    // Convert REST models to enhanced models
+    final requestModel = _convertToRequestModel(_request!);
+    final responseModel = _convertToResponseModel(response);
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => UnifiedResponseEditScreen(
+          request: requestModel,
+          response: responseModel,
+        ),
+      ),
+    ).then((_) => _reloadResponses()); // Refresh responses when returning
+  }
+
+  // Helper method to convert REST RequestModel to enhanced RequestModel
+  RequestModel _convertToRequestModel(rest.RequestModel restRequest) {
+    return RequestModel(
+      id: restRequest.id,
+      title: restRequest.title,
+      description: restRequest.description,
+      requesterId: restRequest.userId,
+      type: _getRequestTypeFromString(
+          restRequest.metadata?['type']?.toString() ?? 'item'),
+      status: _getRequestStatusFromString(restRequest.status),
+      createdAt: restRequest.createdAt,
+      updatedAt: restRequest.updatedAt,
+      budget: restRequest.budgetMin ?? restRequest.budgetMax,
+      currency: restRequest.currency,
+      images: restRequest.imageUrls ?? [],
+      tags: [],
+      priority: Priority.medium,
+      location: restRequest.cityName != null
+          ? LocationInfo(
+              latitude: 0.0,
+              longitude: 0.0,
+              address: restRequest.cityName!,
+              city: restRequest.cityName!,
+              country: restRequest.countryCode,
+            )
+          : null,
+      typeSpecificData: restRequest.metadata ?? {},
+      country: restRequest.countryCode,
     );
+  }
+
+  // Helper method to convert REST ResponseModel to enhanced ResponseModel
+  ResponseModel _convertToResponseModel(rest.ResponseModel restResponse) {
+    return ResponseModel(
+      id: restResponse.id,
+      requestId: restResponse.requestId,
+      responderId: restResponse.userId,
+      message: restResponse.message,
+      price: restResponse.price,
+      currency: restResponse.currency,
+      images: [],
+      isAccepted: _request?.acceptedResponseId == restResponse.id,
+      createdAt: restResponse.createdAt,
+      availableFrom: null,
+      availableUntil: null,
+      additionalInfo: {},
+      rejectionReason: null,
+    );
+  }
+
+  RequestType _getRequestTypeFromString(String type) {
+    switch (type.toLowerCase()) {
+      case 'item':
+        return RequestType.item;
+      case 'service':
+        return RequestType.service;
+      case 'delivery':
+        return RequestType.delivery;
+      case 'rental':
+      case 'rent':
+        return RequestType.rental;
+      case 'ride':
+        return RequestType.ride;
+      case 'price':
+        return RequestType.price;
+      default:
+        return RequestType.item;
+    }
+  }
+
+  RequestStatus _getRequestStatusFromString(String status) {
+    switch (status.toLowerCase()) {
+      case 'active':
+        return RequestStatus.active;
+      case 'open':
+        return RequestStatus.open;
+      case 'completed':
+        return RequestStatus.completed;
+      case 'cancelled':
+        return RequestStatus.cancelled;
+      case 'inprogress':
+        return RequestStatus.inProgress;
+      case 'expired':
+        return RequestStatus.expired;
+      default:
+        return RequestStatus.active;
+    }
   }
 
   void _openEditResponseSheet(rest.ResponseModel response) {
@@ -549,6 +603,9 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                     case 'edit':
                       _openEditRequestSheet();
                       break;
+                    case 'edit_full':
+                      _navigateToRequestEdit();
+                      break;
                     case 'status':
                       _toggleStatus();
                       break;
@@ -558,8 +615,9 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                   }
                 },
                 itemBuilder: (ctx) => [
+                  const PopupMenuItem(value: 'edit', child: Text('Quick Edit')),
                   const PopupMenuItem(
-                      value: 'edit', child: Text('Edit Request')),
+                      value: 'edit_full', child: Text('Full Edit Screen')),
                   PopupMenuItem(
                       value: 'status',
                       child: Text(_request!.status.toLowerCase() == 'active'
@@ -724,6 +782,11 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
         const Text('Responses',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const Spacer(),
+        if (_responses.isNotEmpty)
+          TextButton(
+            onPressed: _navigateToViewAllResponses,
+            child: const Text('View All'),
+          ),
         IconButton(
             onPressed: _reloadResponses,
             icon: const Icon(Icons.refresh),
@@ -790,6 +853,8 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
               onSelected: (val) {
                 if (val == 'edit') {
                   _openEditResponseSheet(r);
+                } else if (val == 'edit_full') {
+                  _navigateToResponseEdit(r);
                 } else if (val == 'delete') {
                   _confirmDelete(r);
                 } else if (val == 'accept') {
@@ -801,8 +866,10 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
               itemBuilder: (ctx) {
                 final items = <PopupMenuEntry<String>>[];
                 if (isMine) {
-                  items.add(
-                      const PopupMenuItem(value: 'edit', child: Text('Edit')));
+                  items.add(const PopupMenuItem(
+                      value: 'edit', child: Text('Quick Edit')));
+                  items.add(const PopupMenuItem(
+                      value: 'edit_full', child: Text('Full Edit Screen')));
                   items.add(const PopupMenuItem(
                       value: 'delete', child: Text('Delete')));
                 }

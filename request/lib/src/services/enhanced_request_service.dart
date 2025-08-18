@@ -63,4 +63,15 @@ class EnhancedRequestService {
       additionalInfo: additionalData,
     );
   }
+
+  // Methods for response management
+  Future<void> acceptResponse(String responseId) async {
+    // Placeholder implementation
+    print('Accepting response: $responseId');
+  }
+
+  Future<void> rejectResponse(String responseId, String reason) async {
+    // Placeholder implementation
+    print('Rejecting response: $responseId with reason: $reason');
+  }
 }

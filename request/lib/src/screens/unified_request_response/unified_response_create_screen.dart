@@ -8,14 +8,16 @@ import '../../utils/currency_helper.dart';
 
 class UnifiedResponseCreateScreen extends StatefulWidget {
   final RequestModel request;
-  
+
   const UnifiedResponseCreateScreen({super.key, required this.request});
 
   @override
-  State<UnifiedResponseCreateScreen> createState() => _UnifiedResponseCreateScreenState();
+  State<UnifiedResponseCreateScreen> createState() =>
+      _UnifiedResponseCreateScreenState();
 }
 
-class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScreen> {
+class _UnifiedResponseCreateScreenState
+    extends State<UnifiedResponseCreateScreen> {
   final _formKey = GlobalKey<FormState>();
   final CentralizedRequestService _requestService = CentralizedRequestService();
   final EnhancedUserService _userService = EnhancedUserService();
@@ -23,7 +25,7 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
   // Common controllers
   final _messageController = TextEditingController();
   final _priceController = TextEditingController();
-  
+
   // Item response controllers
   final _offerPriceController = TextEditingController();
   final _itemConditionController = TextEditingController();
@@ -31,19 +33,19 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
   final _deliveryCostController = TextEditingController();
   final _estimatedDeliveryController = TextEditingController();
   final _warrantyController = TextEditingController();
-  
+
   // Service response controllers
   final _estimatedCostController = TextEditingController();
   final _timeframeController = TextEditingController();
   final _solutionDescriptionController = TextEditingController();
   final _hourlyRateController = TextEditingController();
-  
+
   // Rental response controllers
   final _rentalPriceController = TextEditingController();
   final _rentalItemConditionController = TextEditingController();
   final _rentalDescriptionController = TextEditingController();
   final _securityDepositController = TextEditingController();
-  
+
   // Delivery response controllers
   final _deliveryFeeController = TextEditingController();
   final _estimatedPickupTimeController = TextEditingController();
@@ -51,7 +53,7 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
   final _packageSizeController = TextEditingController();
   final _specialInstructionsController = TextEditingController();
   final _deliveryNotesController = TextEditingController();
-  
+
   // Ride response controllers
   final _fareController = TextEditingController();
   final _routeDescriptionController = TextEditingController();
@@ -130,17 +132,20 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
     switch (widget.request.type) {
       case RequestType.delivery:
         // Allow either delivery OR business role (both verified) to create response
-        final hasDelivery = user.hasRole(UserRole.delivery) && user.isRoleVerified(UserRole.delivery);
-        final hasBusiness = user.hasRole(UserRole.business) && user.isRoleVerified(UserRole.business);
+        final hasDelivery = user.hasRole(UserRole.delivery) &&
+            user.isRoleVerified(UserRole.delivery);
+        final hasBusiness = user.hasRole(UserRole.business) &&
+            user.isRoleVerified(UserRole.business);
         if (!hasDelivery && !hasBusiness) {
-          final hasEitherRole = user.hasRole(UserRole.delivery) || user.hasRole(UserRole.business);
+          final hasEitherRole = user.hasRole(UserRole.delivery) ||
+              user.hasRole(UserRole.business);
           if (hasEitherRole) {
             return 'delivery_business_verification_required';
           }
           return 'delivery_business_required';
         }
         break;
-        
+
       case RequestType.ride:
         // Check if user has driver role
         if (!user.hasRole(UserRole.driver)) {
@@ -151,7 +156,7 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
           return 'driver_verification_required';
         }
         break;
-        
+
       default:
         // For other request types (item, service, rental), no specific role validation required
         return null;
@@ -364,7 +369,8 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
             controller: _messageController,
             maxLines: 4,
             decoration: const InputDecoration(
-              hintText: 'Explain why you\'re the best choice for this request...',
+              hintText:
+                  'Explain why you\'re the best choice for this request...',
               border: InputBorder.none,
               contentPadding: EdgeInsets.all(16),
               filled: true,
@@ -487,7 +493,8 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                 controller: _offerDescriptionController,
                 maxLines: 4,
                 decoration: const InputDecoration(
-                  hintText: 'Detailed description of the item you\'re offering...',
+                  hintText:
+                      'Detailed description of the item you\'re offering...',
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.all(16),
                   filled: true,
@@ -525,8 +532,10 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                   filled: true,
                   fillColor: Color(0xFFF8F9FA),
                 ),
-                items: ['User pickup', 'I can deliver'].map((method) =>
-                    DropdownMenuItem(value: method, child: Text(method))).toList(),
+                items: ['User pickup', 'I can deliver']
+                    .map((method) =>
+                        DropdownMenuItem(value: method, child: Text(method)))
+                    .toList(),
                 onChanged: (value) {
                   setState(() {
                     _selectedDeliveryMethod = value!;
@@ -682,8 +691,10 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                   filled: true,
                   fillColor: Color(0xFFF8F9FA),
                 ),
-                items: ['Fixed Price', 'Hourly Rate'].map((type) =>
-                    DropdownMenuItem(value: type, child: Text(type))).toList(),
+                items: ['Fixed Price', 'Hourly Rate']
+                    .map((type) =>
+                        DropdownMenuItem(value: type, child: Text(type)))
+                    .toList(),
                 onChanged: (value) {
                   setState(() {
                     _selectedPriceType = value!;
@@ -703,13 +714,16 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                _selectedPriceType == 'Fixed Price' ? 'Total Cost*' : 'Hourly Rate*',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                _selectedPriceType == 'Fixed Price'
+                    ? 'Total Cost*'
+                    : 'Hourly Rate*',
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _selectedPriceType == 'Fixed Price' 
-                    ? _estimatedCostController 
+                controller: _selectedPriceType == 'Fixed Price'
+                    ? _estimatedCostController
                     : _hourlyRateController,
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
@@ -717,7 +731,8 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                       ? 'Total estimated cost'
                       : 'Cost per hour',
                   prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
-                  suffixText: _selectedPriceType == 'Hourly Rate' ? '/hr' : null,
+                  suffixText:
+                      _selectedPriceType == 'Hourly Rate' ? '/hr' : null,
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.all(16),
                   filled: true,
@@ -789,7 +804,8 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Available From', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        const Text('Available From',
+                            style: TextStyle(fontSize: 12, color: Colors.grey)),
                         const SizedBox(height: 4),
                         InkWell(
                           onTap: () async {
@@ -797,7 +813,8 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                               context: context,
                               initialDate: DateTime.now(),
                               firstDate: DateTime.now(),
-                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                              lastDate:
+                                  DateTime.now().add(const Duration(days: 365)),
                             );
                             if (date != null) {
                               setState(() {
@@ -825,7 +842,8 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Available Until', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        const Text('Available Until',
+                            style: TextStyle(fontSize: 12, color: Colors.grey)),
                         const SizedBox(height: 4),
                         InkWell(
                           onTap: () async {
@@ -833,7 +851,8 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                               context: context,
                               initialDate: _availableFrom ?? DateTime.now(),
                               firstDate: _availableFrom ?? DateTime.now(),
-                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                              lastDate:
+                                  DateTime.now().add(const Duration(days: 365)),
                             );
                             if (date != null) {
                               setState(() {
@@ -879,7 +898,8 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                 controller: _solutionDescriptionController,
                 maxLines: 4,
                 decoration: const InputDecoration(
-                  hintText: 'Brief explanation of how you plan to solve the problem',
+                  hintText:
+                      'Brief explanation of how you plan to solve the problem',
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.all(16),
                   filled: true,
@@ -982,15 +1002,16 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                         filled: true,
                         fillColor: Color(0xFFF8F9FA),
                       ),
-                      items: ['day', 'week', 'hour'].map((period) =>
-                          DropdownMenuItem(
-                            value: period, 
-                            child: Text(
-                              'per $period',
-                              style: const TextStyle(fontSize: 14),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          )).toList(),
+                      items: ['day', 'week', 'hour']
+                          .map((period) => DropdownMenuItem(
+                                value: period,
+                                child: Text(
+                                  'per $period',
+                                  style: const TextStyle(fontSize: 14),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ))
+                          .toList(),
                       onChanged: (value) {
                         setState(() {
                           _selectedRentalPeriod = value!;
@@ -1023,7 +1044,8 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Available From', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        const Text('Available From',
+                            style: TextStyle(fontSize: 12, color: Colors.grey)),
                         const SizedBox(height: 4),
                         InkWell(
                           onTap: () async {
@@ -1031,7 +1053,8 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                               context: context,
                               initialDate: DateTime.now(),
                               firstDate: DateTime.now(),
-                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                              lastDate:
+                                  DateTime.now().add(const Duration(days: 365)),
                             );
                             if (date != null) {
                               setState(() {
@@ -1059,7 +1082,8 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Available Until', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        const Text('Available Until',
+                            style: TextStyle(fontSize: 12, color: Colors.grey)),
                         const SizedBox(height: 4),
                         InkWell(
                           onTap: () async {
@@ -1067,7 +1091,8 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                               context: context,
                               initialDate: _availableFrom ?? DateTime.now(),
                               firstDate: _availableFrom ?? DateTime.now(),
-                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                              lastDate:
+                                  DateTime.now().add(const Duration(days: 365)),
                             );
                             if (date != null) {
                               setState(() {
@@ -1184,8 +1209,13 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                   filled: true,
                   fillColor: Color(0xFFF8F9FA),
                 ),
-                items: ['User picks up', 'I can deliver', 'Both options available']
-                    .map((option) => DropdownMenuItem(value: option, child: Text(option)))
+                items: [
+                  'User picks up',
+                  'I can deliver',
+                  'Both options available'
+                ]
+                    .map((option) =>
+                        DropdownMenuItem(value: option, child: Text(option)))
                     .toList(),
                 onChanged: (value) {
                   setState(() {
@@ -1322,7 +1352,8 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                   fillColor: Color(0xFFF8F9FA),
                 ),
                 items: ['Car', 'Van', 'Truck', 'Motorcycle', 'Bicycle']
-                    .map((vehicle) => DropdownMenuItem(value: vehicle, child: Text(vehicle)))
+                    .map((vehicle) =>
+                        DropdownMenuItem(value: vehicle, child: Text(vehicle)))
                     .toList(),
                 onChanged: (value) {
                   setState(() {
@@ -1366,7 +1397,8 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                           context: context,
                           initialDate: DateTime.now(),
                           firstDate: DateTime.now(),
-                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                          lastDate:
+                              DateTime.now().add(const Duration(days: 365)),
                         );
                         if (date == null) return;
                         final time = await showTimePicker(
@@ -1374,8 +1406,10 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                           initialTime: TimeOfDay.now(),
                         );
                         if (time == null) return;
-                        final dt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
-                        _estimatedPickupTimeController.text = _formatDateTime(dt);
+                        final dt = DateTime(date.year, date.month, date.day,
+                            time.hour, time.minute);
+                        _estimatedPickupTimeController.text =
+                            _formatDateTime(dt);
                         setState(() {});
                       },
                     ),
@@ -1398,7 +1432,8 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                           context: context,
                           initialDate: DateTime.now(),
                           firstDate: DateTime.now(),
-                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                          lastDate:
+                              DateTime.now().add(const Duration(days: 365)),
                         );
                         if (date == null) return;
                         final time = await showTimePicker(
@@ -1406,8 +1441,10 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                           initialTime: TimeOfDay.now(),
                         );
                         if (time == null) return;
-                        final dt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
-                        _estimatedDropoffTimeController.text = _formatDateTime(dt);
+                        final dt = DateTime(date.year, date.month, date.day,
+                            time.hour, time.minute);
+                        _estimatedDropoffTimeController.text =
+                            _formatDateTime(dt);
                         setState(() {});
                       },
                     ),
@@ -1435,7 +1472,8 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
                 controller: _specialInstructionsController,
                 maxLines: 3,
                 decoration: const InputDecoration(
-                  hintText: 'Any notes or concerns about the delivery (e.g., size limitations)',
+                  hintText:
+                      'Any notes or concerns about the delivery (e.g., size limitations)',
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.all(16),
                   filled: true,
@@ -1493,44 +1531,50 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
         setState(() {
           _isLoading = false;
         });
-        
+
         // Show user-friendly error messages
         String message;
         String actionLabel = 'Register';
-        
+
         switch (validationError) {
           case 'delivery_business_required':
-            message = 'You need to register as a delivery business to respond to delivery requests';
+            message =
+                'You need to register as a delivery business to respond to delivery requests';
             break;
           case 'delivery_business_verification_required':
-            message = 'Your delivery business registration is pending approval. Please wait for verification.';
+            message =
+                'Your delivery business registration is pending approval. Please wait for verification.';
             actionLabel = 'Check Status';
             break;
           case 'driver_registration_required':
-            message = 'You need to register as a driver to respond to ride requests';
+            message =
+                'You need to register as a driver to respond to ride requests';
             break;
           case 'driver_verification_required':
-            message = 'Your driver registration is pending approval. Please wait for verification.';
+            message =
+                'Your driver registration is pending approval. Please wait for verification.';
             actionLabel = 'Check Status';
             break;
           default:
             message = 'You don\'t have permission to respond to this request';
             actionLabel = 'Learn More';
         }
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(message),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 6),
-            action: actionLabel == 'Register' ? SnackBarAction(
-              label: actionLabel,
-              textColor: Colors.white,
-              onPressed: () {
-                // Navigate to appropriate registration screen
-                _navigateToRegistration();
-              },
-            ) : null,
+            action: actionLabel == 'Register'
+                ? SnackBarAction(
+                    label: actionLabel,
+                    textColor: Colors.white,
+                    onPressed: () {
+                      // Navigate to appropriate registration screen
+                      _navigateToRegistration();
+                    },
+                  )
+                : null,
           ),
         );
         return;
@@ -1547,21 +1591,22 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
             'itemCondition': _itemConditionController.text.trim(),
             'offerDescription': _offerDescriptionController.text.trim(),
             'deliveryMethod': _selectedDeliveryMethod,
-            'deliveryCost': _deliveryCostController.text.trim().isNotEmpty 
-                ? double.tryParse(_deliveryCostController.text.trim()) 
+            'deliveryCost': _deliveryCostController.text.trim().isNotEmpty
+                ? double.tryParse(_deliveryCostController.text.trim())
                 : null,
-            'estimatedDelivery': _estimatedDeliveryController.text.trim().isNotEmpty 
-                ? int.tryParse(_estimatedDeliveryController.text.trim()) 
-                : null,
-            'warranty': _warrantyController.text.trim().isNotEmpty 
-                ? _warrantyController.text.trim() 
+            'estimatedDelivery':
+                _estimatedDeliveryController.text.trim().isNotEmpty
+                    ? int.tryParse(_estimatedDeliveryController.text.trim())
+                    : null,
+            'warranty': _warrantyController.text.trim().isNotEmpty
+                ? _warrantyController.text.trim()
                 : null,
             'images': _uploadedImages,
           };
           break;
         case RequestType.service:
-          price = double.tryParse(_selectedPriceType == 'Fixed Price' 
-              ? _estimatedCostController.text.trim() 
+          price = double.tryParse(_selectedPriceType == 'Fixed Price'
+              ? _estimatedCostController.text.trim()
               : _hourlyRateController.text.trim());
           additionalInfo = {
             'priceType': _selectedPriceType,
@@ -1579,8 +1624,8 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
             'itemCondition': _rentalItemConditionController.text.trim(),
             'itemDescription': _rentalDescriptionController.text.trim(),
             'pickupDeliveryOption': _selectedPickupDeliveryOption,
-            'securityDeposit': _securityDepositController.text.trim().isNotEmpty 
-                ? double.tryParse(_securityDepositController.text.trim()) 
+            'securityDeposit': _securityDepositController.text.trim().isNotEmpty
+                ? double.tryParse(_securityDepositController.text.trim())
                 : null,
             'availableFrom': _availableFrom?.millisecondsSinceEpoch,
             'availableUntil': _availableUntil?.millisecondsSinceEpoch,
@@ -1592,8 +1637,10 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
           additionalInfo = {
             'vehicleType': _selectedVehicleType,
             // Store as millisecondsSinceEpoch if parseable
-            'estimatedPickupTime': _parseDateTimeToMillis(_estimatedPickupTimeController.text.trim()),
-            'estimatedDropoffTime': _parseDateTimeToMillis(_estimatedDropoffTimeController.text.trim()),
+            'estimatedPickupTime': _parseDateTimeToMillis(
+                _estimatedPickupTimeController.text.trim()),
+            'estimatedDropoffTime': _parseDateTimeToMillis(
+                _estimatedDropoffTimeController.text.trim()),
             'specialInstructions': _specialInstructionsController.text.trim(),
           };
           break;
@@ -1603,13 +1650,15 @@ class _UnifiedResponseCreateScreenState extends State<UnifiedResponseCreateScree
 
       // Submit the response
       await _requestService.createResponse(
-        requestId: widget.request.id!,
-        message: _messageController.text.trim(),
-        price: price,
-        currency: _selectedCurrency,
-        availableDate: _availableFrom,
-        images: _uploadedImages,
-        additionalData: additionalInfo,
+        widget.request.id,
+        {
+          'message': _messageController.text.trim(),
+          'price': price,
+          'currency': _selectedCurrency,
+          'availableDate': _availableFrom?.toIso8601String(),
+          'images': _uploadedImages,
+          'additionalData': additionalInfo,
+        },
       );
 
       if (mounted) {

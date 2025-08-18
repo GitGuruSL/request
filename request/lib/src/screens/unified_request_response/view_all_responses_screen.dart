@@ -22,7 +22,7 @@ class ViewAllResponsesScreen extends StatefulWidget {
 class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
   final EnhancedRequestService _requestService = EnhancedRequestService();
   final EnhancedUserService _userService = EnhancedUserService();
-  
+
   List<ResponseModel> _responses = [];
   Map<String, UserModel> _responders = {};
   bool _isLoading = true;
@@ -36,9 +36,10 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
 
   Future<void> _loadResponses() async {
     try {
-      final responses = await _requestService.getResponsesForRequest(widget.request.id);
+      final responses =
+          await _requestService.getResponsesForRequest(widget.request.id);
       final responders = <String, UserModel>{};
-      
+
       // Load responder information
       for (final response in responses) {
         try {
@@ -52,18 +53,18 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
       }
 
       setState(() {
-        _responses = responses;
+        _responses = responses.cast<ResponseModel>();
         _responders = responders;
         _isLoading = false;
       });
-      
+
       _sortResponses();
     } catch (e) {
       print('Error loading responses: $e');
       setState(() {
         _isLoading = false;
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -146,7 +147,9 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
                     radius: 20,
                     backgroundColor: Colors.grey[200],
                     child: Text(
-                      (responder != null && responder.name.isNotEmpty) ? responder.name[0] : 'U',
+                      (responder != null && responder.name.isNotEmpty)
+                          ? responder.name[0]
+                          : 'U',
                       style: const TextStyle(
                         color: Colors.black54,
                         fontWeight: FontWeight.bold,
@@ -186,7 +189,8 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
                   ),
                   _buildStatusBadge(response),
                   IconButton(
-                    onPressed: () => _startConversation(response.responderId, responder?.name ?? 'User'),
+                    onPressed: () => _startConversation(
+                        response.responderId, responder?.name ?? 'User'),
                     icon: const Icon(Icons.message),
                   ),
                 ],
@@ -219,11 +223,13 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
               const SizedBox(height: 8),
 
               // Additional details
-              if (response.availableFrom != null || response.availableUntil != null) ...[
+              if (response.availableFrom != null ||
+                  response.availableUntil != null) ...[
                 Row(
                   children: [
                     if (response.availableFrom != null) ...[
-                      const Icon(Icons.calendar_today, size: 14, color: Colors.black54),
+                      const Icon(Icons.calendar_today,
+                          size: 14, color: Colors.black54),
                       const SizedBox(width: 4),
                       Text(
                         'From: ${response.availableFrom!.day}/${response.availableFrom!.month}/${response.availableFrom!.year}',
@@ -233,7 +239,8 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
                         ),
                       ),
                     ],
-                    if (response.availableFrom != null && response.availableUntil != null)
+                    if (response.availableFrom != null &&
+                        response.availableUntil != null)
                       const SizedBox(width: 16),
                     if (response.availableUntil != null) ...[
                       const Icon(Icons.event, size: 14, color: Colors.black54),
@@ -321,9 +328,10 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
 
   String _formatPrice(dynamic price) {
     if (price == null) return '';
-    double? priceValue = price is double ? price : double.tryParse(price.toString());
+    double? priceValue =
+        price is double ? price : double.tryParse(price.toString());
     if (priceValue == null) return '';
-    
+
     if (priceValue == priceValue.roundToDouble()) {
       return priceValue.round().toString();
     } else {
@@ -339,7 +347,7 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
         requesterId: widget.request.requesterId,
         responderId: responderId,
       );
-      
+
       if (mounted) {
         Navigator.push(
           context,
@@ -363,12 +371,12 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
   void _acceptResponse(ResponseModel response) async {
     try {
       await _requestService.acceptResponse(response.id);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Response accepted successfully')),
         );
-        
+
         _loadResponses(); // Refresh the list
       }
     } catch (e) {
