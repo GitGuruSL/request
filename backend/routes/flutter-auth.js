@@ -312,7 +312,7 @@ router.post('/register', async (req, res) => {
     if (existingUser.rows.length > 0) {
       return res.status(409).json({
         success: false,
-        message: 'User already exists'
+        message: 'User already exists with this email or phone'
       });
     }
 
@@ -392,6 +392,11 @@ router.post('/register-complete', async (req, res) => {
   try {
     const { emailOrPhone, firstName, lastName, displayName, password, isEmail } = req.body;
 
+    console.log(`👤 Registration request for: ${emailOrPhone}`);
+    console.log(`👤 isEmail flag: ${isEmail}`);
+    console.log(`👤 firstName: ${firstName}, lastName: ${lastName}`);
+    console.log(`👤 displayName: ${displayName}`);
+
     if (!emailOrPhone || !firstName || !lastName || !password) {
       return res.status(400).json({
         success: false,
@@ -407,49 +412,55 @@ router.post('/register-complete', async (req, res) => {
       [emailOrPhone]
     );
 
+    let user;
+    let isNewUser = false;
+
     if (existingUserResult.rows.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'User already exists with this email or phone'
-      });
+      // User already exists, log them in
+      user = existingUserResult.rows[0];
+      console.log(`👤 User already exists, logging in: ${user.id}`);
+    } else {
+      // Create new user
+      isNewUser = true;
+      
+      // Hash password
+      const saltRounds = 12;
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+      // Create new user account (without profile_completed column)
+      const userData = {
+        email: isEmail ? emailOrPhone : null,
+        phone: !isEmail ? emailOrPhone : null,
+        first_name: firstName,
+        last_name: lastName,
+        display_name: displayName,
+        password_hash: hashedPassword,
+        email_verified: isEmail,
+        phone_verified: !isEmail,
+        is_active: true,
+        role: 'user'
+      };
+
+      const createUserResult = await dbService.query(
+        `INSERT INTO users (
+          id, email, phone, first_name, last_name, display_name, password_hash,
+          email_verified, phone_verified, is_active, role, 
+          created_at, updated_at
+        ) VALUES (
+          gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW()
+        ) RETURNING *`,
+        [
+          userData.email, userData.phone, userData.first_name, userData.last_name,
+          userData.display_name, userData.password_hash, userData.email_verified,
+          userData.phone_verified, userData.is_active, userData.role
+        ]
+      );
+      
+      user = createUserResult.rows[0];
+      console.log(`✅ User registration successful: ${user.id}`);
     }
 
-    // Hash password
-    const saltRounds = 12;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-    // Create new user account (without profile_completed column)
-    const userData = {
-      email: isEmail ? emailOrPhone : null,
-      phone: !isEmail ? emailOrPhone : null,
-      first_name: firstName,
-      last_name: lastName,
-      display_name: displayName,
-      password_hash: hashedPassword,
-      email_verified: isEmail,
-      phone_verified: !isEmail,
-      is_active: true,
-      role: 'user'
-    };
-
-    const createUserResult = await dbService.query(
-      `INSERT INTO users (
-        id, email, phone, first_name, last_name, display_name, password_hash,
-        email_verified, phone_verified, is_active, role, 
-        created_at, updated_at
-      ) VALUES (
-        gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW()
-      ) RETURNING *`,
-      [
-        userData.email, userData.phone, userData.first_name, userData.last_name,
-        userData.display_name, userData.password_hash, userData.email_verified,
-        userData.phone_verified, userData.is_active, userData.role
-      ]
-    );
-    
-    const user = createUserResult.rows[0];
-
-    // Generate JWT tokens
+    // Generate JWT tokens (for both new and existing users)
     const tokenPayload = {
       id: user.id,
       email: user.email,
@@ -462,16 +473,14 @@ router.post('/register-complete', async (req, res) => {
 
     // Store refresh token in database
     await dbService.query(
-      `INSERT INTO user_refresh_tokens (user_id, token, expires_at, created_at)
+      `INSERT INTO user_refresh_tokens (user_id, token_hash, expires_at, created_at)
        VALUES ($1, $2, NOW() + INTERVAL '30 days', NOW())`,
       [user.id, refreshToken]
     );
 
-    console.log(`✅ User registration successful: ${user.id}`);
-
     res.json({
       success: true,
-      message: 'User registered successfully',
+      message: isNewUser ? 'User registered successfully' : 'User logged in successfully',
       data: {
         user: {
           id: user.id,

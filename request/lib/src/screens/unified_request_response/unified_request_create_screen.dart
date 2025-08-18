@@ -152,6 +152,23 @@ class _UnifiedRequestCreateScreenState
     }
   }
 
+  String _getRequestTypeString(RequestType type) {
+    switch (type) {
+      case RequestType.item:
+        return 'item';
+      case RequestType.service:
+        return 'service';
+      case RequestType.delivery:
+        return 'delivery';
+      case RequestType.rental:
+        return 'rent';
+      case RequestType.ride:
+        return 'ride';
+      case RequestType.price:
+        return 'price';
+    }
+  }
+
   Future<void> _showCategoryPicker() async {
     final result = await showModalBottomSheet<Map<String, String>>(
       context: context,
@@ -162,7 +179,7 @@ class _UnifiedRequestCreateScreenState
         maxChildSize: 0.9,
         minChildSize: 0.5,
         builder: (context, scrollController) => CategoryPicker(
-          requestType: 'item',
+          requestType: _getRequestTypeString(_selectedType),
           scrollController: scrollController,
         ),
       ),
@@ -474,7 +491,7 @@ class _UnifiedRequestCreateScreenState
                 minChildSize: 0.5,
                 maxChildSize: 0.95,
                 builder: (context, scrollController) => CategoryPicker(
-                  requestType: 'service',
+                  requestType: _getRequestTypeString(_selectedType),
                   scrollController: scrollController,
                 ),
               ),
@@ -784,7 +801,7 @@ class _UnifiedRequestCreateScreenState
                     builder: (context) => SizedBox(
                       height: MediaQuery.of(context).size.height * 0.8,
                       child: CategoryPicker(
-                        requestType: 'rent',
+                        requestType: _getRequestTypeString(_selectedType),
                         scrollController: ScrollController(),
                       ),
                     ),
@@ -1123,7 +1140,7 @@ class _UnifiedRequestCreateScreenState
                 builder: (context) => DraggableScrollableSheet(
                   expand: false,
                   builder: (context, scrollController) => CategoryPicker(
-                    requestType: 'delivery',
+                    requestType: _getRequestTypeString(_selectedType),
                     scrollController: scrollController,
                   ),
                 ),

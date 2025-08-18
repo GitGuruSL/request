@@ -34,16 +34,17 @@ class _CategoryPickerState extends State<CategoryPicker> {
     try {
       setState(() => _isLoading = true);
       final rest = RestCategoryService.instance;
-      final all = await rest.getCategoriesWithCache();
+
+      // Pass the request type to filter categories
+      final all = await rest.getCategoriesWithCache(
+          type: widget.requestType.toLowerCase());
       _totalBackend = all.length;
       _categoryNameToId.clear();
       _subcategoryNameToId.clear();
-      final type = widget.requestType.toLowerCase();
-      // Only categories explicitly marked with this request type
-      final explicit = all.where((c) => c.requestType == type).toList();
-      _explicitMatches = explicit.length;
 
-      final listToUse = (_showAll && explicit.isEmpty) ? all : explicit;
+      // Categories are already filtered by type from the backend, so use them directly
+      final listToUse = all;
+      _explicitMatches = all.length;
       _categories.clear();
 
       for (final cat in listToUse) {

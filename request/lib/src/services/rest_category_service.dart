@@ -123,14 +123,22 @@ class RestCategoryService {
   Future<List<Category>> getCategories({
     String countryCode = 'LK',
     bool includeInactive = false,
+    String? type, // Add type parameter
   }) async {
     try {
+      final queryParams = {
+        'country': countryCode,
+        'includeInactive': includeInactive.toString(),
+      };
+
+      // Add type filter if specified
+      if (type != null && type.isNotEmpty) {
+        queryParams['type'] = type;
+      }
+
       final response = await _apiClient.get<Map<String, dynamic>>(
         '/api/categories',
-        queryParameters: {
-          'country': countryCode,
-          'includeInactive': includeInactive.toString(),
-        },
+        queryParameters: queryParams,
       );
 
       if (response.isSuccess && response.data != null) {
@@ -201,9 +209,10 @@ class RestCategoryService {
   Future<List<Category>> getCategoriesWithCache({
     String countryCode = 'LK',
     bool includeInactive = false,
+    String? type, // Add type parameter
     bool forceRefresh = false,
   }) async {
-    final cacheKey = '${countryCode}_$includeInactive';
+    final cacheKey = '${countryCode}_${includeInactive}_${type ?? 'all'}';
 
     if (!forceRefresh && _categoriesCache.containsKey(cacheKey)) {
       return _categoriesCache[cacheKey]!;
@@ -212,6 +221,7 @@ class RestCategoryService {
     final categories = await getCategories(
       countryCode: countryCode,
       includeInactive: includeInactive,
+      type: type,
     );
 
     _categoriesCache[cacheKey] = categories;

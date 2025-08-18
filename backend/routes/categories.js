@@ -10,7 +10,7 @@ const router = express.Router();
  */
 router.get('/', async (req, res) => {
     try {
-        const { includeInactive = false } = req.query;
+        const { includeInactive = false, country = 'LK', type } = req.query;
         const user = req.user || { role: 'super_admin' }; // Default to super_admin for testing
 
         let categories;
@@ -21,6 +21,11 @@ router.get('/', async (req, res) => {
             if (!includeInactive) {
                 conditions.is_active = true;
             }
+            
+            // Filter by type if specified
+            if (type) {
+                conditions.type = type;
+            }
 
             categories = await dbService.findMany('categories', conditions, {
                 orderBy: 'name',
@@ -28,18 +33,27 @@ router.get('/', async (req, res) => {
             });
         } else {
             // Country Admin: Get categories enabled for their country
-            const countryCode = user.country_code; // Assuming country admin has country_code in their profile
+            const countryCode = user.country_code || country; // Use country from query if not in user profile
             
-            const query = `
+            let query = `
                 SELECT c.*, cc.is_active as country_active, cc.display_order
                 FROM categories c
                 INNER JOIN country_categories cc ON c.id = cc.category_id
                 WHERE cc.country_code = $1
                 ${!includeInactive ? 'AND c.is_active = true AND cc.is_active = true' : ''}
-                ORDER BY cc.display_order ASC, c.name ASC
             `;
             
-            const result = await dbService.query(query, [countryCode]);
+            const params = [countryCode];
+            
+            // Add type filter if specified
+            if (type) {
+                query += ` AND c.type = $${params.length + 1}`;
+                params.push(type);
+            }
+            
+            query += ` ORDER BY cc.display_order ASC, c.name ASC`;
+            
+            const result = await dbService.query(query, params);
             categories = result.rows;
         }
 
@@ -47,7 +61,8 @@ router.get('/', async (req, res) => {
             success: true,
             data: categories,
             count: categories.length,
-            isGlobalView: user.role === 'super_admin'
+            isGlobalView: user.role === 'super_admin',
+            filteredByType: type || null
         });
     } catch (error) {
         console.error('Get categories error:', error);
@@ -102,8 +117,8 @@ router.get('/:id/subcategories', async (req, res) => {
             conditions.is_active = true;
         }
 
-        const subcategories = await dbService.findMany('subcategories', conditions, {
-            orderBy: 'display_order, name',
+        const subcategories = await dbService.findMany('sub_categories', conditions, {
+            orderBy: 'name',
             orderDirection: 'ASC'
         });
 
