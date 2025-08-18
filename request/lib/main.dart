@@ -92,8 +92,15 @@ class MyApp extends StatelessWidget {
               ),
             );
           case '/profile':
+            final args = settings.arguments as Map<String, dynamic>?;
             return MaterialPageRoute(
-              builder: (context) => const ProfileCompletionScreen(),
+              builder: (context) => ProfileCompletionScreen(
+                emailOrPhone: args?['emailOrPhone'],
+                isNewUser: args?['isNewUser'],
+                isEmail: args?['isEmail'],
+                countryCode: args?['countryCode'],
+                otpToken: args?['otpToken'],
+              ),
             );
           case '/driver-verification':
             return MaterialPageRoute(

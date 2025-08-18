@@ -387,4 +387,115 @@ router.post('/register', async (req, res) => {
   }
 });
 
+// 5. Register new user with complete profile (for profile completion flow)
+router.post('/register-complete', async (req, res) => {
+  try {
+    const { emailOrPhone, firstName, lastName, displayName, password, isEmail } = req.body;
+
+    if (!emailOrPhone || !firstName || !lastName || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email/phone, first name, last name, and password are required'
+      });
+    }
+
+    console.log(`👤 Creating new user account: ${emailOrPhone}`);
+
+    // Check if user already exists
+    const existingUserResult = await dbService.query(
+      'SELECT * FROM users WHERE (email = $1 OR phone = $1)',
+      [emailOrPhone]
+    );
+
+    if (existingUserResult.rows.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'User already exists with this email or phone'
+      });
+    }
+
+    // Hash password
+    const saltRounds = 12;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    // Create new user account (without profile_completed column)
+    const userData = {
+      email: isEmail ? emailOrPhone : null,
+      phone: !isEmail ? emailOrPhone : null,
+      first_name: firstName,
+      last_name: lastName,
+      display_name: displayName,
+      password_hash: hashedPassword,
+      email_verified: isEmail,
+      phone_verified: !isEmail,
+      is_active: true,
+      role: 'user'
+    };
+
+    const createUserResult = await dbService.query(
+      `INSERT INTO users (
+        id, email, phone, first_name, last_name, display_name, password_hash,
+        email_verified, phone_verified, is_active, role, 
+        created_at, updated_at
+      ) VALUES (
+        gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW()
+      ) RETURNING *`,
+      [
+        userData.email, userData.phone, userData.first_name, userData.last_name,
+        userData.display_name, userData.password_hash, userData.email_verified,
+        userData.phone_verified, userData.is_active, userData.role
+      ]
+    );
+    
+    const user = createUserResult.rows[0];
+
+    // Generate JWT tokens
+    const tokenPayload = {
+      id: user.id,
+      email: user.email,
+      phone: user.phone,
+      role: user.role
+    };
+
+    const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '7d' });
+    const refreshToken = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '30d' });
+
+    // Store refresh token in database
+    await dbService.query(
+      `INSERT INTO user_refresh_tokens (user_id, token, expires_at, created_at)
+       VALUES ($1, $2, NOW() + INTERVAL '30 days', NOW())`,
+      [user.id, refreshToken]
+    );
+
+    console.log(`✅ User registration successful: ${user.id}`);
+
+    res.json({
+      success: true,
+      message: 'User registered successfully',
+      data: {
+        user: {
+          id: user.id,
+          email: user.email,
+          phone: user.phone,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          display_name: user.display_name,
+          email_verified: user.email_verified,
+          phone_verified: user.phone_verified,
+          role: user.role
+        },
+        token,
+        refreshToken
+      }
+    });
+
+  } catch (error) {
+    console.error('Register complete user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Registration failed'
+    });
+  }
+});
+
 module.exports = router;

@@ -415,6 +415,148 @@ class RestAuthService {
     }
   }
 
+  /// Login verified user (for users who completed OTP but don't have tokens)
+  Future<AuthResult> loginVerifiedUser(String emailOrPhone) async {
+    try {
+      if (kDebugMode) {
+        print('🔑 [loginVerifiedUser] Attempting login for: $emailOrPhone');
+      }
+
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        '/api/flutter/auth/login-verified',
+        data: {
+          'emailOrPhone': emailOrPhone.toLowerCase().trim(),
+        },
+      );
+
+      if (kDebugMode) {
+        print('🔑 [loginVerifiedUser] Response: ${response.isSuccess}');
+        print('🔑 [loginVerifiedUser] Data: ${response.data}');
+      }
+
+      if (response.isSuccess && response.data != null) {
+        final data = response.data!;
+        final userData = data['data'] as Map<String, dynamic>?;
+
+        if (userData != null) {
+          final userMap = userData['user'] as Map<String, dynamic>?;
+          final token = userData['token'] as String?;
+          final refreshToken = userData['refreshToken'] as String?;
+
+          if (token != null) await _apiClient.saveToken(token);
+          if (refreshToken != null)
+            await _apiClient.saveRefreshToken(refreshToken);
+
+          if (userMap != null) {
+            _currentUser = UserModel.fromJson(userMap);
+          }
+
+          if (kDebugMode) {
+            print(
+                '🔑 [loginVerifiedUser] Login successful, user: ${_currentUser?.email}');
+          }
+
+          return AuthResult(
+            success: true,
+            user: _currentUser,
+            token: token,
+            message: 'Login successful',
+          );
+        }
+      }
+
+      return AuthResult(
+        success: false,
+        error: response.error ?? 'Failed to login',
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ [loginVerifiedUser] Exception: $e');
+      }
+      return AuthResult(
+        success: false,
+        error: 'Failed to login: ${e.toString()}',
+      );
+    }
+  }
+
+  /// Register new user with complete profile information
+  Future<AuthResult> registerNewUser({
+    required String emailOrPhone,
+    required String firstName,
+    required String lastName,
+    required String displayName,
+    required String password,
+    required bool isEmail,
+  }) async {
+    try {
+      if (kDebugMode) {
+        print('👤 [registerNewUser] Starting registration for: $emailOrPhone');
+      }
+
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        '/api/flutter/auth/register-complete',
+        data: {
+          'emailOrPhone': emailOrPhone.toLowerCase().trim(),
+          'firstName': firstName.trim(),
+          'lastName': lastName.trim(),
+          'displayName': displayName.trim(),
+          'password': password,
+          'isEmail': isEmail,
+        },
+      );
+
+      if (kDebugMode) {
+        print('👤 [registerNewUser] Response: ${response.isSuccess}');
+        print('👤 [registerNewUser] Data: ${response.data}');
+      }
+
+      if (response.isSuccess && response.data != null) {
+        final data = response.data!;
+        final userData = data['data'] as Map<String, dynamic>?;
+
+        if (userData != null) {
+          final userMap = userData['user'] as Map<String, dynamic>?;
+          final token = userData['token'] as String?;
+          final refreshToken = userData['refreshToken'] as String?;
+
+          if (token != null) await _apiClient.saveToken(token);
+          if (refreshToken != null)
+            await _apiClient.saveRefreshToken(refreshToken);
+
+          if (userMap != null) {
+            _currentUser = UserModel.fromJson(userMap);
+          }
+
+          if (kDebugMode) {
+            print(
+                '👤 [registerNewUser] Registration successful, user: ${_currentUser?.email}');
+          }
+
+          return AuthResult(
+            success: true,
+            user: _currentUser,
+            token: token,
+            message: 'Registration successful',
+          );
+        }
+      }
+
+      return AuthResult(
+        success: false,
+        error: response.error ?? 'Failed to register',
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ [registerNewUser] Exception: $e');
+      }
+      return AuthResult(
+        success: false,
+        error: 'Failed to register: ${e.toString()}',
+      );
+    }
+  }
+
   /// Complete user profile (update profile info and set password)
   Future<AuthResult> completeProfile({
     String? firstName,

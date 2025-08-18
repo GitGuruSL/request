@@ -2,7 +2,20 @@ import 'package:flutter/material.dart';
 import '../../services/rest_auth_service.dart';
 
 class ProfileCompletionScreen extends StatefulWidget {
-  const ProfileCompletionScreen({super.key});
+  final String? emailOrPhone;
+  final bool? isNewUser;
+  final bool? isEmail;
+  final String? countryCode;
+  final String? otpToken;
+
+  const ProfileCompletionScreen({
+    super.key,
+    this.emailOrPhone,
+    this.isNewUser,
+    this.isEmail,
+    this.countryCode,
+    this.otpToken,
+  });
 
   @override
   State<ProfileCompletionScreen> createState() =>
@@ -65,10 +78,38 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
     });
 
     try {
-      print(
-          '🔧 [ProfileCompletion] Calling RestAuthService.completeProfile...');
+      print('🔧 [ProfileCompletion] Starting user registration...');
 
-      // Complete profile using REST auth service
+      // For new users, register directly instead of trying to authenticate first
+      if (widget.isNewUser == true &&
+          widget.emailOrPhone != null &&
+          widget.emailOrPhone!.isNotEmpty) {
+        print('🔧 [ProfileCompletion] Registering new user...');
+
+        final result = await RestAuthService.instance.registerNewUser(
+          emailOrPhone: widget.emailOrPhone!,
+          firstName: firstName,
+          lastName: lastName,
+          displayName: displayName,
+          password: password,
+          isEmail: widget.isEmail ?? widget.emailOrPhone!.contains('@'),
+        );
+
+        if (result.success) {
+          print('🔧 [ProfileCompletion] User registered successfully');
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/home',
+            (route) => false,
+          );
+          return;
+        } else {
+          print('🔧 [ProfileCompletion] Registration failed: ${result.error}');
+          throw Exception(result.error ?? 'Failed to register user');
+        }
+      }
+
+      // Fallback: try the old profile completion flow for existing users
       final result = await RestAuthService.instance.completeProfile(
         firstName: firstName,
         lastName: lastName,

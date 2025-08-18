@@ -121,7 +121,7 @@ app.get('/test', (req, res) => {
 
 // API routes
 app.use('/api/auth', authRoutes);
-app.use('/api/flutter/auth', flutterAuthRoutes);
+app.use('/api/auth', flutterAuthRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/subcategories', subcategoryRoutes);
 app.use('/api/cities', cityRoutes);
