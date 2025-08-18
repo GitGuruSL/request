@@ -274,8 +274,7 @@ class RequestModel {
   final String? subcategoryId;
   final String title;
   final String description;
-  final double? budgetMin;
-  final double? budgetMax;
+  final double? budget;
   final String currency;
   final String locationCityId;
   final String? locationAddress;
@@ -306,8 +305,7 @@ class RequestModel {
     this.subcategoryId,
     required this.title,
     required this.description,
-    this.budgetMin,
-    this.budgetMax,
+    this.budget,
     required this.currency,
     required this.locationCityId,
     this.locationAddress,
@@ -338,16 +336,9 @@ class RequestModel {
       subcategoryId: json['subcategory_id'] as String?,
       title: json['title'] as String,
       description: json['description'] as String,
-      budgetMin: json['budget'] != null
+      budget: json['budget'] != null
           ? double.tryParse(json['budget'].toString())
-          : (json['budget_min'] != null
-              ? double.tryParse(json['budget_min'].toString())
-              : null),
-      budgetMax: json['budget'] != null
-          ? double.tryParse(json['budget'].toString())
-          : (json['budget_max'] != null
-              ? double.tryParse(json['budget_max'].toString())
-              : null),
+          : null,
       currency: json['currency'] as String? ?? 'LKR',
       locationCityId: json['location_city_id'] as String,
       locationAddress: json['location_address'] as String?,
@@ -377,12 +368,8 @@ class RequestModel {
   }
 
   String get budgetDisplay {
-    if (budgetMin != null && budgetMax != null) {
-      return '$currency ${budgetMin!.toStringAsFixed(0)} - ${budgetMax!.toStringAsFixed(0)}';
-    } else if (budgetMin != null) {
-      return 'From $currency ${budgetMin!.toStringAsFixed(0)}';
-    } else if (budgetMax != null) {
-      return 'Up to $currency ${budgetMax!.toStringAsFixed(0)}';
+    if (budget != null) {
+      return '$currency ${budget!.toStringAsFixed(0)}';
     }
     return 'Budget not specified';
   }

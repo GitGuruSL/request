@@ -26,8 +26,7 @@ class RequestModel {
   final String? cityName;
   final String countryCode;
   final String status;
-  final double? budgetMin;
-  final double? budgetMax;
+  final double? budget;
   final String? currency;
   final DateTime? deadline;
   final List<String>? imageUrls;
@@ -51,8 +50,7 @@ class RequestModel {
     this.cityName,
     required this.countryCode,
     required this.status,
-    this.budgetMin,
-    this.budgetMax,
+    this.budget,
     this.currency,
     this.deadline,
     this.imageUrls,
@@ -78,8 +76,7 @@ class RequestModel {
       cityName: json['city_name'],
       countryCode: json['country_code'] ?? 'LK',
       status: json['status'] ?? 'active',
-      budgetMin: _asDouble(json['budget_min']),
-      budgetMax: _asDouble(json['budget_max']),
+      budget: _asDouble(json['budget']),
       currency: json['currency'],
       deadline:
           json['deadline'] != null && json['deadline'].toString().isNotEmpty
@@ -106,8 +103,7 @@ class RequestModel {
       'country_code': countryCode,
       'status': status,
       'accepted_response_id': acceptedResponseId,
-      'budget_min': budgetMin,
-      'budget_max': budgetMax,
+      'budget': budget,
       'currency': currency,
       'deadline': deadline?.toIso8601String(),
       'image_urls': imageUrls,

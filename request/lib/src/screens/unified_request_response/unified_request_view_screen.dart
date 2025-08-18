@@ -482,11 +482,14 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                                     double.tryParse(maxController.text.trim());
                                 setState(() => _updatingRequest = true);
                                 setSheet(() => {});
+
+                                // Use single budget value (prefer min if both provided, or use whichever is available)
+                                final budget = min ?? max;
+
                                 final updates = <String, dynamic>{
                                   'title': title,
                                   'description': desc,
-                                  'budget_min': min,
-                                  'budget_max': max
+                                  if (budget != null) 'budget': budget
                                 };
                                 final updated =
                                     await _service.updateRequest(r.id, updates);
@@ -655,7 +658,7 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                     _chip(Icons.access_time, _relativeTime(r.createdAt)),
                     _chip(Icons.info_outline, r.status.toUpperCase()),
                   ]),
-                  if (r.budgetMin != null || r.budgetMax != null) ...[
+                  if (r.budget != null) ...[
                     const SizedBox(height: 20),
                     Row(children: [
                       const Icon(Icons.account_balance_wallet,
@@ -762,15 +765,8 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
 
   String _formatBudget(rest.RequestModel r) {
     final cur = r.currency ?? '';
-    if (r.budgetMin == null && r.budgetMax == null) return 'No budget';
-    if (r.budgetMin != null && r.budgetMax != null) {
-      if (r.budgetMin == r.budgetMax)
-        return '$cur${r.budgetMin!.toStringAsFixed(0)}';
-      return '$cur${r.budgetMin!.toStringAsFixed(0)}-${r.budgetMax!.toStringAsFixed(0)}';
-    }
-    if (r.budgetMin != null)
-      return 'From $cur${r.budgetMin!.toStringAsFixed(0)}';
-    return 'Up to $cur${r.budgetMax!.toStringAsFixed(0)}';
+    if (r.budget == null) return 'No budget';
+    return '$cur${r.budget!.toStringAsFixed(0)}';
   }
 
   Widget _responsesSection() {
