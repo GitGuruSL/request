@@ -808,6 +808,46 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                     ),
                   ),
 
+                  // Location Information Section
+                  if (r.locationAddress != null &&
+                      r.locationAddress!.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    const Text('Location Information',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(children: [
+                            Icon(Icons.location_on,
+                                size: 18, color: Colors.grey[600]),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(r.locationAddress!,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w600)),
+                            ),
+                          ]),
+                          if (r.locationLatitude != null &&
+                              r.locationLongitude != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                                'Coordinates: ${r.locationLatitude!.toStringAsFixed(6)}, ${r.locationLongitude!.toStringAsFixed(6)}',
+                                style: TextStyle(
+                                    color: Colors.grey[600], fontSize: 12)),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+
                   if (r.metadata != null && r.metadata!.isNotEmpty) ...[
                     const SizedBox(height: 24),
                     const Text('Request Details',

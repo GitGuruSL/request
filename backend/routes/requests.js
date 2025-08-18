@@ -303,6 +303,13 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
     console.log('metadata field exists?', 'metadata' in req.body);
     console.log('metadata value:', req.body.metadata);
     console.log('metadata type:', typeof req.body.metadata);
+    console.log('=== LOCATION DATA DEBUG ===');
+    console.log('location_address:', location_address);
+    console.log('location_latitude:', location_latitude);
+    console.log('location_longitude:', location_longitude);
+    console.log('=== IMAGE DATA DEBUG ===');
+    console.log('image_urls:', image_urls);
+    console.log('image_urls type:', typeof image_urls);
 
     console.log('Request creation data:', {
       user_id,
@@ -327,14 +334,16 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
     const request = await database.queryOne(`
       INSERT INTO requests (
         user_id, title, description, category_id, subcategory_id, location_city_id,
-        budget, country_code, metadata, status, created_at, updated_at
+        location_address, location_latitude, location_longitude,
+        budget, currency, deadline, image_urls, country_code, metadata, status, created_at, updated_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, 'active',
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'active',
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
       ) RETURNING *
     `, [
       user_id, title, description, category_id, subcategory_id, city_id,
-      budget, country_code, metadata ? JSON.stringify(metadata) : null
+      location_address, location_latitude, location_longitude,
+      budget, currency, deadline, image_urls, country_code, metadata ? JSON.stringify(metadata) : null
     ]);
 
     res.status(201).json({
@@ -386,13 +395,20 @@ router.put('/:id', auth.authMiddleware(), async (req, res) => {
       description,
       category_id,
       subcategory_id,
-  city_id, // client may send city_id; map to location_city_id
+      city_id, // client may send city_id; map to location_city_id
       budget_min,
       budget_max,
-  currency,
-  priority,
+      budget, // new single budget field
+      currency,
+      priority,
       status,
-      is_active
+      is_active,
+      location_address,
+      location_latitude,
+      location_longitude,
+      deadline,
+      image_urls,
+      metadata
     } = req.body;
 
     // Build dynamic update query
@@ -428,6 +444,10 @@ router.put('/:id', auth.authMiddleware(), async (req, res) => {
       updates.push(`budget_max = $${paramCounter++}`);
       values.push(budget_max);
     }
+    if (budget !== undefined) {
+      updates.push(`budget = $${paramCounter++}`);
+      values.push(budget);
+    }
     if (currency !== undefined) {
       updates.push(`currency = $${paramCounter++}`);
       values.push(currency);
@@ -443,6 +463,30 @@ router.put('/:id', auth.authMiddleware(), async (req, res) => {
     if (is_active !== undefined) {
       updates.push(`is_active = $${paramCounter++}`);
       values.push(is_active);
+    }
+    if (location_address !== undefined) {
+      updates.push(`location_address = $${paramCounter++}`);
+      values.push(location_address);
+    }
+    if (location_latitude !== undefined) {
+      updates.push(`location_latitude = $${paramCounter++}`);
+      values.push(location_latitude);
+    }
+    if (location_longitude !== undefined) {
+      updates.push(`location_longitude = $${paramCounter++}`);
+      values.push(location_longitude);
+    }
+    if (deadline !== undefined) {
+      updates.push(`deadline = $${paramCounter++}`);
+      values.push(deadline);
+    }
+    if (image_urls !== undefined) {
+      updates.push(`image_urls = $${paramCounter++}`);
+      values.push(image_urls);
+    }
+    if (metadata !== undefined) {
+      updates.push(`metadata = $${paramCounter++}`);
+      values.push(metadata ? JSON.stringify(metadata) : null);
     }
 
     if (updates.length === 0) {

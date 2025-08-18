@@ -3,6 +3,7 @@ import '../../models/request_model.dart';
 import '../../models/enhanced_user_model.dart';
 import '../../services/enhanced_request_service.dart';
 import '../../services/enhanced_user_service.dart';
+import '../../services/rest_request_service.dart' as rest;
 import '../../widgets/image_upload_widget.dart';
 import '../../widgets/accurate_location_picker_widget.dart';
 import '../../widgets/category_picker.dart';
@@ -24,6 +25,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
   final _formKey = GlobalKey<FormState>();
   final EnhancedRequestService _requestService = EnhancedRequestService();
   final EnhancedUserService _userService = EnhancedUserService();
+  final rest.RestRequestService _restService = rest.RestRequestService.instance;
 
   // Common form controllers
   final _titleController = TextEditingController();
@@ -1544,30 +1546,44 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
         }
       }
 
-      await _requestService.updateRequest(
+      // Prepare update data for REST API
+      final Map<String, dynamic> updateData = {
+        'title': _titleController.text.trim(),
+        'description': _descriptionController.text.trim(),
+        'budget': _budgetController.text.trim().isNotEmpty
+            ? double.tryParse(_budgetController.text.trim())
+            : null,
+        'image_urls': _imageUrls.isNotEmpty ? _imageUrls : null,
+        'metadata': _getTypeSpecificData(),
+      };
+
+      // Add location data if available
+      if (locationInfo != null) {
+        updateData['location_address'] = locationInfo.address;
+        updateData['location_latitude'] = locationInfo.latitude;
+        updateData['location_longitude'] = locationInfo.longitude;
+      }
+
+      // Use REST service to update the request
+      final updatedRequest = await _restService.updateRequest(
         widget.request.id,
-        {
-          'title': _titleController.text.trim(),
-          'description': _descriptionController.text.trim(),
-          'location': locationInfo?.toMap(),
-          'budget': _budgetController.text.trim().isNotEmpty
-              ? double.tryParse(_budgetController.text.trim())
-              : null,
-          'images': _imageUrls,
-          'typeSpecificData': _getTypeSpecificData(),
-        },
+        updateData,
       );
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                '${_getTypeDisplayName(_selectedType)} updated successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(
-            context, true); // Return true to indicate successful update
+      if (updatedRequest != null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  '${_getTypeDisplayName(_selectedType)} updated successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.pop(
+              context, true); // Return true to indicate successful update
+        }
+      } else {
+        throw Exception('Failed to update request');
       }
     } catch (e) {
       if (mounted) {
