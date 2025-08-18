@@ -113,6 +113,11 @@ class CentralizedRequestService {
       // Debug log final create payload
       // ignore: avoid_print
       print('CentralizedRequestService -> creating with city_id=$cityId');
+      // ignore: avoid_print
+      print(
+          'CentralizedRequestService -> metadata being sent: ${createData.metadata}');
+      // ignore: avoid_print
+      print('CentralizedRequestService -> typeSpecific data: $typeSpecific');
 
       if (createData.categoryId.isEmpty) {
         throw Exception(
@@ -120,6 +125,11 @@ class CentralizedRequestService {
       }
 
       final created = await _rest.createRequest(createData);
+      // ignore: avoid_print
+      print('CentralizedRequestService -> created request result: $created');
+      // ignore: avoid_print
+      print(
+          'CentralizedRequestService -> created request metadata: ${created?.metadata}');
       return created?.id; // Return the new request ID
     } catch (e) {
       print('CentralizedRequestService.createRequest error: $e');

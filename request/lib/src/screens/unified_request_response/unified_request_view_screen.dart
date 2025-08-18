@@ -560,6 +560,73 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
     if (mounted) setState(() => _deletingRequest = false);
   }
 
+  void _messageRequester(rest.RequestModel request) {
+    // Navigate to messaging screen or show messaging interface
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Message ${request.userName ?? 'Requester'}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Contact: ${request.userEmail ?? 'No email available'}'),
+            const SizedBox(height: 16),
+            const Text(
+                'Messaging feature will be implemented to allow direct communication with the requester.'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              // TODO: Implement actual messaging navigation
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Messaging feature coming soon!')),
+              );
+            },
+            child: const Text('Start Chat'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showImageFullScreen(String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.black,
+        child: Stack(
+          children: [
+            Center(
+              child: InteractiveViewer(
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => const Center(
+                    child: Icon(Icons.error, color: Colors.white, size: 50),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 40,
+              right: 20,
+              child: IconButton(
+                onPressed: () => Navigator.pop(ctx),
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -630,9 +697,49 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                   const SizedBox(height: 12),
                   Text(r.description,
                       style: TextStyle(color: Colors.grey[700], height: 1.4)),
+
+                  // Images Section
+                  if (r.imageUrls != null && r.imageUrls!.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    const Text('Images',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 120,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: r.imageUrls!.length,
+                        itemBuilder: (context, index) => GestureDetector(
+                          onTap: () =>
+                              _showImageFullScreen(r.imageUrls![index]),
+                          child: Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            width: 120,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey[300]!),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                r.imageUrls![index],
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Container(
+                                  color: Colors.grey[200],
+                                  child: const Icon(Icons.image_not_supported),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+
                   const SizedBox(height: 16),
                   Wrap(spacing: 8, runSpacing: 8, children: [
-                    _chip(Icons.person, r.userName ?? 'User'),
                     _chip(Icons.category, r.categoryName ?? r.categoryId),
                     if (r.cityName != null)
                       _chip(Icons.location_on, r.cityName!),
@@ -640,8 +747,64 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                     _chip(Icons.access_time, _relativeTime(r.createdAt)),
                     _chip(Icons.info_outline, r.status.toUpperCase()),
                   ]),
+
+                  // Requester Information Section
+                  const SizedBox(height: 20),
+                  const Text('Requester Information',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(children: [
+                          Icon(Icons.person, size: 18, color: Colors.grey[600]),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(r.userName ?? 'Unknown User',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w600)),
+                          ),
+                          if (!_isOwner) ...[
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.blue,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: IconButton(
+                                onPressed: () => _messageRequester(r),
+                                icon: const Icon(Icons.message,
+                                    size: 18, color: Colors.white),
+                                tooltip: 'Message Requester',
+                                padding: const EdgeInsets.all(8),
+                                constraints: const BoxConstraints(),
+                              ),
+                            ),
+                          ],
+                        ]),
+                        // TODO: Add phone number display when available in the model
+                        // if (r.phone != null) ...[
+                        //   const SizedBox(height: 4),
+                        //   Row(children: [
+                        //     Icon(Icons.phone, size: 16, color: Colors.grey[600]),
+                        //     const SizedBox(width: 8),
+                        //     Expanded(
+                        //         child: Text(r.phone!,
+                        //             style: TextStyle(color: Colors.grey[700]))),
+                        //   ]),
+                        // ],
+                      ],
+                    ),
+                  ),
+
                   if (r.budget != null) ...[
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                     Row(children: [
                       const Icon(Icons.account_balance_wallet,
                           size: 18, color: Colors.blue),
@@ -652,25 +815,53 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                   ],
                   if (r.metadata != null && r.metadata!.isNotEmpty) ...[
                     const SizedBox(height: 24),
-                    const Text('Extra Details',
+                    const Text('Request Details',
                         style: TextStyle(
                             fontSize: 16, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
-                    ...r.metadata!.entries.take(8).map((e) => Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('${e.key}: ',
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w500)),
-                                Expanded(child: Text(e.value.toString())),
-                              ]),
-                        )),
-                    if (r.metadata!.length > 8)
-                      Text('+${r.metadata!.length - 8} more entries',
-                          style:
-                              TextStyle(color: Colors.grey[600], fontSize: 12)),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey[200]!),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ...r.metadata!.entries.take(10).map((e) => Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      SizedBox(
+                                        width: 80,
+                                        child: Text('${e.key}:',
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.w500,
+                                                fontSize: 12)),
+                                      ),
+                                      Expanded(
+                                        child: Text(e.value.toString(),
+                                            style:
+                                                const TextStyle(fontSize: 12)),
+                                      ),
+                                    ]),
+                              )),
+                          if (r.metadata!.length > 10)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                  '+${r.metadata!.length - 10} more details',
+                                  style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 11,
+                                      fontStyle: FontStyle.italic)),
+                            ),
+                        ],
+                      ),
+                    ),
                   ],
                   if (_isOwner) ...[
                     const SizedBox(height: 24),
@@ -683,7 +874,9 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                       Text('Status: ${r.status}',
                           style: const TextStyle(
                               fontSize: 12, fontWeight: FontWeight.w600)),
-                      const SizedBox(width: 12),
+                    ]),
+                    const SizedBox(height: 8),
+                    Row(children: [
                       TextButton.icon(
                           onPressed: _toggleStatus,
                           icon: Icon(
