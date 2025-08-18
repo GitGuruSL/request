@@ -285,11 +285,24 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       subcategory_id,
       city_id,
       budget,
-      variables = []
+      variables = [],
+      metadata,
+      location_address,
+      location_latitude,
+      location_longitude,
+      currency,
+      deadline,
+      image_urls
     } = req.body;
 
     const user_id = req.user.id;
     const country_code = req.user.country_code || 'LK';
+
+    console.log('=== FULL REQUEST BODY DEBUG ===');
+    console.log('Full req.body:', JSON.stringify(req.body, null, 2));
+    console.log('metadata field exists?', 'metadata' in req.body);
+    console.log('metadata value:', req.body.metadata);
+    console.log('metadata type:', typeof req.body.metadata);
 
     console.log('Request creation data:', {
       user_id,
@@ -298,7 +311,8 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       description,
       category_id,
       city_id,
-      budget
+      budget,
+      metadata: metadata ? JSON.stringify(metadata) : null
     });
 
     // Validate required fields
@@ -309,19 +323,22 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       });
     }
 
-    // Create the request
+    // Create the request with metadata
     const request = await database.queryOne(`
       INSERT INTO requests (
         user_id, title, description, category_id, subcategory_id, location_city_id,
-        budget, country_code,
+        budget, country_code, metadata, location_address, location_latitude, 
+        location_longitude, currency, deadline, image_urls,
         status, created_at, updated_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, 'active',
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'active',
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
       ) RETURNING *
     `, [
       user_id, title, description, category_id, subcategory_id, city_id,
-      budget, country_code
+      budget, country_code, metadata ? JSON.stringify(metadata) : null,
+      location_address, location_latitude, location_longitude, currency, 
+      deadline, image_urls ? JSON.stringify(image_urls) : null
     ]);
 
     res.status(201).json({
