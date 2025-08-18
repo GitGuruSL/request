@@ -16,15 +16,18 @@ CREATE TABLE IF NOT EXISTS business_products (
 CREATE INDEX IF NOT EXISTS idx_business_products_business ON business_products(business_id);
 CREATE INDEX IF NOT EXISTS idx_business_products_country ON business_products(country_code);
 
--- Ensure updated_at stays current
-CREATE OR REPLACE FUNCTION touch_business_products_updated_at()
-RETURNS TRIGGER AS $$
+DO $$
 BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END; $$ LANGUAGE plpgsql;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger WHERE tgname = 'trg_business_products_updated_at'
+  ) THEN
+    CREATE OR REPLACE FUNCTION touch_business_products_updated_at()
+    RETURNS TRIGGER AS $$
+    BEGIN
+      NEW.updated_at = NOW(); RETURN NEW; END; $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS trg_business_products_updated_at ON business_products;
-CREATE TRIGGER trg_business_products_updated_at
-BEFORE UPDATE ON business_products
-FOR EACH ROW EXECUTE FUNCTION touch_business_products_updated_at();
+    CREATE TRIGGER trg_business_products_updated_at
+    BEFORE UPDATE ON business_products
+    FOR EACH ROW EXECUTE FUNCTION touch_business_products_updated_at();
+  END IF;
+END$$;

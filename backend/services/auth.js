@@ -156,39 +156,14 @@ class AuthService {
             throw new Error('Email or phone is required');
         }
 
-        // Find user in users table first, then check admin_users table
+        // Find user
         let user = null;
         if (email) {
             const users = await dbService.findMany('users', { email });
             user = users[0];
-            
-            // If not found in users table, check admin_users table
-            if (!user) {
-                const adminUsers = await dbService.findMany('admin_users', { email });
-                if (adminUsers[0]) {
-                    // Convert admin_users format to users format
-                    const admin = adminUsers[0];
-                    user = {
-                        id: admin.id,
-                        email: admin.email,
-                        phone: null, // admin_users doesn't have phone
-                        password_hash: admin.password_hash, // copy password_hash from admin_users
-                        display_name: admin.name,
-                        role: admin.role,
-                        is_active: admin.is_active,
-                        email_verified: true, // assume admin emails are verified
-                        phone_verified: false,
-                        country_code: 'LK', // default
-                        permissions: admin.permissions,
-                        created_at: admin.created_at,
-                        updated_at: admin.updated_at
-                    };
-                }
-            }
         } else if (phone) {
             const users = await dbService.findMany('users', { phone });
             user = users[0];
-            // admin_users table doesn't have phone numbers, so only check users table
         }
 
         if (!user) {
@@ -202,38 +177,18 @@ class AuthService {
         // Verify password if provided
         if (password) {
             if (!user.password_hash) {
-                // For admin_users without password_hash, check if this is the default admin and set password
-                if (user.email === 'superadmin@request.lk' && password === 'StrongPassword123!') {
-                    // Allow login and set password_hash in admin_users table
-                    const hashedPassword = await this.hashPassword(password);
-                    if (user.role === 'super_admin') {
-                        // Update admin_users table with password_hash
-                        await dbService.query(
-                            'UPDATE admin_users SET password_hash = $1 WHERE email = $2',
-                            [hashedPassword, user.email]
-                        );
-                        user.password_hash = hashedPassword;
-                    }
-                } else {
-                    throw new Error('Password login not available for this account');
-                }
-            } else {
-                const isValidPassword = await this.verifyPassword(password, user.password_hash);
-                if (!isValidPassword) {
-                    throw new Error('Invalid password');
-                }
+                throw new Error('Password login not available for this account');
+            }
+
+            const isValidPassword = await this.verifyPassword(password, user.password_hash);
+            if (!isValidPassword) {
+                throw new Error('Invalid password');
             }
         }
 
         // Generate token
         const token = this.generateToken(user);
-        
-        // Skip refresh tokens for admin users (they exist in admin_users table, not users table)
-        let refreshToken = null;
-        if (user.role !== 'super_admin' && user.role !== 'admin' && user.role !== 'business_admin') {
-            refreshToken = await this.generateAndStoreRefreshToken(user.id);
-        }
-        
+        const refreshToken = await this.generateAndStoreRefreshToken(user.id);
         return {
             user: this.sanitizeUser(user),
             token,

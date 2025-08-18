@@ -29,13 +29,13 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
 );
 CREATE INDEX IF NOT EXISTS idx_notification_prefs_user ON notification_preferences(user_id);
 
--- Touch functions
-CREATE OR REPLACE FUNCTION touch_notifications_updated_at() RETURNS TRIGGER AS $$ BEGIN NEW.updated_at=NOW(); RETURN NEW; END; $$ LANGUAGE plpgsql;
-CREATE OR REPLACE FUNCTION touch_notification_preferences_updated_at() RETURNS TRIGGER AS $$ BEGIN NEW.updated_at=NOW(); RETURN NEW; END; $$ LANGUAGE plpgsql;
-
--- Recreate triggers
-DROP TRIGGER IF EXISTS trg_notifications_updated_at ON notifications;
-CREATE TRIGGER trg_notifications_updated_at BEFORE UPDATE ON notifications FOR EACH ROW EXECUTE FUNCTION touch_notifications_updated_at();
-
-DROP TRIGGER IF EXISTS trg_notification_preferences_updated_at ON notification_preferences;
-CREATE TRIGGER trg_notification_preferences_updated_at BEFORE UPDATE ON notification_preferences FOR EACH ROW EXECUTE FUNCTION touch_notification_preferences_updated_at();
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_notifications_updated_at') THEN
+    CREATE OR REPLACE FUNCTION touch_notifications_updated_at() RETURNS TRIGGER AS $$ BEGIN NEW.updated_at=NOW(); RETURN NEW; END; $$ LANGUAGE plpgsql;
+    CREATE TRIGGER trg_notifications_updated_at BEFORE UPDATE ON notifications FOR EACH ROW EXECUTE FUNCTION touch_notifications_updated_at();
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_notification_preferences_updated_at') THEN
+    CREATE OR REPLACE FUNCTION touch_notification_preferences_updated_at() RETURNS TRIGGER AS $$ BEGIN NEW.updated_at=NOW(); RETURN NEW; END; $$ LANGUAGE plpgsql;
+    CREATE TRIGGER trg_notification_preferences_updated_at BEFORE UPDATE ON notification_preferences FOR EACH ROW EXECUTE FUNCTION touch_notification_preferences_updated_at();
+  END IF;
+END $$;

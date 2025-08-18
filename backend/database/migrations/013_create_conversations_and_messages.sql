@@ -29,13 +29,13 @@ CREATE TABLE IF NOT EXISTS conversation_messages (
 CREATE INDEX IF NOT EXISTS idx_messages_conversation ON conversation_messages(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_messages_sender ON conversation_messages(sender_id);
 
--- Touch functions
-CREATE OR REPLACE FUNCTION touch_conversations_updated_at() RETURNS TRIGGER AS $$ BEGIN NEW.updated_at=NOW(); RETURN NEW; END; $$ LANGUAGE plpgsql;
-CREATE OR REPLACE FUNCTION touch_conversation_messages_updated_at() RETURNS TRIGGER AS $$ BEGIN NEW.updated_at=NOW(); RETURN NEW; END; $$ LANGUAGE plpgsql;
-
--- Recreate triggers
-DROP TRIGGER IF EXISTS trg_conversations_updated_at ON conversations;
-CREATE TRIGGER trg_conversations_updated_at BEFORE UPDATE ON conversations FOR EACH ROW EXECUTE FUNCTION touch_conversations_updated_at();
-
-DROP TRIGGER IF EXISTS trg_conversation_messages_updated_at ON conversation_messages;
-CREATE TRIGGER trg_conversation_messages_updated_at BEFORE UPDATE ON conversation_messages FOR EACH ROW EXECUTE FUNCTION touch_conversation_messages_updated_at();
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_conversations_updated_at') THEN
+    CREATE OR REPLACE FUNCTION touch_conversations_updated_at() RETURNS TRIGGER AS $$ BEGIN NEW.updated_at=NOW(); RETURN NEW; END; $$ LANGUAGE plpgsql;
+    CREATE TRIGGER trg_conversations_updated_at BEFORE UPDATE ON conversations FOR EACH ROW EXECUTE FUNCTION touch_conversations_updated_at();
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_conversation_messages_updated_at') THEN
+    CREATE OR REPLACE FUNCTION touch_conversation_messages_updated_at() RETURNS TRIGGER AS $$ BEGIN NEW.updated_at=NOW(); RETURN NEW; END; $$ LANGUAGE plpgsql;
+    CREATE TRIGGER trg_conversation_messages_updated_at BEFORE UPDATE ON conversation_messages FOR EACH ROW EXECUTE FUNCTION touch_conversation_messages_updated_at();
+  END IF;
+END $$;

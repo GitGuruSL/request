@@ -67,35 +67,9 @@ async function main() {
     const applied = await getApplied();
 
     const migrationsDir = path.join(__dirname, 'database', 'migrations');
-    const allFiles = fs.readdirSync(migrationsDir).filter(f=>f.endsWith('.sql'));
-
-    // Categorize
-    const numbered = allFiles.filter(f=>/^\d+_/.test(f)).sort();
-    const addFiles = allFiles.filter(f=>/^add_/.test(f)).sort();
-    const others = allFiles.filter(f=>!numbered.includes(f) && !addFiles.includes(f)).sort();
-
-    // Priority foundational add_* files required before some numbered migrations reference their tables
-    const priorityAddList = [
-      'add_countries_table.sql'
-    ];
-    const priorityAdd = priorityAddList.filter(f=>addFiles.includes(f));
-    const remainingAdd = addFiles.filter(f=>!priorityAdd.includes(f));
-
-    // Split numbered: early base (000-002) remain first; rest after priority add
-    const earlyNumbered = numbered.filter(f=>{ const n=parseInt(f.split('_')[0],10); return n<=2; });
-    const laterNumbered = numbered.filter(f=>!earlyNumbered.includes(f));
-
-    // Final ordered list
-    const files = [
-      ...earlyNumbered,
-      ...priorityAdd,
-      ...laterNumbered,
-      ...remainingAdd,
-      ...others
-    ];
-    // Optional debug: list order
-    console.log('\n🗂  Migration execution order:');
-    files.forEach(f=>console.log(' -', f));
+    const files = fs.readdirSync(migrationsDir)
+      .filter(f => f.endsWith('.sql'))
+      .sort();
 
     if (files.length === 0) {
       console.log('⚠️  No migration files found.');

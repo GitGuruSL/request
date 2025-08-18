@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-// NOTE: Backend preferred dev port is 3001 (fallback logic may switch to 3010 if busy).
-// Override with VITE_API_BASE_URL in env when needed.
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+// NOTE: Backend currently defaults to port 3010 in dev if 3001 is occupied.
+// Prefer setting VITE_API_BASE_URL in a .env file at project root (e.g., .env.development) to override.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3010';
 
 let accessToken = null;
 let refreshToken = null;

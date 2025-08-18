@@ -60,17 +60,18 @@ CREATE TABLE IF NOT EXISTS email_verifications (
 );
 CREATE INDEX IF NOT EXISTS idx_email_verifications_email ON email_verifications(email);
 
--- Touch functions (created unconditionally for idempotency)
-CREATE OR REPLACE FUNCTION touch_promo_codes_updated_at() RETURNS TRIGGER AS $$ BEGIN NEW.updated_at=NOW(); RETURN NEW; END; $$ LANGUAGE plpgsql;
-CREATE OR REPLACE FUNCTION touch_phone_verifications_updated_at() RETURNS TRIGGER AS $$ BEGIN NEW.updated_at=NOW(); RETURN NEW; END; $$ LANGUAGE plpgsql;
-CREATE OR REPLACE FUNCTION touch_email_verifications_updated_at() RETURNS TRIGGER AS $$ BEGIN NEW.updated_at=NOW(); RETURN NEW; END; $$ LANGUAGE plpgsql;
-
--- Recreate triggers (drop then create ensures latest function definition)
-DROP TRIGGER IF EXISTS trg_promo_codes_updated_at ON promo_codes;
-CREATE TRIGGER trg_promo_codes_updated_at BEFORE UPDATE ON promo_codes FOR EACH ROW EXECUTE FUNCTION touch_promo_codes_updated_at();
-
-DROP TRIGGER IF EXISTS trg_phone_verifications_updated_at ON phone_verifications;
-CREATE TRIGGER trg_phone_verifications_updated_at BEFORE UPDATE ON phone_verifications FOR EACH ROW EXECUTE FUNCTION touch_phone_verifications_updated_at();
-
-DROP TRIGGER IF EXISTS trg_email_verifications_updated_at ON email_verifications;
-CREATE TRIGGER trg_email_verifications_updated_at BEFORE UPDATE ON email_verifications FOR EACH ROW EXECUTE FUNCTION touch_email_verifications_updated_at();
+-- Touch triggers
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_promo_codes_updated_at') THEN
+    CREATE OR REPLACE FUNCTION touch_promo_codes_updated_at() RETURNS TRIGGER AS $$ BEGIN NEW.updated_at=NOW(); RETURN NEW; END; $$ LANGUAGE plpgsql;
+    CREATE TRIGGER trg_promo_codes_updated_at BEFORE UPDATE ON promo_codes FOR EACH ROW EXECUTE FUNCTION touch_promo_codes_updated_at();
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_phone_verifications_updated_at') THEN
+    CREATE OR REPLACE FUNCTION touch_phone_verifications_updated_at() RETURNS TRIGGER AS $$ BEGIN NEW.updated_at=NOW(); RETURN NEW; END; $$ LANGUAGE plpgsql;
+    CREATE TRIGGER trg_phone_verifications_updated_at BEFORE UPDATE ON phone_verifications FOR EACH ROW EXECUTE FUNCTION touch_phone_verifications_updated_at();
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_email_verifications_updated_at') THEN
+    CREATE OR REPLACE FUNCTION touch_email_verifications_updated_at() RETURNS TRIGGER AS $$ BEGIN NEW.updated_at=NOW(); RETURN NEW; END; $$ LANGUAGE plpgsql;
+    CREATE TRIGGER trg_email_verifications_updated_at BEFORE UPDATE ON email_verifications FOR EACH ROW EXECUTE FUNCTION touch_email_verifications_updated_at();
+  END IF;
+END $$;

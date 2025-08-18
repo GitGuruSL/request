@@ -20,22 +20,20 @@ CREATE INDEX IF NOT EXISTS idx_content_pages_country ON content_pages(country_co
 CREATE INDEX IF NOT EXISTS idx_content_pages_page_type ON content_pages(page_type);
 
 -- Trigger to auto update updated_at
--- Create function (idempotent) then trigger if missing (cannot wrap CREATE FUNCTION inside conditional easily without dynamic SQL)
-CREATE OR REPLACE FUNCTION touch_content_pages_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
 DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_trigger WHERE tgname = 'trg_content_pages_updated_at'
   ) THEN
+    CREATE OR REPLACE FUNCTION touch_content_pages_updated_at()
+    RETURNS TRIGGER AS $$
+    BEGIN
+      NEW.updated_at = NOW();
+      RETURN NEW;
+    END;$$ LANGUAGE plpgsql;
+
     CREATE TRIGGER trg_content_pages_updated_at
     BEFORE UPDATE ON content_pages
     FOR EACH ROW EXECUTE FUNCTION touch_content_pages_updated_at();
   END IF;
-END $$;
+END$$;
