@@ -420,6 +420,12 @@ class _UnifiedRequestCreateScreenState
                 isRequired: true,
                 prefixIcon: Icons.location_on,
                 onLocationSelected: (address, lat, lng) {
+                  print('=== ITEM LOCATION CALLBACK RECEIVED ===');
+                  print('Address: "$address"');
+                  print('Latitude: $lat');
+                  print('Longitude: $lng');
+                  print('========================================');
+
                   setState(() {
                     _locationController.text = address;
                     _selectedLatitude = lat;
@@ -1364,6 +1370,13 @@ class _UnifiedRequestCreateScreenState
         throw Exception('User not found');
       }
 
+      // Debug log location data before creating request
+      print('=== LOCATION DEBUG BEFORE CREATE ===');
+      print('_locationController.text: "${_locationController.text}"');
+      print('_selectedLatitude: $_selectedLatitude');
+      print('_selectedLongitude: $_selectedLongitude');
+      print('=====================================');
+
       // Create request using the service method
       LocationInfo? locationInfo;
       if (_locationController.text.trim().isNotEmpty) {
@@ -1382,6 +1395,15 @@ class _UnifiedRequestCreateScreenState
           );
         }
       }
+
+      print('=== FINAL LOCATION INFO ===');
+      print('locationInfo: $locationInfo');
+      if (locationInfo != null) {
+        print('locationInfo.address: "${locationInfo.address}"');
+        print('locationInfo.latitude: ${locationInfo.latitude}');
+        print('locationInfo.longitude: ${locationInfo.longitude}');
+      }
+      print('===========================');
 
       await _requestService.createRequestCompat(
         title: _titleController.text.trim(),

@@ -64,8 +64,21 @@ class CentralizedRequestService {
             locationAddress = locationObj['address']?.toString();
             locationLat = _asDoubleInternal(locationObj['latitude']);
             locationLon = _asDoubleInternal(locationObj['longitude']);
+          } else if (locationObj is ui.LocationInfo) {
+            // Handle LocationInfo objects
+            locationAddress = locationObj.address;
+            locationLat = _asDoubleInternal(locationObj.latitude);
+            locationLon = _asDoubleInternal(locationObj.longitude);
+            print('=== CENTRALIZED SERVICE LOCATION DEBUG ===');
+            print('LocationInfo detected - address: "$locationAddress"');
+            print('LocationInfo detected - latitude: $locationLat');
+            print('LocationInfo detected - longitude: $locationLon');
+            print('==========================================');
           } else {
-            // Use reflection via toString not ideal; ignore for now
+            print('=== UNKNOWN LOCATION OBJECT TYPE ===');
+            print('locationObj type: ${locationObj.runtimeType}');
+            print('locationObj: $locationObj');
+            print('====================================');
           }
         } catch (_) {}
       }

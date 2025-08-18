@@ -22,10 +22,12 @@ class AccurateLocationPickerWidget extends StatefulWidget {
   });
 
   @override
-  State<AccurateLocationPickerWidget> createState() => _AccurateLocationPickerWidgetState();
+  State<AccurateLocationPickerWidget> createState() =>
+      _AccurateLocationPickerWidgetState();
 }
 
-class _AccurateLocationPickerWidgetState extends State<AccurateLocationPickerWidget> {
+class _AccurateLocationPickerWidgetState
+    extends State<AccurateLocationPickerWidget> {
   List<PlaceSuggestion> _suggestions = [];
   bool _isLoading = false;
   Timer? _debounceTimer;
@@ -50,9 +52,9 @@ class _AccurateLocationPickerWidgetState extends State<AccurateLocationPickerWid
 
   void _onTextChanged() {
     final query = widget.controller.text;
-    
+
     if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
-    
+
     _debounceTimer = Timer(const Duration(milliseconds: 500), () {
       if (query.isNotEmpty && query.length > 2) {
         _searchPlaces(query);
@@ -81,7 +83,7 @@ class _AccurateLocationPickerWidgetState extends State<AccurateLocationPickerWid
         _suggestions = suggestions;
         _isLoading = false;
       });
-      
+
       if (_focusNode.hasFocus && suggestions.isNotEmpty) {
         _showOverlay();
       }
@@ -103,7 +105,7 @@ class _AccurateLocationPickerWidgetState extends State<AccurateLocationPickerWid
 
   void _showOverlay() {
     _removeOverlay();
-    
+
     _overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
         width: MediaQuery.of(context).size.width - 32, // Account for padding
@@ -170,19 +172,27 @@ class _AccurateLocationPickerWidgetState extends State<AccurateLocationPickerWid
     setState(() {
       _isLoading = true;
     });
-    
+
     _removeOverlay();
     _focusNode.unfocus();
 
     try {
-      final placeDetails = await GooglePlacesService.getPlaceDetails(suggestion.placeId);
-      
+      final placeDetails =
+          await GooglePlacesService.getPlaceDetails(suggestion.placeId);
+
       if (placeDetails != null) {
         // Clean the address to remove location codes
-        final cleanedAddress = AddressUtils.cleanAddress(placeDetails.formattedAddress);
+        final cleanedAddress =
+            AddressUtils.cleanAddress(placeDetails.formattedAddress);
         widget.controller.text = cleanedAddress;
-        
+
         if (widget.onLocationSelected != null) {
+          print('=== LOCATION PICKER CALLBACK ===');
+          print('Selected address: "$cleanedAddress"');
+          print('Selected latitude: ${placeDetails.latitude}');
+          print('Selected longitude: ${placeDetails.longitude}');
+          print('================================');
+
           widget.onLocationSelected!(
             cleanedAddress,
             placeDetails.latitude,
@@ -217,23 +227,23 @@ class _AccurateLocationPickerWidgetState extends State<AccurateLocationPickerWid
           labelText: widget.labelText,
           hintText: widget.hintText,
           prefixIcon: Icon(widget.prefixIcon),
-          suffixIcon: _isLoading 
-            ? Container(
-                width: 20,
-                height: 20,
-                padding: const EdgeInsets.all(12),
-                child: const CircularProgressIndicator(strokeWidth: 2),
-              )
-            : widget.controller.text.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    widget.controller.clear();
-                    _clearSuggestions();
-                    _focusNode.unfocus();
-                  },
+          suffixIcon: _isLoading
+              ? Container(
+                  width: 20,
+                  height: 20,
+                  padding: const EdgeInsets.all(12),
+                  child: const CircularProgressIndicator(strokeWidth: 2),
                 )
-              : null,
+              : widget.controller.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        widget.controller.clear();
+                        _clearSuggestions();
+                        _focusNode.unfocus();
+                      },
+                    )
+                  : null,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
           ),
@@ -247,13 +257,13 @@ class _AccurateLocationPickerWidgetState extends State<AccurateLocationPickerWid
           ),
         ),
         validator: widget.isRequired
-          ? (value) {
-              if (value == null || value.isEmpty) {
-                return 'This field is required';
+            ? (value) {
+                if (value == null || value.isEmpty) {
+                  return 'This field is required';
+                }
+                return null;
               }
-              return null;
-            }
-          : null,
+            : null,
         onTap: () {
           if (_suggestions.isNotEmpty) {
             _showOverlay();
