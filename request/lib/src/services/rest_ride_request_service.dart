@@ -19,8 +19,7 @@ class RestRideRequestService {
     required String vehicleTypeId,
     required int passengers,
     DateTime? scheduledTime,
-    double? budgetMin,
-    double? budgetMax,
+    double? budget,
     String? currency,
   }) async {
     final title = 'Ride: $pickupAddress -> $destinationAddress';
@@ -48,8 +47,7 @@ class RestRideRequestService {
         if (scheduledTime != null)
           'scheduled_time': scheduledTime.toIso8601String(),
       },
-      budgetMin: budgetMin,
-      budgetMax: budgetMax,
+      budget: budget,
       currency: currency,
     );
 

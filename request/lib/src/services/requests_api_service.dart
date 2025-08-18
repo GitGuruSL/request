@@ -5,10 +5,11 @@ import 'api_client.dart';
 class RequestsApiService {
   static final ApiClient _apiClient = ApiClient.instance;
   static RequestsApiService? _instance;
-  static RequestsApiService get instance => _instance ??= RequestsApiService._internal();
-  
+  static RequestsApiService get instance =>
+      _instance ??= RequestsApiService._internal();
+
   RequestsApiService._internal();
-  
+
   /// Get requests with filtering and pagination
   Future<PaginatedRequestsResult> getRequests({
     String? categoryId,
@@ -30,34 +31,35 @@ class RequestsApiService {
         'sort_by': sortBy,
         'sort_order': sortOrder,
       };
-      
+
       if (categoryId != null) queryParams['category_id'] = categoryId;
       if (subcategoryId != null) queryParams['subcategory_id'] = subcategoryId;
       if (cityId != null) queryParams['city_id'] = cityId;
       if (status != null) queryParams['status'] = status;
       if (userId != null) queryParams['user_id'] = userId;
-      
-      final rawResponse = await _apiClient.get('/api/requests',
-        queryParameters: queryParams);
-      
+
+      final rawResponse =
+          await _apiClient.get('/api/requests', queryParameters: queryParams);
+
       if (rawResponse.isSuccess && rawResponse.data is Map<String, dynamic>) {
         final data = rawResponse.data as Map<String, dynamic>;
         final responseData = data['data'] as Map<String, dynamic>;
-        
+
         final requestsJson = responseData['requests'] as List<dynamic>? ?? [];
-        final pagination = responseData['pagination'] as Map<String, dynamic>? ?? {};
-        
+        final pagination =
+            responseData['pagination'] as Map<String, dynamic>? ?? {};
+
         final requests = requestsJson
             .map((json) => RequestModel.fromJson(json as Map<String, dynamic>))
             .toList();
-        
+
         return PaginatedRequestsResult(
           success: true,
           requests: requests,
           pagination: PaginationInfo.fromJson(pagination),
         );
       }
-      
+
       return PaginatedRequestsResult(
         success: false,
         error: rawResponse.error ?? 'Failed to fetch requests',
@@ -76,16 +78,16 @@ class RequestsApiService {
       );
     }
   }
-  
+
   /// Get a single request by ID
   Future<RequestResult> getRequestById(String requestId) async {
     try {
       final rawResponse = await _apiClient.get('/api/requests/$requestId');
-      
+
       if (rawResponse.isSuccess && rawResponse.data is Map<String, dynamic>) {
         final data = rawResponse.data as Map<String, dynamic>;
         final requestData = data['data'] as Map<String, dynamic>?;
-        
+
         if (requestData != null) {
           return RequestResult(
             success: true,
@@ -93,7 +95,7 @@ class RequestsApiService {
           );
         }
       }
-      
+
       return RequestResult(
         success: false,
         error: rawResponse.error ?? 'Failed to fetch request',
@@ -108,7 +110,7 @@ class RequestsApiService {
       );
     }
   }
-  
+
   /// Create a new request
   Future<RequestResult> createRequest({
     required String title,
@@ -116,8 +118,7 @@ class RequestsApiService {
     required String categoryId,
     required String cityId,
     String? subcategoryId,
-    double? budgetMin,
-    double? budgetMax,
+    double? budget,
     String currency = 'LKR',
     String priority = 'normal',
     String? locationAddress,
@@ -136,21 +137,25 @@ class RequestsApiService {
         'priority': priority,
         'is_urgent': isUrgent,
       };
-      
+
       if (subcategoryId != null) requestData['subcategory_id'] = subcategoryId;
-      if (budgetMin != null) requestData['budget_min'] = budgetMin;
-      if (budgetMax != null) requestData['budget_max'] = budgetMax;
-      if (locationAddress != null) requestData['location_address'] = locationAddress;
-      if (locationLatitude != null) requestData['location_latitude'] = locationLatitude;
-      if (locationLongitude != null) requestData['location_longitude'] = locationLongitude;
-      if (expiresAt != null) requestData['expires_at'] = expiresAt.toIso8601String();
-      
-      final rawResponse = await _apiClient.post('/api/requests', data: requestData);
-      
+      if (budget != null) requestData['budget'] = budget;
+      if (locationAddress != null)
+        requestData['location_address'] = locationAddress;
+      if (locationLatitude != null)
+        requestData['location_latitude'] = locationLatitude;
+      if (locationLongitude != null)
+        requestData['location_longitude'] = locationLongitude;
+      if (expiresAt != null)
+        requestData['expires_at'] = expiresAt.toIso8601String();
+
+      final rawResponse =
+          await _apiClient.post('/api/requests', data: requestData);
+
       if (rawResponse.isSuccess && rawResponse.data is Map<String, dynamic>) {
         final data = rawResponse.data as Map<String, dynamic>;
         final requestData = data['data'] as Map<String, dynamic>?;
-        
+
         if (requestData != null) {
           return RequestResult(
             success: true,
@@ -159,7 +164,7 @@ class RequestsApiService {
           );
         }
       }
-      
+
       return RequestResult(
         success: false,
         error: rawResponse.error ?? 'Failed to create request',
@@ -174,7 +179,7 @@ class RequestsApiService {
       );
     }
   }
-  
+
   /// Update an existing request
   Future<RequestResult> updateRequest({
     required String requestId,
@@ -183,8 +188,7 @@ class RequestsApiService {
     String? categoryId,
     String? subcategoryId,
     String? cityId,
-    double? budgetMin,
-    double? budgetMax,
+    double? budget,
     String? currency,
     String? priority,
     String? status,
@@ -196,29 +200,33 @@ class RequestsApiService {
   }) async {
     try {
       final updateData = <String, dynamic>{};
-      
+
       if (title != null) updateData['title'] = title;
       if (description != null) updateData['description'] = description;
       if (categoryId != null) updateData['category_id'] = categoryId;
       if (subcategoryId != null) updateData['subcategory_id'] = subcategoryId;
       if (cityId != null) updateData['city_id'] = cityId;
-      if (budgetMin != null) updateData['budget_min'] = budgetMin;
-      if (budgetMax != null) updateData['budget_max'] = budgetMax;
+      if (budget != null) updateData['budget'] = budget;
       if (currency != null) updateData['currency'] = currency;
       if (priority != null) updateData['priority'] = priority;
       if (status != null) updateData['status'] = status;
-      if (locationAddress != null) updateData['location_address'] = locationAddress;
-      if (locationLatitude != null) updateData['location_latitude'] = locationLatitude;
-      if (locationLongitude != null) updateData['location_longitude'] = locationLongitude;
-      if (expiresAt != null) updateData['expires_at'] = expiresAt.toIso8601String();
+      if (locationAddress != null)
+        updateData['location_address'] = locationAddress;
+      if (locationLatitude != null)
+        updateData['location_latitude'] = locationLatitude;
+      if (locationLongitude != null)
+        updateData['location_longitude'] = locationLongitude;
+      if (expiresAt != null)
+        updateData['expires_at'] = expiresAt.toIso8601String();
       if (isUrgent != null) updateData['is_urgent'] = isUrgent;
-      
-      final rawResponse = await _apiClient.put('/api/requests/$requestId', data: updateData);
-      
+
+      final rawResponse =
+          await _apiClient.put('/api/requests/$requestId', data: updateData);
+
       if (rawResponse.isSuccess && rawResponse.data is Map<String, dynamic>) {
         final data = rawResponse.data as Map<String, dynamic>;
         final requestData = data['data'] as Map<String, dynamic>?;
-        
+
         if (requestData != null) {
           return RequestResult(
             success: true,
@@ -227,7 +235,7 @@ class RequestsApiService {
           );
         }
       }
-      
+
       return RequestResult(
         success: false,
         error: rawResponse.error ?? 'Failed to update request',
@@ -242,7 +250,7 @@ class RequestsApiService {
       );
     }
   }
-  
+
   /// Delete a request
   Future<bool> deleteRequest(String requestId) async {
     try {
@@ -282,14 +290,14 @@ class RequestModel {
   final String countryCode;
   final DateTime createdAt;
   final DateTime updatedAt;
-  
+
   // Related data from joins
   final String? userName;
   final String? userEmail;
   final String? categoryName;
   final String? subcategoryName;
   final String? cityName;
-  
+
   RequestModel({
     required this.id,
     this.firebaseId,
@@ -320,7 +328,7 @@ class RequestModel {
     this.subcategoryName,
     this.cityName,
   });
-  
+
   factory RequestModel.fromJson(Map<String, dynamic> json) {
     return RequestModel(
       id: json['id'] as String,
@@ -330,16 +338,26 @@ class RequestModel {
       subcategoryId: json['subcategory_id'] as String?,
       title: json['title'] as String,
       description: json['description'] as String,
-      budgetMin: json['budget_min'] != null ? double.tryParse(json['budget_min'].toString()) : null,
-      budgetMax: json['budget_max'] != null ? double.tryParse(json['budget_max'].toString()) : null,
+      budgetMin: json['budget_min'] != null
+          ? double.tryParse(json['budget_min'].toString())
+          : null,
+      budgetMax: json['budget_max'] != null
+          ? double.tryParse(json['budget_max'].toString())
+          : null,
       currency: json['currency'] as String? ?? 'LKR',
       locationCityId: json['location_city_id'] as String,
       locationAddress: json['location_address'] as String?,
-      locationLatitude: json['location_latitude'] != null ? double.tryParse(json['location_latitude'].toString()) : null,
-      locationLongitude: json['location_longitude'] != null ? double.tryParse(json['location_longitude'].toString()) : null,
+      locationLatitude: json['location_latitude'] != null
+          ? double.tryParse(json['location_latitude'].toString())
+          : null,
+      locationLongitude: json['location_longitude'] != null
+          ? double.tryParse(json['location_longitude'].toString())
+          : null,
       status: json['status'] as String? ?? 'active',
       priority: json['priority'] as String? ?? 'normal',
-      expiresAt: json['expires_at'] != null ? DateTime.parse(json['expires_at'] as String) : null,
+      expiresAt: json['expires_at'] != null
+          ? DateTime.parse(json['expires_at'] as String)
+          : null,
       isUrgent: json['is_urgent'] as bool? ?? false,
       viewCount: json['view_count'] as int? ?? 0,
       responseCount: json['response_count'] as int? ?? 0,
@@ -353,7 +371,7 @@ class RequestModel {
       cityName: json['city_name'] as String?,
     );
   }
-  
+
   String get budgetDisplay {
     if (budgetMin != null && budgetMax != null) {
       return '$currency ${budgetMin!.toStringAsFixed(0)} - ${budgetMax!.toStringAsFixed(0)}';
@@ -364,7 +382,7 @@ class RequestModel {
     }
     return 'Budget not specified';
   }
-  
+
   @override
   String toString() => 'RequestModel(id: $id, title: $title)';
 }
@@ -375,14 +393,14 @@ class PaginationInfo {
   final int limit;
   final int total;
   final int totalPages;
-  
+
   PaginationInfo({
     required this.page,
     required this.limit,
     required this.total,
     required this.totalPages,
   });
-  
+
   factory PaginationInfo.fromJson(Map<String, dynamic> json) {
     return PaginationInfo(
       page: json['page'] as int? ?? 1,
@@ -391,11 +409,11 @@ class PaginationInfo {
       totalPages: json['totalPages'] as int? ?? 1,
     );
   }
-  
+
   factory PaginationInfo.empty() {
     return PaginationInfo(page: 1, limit: 20, total: 0, totalPages: 1);
   }
-  
+
   bool get hasNextPage => page < totalPages;
   bool get hasPreviousPage => page > 1;
 }
@@ -406,7 +424,7 @@ class PaginatedRequestsResult {
   final List<RequestModel> requests;
   final PaginationInfo pagination;
   final String? error;
-  
+
   PaginatedRequestsResult({
     required this.success,
     required this.requests,
@@ -421,7 +439,7 @@ class RequestResult {
   final RequestModel? request;
   final String? message;
   final String? error;
-  
+
   RequestResult({
     required this.success,
     this.request,

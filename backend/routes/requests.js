@@ -8,7 +8,10 @@ const responsesRouter = require('./responses');
 router.get('/', async (req, res) => {
   try {
     const {
-      category_id,
+      ], [
+      user_id, title, description, category_id, subcategory_id, city_id,
+      budget, currency, priority, country_code
+    ]);category_id,
       subcategory_id,
       city_id,
       country_code = 'LK',
@@ -61,7 +64,7 @@ router.get('/', async (req, res) => {
     }
 
     const offset = (page - 1) * limit;
-    const validSortColumns = ['created_at', 'updated_at', 'title', 'budget_min', 'budget_max'];
+    const validSortColumns = ['created_at', 'updated_at', 'title', 'budget'];
     const finalSortBy = validSortColumns.includes(sort_by) ? sort_by : 'created_at';
     const finalSortOrder = sort_order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
@@ -166,7 +169,7 @@ router.get('/search', async (req, res) => {
   if (has_accepted === 'true') { conditions.push('r.accepted_response_id IS NOT NULL'); }
 
     const offset = (page - 1) * limit;
-    const validSortColumns = ['created_at', 'updated_at', 'title', 'budget_min', 'budget_max'];
+    const validSortColumns = ['created_at', 'updated_at', 'title', 'budget'];
     const finalSortBy = validSortColumns.includes(sort_by) ? sort_by : 'created_at';
     const finalSortOrder = sort_order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
@@ -279,8 +282,7 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       category_id,
       subcategory_id,
       city_id,
-      budget_min,
-      budget_max,
+      budget,
       currency = 'LKR',
       priority = 'normal',
       variables = []
@@ -296,8 +298,7 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       description,
       category_id,
       city_id,
-      budget_min,
-      budget_max,
+      budget,
       currency,
       priority
     });
@@ -314,15 +315,15 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
     const request = await database.queryOne(`
       INSERT INTO requests (
         user_id, title, description, category_id, subcategory_id, location_city_id,
-        budget_min, budget_max, currency, priority, country_code,
+        budget, currency, priority, country_code,
         status, created_at, updated_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'active',
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'active',
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
       ) RETURNING *
     `, [
       user_id, title, description, category_id, subcategory_id, city_id,
-      budget_min, budget_max, currency, priority, country_code
+      budget, currency, priority, country_code
     ]);
 
     res.status(201).json({

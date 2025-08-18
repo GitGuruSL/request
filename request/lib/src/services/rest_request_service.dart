@@ -169,8 +169,7 @@ class CreateRequestData {
   final double? locationLatitude;
   final double? locationLongitude;
   final String countryCode;
-  final double? budgetMin;
-  final double? budgetMax;
+  final double? budget;
   final String? currency;
   final DateTime? deadline;
   final List<String>? imageUrls;
@@ -186,8 +185,7 @@ class CreateRequestData {
     this.locationLatitude,
     this.locationLongitude,
     this.countryCode = 'LK',
-    this.budgetMin,
-    this.budgetMax,
+    this.budget,
     this.currency,
     this.deadline,
     this.imageUrls,
@@ -207,8 +205,7 @@ class CreateRequestData {
       if (locationLatitude != null) 'location_latitude': locationLatitude,
       if (locationLongitude != null) 'location_longitude': locationLongitude,
       'country_code': countryCode,
-      if (budgetMin != null) 'budget_min': budgetMin,
-      if (budgetMax != null) 'budget_max': budgetMax,
+      if (budget != null) 'budget': budget,
       if (currency != null) 'currency': currency,
       if (deadline != null) 'deadline': deadline!.toIso8601String(),
       if (imageUrls != null) 'image_urls': imageUrls,

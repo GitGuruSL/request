@@ -99,8 +99,7 @@ class CentralizedRequestService {
         locationLatitude: locationLat,
         locationLongitude: locationLon,
         countryCode: CountryService.instance.countryCode ?? 'LK',
-        budgetMin: budget,
-        budgetMax: budget,
+        budget: budget,
         currency: data['currency']?.toString(),
         deadline: data['deadline'] is DateTime ? data['deadline'] : null,
         imageUrls: (data['images'] as List<String>?)

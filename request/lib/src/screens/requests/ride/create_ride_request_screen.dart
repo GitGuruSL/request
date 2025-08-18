@@ -955,7 +955,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
         vehicleTypeId: selectedVehicle.id,
         passengers: _passengerCount,
         scheduledTime: _scheduleForLater ? _departureTime : null,
-        budgetMin: double.tryParse(_budgetController.text),
+        budget: double.tryParse(_budgetController.text),
         currency: CurrencyHelper.instance.getCurrency(),
       );
 
