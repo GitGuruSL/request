@@ -1,3 +1,5 @@
+import '../models/message_model.dart';
+
 class MessagingService {
   // Placeholder messaging service
 
@@ -24,11 +26,11 @@ class MessagingService {
 
   Future<void> sendMessage({
     required String conversationId,
-    required String message,
+    required String text,
     String? senderId,
   }) async {
     // Placeholder implementation
-    print('Sending message: $message to conversation: $conversationId');
+    print('Sending message: $text to conversation: $conversationId');
   }
 
   Future<void> markAsRead(String conversationId) async {
@@ -36,7 +38,7 @@ class MessagingService {
     print('Marking conversation as read: $conversationId');
   }
 
-  Stream<List<dynamic>> getMessagesStream(String conversationId) {
+  Stream<List<MessageModel>> getMessagesStream(String conversationId) {
     // Placeholder implementation - returns empty stream
     return Stream.value([]);
   }

@@ -244,20 +244,25 @@ router.get('/:id', async (req, res) => {
       });
     }
 
-    // Get request variables if any
-    const variablesResult = await database.query(`
-      SELECT rv.*, vt.name as variable_name, vt.type as variable_type
-      FROM request_variables rv
-      LEFT JOIN variable_types vt ON rv.variable_type_id = vt.id
-      WHERE rv.request_id = $1
-      ORDER BY vt.name
-    `, [requestId]);
+    // Parse metadata if it exists
+    let metadata = {};
+    try {
+      if (request.metadata) {
+        metadata = typeof request.metadata === 'string' 
+          ? JSON.parse(request.metadata) 
+          : request.metadata;
+      }
+    } catch (e) {
+      console.log('Error parsing metadata:', e);
+      metadata = {};
+    }
 
     res.json({
       success: true,
       data: {
         ...request,
-        variables: variablesResult.rows
+        metadata,
+        variables: [] // For compatibility with frontend expecting variables array
       }
     });
   } catch (error) {
