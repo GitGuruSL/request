@@ -7,6 +7,8 @@ node_modules/
 .env.rds
 .env.local
 .env.production
+serviceAccount.json
+*serviceAccount*.json
 
 # IDE files
 .vscode/

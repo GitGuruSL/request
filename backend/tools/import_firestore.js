@@ -114,8 +114,9 @@ const handlers=[
 // Diff configuration mapping handler key to DB table/column or custom SQL
 const diffConfig = {
   users: { table:'users', column:'id', sourceKey: d=>d.id },
-  categories: { table:'categories', column:'id', sourceKey: d=>d.id },
-  subcategories: { table:'subcategories', column:'id', sourceKey: d=>d.id },
+  // Use firebase_id if present (legacy schema) else id for diff key alignment
+  categories: { table:'categories', sql:"SELECT COALESCE(firebase_id::text,id::text) as key FROM categories", sourceKey: d=>d.id },
+  subcategories: { table:'subcategories', sql:"SELECT COALESCE(firebase_id::text,id::text) as key FROM subcategories", sourceKey: d=>d.id },
   master_products: { table:'master_products', column:'id', sourceKey: d=>d.id },
   requests: { table:'requests', column:'id', sourceKey: d=>d.id },
   business_products: { table:'business_products', sql:"SELECT business_id||':'||master_product_id||':'||COALESCE(country_code,'') as key FROM business_products", sourceKey: d=>{
@@ -167,6 +168,21 @@ function getDb(){ return mockDir? createMockDb(mockDir): initFirestore(); }
 // Override run to support mock
 async function run(){
   if(dbTest){
+    const cfg = {
+      connectionString: process.env.DATABASE_URL,
+      host: process.env.PGHOST || process.env.DB_HOST,
+      port: process.env.PGPORT || process.env.DB_PORT,
+      user: process.env.PGUSER || process.env.DB_USERNAME,
+      database: process.env.PGDATABASE || process.env.DB_NAME
+    };
+    if(!cfg.connectionString && (!cfg.host || !cfg.user || !cfg.database)){
+      console.error('DB test failed: missing connection details');
+      if(!cfg.connectionString){
+        const missing=[]; if(!cfg.host) missing.push('PGHOST'); if(!cfg.user) missing.push('PGUSER'); if(!cfg.database) missing.push('PGDATABASE');
+        console.error('Provide either DATABASE_URL or set:', missing.join(', '));
+      }
+      process.exit(1);
+    }
     try { await pg.connect(); const v = await pg.query('SELECT version()'); console.log('Postgres version:', v.rows[0].version); const tables = await pg.query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY 1 LIMIT 25"); console.table(tables.rows); await pg.end(); } catch(e){ console.error('DB test failed:', e.message); process.exit(1);} return; }
   if(!importAll && !collectionsArg){ console.error('Use --collections a,b or --all'); process.exit(1);} if(diffMode && noDb){ console.error('--diff requires DB connection (remove --no-db)'); process.exit(1);} const selected = importAll? handlers.map(h=>h.key): collectionsArg.split(',').map(s=>s.trim()).filter(Boolean); const ordered=[...new Set(selected)];
 
