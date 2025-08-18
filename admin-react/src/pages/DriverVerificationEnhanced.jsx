@@ -80,18 +80,7 @@ import {
   AccessTime as AccessTimeIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
-import { db } from '../firebase/config';
-import { 
-  collection, 
-  getDocs, 
-  doc, 
-  updateDoc,
-  query,
-  where,
-  orderBy,
-  Timestamp,
-  getDoc
-} from 'firebase/firestore';
+import api from '../services/apiClient';
 
 const DriverVerificationEnhanced = () => {
   const { adminData, isCountryAdmin, isSuperAdmin } = useAuth();
@@ -121,160 +110,21 @@ const DriverVerificationEnhanced = () => {
   const loadDrivers = async () => {
     try {
       setLoading(true);
-      console.log('🔄 Loading drivers...');
-      
-      let driverQuery = collection(db, 'new_driver_verifications');
-      const conditions = [];
-      
-      // Country-based filtering for country admins
-      if (isCountryAdmin && adminData?.country) {
-        conditions.push(where('country', '==', adminData.country));
-      }
-      
-      // Status filtering
-      if (filterStatus !== 'all') {
-        conditions.push(where('status', '==', filterStatus));
-      }
-      
-      if (conditions.length > 0) {
-        driverQuery = query(driverQuery, ...conditions);
-      }
-
-      const snapshot = await getDocs(driverQuery);
-      const driverList = [];
-      const missingCountryDrivers = [];
-      
-      for (const docSnapshot of snapshot.docs) {
-        const data = docSnapshot.data();
-        const driverData = { id: docSnapshot.id, ...data };
-        
-        console.log(`📋 Driver ${driverData.fullName || driverData.id} data:`, {
-          address: driverData.address,
-          fullAddress: driverData.fullAddress,
-          location: driverData.location,
-          submittedAt: driverData.submittedAt,
-          createdAt: driverData.createdAt,
-          appliedAt: driverData.appliedAt,
-          applicationDate: driverData.applicationDate,
-          vehicleType: driverData.vehicleType
-        });
-        
-        // Auto-migrate missing country field
-        if (!data.country && data.userId && isSuperAdmin) {
-          missingCountryDrivers.push({ docRef: docSnapshot.ref, data: driverData });
-        }
-        
-        driverList.push(driverData);
-      }
-      
-      // Fix missing country data
-      for (const { docRef, data } of missingCountryDrivers) {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', data.userId));
-          let countryToSet = 'LK';
-          let countryNameToSet = 'Sri Lanka';
-          
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            if (userData.countryCode) {
-              countryToSet = userData.countryCode;
-              countryNameToSet = userData.countryName || 'Unknown';
-            }
-          }
-          
-          await updateDoc(docRef, {
-            country: countryToSet,
-            countryName: countryNameToSet,
-            updatedAt: Timestamp.now()
-          });
-          
-          const driverIndex = driverList.findIndex(d => d.id === data.id);
-          if (driverIndex !== -1) {
-            driverList[driverIndex].country = countryToSet;
-            driverList[driverIndex].countryName = countryNameToSet;
-          }
-        } catch (error) {
-          console.error(`Failed to update country for driver ${data.fullName}:`, error);
-        }
-      }
-      
-      // Fix any drivers with "approve" status (should be "approved")
-      const driversToFix = driverList.filter(driver => driver.status === 'approve');
-      for (const driver of driversToFix) {
-        try {
-          console.log(`🔄 Fixing status for driver ${driver.fullName}: "approve" → "approved"`);
-          const driverRef = doc(db, 'new_driver_verifications', driver.id);
-          await updateDoc(driverRef, {
-            status: 'approved',
-            isVerified: true,
-            updatedAt: Timestamp.now()
-          });
-          
-          // Update local data
-          const driverIndex = driverList.findIndex(d => d.id === driver.id);
-          if (driverIndex !== -1) {
-            driverList[driverIndex].status = 'approved';
-            driverList[driverIndex].isVerified = true;
-          }
-          console.log(`✅ Fixed status for ${driver.fullName}`);
-        } catch (error) {
-          console.error(`❌ Failed to fix status for ${driver.fullName}:`, error);
-        }
-      }
-      
-      // Sort by created date
-      driverList.sort((a, b) => {
-        const aTime = a.submittedAt?.toDate?.() || a.createdAt?.toDate?.() || new Date(0);
-        const bTime = b.submittedAt?.toDate?.() || b.createdAt?.toDate?.() || new Date(0);
-        return bTime - aTime;
-      });
-      
-      setDrivers(driverList);
-      console.log(`Loaded ${driverList.length} drivers`);
-    } catch (error) {
-      console.error('Error loading drivers:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      const params = {};
+      if (isCountryAdmin && adminData?.country) params.country = adminData.country;
+      if (filterStatus !== 'all') params.status = filterStatus;
+      const res = await api.get('/driver-verifications', { params });
+      const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      const sorted = [...list].sort((a,b)=> new Date(b.submittedAt || b.createdAt || 0) - new Date(a.submittedAt || a.createdAt || 0));
+      setDrivers(sorted);
+    } catch (e) {
+      console.error('Error loading drivers', e);
+    } finally { setLoading(false);} };
 
   const loadCityNames = async () => {
-    try {
-      const citiesSnapshot = await getDocs(collection(db, 'cities'));
-      const cityMap = {};
-      
-      console.log('🏙️ Loading cities...');
-      citiesSnapshot.forEach((doc) => {
-        const data = doc.data();
-        console.log(`City ${doc.id}:`, data);
-        cityMap[doc.id] = data.name || data.cityName || data.displayName || doc.id;
-      });
-      
-      console.log('City mapping:', cityMap);
-      setCityNames(cityMap);
-    } catch (error) {
-      console.error('Error loading city names:', error);
-    }
-  };
+    try { const res = await api.get('/cities'); const map={}; (res.data||[]).forEach(c=> { map[c.id]= c.name || c.cityName || c.displayName || c.id; }); setCityNames(map);} catch(e){ console.error('Error loading city names', e);} };
 
-  const loadVehicleTypeNames = async () => {
-    try {
-      const vehicleTypesSnapshot = await getDocs(collection(db, 'vehicle_types'));
-      const vehicleTypeMap = {};
-      
-      console.log('🚗 Loading vehicle types...');
-      vehicleTypesSnapshot.forEach((doc) => {
-        const data = doc.data();
-        console.log(`Vehicle type ${doc.id}:`, data);
-        vehicleTypeMap[doc.id] = data.name || data.typeName || data.displayName || doc.id;
-      });
-      
-      console.log('Vehicle type mapping:', vehicleTypeMap);
-      setVehicleTypeNames(vehicleTypeMap);
-    } catch (error) {
-      console.error('Error loading vehicle type names:', error);
-    }
-  };
+  const loadVehicleTypeNames = async () => { try { const res = await api.get('/vehicle-types'); const map={}; (res.data||[]).forEach(v=> { map[v.id]= v.name || v.typeName || v.displayName || v.id; }); setVehicleTypeNames(map);} catch(e){ console.error('Error loading vehicle types', e);} };
 
   // Phone verification helper function
   const getPhoneVerificationStatus = (driverData) => {
@@ -407,26 +257,11 @@ const DriverVerificationEnhanced = () => {
   const handleDocumentApprovalWithClose = async (driver, docType, action) => {
     setActionLoading(true);
     try {
-      const updateData = {
-        [`documentVerification.${docType}.status`]: action,
-        [`${docType}Status`]: action,
-        updatedAt: Timestamp.now()
-      };
-
-      if (action === 'approved') {
-        updateData[`documentVerification.${docType}.approvedAt`] = Timestamp.now();
-      }
-
-      await updateDoc(doc(db, 'new_driver_verifications', driver.id), updateData);
-      
-      // Refresh the specific driver data
-      const refreshedDriverDoc = await getDoc(doc(db, 'new_driver_verifications', driver.id));
-      if (refreshedDriverDoc.exists()) {
-        setSelectedDriver({ id: refreshedDriverDoc.id, ...refreshedDriverDoc.data() });
-      }
-      
-      await loadDrivers(); // Refresh drivers list
-      
+      await api.put(`/driver-verifications/${driver.id}/documents/${docType}`, { status: action });
+      await loadDrivers();
+      // Refresh selected driver
+      const res = await api.get(`/driver-verifications/${driver.id}`);
+      if (res.data) setSelectedDriver(res.data);
       console.log(`✅ Document ${docType} ${action} for ${driver.fullName}`);
     } catch (error) {
       console.error(`Error updating document status:`, error);
@@ -446,26 +281,8 @@ const DriverVerificationEnhanced = () => {
       return;
     }
 
-    setActionLoading(true);
-    try {
-      const updateData = {
-        [`documentVerification.${docType}.status`]: action,
-        [`${docType}Status`]: action,
-        updatedAt: Timestamp.now()
-      };
-
-      if (action === 'approved') {
-        updateData[`documentVerification.${docType}.approvedAt`] = Timestamp.now();
-      }
-
-      await updateDoc(doc(db, 'new_driver_verifications', driver.id), updateData);
-      await loadDrivers(); // Refresh data
-      console.log(`✅ Document ${docType} ${action} for ${driver.fullName}`);
-    } catch (error) {
-      console.error(`Error updating document status:`, error);
-    } finally {
-      setActionLoading(false);
-    }
+  setActionLoading(true);
+  try { await api.put(`/driver-verifications/${driver.id}/documents/${docType}`, { status: action }); await loadDrivers(); console.log(`✅ Document ${docType} ${action} for ${driver.fullName}`);} catch (error){ console.error('Error updating document status', error);} finally { setActionLoading(false);} 
   };
 
   const handleDriverAction = async (driver, action) => {
@@ -502,47 +319,11 @@ const DriverVerificationEnhanced = () => {
       }
 
       // Check contact verification (similar to business verification)
-      try {
-        const userDoc = await getDoc(doc(db, 'users', driver.userId));
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          const linkedCredentials = userData.linkedCredentials || {};
-          const phoneVerified = linkedCredentials.linkedPhoneVerified || false;
-          const emailVerified = linkedCredentials.linkedEmailVerified || false;
-
-          if (!phoneVerified || !emailVerified) {
-            const missing = [];
-            if (!phoneVerified) missing.push('phone');
-            if (!emailVerified) missing.push('email');
-            alert(`Cannot approve driver. User must verify: ${missing.join(', ')}`);
-            return;
-          }
-        }
-      } catch (error) {
-        console.error('Error checking contact verification:', error);
-      }
+  try { if (driver.userId){ const res = await api.get(`/users/${driver.userId}`); const u=res.data||{}; const creds=u.linkedCredentials||{}; const phoneVerified=creds.linkedPhoneVerified||u.phoneVerified; const emailVerified=creds.linkedEmailVerified||u.emailVerified; if (!phoneVerified || !emailVerified){ const missing=[]; if(!phoneVerified) missing.push('phone'); if(!emailVerified) missing.push('email'); alert(`Cannot approve driver. User must verify: ${missing.join(', ')}`); return; } } } catch(err){ console.warn('Proceeding without strict contact check', err);} 
     }
 
-    setActionLoading(true);
-    try {
-      const updateData = {
-        status: action === 'approve' ? 'approved' : action,
-        updatedAt: Timestamp.now()
-      };
-
-      if (action === 'approve') {
-        updateData.approvedAt = Timestamp.now();
-        updateData.isVerified = true;
-      }
-
-      await updateDoc(doc(db, 'new_driver_verifications', driver.id), updateData);
-      await loadDrivers();
-      console.log(`✅ Driver ${action}: ${driver.fullName}`);
-    } catch (error) {
-      console.error(`Error ${action} driver:`, error);
-    } finally {
-      setActionLoading(false);
-    }
+  setActionLoading(true);
+  try { await api.put(`/driver-verifications/${driver.id}/status`, { status: action === 'approve' ? 'approved' : action }); await loadDrivers(); console.log(`✅ Driver ${action}: ${driver.fullName}`);} catch (error){ console.error(`Error ${action} driver`, error);} finally { setActionLoading(false);} 
   };
 
   const handleVehicleImageAction = async (driver, imageIndex, action) => {
@@ -556,48 +337,8 @@ const DriverVerificationEnhanced = () => {
       return;
     }
 
-    setActionLoading(true);
-    try {
-      const updateData = {
-        [`vehicleImageVerification.${imageIndex}.status`]: action,
-        updatedAt: Timestamp.now()
-      };
-
-      const driverRef = doc(db, 'new_driver_verifications', driver.id);
-      await updateDoc(driverRef, updateData);
-
-      // Update local state
-      setDrivers(prevDrivers =>
-        prevDrivers.map(d =>
-          d.id === driver.id
-            ? {
-                ...d,
-                vehicleImageVerification: {
-                  ...d.vehicleImageVerification,
-                  [imageIndex]: { status: action }
-                }
-              }
-            : d
-        )
-      );
-
-      // Update selected driver if it's the same one
-      if (selectedDriver && selectedDriver.id === driver.id) {
-        setSelectedDriver(prev => ({
-          ...prev,
-          vehicleImageVerification: {
-            ...prev.vehicleImageVerification,
-            [imageIndex]: { status: action }
-          }
-        }));
-      }
-
-      console.log(`✅ Vehicle image ${imageIndex} ${action}: ${driver.fullName}`);
-    } catch (error) {
-      console.error(`Error ${action} vehicle image:`, error);
-    } finally {
-      setActionLoading(false);
-    }
+  setActionLoading(true);
+  try { await api.put(`/driver-verifications/${driver.id}/vehicle-images/${imageIndex}`, { status: action }); await loadDrivers(); console.log(`✅ Vehicle image ${imageIndex} ${action}: ${driver.fullName}`);} catch (error){ console.error(`Error ${action} vehicle image`, error);} finally { setActionLoading(false);} 
   };
 
   const handleRejection = async () => {
@@ -610,46 +351,20 @@ const DriverVerificationEnhanced = () => {
     setActionLoading(true);
 
     try {
-      let updateData = {
-        updatedAt: Timestamp.now()
-      };
-
       if (type === 'document') {
-        updateData[`documentVerification.${docType}.status`] = 'rejected';
-        updateData[`documentVerification.${docType}.rejectionReason`] = rejectionReason;
-        updateData[`documentVerification.${docType}.rejectedAt`] = Timestamp.now();
-        updateData[`${docType}Status`] = 'rejected';
-        updateData[`${docType}RejectionReason`] = rejectionReason;
+        await api.put(`/driver-verifications/${target.id}/documents/${docType}`, { status: 'rejected', rejectionReason });
       } else if (type === 'vehicleImage') {
         const { imageIndex } = rejectionDialog;
-        updateData[`vehicleImageVerification.${imageIndex}.status`] = 'rejected';
-        updateData[`vehicleImageVerification.${imageIndex}.rejectionReason`] = rejectionReason;
-        updateData[`vehicleImageVerification.${imageIndex}.rejectedAt`] = Timestamp.now();
+        await api.put(`/driver-verifications/${target.id}/vehicle-images/${imageIndex}`, { status: 'rejected', rejectionReason });
       } else {
-        updateData.status = 'rejected';
-        updateData.rejectionReason = rejectionReason;
-        updateData.rejectedAt = Timestamp.now();
-        updateData.isVerified = false;
+        await api.put(`/driver-verifications/${target.id}/status`, { status: 'rejected', rejectionReason });
       }
-
-      await updateDoc(doc(db, 'new_driver_verifications', target.id), updateData);
       await loadDrivers();
       
       // Update selected driver data to show new status immediately
       if (selectedDriver && selectedDriver.id === target.id) {
         if (type === 'document') {
-          const updatedDriver = { 
-            ...selectedDriver, 
-            documentVerification: {
-              ...selectedDriver.documentVerification,
-              [docType]: {
-                ...selectedDriver.documentVerification?.[docType],
-                status: 'rejected',
-                rejectionReason: rejectionReason,
-                rejectedAt: Timestamp.now()
-              }
-            }
-          };
+          const updatedDriver = { ...selectedDriver, documentVerification: { ...selectedDriver.documentVerification, [docType]: { ...selectedDriver.documentVerification?.[docType], status: 'rejected', rejectionReason } } };
           setSelectedDriver(updatedDriver);
         }
       }

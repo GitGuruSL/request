@@ -40,8 +40,7 @@ import {
   DirectionsCar as CarIcon,
   TrendingUp as TrendingUpIcon
 } from '@mui/icons-material';
-import { collection, getDocs, doc, deleteDoc, addDoc, updateDoc, query, where } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import api from '../services/apiClient';
 import useCountryFilter from '../hooks/useCountryFilter';
 
 function TabPanel(props) {
@@ -101,17 +100,10 @@ const SubscriptionsModule = () => {
   const fetchSubscriptions = async () => {
     setLoading(true);
     try {
-      const subscriptionsQuery = isSuperAdmin 
-        ? collection(db, 'user_subscriptions')
-        : query(collection(db, 'user_subscriptions'), where('countryCode', '==', countryCode));
-      
-      const snapshot = await getDocs(subscriptionsQuery);
-      const subscriptionsList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      
-      setSubscriptions(subscriptionsList);
+      const params = {};
+      if (!isSuperAdmin && countryCode) params.country = countryCode;
+      const { data } = await api.get('/user-subscriptions', { params });
+      setSubscriptions(Array.isArray(data) ? data : data?.items || []);
     } catch (error) {
       setError('Failed to fetch subscriptions');
       console.error('Error fetching subscriptions:', error);
@@ -121,17 +113,10 @@ const SubscriptionsModule = () => {
 
   const fetchSubscriptionPlans = async () => {
     try {
-      const plansQuery = isSuperAdmin 
-        ? collection(db, 'subscription_plans')
-        : query(collection(db, 'subscription_plans'), where('countryCode', '==', countryCode));
-      
-      const snapshot = await getDocs(plansQuery);
-      const plansList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      
-      setSubscriptionPlans(plansList);
+      const params = {};
+      if (!isSuperAdmin && countryCode) params.country = countryCode;
+      const { data } = await api.get('/subscription-plans', { params });
+      setSubscriptionPlans(Array.isArray(data) ? data : data?.items || []);
     } catch (error) {
       setError('Failed to fetch subscription plans');
       console.error('Error fetching subscription plans:', error);
@@ -140,25 +125,14 @@ const SubscriptionsModule = () => {
 
   const calculateStats = async () => {
     try {
-      const subscriptionsQuery = isSuperAdmin 
-        ? collection(db, 'user_subscriptions')
-        : query(collection(db, 'user_subscriptions'), where('countryCode', '==', countryCode));
-      
-      const snapshot = await getDocs(subscriptionsQuery);
-      const subscriptionsList = snapshot.docs.map(doc => doc.data());
-      
-      const totalSubscriptions = subscriptionsList.length;
-      const activeSubscriptions = subscriptionsList.filter(sub => sub.status === 'active').length;
-      const trialSubscriptions = subscriptionsList.filter(sub => sub.status === 'trial').length;
-      const totalRevenue = subscriptionsList
-        .filter(sub => sub.status === 'active')
-        .reduce((sum, sub) => sum + (sub.monthlyPrice || 0), 0);
-
+      const params = {};
+      if (!isSuperAdmin && countryCode) params.country = countryCode;
+      const { data } = await api.get('/subscription-stats', { params });
       setStats({
-        totalSubscriptions,
-        activeSubscriptions,
-        trialSubscriptions,
-        totalRevenue
+        totalSubscriptions: data?.totalSubscriptions || 0,
+        activeSubscriptions: data?.activeSubscriptions || 0,
+        trialSubscriptions: data?.trialSubscriptions || 0,
+        totalRevenue: data?.totalRevenue || 0
       });
     } catch (error) {
       console.error('Error calculating stats:', error);
@@ -170,13 +144,9 @@ const SubscriptionsModule = () => {
     try {
       const planData = {
         ...formData,
-        countryCode: countryCode || 'LK',
-        createdAt: new Date().toISOString(),
-        createdBy: adminData?.uid || 'admin'
+        countryCode: countryCode || 'LK'
       };
-
-      await addDoc(collection(db, 'subscription_plans'), planData);
-      
+      await api.post('/subscription-plans', planData);
       setSuccess('Subscription plan created successfully');
       setDialogOpen(false);
       resetForm();
@@ -191,12 +161,7 @@ const SubscriptionsModule = () => {
   const handleUpdatePlan = async () => {
     setLoading(true);
     try {
-      const planRef = doc(db, 'subscription_plans', editingSubscription.id);
-      await updateDoc(planRef, {
-        ...formData,
-        updatedAt: new Date().toISOString()
-      });
-      
+      await api.put(`/subscription-plans/${editingSubscription.id}`, formData);
       setSuccess('Subscription plan updated successfully');
       setDialogOpen(false);
       resetForm();
@@ -211,7 +176,7 @@ const SubscriptionsModule = () => {
   const handleDeletePlan = async (planId) => {
     if (window.confirm('Are you sure you want to delete this subscription plan?')) {
       try {
-        await deleteDoc(doc(db, 'subscription_plans', planId));
+        await api.delete(`/subscription-plans/${planId}`);
         setSuccess('Subscription plan deleted successfully');
         fetchSubscriptionPlans();
       } catch (error) {

@@ -59,8 +59,7 @@ import {
   Apartment
 } from '@mui/icons-material';
 import useCountryFilter from '../hooks/useCountryFilter.jsx';
-import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../firebase/config.js';
+import api from '../services/apiClient';
 
 const CentralizedPagesModule = () => {
   const {
@@ -130,29 +129,7 @@ const CentralizedPagesModule = () => {
     published: 'info'
   };
 
-  const loadCentralizedPages = async () => {
-    try {
-      setLoading(true);
-      // Load only centralized pages
-      const centralizedQuery = query(
-        collection(db, 'content_pages'),
-        where('type', '==', 'centralized')
-      );
-      
-      const snapshot = await getDocs(centralizedQuery);
-      const centralizedPages = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      
-      setPages(centralizedPages || []);
-    } catch (error) {
-      console.error('Error loading centralized pages:', error);
-      setPages([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loadCentralizedPages = async () => { try { setLoading(true); const res = await api.get('/content-pages', { params: { type: 'centralized' }}); const list = Array.isArray(res.data)? res.data : res.data?.data || []; setPages(list);} catch(e){ console.error('Error loading centralized pages', e); setPages([]);} finally { setLoading(false);} };
 
   useEffect(() => {
     loadCentralizedPages();
@@ -190,28 +167,8 @@ const CentralizedPagesModule = () => {
 
   const handleSavePage = async () => {
     try {
-      const pageData = {
-        ...formData,
-        slug: formData.slug || formData.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
-        updatedAt: serverTimestamp(),
-        updatedBy: adminData.uid,
-        countries: ['global'], // Centralized pages are global
-        isTemplate: false,
-        requiresApproval: !isSuperAdmin // Super admin pages don't need approval
-      };
-
-      if (selectedPage) {
-        // Update existing page
-        await updateDoc(doc(db, 'content_pages', selectedPage.id), pageData);
-      } else {
-        // Create new page
-        await addDoc(collection(db, 'content_pages'), {
-          ...pageData,
-          createdAt: serverTimestamp(),
-          createdBy: adminData.uid,
-          status: isSuperAdmin ? 'approved' : 'draft' // Super admin pages are auto-approved
-        });
-      }
+  const payload = { ...formData, slug: formData.slug || formData.title.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,''), countries:['global'], isTemplate:false, requiresApproval: !isSuperAdmin };
+  if (selectedPage){ await api.put(`/content-pages/${selectedPage.id}`, payload);} else { await api.post('/content-pages', { ...payload, status: isSuperAdmin ? 'approved' : 'draft' }); }
 
       setDialogOpen(false);
       loadCentralizedPages();
@@ -222,21 +179,7 @@ const CentralizedPagesModule = () => {
 
   const handleStatusChange = async (page, newStatus) => {
     try {
-      const updateData = {
-        status: newStatus,
-        updatedAt: serverTimestamp(),
-        updatedBy: adminData.uid
-      };
-
-      if (newStatus === 'approved') {
-        updateData.approvedAt = serverTimestamp();
-        updateData.approvedBy = adminData.uid;
-      } else if (newStatus === 'published') {
-        updateData.publishedAt = serverTimestamp();
-        updateData.publishedBy = adminData.uid;
-      }
-
-      await updateDoc(doc(db, 'content_pages', page.id), updateData);
+  await api.put(`/content-pages/${page.id}/status`, { status: newStatus });
       loadCentralizedPages();
     } catch (error) {
       console.error('Error updating page status:', error);
@@ -246,7 +189,7 @@ const CentralizedPagesModule = () => {
   const handleDeletePage = async (page) => {
     if (window.confirm(`Are you sure you want to delete "${page.title}"? This will affect all countries.`)) {
       try {
-        await deleteDoc(doc(db, 'content_pages', page.id));
+  await api.delete(`/content-pages/${page.id}`);
         loadCentralizedPages();
       } catch (error) {
         console.error('Error deleting page:', error);

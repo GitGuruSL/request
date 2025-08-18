@@ -2,16 +2,19 @@ import api, { setAuthSession, clearAuthSession } from './apiClient';
 
 function mapUser(u) {
   if (!u) return null;
+  let role = u.role;
+  if (role === 'admin') role = 'super_admin'; // normalize legacy role
   return {
     id: u.id,
     email: u.email,
     phone: u.phone,
-    role: u.role,
+    role,
     country: u.country_code || u.country || null,
     emailVerified: u.email_verified,
     phoneVerified: u.phone_verified,
     displayName: u.display_name,
-    isActive: u.is_active,
+  isActive: u.is_active,
+  permissions: u.permissions || {}
   };
 }
 

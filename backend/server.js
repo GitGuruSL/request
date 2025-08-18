@@ -15,16 +15,22 @@ const dbService = require('./services/database');
 const authRoutes = require('./routes/auth');
 const flutterAuthRoutes = require('./routes/flutter-auth');
 const categoryRoutes = require('./routes/categories');
+const countryModuleRoutes = require('./routes/country-modules');
 const cityRoutes = require('./routes/cities');
 const requestRoutes = require('./routes/requests');
 const vehicleTypeRoutes = require('./routes/vehicle-types');
+const brandRoutes = require('./routes/brands');
+const masterProductRoutes = require('./routes/master-products');
+const entityActivationRoutes = require('./routes/entity-activations');
 
 const app = express();
 
 // Security middleware
 app.use(helmet());
+// CORS: include common dev origins (CRA 3000, Vite 5173) unless overridden
+const defaultOrigins = ['http://localhost:3000', 'http://localhost:5173'];
 app.use(cors({
-    origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:3000'],
+    origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : defaultOrigins,
     credentials: true
 }));
 
@@ -82,6 +88,10 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/cities', cityRoutes);
 app.use('/api/requests', requestRoutes);
 app.use('/api/vehicle-types', vehicleTypeRoutes);
+app.use('/api/country-modules', countryModuleRoutes);
+app.use('/api/brands', brandRoutes);
+app.use('/api/master-products', masterProductRoutes);
+app.use('/api/entity-activations', entityActivationRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

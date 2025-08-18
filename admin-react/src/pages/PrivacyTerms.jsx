@@ -20,17 +20,7 @@ import {
   LinearProgress
 } from '@mui/material';
 import { Add, Edit, Public } from '@mui/icons-material';
-import { 
-  collection, 
-  getDocs, 
-  addDoc, 
-  updateDoc, 
-  doc, 
-  serverTimestamp,
-  query,
-  where 
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+import api from '../services/apiClient';
 import useCountryFilter from '../hooks/useCountryFilter';
 
 const COUNTRIES = [
@@ -79,20 +69,11 @@ const PrivacyTerms = () => {
   const loadDocuments = async () => {
     try {
       setLoading(true);
-      let documentsQuery = collection(db, 'legal_documents');
-      
-      // Country admin only sees their country's documents
-      if (!isSuperAdmin && userCountry) {
-        documentsQuery = query(documentsQuery, where('country', '==', userCountry));
-      }
-
-      const snapshot = await getDocs(documentsQuery);
-      const docsData = [];
-      snapshot.forEach(doc => {
-        docsData.push({ id: doc.id, ...doc.data() });
-      });
-
-      setDocuments(docsData.sort((a, b) => {
+      const params = {};
+      if (!isSuperAdmin && userCountry) params.country = userCountry;
+      const { data } = await api.get('/legal-documents', { params });
+      const docsData = Array.isArray(data) ? data : data?.items || [];
+      setDocuments([...docsData].sort((a, b) => {
         if (a.country !== b.country) return a.country.localeCompare(b.country);
         return a.type.localeCompare(b.type);
       }));
@@ -142,18 +123,16 @@ const PrivacyTerms = () => {
     try {
       const docData = {
         ...formData,
-        updatedAt: serverTimestamp(),
         updatedBy: adminData.email
       };
-
       if (editingDoc) {
-        await updateDoc(doc(db, 'legal_documents', editingDoc), docData);
+        await api.put(`/legal-documents/${editingDoc}`, docData);
       } else {
-        docData.createdAt = serverTimestamp();
-        docData.createdBy = adminData.email;
-        await addDoc(collection(db, 'legal_documents'), docData);
+        await api.post('/legal-documents', {
+          ...docData,
+          createdBy: adminData.email
+        });
       }
-
       handleCloseDialog();
       loadDocuments();
     } catch (error) {

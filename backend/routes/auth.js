@@ -221,7 +221,7 @@ router.get('/profile', authService.authMiddleware(), async (req, res) => {
     try {
         res.json({
             success: true,
-            data: req.user
+            data: { ...req.user, permissions: req.user.permissions || {} }
         });
     } catch (error) {
         console.error('Get profile error:', error);

@@ -486,6 +486,22 @@ class AuthService {
     requireRole(requiredRoles) {
         return this.roleMiddleware(requiredRoles);
     }
+
+    /**
+     * Permission middleware (expects users.permissions JSONB column)
+     */
+    permissionMiddleware(permissionKey) {
+        return (req, res, next) => {
+            if (!req.user) {
+                return res.status(401).json({ error: 'Authentication required' });
+            }
+            const perms = req.user.permissions || req.user.permission || req.user.perms || {};
+            if (perms[permissionKey] === true) return next();
+            return res.status(403).json({ error: 'Permission denied' });
+        };
+    }
+
+    requirePermission(permissionKey) { return this.permissionMiddleware(permissionKey); }
 }
 
 module.exports = new AuthService();

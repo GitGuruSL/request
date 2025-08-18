@@ -35,16 +35,7 @@ import {
   Info as InfoIcon
 } from '@mui/icons-material';
 import useCountryFilter from '../hooks/useCountryFilter';
-import { db } from '../firebase/config';
-import { 
-  collection, 
-  doc, 
-  getDocs, 
-  updateDoc, 
-  setDoc,
-  query,
-  where 
-} from 'firebase/firestore';
+import api from '../services/apiClient';
 import { BUSINESS_MODULES, CORE_DEPENDENCIES, canEnableModule, getModulesUsingDependency } from '../constants/businessModules';
 
 const ModuleManagement = () => {
@@ -73,13 +64,9 @@ const ModuleManagement = () => {
 
   const fetchCountries = async () => {
     try {
-      const snapshot = await getDocs(collection(db, 'app_countries'));
-      const countriesList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        code: doc.data().code,
-        name: doc.data().name
-      }));
-      setCountries(countriesList);
+      const res = await api.get('/countries');
+      const list = (res.data || []).map(c => ({ id: c.id || c.code, code: c.code, name: c.name }));
+      setCountries(list);
     } catch (error) {
       console.error('Error fetching countries:', error);
       setSnackbar({ open: true, message: 'Error fetching countries', severity: 'error' });
@@ -89,42 +76,20 @@ const ModuleManagement = () => {
   const fetchCountryModules = async (countryCode) => {
     try {
       setLoading(true);
-      
-      // Fetch country module configuration
-      const moduleQuery = query(
-        collection(db, 'country_modules'),
-        where('countryCode', '==', countryCode)
-      );
-      const moduleSnapshot = await getDocs(moduleQuery);
-      
-      if (!moduleSnapshot.empty) {
-        const moduleData = moduleSnapshot.docs[0].data();
-        setCountryModules(moduleData.modules || {});
-        setCountryDependencies(moduleData.coreDependencies || {});
+      const res = await api.get(`/country-modules/${countryCode}`);
+      if (res.data) {
+        setCountryModules(res.data.modules || {});
+        setCountryDependencies(res.data.coreDependencies || {});
       } else {
-        // Set defaults for new country
-        const defaultModules = {};
-        const defaultDependencies = {};
-        
-        Object.keys(BUSINESS_MODULES).forEach(key => {
-          const module = BUSINESS_MODULES[key];
-          defaultModules[module.id] = module.defaultEnabled;
-        });
-        
-        Object.keys(CORE_DEPENDENCIES).forEach(key => {
-          defaultDependencies[key] = true; // All core dependencies enabled by default
-        });
-        
-        setCountryModules(defaultModules);
-        setCountryDependencies(defaultDependencies);
+        const defaultModules = {}; const defaultDependencies = {};
+        Object.keys(BUSINESS_MODULES).forEach(key => { const module = BUSINESS_MODULES[key]; defaultModules[module.id] = module.defaultEnabled; });
+        Object.keys(CORE_DEPENDENCIES).forEach(key => { defaultDependencies[key] = true; });
+        setCountryModules(defaultModules); setCountryDependencies(defaultDependencies);
       }
     } catch (error) {
       console.error('Error fetching country modules:', error);
       setSnackbar({ open: true, message: 'Error fetching country modules', severity: 'error' });
-    } finally {
-      setLoading(false);
-    }
-  };
+    } finally { setLoading(false);} };
 
   const handleModuleToggle = (moduleId, enabled) => {
     if (!enabled) {
@@ -237,15 +202,8 @@ const ModuleManagement = () => {
   };
 
   const saveCountryConfiguration = async (modules, dependencies) => {
-    const configData = {
-      countryCode: selectedCountry,
-      modules,
-      coreDependencies: dependencies,
-      updatedAt: new Date(),
-      updatedBy: adminData?.email || adminData?.uid || 'admin'
-    };
-
-    await setDoc(doc(db, 'country_modules', selectedCountry), configData);
+    const payload = { modules, coreDependencies: dependencies };
+    await api.put(`/country-modules/${selectedCountry}`, payload);
   };
 
   const getModuleStatus = (moduleId) => {

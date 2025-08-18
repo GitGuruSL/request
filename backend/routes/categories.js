@@ -105,7 +105,7 @@ router.get('/:id/subcategories', async (req, res) => {
  */
 router.post('/', 
     authService.authMiddleware(), 
-    authService.roleMiddleware(['admin']), 
+    authService.roleMiddleware(['admin','super_admin']), 
     async (req, res) => {
         try {
             const { name, description, icon, displayOrder, countryCode = 'LK' } = req.body;
@@ -148,7 +148,7 @@ router.post('/',
  */
 router.put('/:id', 
     authService.authMiddleware(), 
-    authService.roleMiddleware(['admin']), 
+    authService.roleMiddleware(['admin','super_admin']), 
     async (req, res) => {
         try {
             const { id } = req.params;
@@ -197,7 +197,7 @@ router.put('/:id',
  */
 router.delete('/:id', 
     authService.authMiddleware(), 
-    authService.roleMiddleware(['admin']), 
+    authService.roleMiddleware(['admin','super_admin']), 
     async (req, res) => {
         try {
             const { id } = req.params;

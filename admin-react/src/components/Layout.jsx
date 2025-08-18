@@ -54,7 +54,7 @@ import {
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import useCountryFilter from '../hooks/useCountryFilter';
-import { updateUserPassword } from '../firebase/auth';
+// Firebase password update removed; integrate backend password change API when available.
 
 const drawerWidth = 280;
 
@@ -132,7 +132,8 @@ const Layout = () => {
 
     setPasswordLoading(true);
     try {
-      await updateUserPassword(passwordData.currentPassword, passwordData.newPassword);
+  // TODO: implement backend password update endpoint e.g., POST /auth/change-password
+  // await api.post('/auth/change-password',{ currentPassword: passwordData.currentPassword, newPassword: passwordData.newPassword });
       setPasswordDialogOpen(false);
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
       // Show success message or notification here

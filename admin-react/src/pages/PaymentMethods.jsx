@@ -29,19 +29,7 @@ import {
   Delete as DeleteIcon,
   CloudUpload as UploadIcon
 } from '@mui/icons-material';
-import { db, storage } from '../firebase/config';
-import { 
-  collection, 
-  addDoc, 
-  getDocs, 
-  updateDoc, 
-  deleteDoc, 
-  doc,
-  query,
-  where,
-  orderBy 
-} from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import api from '../services/apiClient';
 import useCountryFilter from '../hooks/useCountryFilter';
 
 const PaymentMethods = () => {
@@ -84,28 +72,15 @@ const PaymentMethods = () => {
   useEffect(() => {
     fetchPaymentMethods();
     fetchCountries();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSuperAdmin, userCountry]);
 
   const fetchPaymentMethods = async () => {
     try {
-      let q;
-      if (isSuperAdmin) {
-        q = query(collection(db, 'payment_methods'), orderBy('createdAt', 'desc'));
-      } else {
-        // Country admin can only see their country's payment methods
-        q = query(
-          collection(db, 'payment_methods'), 
-          where('country', '==', userCountry),
-          orderBy('createdAt', 'desc')
-        );
-      }
-      
-      const snapshot = await getDocs(q);
-      const methods = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setPaymentMethods(methods);
+      const params = {};
+      if (!isSuperAdmin && userCountry) params.country = userCountry;
+      const { data } = await api.get('/payment-methods', { params });
+      setPaymentMethods(Array.isArray(data) ? data : data?.items || []);
     } catch (error) {
       console.error('Error fetching payment methods:', error);
     }
@@ -113,12 +88,8 @@ const PaymentMethods = () => {
 
   const fetchCountries = async () => {
     try {
-      const snapshot = await getDocs(collection(db, 'app_countries'));
-      const countriesList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })).filter(country => country.isEnabled);
-      setCountries(countriesList);
+      const { data } = await api.get('/countries');
+      setCountries((data?.countries || data || []).filter(c => c.isEnabled !== false));
     } catch (error) {
       console.error('Error fetching countries:', error);
     }
@@ -138,10 +109,17 @@ const PaymentMethods = () => {
 
   const uploadImage = async () => {
     if (!imageFile) return formData.imageUrl;
-    
-    const imageRef = ref(storage, `payment_methods/${Date.now()}_${imageFile.name}`);
-    const snapshot = await uploadBytes(imageRef, imageFile);
-    return await getDownloadURL(snapshot.ref);
+    try {
+      const form = new FormData();
+      form.append('file', imageFile);
+      const { data } = await api.post('/uploads/payment-methods', form, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      return data?.url || data?.path || formData.imageUrl;
+    } catch (e) {
+      console.error('Image upload failed, continuing without new image', e);
+      return formData.imageUrl;
+    }
   };
 
   const handleSubmit = async () => {
@@ -153,18 +131,12 @@ const PaymentMethods = () => {
         ...formData,
         imageUrl,
         country: isSuperAdmin ? formData.country : userCountry,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        createdBy: adminData?.email || adminData?.uid || 'admin'
       };
 
       if (editingMethod) {
-        await updateDoc(doc(db, 'payment_methods', editingMethod.id), {
-          ...methodData,
-          updatedAt: new Date()
-        });
+        await api.put(`/payment-methods/${editingMethod.id}`, methodData);
       } else {
-        await addDoc(collection(db, 'payment_methods'), methodData);
+        await api.post('/payment-methods', methodData);
       }
 
       fetchPaymentMethods();
@@ -185,7 +157,7 @@ const PaymentMethods = () => {
   const handleDelete = async (methodId) => {
     if (window.confirm('Are you sure you want to delete this payment method?')) {
       try {
-        await deleteDoc(doc(db, 'payment_methods', methodId));
+        await api.delete(`/payment-methods/${methodId}`);
         fetchPaymentMethods();
       } catch (error) {
         console.error('Error deleting payment method:', error);

@@ -20,18 +20,18 @@ WHERE NOT EXISTS (
 );
 
 -- Helper function + trigger for updated_at
-DO $$
+DO $mig$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_proc WHERE proname = 'update_timestamp'
   ) THEN
     CREATE OR REPLACE FUNCTION update_timestamp()
-    RETURNS trigger AS $$
+    RETURNS trigger AS $func$
     BEGIN
       NEW.updated_at = NOW();
       RETURN NEW;
     END;
-    $$ LANGUAGE plpgsql;
+    $func$ LANGUAGE plpgsql;
   END IF;
   IF NOT EXISTS (
     SELECT 1 FROM pg_trigger WHERE tgname = 'trg_sms_provider_configs_updated_at'
@@ -41,4 +41,4 @@ BEGIN
       FOR EACH ROW
       EXECUTE FUNCTION update_timestamp();
   END IF;
-END $$;
+END $mig$;

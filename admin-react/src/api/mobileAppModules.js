@@ -1,8 +1,8 @@
 // Mobile App API - Get Country Modules Configuration
 // This would be deployed as a Firebase Cloud Function or API endpoint
 
-import { db } from '../firebase/config';
-import { doc, getDoc } from 'firebase/firestore';
+// Firestore removed: this module should call backend REST endpoint instead.
+import api from '../services/apiClient';
 
 /**
  * Get enabled modules and configuration for a specific country
@@ -13,10 +13,16 @@ export const getCountryModules = async (countryCode) => {
   try {
     console.log(`🌍 Fetching modules for country: ${countryCode}`);
     
-    // Get country module configuration
-    const countryModuleDoc = await getDoc(doc(db, 'country_modules', countryCode));
-    
-    if (!countryModuleDoc.exists()) {
+    // Fetch from backend REST; fall back to default if 404
+    let moduleData;
+    try {
+      const { data } = await api.get(`/country-modules/${countryCode}`);
+      moduleData = data;
+    } catch (e) {
+      if (e?.response?.status !== 404) throw e;
+    }
+
+    if (!moduleData) {
       // Return default configuration if none exists
       console.log(`⚠️ No module config found for ${countryCode}, using defaults`);
       return {
@@ -40,17 +46,15 @@ export const getCountryModules = async (countryCode) => {
       };
     }
     
-    const moduleData = countryModuleDoc.data();
-    
-    console.log(`✅ Found module config for ${countryCode}:`, moduleData.modules);
+  console.log(`✅ Found module config for ${countryCode}:`, moduleData.modules);
     
     return {
       success: true,
       countryCode,
-      modules: moduleData.modules || {},
-      coreDependencies: moduleData.coreDependencies || {},
-      lastUpdated: moduleData.updatedAt?.toDate() || null,
-      version: moduleData.version || '1.0.0'
+  modules: moduleData.modules || {},
+  coreDependencies: moduleData.coreDependencies || {},
+  lastUpdated: moduleData.updatedAt || null,
+  version: moduleData.version || '1.0.0'
     };
     
   } catch (error) {

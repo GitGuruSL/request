@@ -27,8 +27,7 @@ import {
   Refresh,
   Info
 } from '@mui/icons-material';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import api from '../services/apiClient';
 import useCountryFilter from '../hooks/useCountryFilter.jsx';
 
 const Dashboard = () => {
@@ -64,25 +63,16 @@ const Dashboard = () => {
       setError(null);
       setStats(prev => ({ ...prev, loading: true }));
 
-      // Load centralized products (all admins see all products)
-      const productsSnapshot = await getDocs(collection(db, 'master_products'));
-      const productsCount = productsSnapshot.size;
+      // Parallel fetches
+      const [productsRes, statsRes, adminsRes] = await Promise.all([
+        api.get('/products/master/count'),
+        api.get('/dashboard/stats', { params: isSuperAdmin ? {} : { country: userCountry }}),
+        api.get('/admin-users/count', { params: isSuperAdmin ? {} : { country: userCountry }})
+      ]);
 
-      // Get country-filtered statistics
-      const countryStats = await getCountryStats();
-
-      // Load admin users count (based on role)
-      let adminUsersCount = 0;
-      if (isSuperAdmin) {
-        const adminUsersSnapshot = await getDocs(collection(db, 'admin_users'));
-        adminUsersCount = adminUsersSnapshot.size;
-      } else if (userCountry) {
-        // Country admin sees only their country's admins
-        const countryAdminsSnapshot = await getDocs(
-          query(collection(db, 'admin_users'), where('country', '==', userCountry))
-        );
-        adminUsersCount = countryAdminsSnapshot.size;
-      }
+      const countryStats = statsRes.data || {};
+      const productsCount = productsRes.data?.count ?? productsRes.data ?? 0;
+      const adminUsersCount = adminsRes.data?.count ?? adminsRes.data ?? 0;
 
       setStats({
         products: productsCount,
@@ -96,7 +86,6 @@ const Dashboard = () => {
         loading: false
       });
 
-      // Load recent activity (simplified for now)
       loadRecentActivity(countryStats);
 
     } catch (error) {

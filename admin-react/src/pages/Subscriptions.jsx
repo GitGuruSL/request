@@ -45,18 +45,7 @@ import {
   Group,
   TrendingUp
 } from '@mui/icons-material';
-import { 
-  collection, 
-  getDocs, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  query, 
-  where, 
-  orderBy 
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+import api from '../services/apiClient';
 import { useAuth } from '../contexts/AuthContext';
 import useCountryFilter from '../hooks/useCountryFilter';
 
@@ -203,47 +192,23 @@ const Subscriptions = () => {
   const fetchSubscriptionPlans = async () => {
     try {
       setLoading(true);
-      const plansRef = collection(db, 'subscription_plans');
-      let plansQuery = plansRef;
-
-      // For country admins: show both assigned plans and global default plans
-      if (!isSuperAdmin && userCountry) {
-        // Get all plans - we'll filter client-side to show relevant ones
-        plansQuery = query(plansRef, orderBy('createdAt', 'desc'));
-      }
-
-      const snapshot = await getDocs(plansQuery);
-      const plans = [];
-      
-      snapshot.forEach((doc) => {
-        const planData = { id: doc.id, ...doc.data() };
-        plans.push(planData);
-      });
-
+      const params = {};
+      if (!isSuperAdmin && userCountry) params.country = userCountry;
+      const { data } = await api.get('/subscription-plans', { params });
+      let plans = Array.isArray(data) ? data : data?.items || [];
       // Client-side filtering for country admins
-      let filteredPlans = plans;
       if (!isSuperAdmin && userCountry) {
-        filteredPlans = plans.filter(plan => 
-          // Show plans that include this country OR are default plans that need country pricing
+        plans = plans.filter(plan => 
           plan.countries?.includes(userCountry) || 
           (plan.isDefaultPlan && plan.requiresCountryPricing) ||
-          (plan.isDefaultPlan && !plan.requiresCountryPricing) // Show free plans too
+          (plan.isDefaultPlan && !plan.requiresCountryPricing)
         );
       }
-
-      // If no plans exist and user is super admin, create default plans
       if (plans.length === 0 && isSuperAdmin) {
         await initializeDefaultPlans();
-        // Refetch after creating default plans
-        const newSnapshot = await getDocs(plansQuery);
-        const newPlans = [];
-        newSnapshot.forEach((doc) => {
-          newPlans.push({ id: doc.id, ...doc.data() });
-        });
-        setSubscriptionPlans(newPlans);
-      } else {
-        setSubscriptionPlans(filteredPlans);
+        return;
       }
+      setSubscriptionPlans(plans);
     } catch (error) {
       console.error('Error fetching subscription plans:', error);
       setError('Failed to fetch subscription plans');
@@ -254,22 +219,10 @@ const Subscriptions = () => {
 
   const fetchUserSubscriptions = async () => {
     try {
-      const subscriptionsRef = collection(db, 'user_subscriptions');
-      let subscriptionsQuery = subscriptionsRef;
-
-      // Country filtering for non-super admins
-      if (!isSuperAdmin && userCountry) {
-        subscriptionsQuery = query(subscriptionsRef, where('countryCode', '==', userCountry));
-      }
-
-      const snapshot = await getDocs(subscriptionsQuery);
-      const subscriptions = [];
-      
-      snapshot.forEach((doc) => {
-        subscriptions.push({ id: doc.id, ...doc.data() });
-      });
-
-      setUserSubscriptions(subscriptions);
+      const params = {};
+      if (!isSuperAdmin && userCountry) params.country = userCountry;
+      const { data } = await api.get('/user-subscriptions', { params });
+      setUserSubscriptions(Array.isArray(data) ? data : data?.items || []);
     } catch (error) {
       console.error('Error fetching user subscriptions:', error);
     }
@@ -285,28 +238,10 @@ const Subscriptions = () => {
       let existingCount = 0;
       
       for (const [planId, planData] of Object.entries(DEFAULT_SUBSCRIPTION_PLANS)) {
-        // Check if plan already exists
-        const plansRef = collection(db, 'subscription_plans');
-        const existingQuery = query(plansRef, where('planId', '==', planId));
-        const existingSnapshot = await getDocs(existingQuery);
-        
-        if (existingSnapshot.empty) {
-          // Create the plan
-          const newPlan = {
-            ...planData,
-            planId: planId,
-            countries: [], // Will be populated when country admins add pricing
-            pricingByCountry: {},
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            createdBy: user.email,
-            isDefaultPlan: true
-          };
-          
-          await addDoc(collection(db, 'subscription_plans'), newPlan);
-          console.log(`Created default plan: ${planData.name}`);
+        try {
+          await api.post('/subscription-plans/defaults', { planId, ...planData });
           createdCount++;
-        } else {
+        } catch (e) {
           existingCount++;
         }
       }
@@ -348,8 +283,7 @@ const Subscriptions = () => {
     try {
       console.log('Adding country pricing:', { planId, countryCode, pricing });
       
-      const planRef = doc(db, 'subscription_plans', planId);
-      const plan = subscriptionPlans.find(p => p.id === planId);
+  const plan = subscriptionPlans.find(p => p.id === planId);
       
       if (!plan) {
         console.error('Plan not found:', planId);
@@ -383,10 +317,8 @@ const Subscriptions = () => {
         countries: updatedCountries
       });
       
-      await updateDoc(planRef, {
-        pricingByCountry: updatedPricingByCountry,
-        countries: updatedCountries,
-        updatedAt: new Date()
+      await api.put(`/subscription-plans/${planId}/pricing/${countryCode}`, {
+        price: pricing.price
       });
       
       console.log('Successfully updated plan');
@@ -509,8 +441,7 @@ const Subscriptions = () => {
     if (!isSuperAdmin) return;
     
     try {
-      const planRef = doc(db, 'subscription_plans', planId);
-      const plan = subscriptionPlans.find(p => p.id === planId);
+  const plan = subscriptionPlans.find(p => p.id === planId);
       
       if (!plan || !plan.pricingByCountry[countryCode]) return;
       
@@ -525,10 +456,7 @@ const Subscriptions = () => {
         }
       };
       
-      await updateDoc(planRef, {
-        pricingByCountry: updatedPricingByCountry,
-        updatedAt: new Date()
-      });
+  await api.post(`/subscription-plans/${planId}/pricing/${countryCode}/approve`);
       
       setSnackbar({
         open: true,
@@ -551,8 +479,7 @@ const Subscriptions = () => {
     if (!isSuperAdmin) return;
     
     try {
-      const planRef = doc(db, 'subscription_plans', planId);
-      const plan = subscriptionPlans.find(p => p.id === planId);
+  const plan = subscriptionPlans.find(p => p.id === planId);
       
       if (!plan || !plan.pricingByCountry[countryCode]) return;
       
@@ -568,10 +495,7 @@ const Subscriptions = () => {
         }
       };
       
-      await updateDoc(planRef, {
-        pricingByCountry: updatedPricingByCountry,
-        updatedAt: new Date()
-      });
+  await api.post(`/subscription-plans/${planId}/pricing/${countryCode}/reject`, { reason });
       
       setSnackbar({
         open: true,
@@ -613,14 +537,9 @@ const Subscriptions = () => {
       };
 
       if (selectedPlan) {
-        // Update existing plan
-        await updateDoc(doc(db, 'subscription_plans', selectedPlan.id), {
-          ...planData,
-          createdAt: selectedPlan.createdAt // Preserve original creation date
-        });
+        await api.put(`/subscription-plans/${selectedPlan.id}`, planData);
       } else {
-        // Create new plan
-        await addDoc(collection(db, 'subscription_plans'), planData);
+        await api.post('/subscription-plans', planData);
       }
 
       await fetchSubscriptionPlans();
@@ -650,7 +569,7 @@ const Subscriptions = () => {
   const handleDelete = async (planId) => {
     if (window.confirm('Are you sure you want to delete this subscription plan?')) {
       try {
-        await deleteDoc(doc(db, 'subscription_plans', planId));
+        await api.delete(`/subscription-plans/${planId}`);
         await fetchSubscriptionPlans();
       } catch (error) {
         console.error('Error deleting subscription plan:', error);

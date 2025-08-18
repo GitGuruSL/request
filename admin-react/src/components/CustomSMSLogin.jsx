@@ -231,32 +231,7 @@ const CustomSMSLogin = () => {
   /**
    * Handle admin login
    */
-  const handleAdminLogin = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      if (!adminEmail || !adminPassword) {
-        throw new Error('Please enter both email and password');
-      }
-
-      // Admin login
-      const result = await smsAuthService.adminLogin(adminEmail, adminPassword);
-      
-      if (result.success) {
-        setSuccess('Admin login successful! Redirecting...');
-        
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 2000);
-      }
-    } catch (error) {
-      console.error('Admin login error:', error);
-      setError(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Admin email/password flow removed (Firebase deprecated); could integrate backend /auth/login here if needed.
 
   /**
    * Handle retry OTP

@@ -52,8 +52,7 @@ import {
   Publish
 } from '@mui/icons-material';
 import useCountryFilter from '../hooks/useCountryFilter.jsx';
-import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase/config.js';
+import api from '../services/apiClient';
 
 const PagesModule = () => {
   const {
@@ -123,37 +122,7 @@ const PagesModule = () => {
   };
 
   const loadPages = async () => {
-    try {
-      setLoading(true);
-      
-      let pagesData;
-      if (isSuperAdmin) {
-        // Super admin sees ALL pages from all countries
-        pagesData = await getFilteredData('content_pages', { role: 'super_admin', country: null });
-      } else {
-        // Country admin only sees pages for their country + global centralized pages
-        const allPagesData = await getFilteredData('content_pages', adminData);
-        
-        // Filter to show:
-        // 1. Pages created for their specific country
-        // 2. Centralized pages (global)
-        // 3. Templates they can customize
-        pagesData = allPagesData?.filter(page => {
-          return page.countries?.includes(userCountry) || // Country-specific pages
-                 page.countries?.includes('global') ||    // Global/centralized pages  
-                 page.type === 'centralized' ||           // Centralized pages
-                 (page.type === 'template' && page.isTemplate); // Templates
-        });
-      }
-      
-      setPages(pagesData || []);
-    } catch (error) {
-      console.error('Error loading pages:', error);
-      setPages([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    try { setLoading(true); const params = {}; if (!isSuperAdmin) params.country = userCountry; const res = await api.get('/content-pages', { params }); const all = Array.isArray(res.data)? res.data : res.data?.data || []; const pagesData = isSuperAdmin ? all : all.filter(page => page.countries?.includes(userCountry) || page.countries?.includes('global') || page.type==='centralized' || (page.type==='template' && page.isTemplate)); setPages(pagesData);} catch(e){ console.error('Error loading pages', e); setPages([]);} finally { setLoading(false);} };
 
   useEffect(() => {
     loadPages();
@@ -197,25 +166,12 @@ const PagesModule = () => {
 
   const handleSavePage = async () => {
     try {
-      const pageData = {
+      const payload = {
         ...formData,
         slug: formData.slug || formData.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
-        updatedAt: serverTimestamp(),
-        updatedBy: adminData.uid,
         country: formData.type === 'country-specific' ? userCountry : null
       };
-
-      if (selectedPage) {
-        // Update existing page
-        await updateDoc(doc(db, 'content_pages', selectedPage.id), pageData);
-      } else {
-        // Create new page
-        await addDoc(collection(db, 'content_pages'), {
-          ...pageData,
-          createdAt: serverTimestamp(),
-          createdBy: adminData.uid
-        });
-      }
+      if (selectedPage) { await api.put(`/content-pages/${selectedPage.id}`, payload); } else { await api.post('/content-pages', payload); }
 
       setDialogOpen(false);
       loadPages();
@@ -226,21 +182,7 @@ const PagesModule = () => {
 
   const handleStatusChange = async (page, newStatus) => {
     try {
-      const updateData = {
-        status: newStatus,
-        updatedAt: serverTimestamp(),
-        updatedBy: adminData.uid
-      };
-
-      if (newStatus === 'approved') {
-        updateData.approvedAt = serverTimestamp();
-        updateData.approvedBy = adminData.uid;
-      } else if (newStatus === 'published') {
-        updateData.publishedAt = serverTimestamp();
-        updateData.publishedBy = adminData.uid;
-      }
-
-      await updateDoc(doc(db, 'content_pages', page.id), updateData);
+  await api.put(`/content-pages/${page.id}/status`, { status: newStatus });
       loadPages();
     } catch (error) {
       console.error('Error updating page status:', error);
@@ -250,7 +192,7 @@ const PagesModule = () => {
   const handleDeletePage = async (page) => {
     if (window.confirm(`Are you sure you want to delete "${page.title}"?`)) {
       try {
-        await deleteDoc(doc(db, 'content_pages', page.id));
+  await api.delete(`/content-pages/${page.id}`);
         loadPages();
       } catch (error) {
         console.error('Error deleting page:', error);
