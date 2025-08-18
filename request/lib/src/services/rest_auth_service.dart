@@ -176,7 +176,7 @@ class RestAuthService {
       }
 
       final response = await _apiClient.post<Map<String, dynamic>>(
-        '/api/auth/check-user-exists',
+        '/api/flutter/auth/check-user-exists',
         data: {
           'emailOrPhone': emailOrPhone.toLowerCase().trim(),
         },
