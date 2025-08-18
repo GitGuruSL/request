@@ -15,6 +15,7 @@ class RequestModel {
   final String userId;
   final String? userName;
   final String? userEmail;
+  final String? userPhone;
   final String? acceptedResponseId;
   final String title;
   final String description;
@@ -24,6 +25,9 @@ class RequestModel {
   final String? subcategoryName;
   final String? locationCityId;
   final String? cityName;
+  final String? locationAddress;
+  final double? locationLatitude;
+  final double? locationLongitude;
   final String countryCode;
   final String status;
   final double? budget;
@@ -39,6 +43,7 @@ class RequestModel {
     required this.userId,
     this.userName,
     this.userEmail,
+    this.userPhone,
     this.acceptedResponseId,
     required this.title,
     required this.description,
@@ -48,6 +53,9 @@ class RequestModel {
     this.subcategoryName,
     this.locationCityId,
     this.cityName,
+    this.locationAddress,
+    this.locationLatitude,
+    this.locationLongitude,
     required this.countryCode,
     required this.status,
     this.budget,
@@ -65,6 +73,7 @@ class RequestModel {
       userId: json['user_id'].toString(),
       userName: json['user_name'],
       userEmail: json['user_email'],
+      userPhone: json['user_phone'],
       acceptedResponseId: json['accepted_response_id']?.toString(),
       title: json['title'] ?? '',
       description: json['description'] ?? '',
@@ -74,6 +83,9 @@ class RequestModel {
       subcategoryName: json['subcategory_name'],
       locationCityId: json['location_city_id']?.toString(),
       cityName: json['city_name'],
+      locationAddress: json['location_address'],
+      locationLatitude: _asDouble(json['location_latitude']),
+      locationLongitude: _asDouble(json['location_longitude']),
       countryCode: json['country_code'] ?? 'LK',
       status: json['status'] ?? 'active',
       budget: _asDouble(json['budget']),
@@ -95,11 +107,17 @@ class RequestModel {
     return {
       'id': id,
       'user_id': userId,
+      'user_name': userName,
+      'user_email': userEmail,
+      'user_phone': userPhone,
       'title': title,
       'description': description,
       'category_id': categoryId,
       'subcategory_id': subcategoryId,
       'location_city_id': locationCityId,
+      'location_address': locationAddress,
+      'location_latitude': locationLatitude,
+      'location_longitude': locationLongitude,
       'country_code': countryCode,
       'status': status,
       'accepted_response_id': acceptedResponseId,

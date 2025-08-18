@@ -195,15 +195,25 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
       images: restRequest.imageUrls ?? [],
       tags: [],
       priority: Priority.medium,
-      location: restRequest.cityName != null
+      location: restRequest.locationAddress != null &&
+              restRequest.locationLatitude != null &&
+              restRequest.locationLongitude != null
           ? LocationInfo(
-              latitude: 0.0,
-              longitude: 0.0,
-              address: restRequest.cityName!,
-              city: restRequest.cityName!,
+              latitude: restRequest.locationLatitude!,
+              longitude: restRequest.locationLongitude!,
+              address: restRequest.locationAddress!,
+              city: restRequest.cityName ?? restRequest.locationAddress!,
               country: restRequest.countryCode,
             )
-          : null,
+          : (restRequest.cityName != null
+              ? LocationInfo(
+                  latitude: 0.0,
+                  longitude: 0.0,
+                  address: restRequest.cityName!,
+                  city: restRequest.cityName!,
+                  country: restRequest.countryCode,
+                )
+              : null),
       typeSpecificData: restRequest.metadata ?? {},
       country: restRequest.countryCode,
     );
@@ -897,7 +907,7 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                               ? 'Close'
                               : 'Reopen')),
                       TextButton.icon(
-                          onPressed: _openEditRequestSheet,
+                          onPressed: _navigateToRequestEdit,
                           icon: const Icon(Icons.edit, size: 16),
                           label: const Text('Edit')),
                       TextButton.icon(
@@ -1034,10 +1044,6 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
     final shouldHide = hiddenFields.contains(keyLower) ||
         keyLower.endsWith('id') &&
             (keyLower.contains('category') || keyLower.contains('subcategory'));
-
-    // Debug: print the key to see what we're getting
-    print(
-        'Checking field: "$key" (lowercase: "$keyLower") - should hide: $shouldHide');
 
     return shouldHide;
   }
