@@ -488,6 +488,7 @@ class RestAuthService {
     required String displayName,
     required String password,
     required bool isEmail,
+    String? countryCode,
   }) async {
     try {
       if (kDebugMode) {
@@ -503,6 +504,7 @@ class RestAuthService {
           'displayName': displayName.trim(),
           'password': password,
           'isEmail': isEmail,
+          if (countryCode != null) 'countryCode': countryCode,
         },
       );
 

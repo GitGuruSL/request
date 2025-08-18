@@ -93,6 +93,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
           displayName: displayName,
           password: password,
           isEmail: widget.isEmail ?? widget.emailOrPhone!.contains('@'),
+          countryCode: widget.countryCode,
         );
 
         if (result.success) {

@@ -280,7 +280,6 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       subcategory_id,
       city_id,
       budget,
-      currency = 'LKR',
       priority = 'normal',
       variables = []
     } = req.body;
@@ -296,7 +295,6 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       category_id,
       city_id,
       budget,
-      currency,
       priority
     });
 
@@ -312,15 +310,15 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
     const request = await database.queryOne(`
       INSERT INTO requests (
         user_id, title, description, category_id, subcategory_id, location_city_id,
-        budget, currency, priority, country_code,
+        budget, priority, country_code,
         status, created_at, updated_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'active',
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, 'active',
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
       ) RETURNING *
     `, [
       user_id, title, description, category_id, subcategory_id, city_id,
-      budget, currency, priority, country_code
+      budget, priority, country_code
     ]);
 
     res.status(201).json({

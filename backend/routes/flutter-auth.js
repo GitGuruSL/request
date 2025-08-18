@@ -390,12 +390,13 @@ router.post('/register', async (req, res) => {
 // 5. Register new user with complete profile (for profile completion flow)
 router.post('/register-complete', async (req, res) => {
   try {
-    const { emailOrPhone, firstName, lastName, displayName, password, isEmail } = req.body;
+    const { emailOrPhone, firstName, lastName, displayName, password, isEmail, countryCode } = req.body;
 
     console.log(`👤 Registration request for: ${emailOrPhone}`);
     console.log(`👤 isEmail flag: ${isEmail}`);
     console.log(`👤 firstName: ${firstName}, lastName: ${lastName}`);
     console.log(`👤 displayName: ${displayName}`);
+    console.log(`👤 countryCode: ${countryCode}`);
 
     if (!emailOrPhone || !firstName || !lastName || !password) {
       return res.status(400).json({
@@ -438,21 +439,22 @@ router.post('/register-complete', async (req, res) => {
         email_verified: isEmail,
         phone_verified: !isEmail,
         is_active: true,
-        role: 'user'
+        role: 'user',
+        country_code: countryCode || 'LK' // Default to LK if not provided
       };
 
       const createUserResult = await dbService.query(
         `INSERT INTO users (
           id, email, phone, first_name, last_name, display_name, password_hash,
-          email_verified, phone_verified, is_active, role, 
+          email_verified, phone_verified, is_active, role, country_code,
           created_at, updated_at
         ) VALUES (
-          gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW()
+          gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW()
         ) RETURNING *`,
         [
           userData.email, userData.phone, userData.first_name, userData.last_name,
           userData.display_name, userData.password_hash, userData.email_verified,
-          userData.phone_verified, userData.is_active, userData.role
+          userData.phone_verified, userData.is_active, userData.role, userData.country_code
         ]
       );
       
@@ -462,6 +464,7 @@ router.post('/register-complete', async (req, res) => {
 
     // Generate JWT tokens (for both new and existing users)
     const tokenPayload = {
+      userId: user.id,
       id: user.id,
       email: user.email,
       phone: user.phone,
