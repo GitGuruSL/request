@@ -60,6 +60,10 @@ const cityRoutes = require('./routes/cities');
 const vehicleTypeRoutes = require('./routes/vehicle-types');
 const requestRoutes = require('./routes/requests');
 const countryRoutes = require('./routes/countries');
+const uploadRoutes = require('./routes/upload'); // NEW
+
+// Serve static files (uploaded images)
+app.use('/uploads', express.static('uploads'));
 
 // Use routes
 app.use('/api/auth', authRoutes);
@@ -69,6 +73,7 @@ app.use('/api/cities', cityRoutes);
 app.use('/api/vehicle-types', vehicleTypeRoutes);
 app.use('/api/requests', requestRoutes);
 app.use('/api/countries', countryRoutes);
+app.use('/api/upload', uploadRoutes); // NEW - image upload endpoint
 
 // Error handling middleware
 app.use((err, req, res, next) => {
