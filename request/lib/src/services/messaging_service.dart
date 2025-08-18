@@ -30,4 +30,14 @@ class MessagingService {
     // Placeholder implementation
     print('Sending message: $message to conversation: $conversationId');
   }
+
+  Future<void> markAsRead(String conversationId) async {
+    // Placeholder implementation
+    print('Marking conversation as read: $conversationId');
+  }
+
+  Stream<List<dynamic>> getMessagesStream(String conversationId) {
+    // Placeholder implementation - returns empty stream
+    return Stream.value([]);
+  }
 }
