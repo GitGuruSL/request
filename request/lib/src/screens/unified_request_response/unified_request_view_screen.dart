@@ -772,19 +772,14 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                                     fontWeight: FontWeight.w600)),
                           ),
                           if (!_isOwner) ...[
-                            Container(
-                              decoration: BoxDecoration(
+                            IconButton(
+                              onPressed: () => _messageRequester(r),
+                              icon: const Icon(
+                                Icons.message,
                                 color: Colors.blue,
-                                borderRadius: BorderRadius.circular(20),
+                                size: 20,
                               ),
-                              child: IconButton(
-                                onPressed: () => _messageRequester(r),
-                                icon: const Icon(Icons.message,
-                                    size: 18, color: Colors.white),
-                                tooltip: 'Message Requester',
-                                padding: const EdgeInsets.all(8),
-                                constraints: const BoxConstraints(),
-                              ),
+                              tooltip: 'Message Requester',
                             ),
                           ],
                         ]),
