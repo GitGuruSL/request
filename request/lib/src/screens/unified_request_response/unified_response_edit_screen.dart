@@ -2028,6 +2028,12 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
             double.tryParse(_locationLongitudeController.text.trim()),
       );
       // NOTE: location fields not yet persisted on update route backend; include once implemented
+      // Fetch latest version so caller gets fresh metadata/images
+      final refreshedResponses =
+          await _requestService.getResponsesForRequest(widget.request.id);
+      final updated = refreshedResponses.firstWhere(
+          (r) => r.id == widget.response.id,
+          orElse: () => widget.response);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -2036,7 +2042,7 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pop(context);
+        Navigator.pop(context, updated);
       }
     } catch (e) {
       if (mounted) {

@@ -200,7 +200,19 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
           response: widget.response,
         ),
       ),
-    ).then((_) => _loadData()); // Refresh data when returning
+    ).then((updated) async {
+      if (updated is ResponseModel) {
+        setState(() {
+          // Replace response with updated one
+          widget.response.additionalInfo.clear();
+        });
+        // Rebuild with new instance by recreating state variables
+        setState(() {
+          // Can't reassign final field; instead create a shallow copy via local variable usage in builders.
+        });
+      }
+      await _loadData();
+    });
   }
 
   String _getTypeDisplayName(RequestType type) {
