@@ -120,6 +120,23 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
     }
   }
 
+  Color _getTypeColor(RequestType type) {
+    switch (type) {
+      case RequestType.item:
+        return const Color(0xFFFF6B35); // Orange/red
+      case RequestType.service:
+        return const Color(0xFF00BCD4); // Teal
+      case RequestType.rental:
+        return const Color(0xFF2196F3); // Blue
+      case RequestType.delivery:
+        return const Color(0xFF4CAF50); // Green
+      case RequestType.ride:
+        return const Color(0xFFFFC107); // Yellow
+      case RequestType.price:
+        return const Color(0xFF9C27B0); // Purple
+    }
+  }
+
   Widget _buildResponseItem(ResponseModel response, UserModel? responder) {
     return GestureDetector(
       onTap: () {
@@ -191,7 +208,10 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
                   IconButton(
                     onPressed: () => _startConversation(
                         response.responderId, responder?.name ?? 'User'),
-                    icon: const Icon(Icons.message),
+                    icon: Icon(
+                      Icons.message,
+                      color: _getTypeColor(widget.request.type),
+                    ),
                   ),
                 ],
               ),

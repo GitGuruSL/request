@@ -12,19 +12,20 @@ class UnifiedResponseViewScreen extends StatefulWidget {
   final ResponseModel response;
 
   const UnifiedResponseViewScreen({
-    super.key, 
+    super.key,
     required this.request,
     required this.response,
   });
 
   @override
-  State<UnifiedResponseViewScreen> createState() => _UnifiedResponseViewScreenState();
+  State<UnifiedResponseViewScreen> createState() =>
+      _UnifiedResponseViewScreenState();
 }
 
 class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
   final EnhancedRequestService _requestService = EnhancedRequestService();
   final EnhancedUserService _userService = EnhancedUserService();
-  
+
   UserModel? _responder;
   UserModel? _currentUser;
   bool _isLoading = true;
@@ -39,8 +40,9 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
   Future<void> _loadData() async {
     try {
       final currentUser = await _userService.getCurrentUserModel();
-      final responder = await _userService.getUserById(widget.response.responderId);
-      
+      final responder =
+          await _userService.getUserById(widget.response.responderId);
+
       setState(() {
         _currentUser = currentUser;
         _responder = responder;
@@ -63,7 +65,7 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
 
   Future<void> _acceptResponse() async {
     if (_isProcessing) return;
-    
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -90,7 +92,7 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
 
     try {
       await _requestService.acceptResponse(widget.response.id);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -146,7 +148,8 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () => Navigator.pop(context, reasonController.text.trim()),
+              onPressed: () =>
+                  Navigator.pop(context, reasonController.text.trim()),
               child: const Text('Reject'),
             ),
           ],
@@ -162,7 +165,7 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
 
     try {
       await _requestService.rejectResponse(widget.response.id, reason);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -217,6 +220,23 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
     }
   }
 
+  Color _getTypeColor(RequestType type) {
+    switch (type) {
+      case RequestType.item:
+        return const Color(0xFFFF6B35); // Orange/red
+      case RequestType.service:
+        return const Color(0xFF00BCD4); // Teal
+      case RequestType.rental:
+        return const Color(0xFF2196F3); // Blue
+      case RequestType.delivery:
+        return const Color(0xFF4CAF50); // Green
+      case RequestType.ride:
+        return const Color(0xFFFFC107); // Yellow
+      case RequestType.price:
+        return const Color(0xFF9C27B0); // Purple
+    }
+  }
+
   Widget _buildActionButtons() {
     final isRequester = _currentUser?.id == widget.request.requesterId;
     final isResponder = _currentUser?.id == widget.response.responderId;
@@ -253,7 +273,7 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
           ),
         ],
       );
-  }
+    }
 
     return const SizedBox.shrink();
   }
@@ -317,8 +337,8 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
           const SizedBox(height: 8),
         ],
         if (info['securityDeposit'] != null) ...[
-          _buildDetailRow('Security Deposit', 
-            '${widget.response.currency ?? 'LKR'} ${_formatPrice(info['securityDeposit'])}'),
+          _buildDetailRow('Security Deposit',
+              '${widget.response.currency ?? 'LKR'} ${_formatPrice(info['securityDeposit'])}'),
           const SizedBox(height: 8),
         ],
         if (info['itemCondition'] != null) ...[
@@ -345,8 +365,8 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
           const SizedBox(height: 8),
         ],
         if (info['deliveryCost'] != null) ...[
-          _buildDetailRow('Delivery Cost', 
-            '${widget.response.currency ?? 'LKR'} ${_formatPrice(info['deliveryCost'])}'),
+          _buildDetailRow('Delivery Cost',
+              '${widget.response.currency ?? 'LKR'} ${_formatPrice(info['deliveryCost'])}'),
           const SizedBox(height: 8),
         ],
         if (info['warranty'] != null) ...[
@@ -431,9 +451,10 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
 
   String _formatPrice(dynamic price) {
     if (price == null) return '';
-    double? priceValue = price is double ? price : double.tryParse(price.toString());
+    double? priceValue =
+        price is double ? price : double.tryParse(price.toString());
     if (priceValue == null) return '';
-    
+
     // Remove unnecessary decimal places
     if (priceValue == priceValue.roundToDouble()) {
       return priceValue.round().toString();
@@ -444,7 +465,7 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
 
   void _startConversation() async {
     if (_responder == null) return;
-    
+
     try {
       final conversation = await MessagingService().getOrCreateConversation(
         requestId: widget.request.id,
@@ -452,7 +473,7 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
         requesterId: widget.request.requesterId,
         responderId: _responder!.id,
       );
-      
+
       if (mounted) {
         Navigator.push(
           context,
@@ -491,7 +512,8 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         foregroundColor: Theme.of(context).textTheme.titleLarge?.color,
         actions: [
-          if (_currentUser?.id == widget.response.responderId && !widget.response.isAccepted)
+          if (_currentUser?.id == widget.response.responderId &&
+              !widget.response.isAccepted)
             IconButton(
               icon: const Icon(Icons.edit),
               tooltip: 'Edit Your Response',
@@ -511,15 +533,15 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
                 Text(
                   'Response Status',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
                 _buildStatusBadge(),
               ],
             ),
             const SizedBox(height: 24),
 
-                        // Responder information
+            // Responder information
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -532,8 +554,8 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
                   Text(
                     'Responder Information',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -542,7 +564,9 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
                         radius: 30,
                         backgroundColor: Colors.blue[100],
                         child: Text(
-                          (_responder != null && _responder!.name.isNotEmpty) ? _responder!.name[0] : 'U',
+                          (_responder != null && _responder!.name.isNotEmpty)
+                              ? _responder!.name[0]
+                              : 'U',
                           style: TextStyle(
                             color: Colors.blue[700],
                             fontWeight: FontWeight.bold,
@@ -578,7 +602,10 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
                       // Message button
                       IconButton(
                         onPressed: () => _startConversation(),
-                        icon: const Icon(Icons.message),
+                        icon: Icon(
+                          Icons.message,
+                          color: _getTypeColor(widget.request.type),
+                        ),
                       ),
                     ],
                   ),
@@ -600,15 +627,15 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
                   Text(
                     'Response Details',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   const SizedBox(height: 16),
 
                   // Price
                   if (widget.response.price != null) ...[
-                    _buildDetailRow('Price', 
-                      '${widget.response.currency ?? 'LKR'} ${_formatPrice(widget.response.price!)}'),
+                    _buildDetailRow('Price',
+                        '${widget.response.currency ?? 'LKR'} ${_formatPrice(widget.response.price!)}'),
                     const SizedBox(height: 12),
                   ],
 
@@ -617,14 +644,15 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
                   const SizedBox(height: 12),
 
                   // Availability
-                  if (widget.response.availableFrom != null || widget.response.availableUntil != null) ...[
+                  if (widget.response.availableFrom != null ||
+                      widget.response.availableUntil != null) ...[
                     if (widget.response.availableFrom != null)
-                      _buildDetailRow('Available From', 
-                        '${widget.response.availableFrom!.day}/${widget.response.availableFrom!.month}/${widget.response.availableFrom!.year}'),
+                      _buildDetailRow('Available From',
+                          '${widget.response.availableFrom!.day}/${widget.response.availableFrom!.month}/${widget.response.availableFrom!.year}'),
                     const SizedBox(height: 8),
                     if (widget.response.availableUntil != null)
-                      _buildDetailRow('Available Until', 
-                        '${widget.response.availableUntil!.day}/${widget.response.availableUntil!.month}/${widget.response.availableUntil!.year}'),
+                      _buildDetailRow('Available Until',
+                          '${widget.response.availableUntil!.day}/${widget.response.availableUntil!.month}/${widget.response.availableUntil!.year}'),
                     const SizedBox(height: 12),
                   ],
 
@@ -649,73 +677,73 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
                     Text(
                       'Images',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        height: 120,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: widget.response.images.length,
-                          itemBuilder: (context, index) {
-                            return Container(
-                              width: 120,
-                              margin: const EdgeInsets.only(right: 8),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
-                                  widget.response.images[index],
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Container(
-                                      color: Colors.grey[200],
-                                      child: const Icon(
-                                        Icons.image_not_supported,
-                                        color: Colors.grey,
-                                      ),
-                                    );
-                                  },
-                                ),
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 120,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: widget.response.images.length,
+                        itemBuilder: (context, index) {
+                          return Container(
+                            width: 120,
+                            margin: const EdgeInsets.only(right: 8),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                widget.response.images[index],
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: Colors.grey[200],
+                                    child: const Icon(
+                                      Icons.image_not_supported,
+                                      color: Colors.grey,
+                                    ),
+                                  );
+                                },
                               ),
-                            );
-                          },
-                        ),
+                            ),
+                          );
+                        },
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-              ],
+              ),
+              const SizedBox(height: 16),
+            ],
 
             // Rejection reason (if any)
-              if (widget.response.rejectionReason != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.red[50],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Rejection Reason',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.red[700],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        widget.response.rejectionReason!,
-                        style: TextStyle(color: Colors.red[600]),
-                      ),
-                    ],
-                  ),
+            if (widget.response.rejectionReason != null) ...[
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(height: 16),
-              ],
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Rejection Reason',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red[700],
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      widget.response.rejectionReason!,
+                      style: TextStyle(color: Colors.red[600]),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
 
             // Action buttons
             _buildActionButtons(),

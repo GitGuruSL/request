@@ -213,6 +213,30 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
     ).then((_) => _reloadResponses()); // Refresh responses when returning
   }
 
+  RequestType _getCurrentRequestType() {
+    if (_request == null) return RequestType.item;
+    final typeString = _request!.metadata?['type']?.toString() ?? 'item';
+    print('DEBUG: Request metadata type: $typeString'); // Debug line
+    return _getRequestTypeFromString(typeString);
+  }
+
+  Color _getTypeColor(RequestType type) {
+    switch (type) {
+      case RequestType.item:
+        return const Color(0xFFFF6B35); // Orange/red
+      case RequestType.service:
+        return const Color(0xFF00BCD4); // Teal
+      case RequestType.rental:
+        return const Color(0xFF2196F3); // Blue
+      case RequestType.delivery:
+        return const Color(0xFF4CAF50); // Green
+      case RequestType.ride:
+        return const Color(0xFFFFC107); // Yellow
+      case RequestType.price:
+        return const Color(0xFF9C27B0); // Purple
+    }
+  }
+
   // Helper method to convert REST RequestModel to enhanced RequestModel
   RequestModel _convertToRequestModel(rest.RequestModel restRequest) {
     return RequestModel(
@@ -933,9 +957,9 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                           if (!_isOwner) ...[
                             IconButton(
                               onPressed: () => _messageRequester(r),
-                              icon: const Icon(
+                              icon: Icon(
                                 Icons.message,
-                                color: Colors.blue,
+                                color: _getTypeColor(_getCurrentRequestType()),
                                 size: 20,
                               ),
                               tooltip: 'Message Requester',
@@ -1107,6 +1131,8 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
       floatingActionButton: _canRespond
           ? FloatingActionButton.extended(
               onPressed: _openCreateResponseSheet,
+              backgroundColor: _getTypeColor(_getCurrentRequestType()),
+              foregroundColor: Colors.white,
               icon: const Icon(Icons.reply),
               label: const Text('Respond'))
           : null,
