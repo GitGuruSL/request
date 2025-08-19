@@ -62,6 +62,9 @@ const requestRoutes = require('./routes/requests');
 const countryRoutes = require('./routes/countries');
 const uploadRoutes = require('./routes/upload'); // NEW
 const testImageRoutes = require('./routes/test-images'); // TEST
+const subscriptionPlansLegacy = require('./routes/subscription-plans-legacy');
+const subscriptionPlansNew = require('./routes/subscription-plans-new');
+const contentPagesRoutes = require('./routes/content-pages');
 
 // Serve static files (uploaded images)
 app.use('/uploads', express.static('uploads', {
@@ -83,6 +86,9 @@ app.use('/api/requests', requestRoutes);
 app.use('/api/countries', countryRoutes);
 app.use('/api/upload', uploadRoutes); // NEW - image upload endpoint
 app.use('/api/test-images', testImageRoutes); // TEST - image serving test
+app.use('/api', subscriptionPlansLegacy); // legacy paths /subscription-plans, /user-subscriptions
+app.use('/api', subscriptionPlansNew); // new CRUD under /subscription-plans-new
+app.use('/api/content-pages', contentPagesRoutes); // content pages management
 
 // Error handling middleware
 app.use((err, req, res, next) => {
