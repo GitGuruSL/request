@@ -118,6 +118,45 @@ router.post('/', authService.authMiddleware(), async (req, res) => {
         const passwordHash = await authService.hashPassword(rawPassword);
         const insert = await dbService.query(`INSERT INTO admin_users (email,password_hash,name,role,country_code,permissions,is_active) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`, [email, passwordHash, displayName, role, countryCode, permissions, isActive]);
         const row = insert.rows[0];
+
+        // Auto-initialize vehicle types for new country admins
+        if (role === 'country_admin' && countryCode) {
+            try {
+                console.log(`Auto-initializing vehicle types for new country admin: ${countryCode}`);
+                
+                // Check if country already has vehicle types configured
+                const existingCount = await dbService.queryOne(
+                    'SELECT COUNT(*) as count FROM country_vehicle_types WHERE country_code = $1',
+                    [countryCode.toUpperCase()]
+                );
+                
+                if (existingCount.count == 0) {
+                    // Get all active vehicle types and add them as disabled for this country
+                    const vehicleTypes = await dbService.query(
+                        'SELECT id, name FROM vehicle_types WHERE is_active = true ORDER BY name'
+                    );
+                    
+                    if (vehicleTypes.rows.length > 0) {
+                        // Insert all vehicle types as disabled for this country
+                        const insertPromises = vehicleTypes.rows.map(vt => 
+                            dbService.query(`
+                                INSERT INTO country_vehicle_types (vehicle_type_id, country_code, is_active)
+                                VALUES ($1, $2, false)
+                            `, [vt.id, countryCode.toUpperCase()])
+                        );
+                        
+                        await Promise.all(insertPromises);
+                        console.log(`✅ Initialized ${vehicleTypes.rows.length} vehicle types for ${countryCode} (all disabled by default)`);
+                    }
+                } else {
+                    console.log(`ℹ️ Vehicle types already initialized for ${countryCode} (${existingCount.count} entries)`);
+                }
+            } catch (autoInitError) {
+                console.error('Warning: Failed to auto-initialize vehicle types:', autoInitError);
+                // Don't fail the user creation if vehicle type initialization fails
+            }
+        }
+
         res.status(201).json({ success:true, message:'Admin user created successfully', data: adapt(row) });
     } catch (error) {
         console.error('Error creating admin user:', error);
