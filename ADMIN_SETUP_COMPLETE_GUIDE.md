@@ -24,12 +24,31 @@ This guide sets up **automated permission management** and **auto-activation** f
 
 ## 🚀 How It Works Now
 
-### **Creating New Country Admins** 
+### **Creating New Country Admins - ONE LINE!** 
+```bash
+# Single command creates admin with ALL permissions automatically
+node create-admin.js admin@country.com Password123 "Admin Name" COUNTRY_CODE
+
+# Examples:
+node create-admin.js admin@india.request.com Admin123 "India Admin" IN
+node create-admin.js admin@us.request.com Admin123 "USA Admin" US
+node create-admin.js admin@uk.request.com Admin123 "UK Admin" GB
 ```
-1. Create admin user through admin panel
-2. ✅ Backend automatically assigns all 27 standard permissions
-3. ✅ Menu items appear immediately (no manual script needed)
-4. ✅ User can access all appropriate modules
+
+**What this does:**
+✅ Creates admin user with email/password  
+✅ Assigns ALL 27 permissions automatically  
+✅ Sets country correctly  
+✅ User can login immediately with full menu access  
+✅ No additional setup needed!
+
+### **Alternative: Admin Panel**
+```
+1. Login as super admin
+2. Go to Admin Management 
+3. Click "Add New Admin User"
+4. Fill form → Backend auto-assigns all permissions
+5. ✅ Done! New admin has full access
 ```
 
 ### **Key Files Updated:**
@@ -42,21 +61,28 @@ This guide sets up **automated permission management** and **auto-activation** f
 
 ## 🛠️ Available Scripts
 
-### **1. Auto-Propagate Permissions (PostgreSQL)**
+### **🎯 ONE-LINE ADMIN CREATION (Recommended)**
+```bash
+# From backend directory - Creates admin with full permissions
+node create-admin.js EMAIL PASSWORD "NAME" COUNTRY_CODE
+```
+**Example:** `node create-admin.js admin@india.com Admin123 "India Admin" IN`
+
+### **2. Auto-Propagate Permissions (PostgreSQL)**
 ```bash
 # From admin-react directory
 node auto-propagate-permissions-postgres.cjs
 ```
 **Use case:** Update existing admin users with any new permissions
 
-### **2. Auto-Activate Country Data (PostgreSQL)**
+### **3. Auto-Activate Country Data (PostgreSQL)**
 ```bash
 # From backend directory  
 node auto_activate_country_data_postgres.js LK "Sri Lanka" admin_user_id "Admin Name"
 ```
 **Use case:** When enabling a new country, activate all data types
 
-### **3. Test Permission System**
+### **4. Test Permission System**
 ```bash
 # From backend directory
 node test_default_permissions.js
