@@ -3,6 +3,21 @@ const db = require('../services/database');
 const auth = require('../services/auth');
 const router = express.Router();
 
+// Adapter to camelCase expected by frontend
+function adapt(row){
+  if(!row) return null;
+  return {
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    brandId: row.brand_id || null,
+    baseUnit: row.base_unit || null,
+    isActive: row.is_active,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
 // GET /api/master-products
 router.get('/', async (req, res) => {
   try {
@@ -11,11 +26,11 @@ router.get('/', async (req, res) => {
     if (brandId) conditions.brand_id = brandId;
     if (includeInactive !== 'true') conditions.is_active = true;
     const rows = await db.findMany('master_products', conditions, { orderBy: 'name', orderDirection: 'ASC' });
-    res.json({ success:true, data: rows });
+    res.json({ success:true, data: rows.map(adapt) });
   } catch(e){ console.error('List master_products error',e); res.status(500).json({success:false,error:e.message}); }
 });
 
-router.get('/:id', async (req,res)=>{ try{ const row=await db.findById('master_products', req.params.id); if(!row) return res.status(404).json({success:false,error:'Not found'}); res.json({success:true,data:row}); } catch(e){ console.error('Get master product error',e); res.status(500).json({success:false,error:e.message}); }});
+router.get('/:id', async (req,res)=>{ try{ const row=await db.findById('master_products', req.params.id); if(!row) return res.status(404).json({success:false,error:'Not found'}); res.json({success:true,data:adapt(row)}); } catch(e){ console.error('Get master product error',e); res.status(500).json({success:false,error:e.message}); }});
 
 router.post('/', auth.authMiddleware(), auth.requirePermission('productManagement'), async (req,res)=>{
   try {
@@ -24,7 +39,7 @@ router.post('/', auth.authMiddleware(), auth.requirePermission('productManagemen
     const exists = slug ? await db.findMany('master_products', { slug }) : [];
     if (exists.length) return res.status(400).json({ success:false, error:'Slug exists' });
     const row = await db.insert('master_products', { name, slug, brand_id: brandId || null, base_unit: baseUnit || null, is_active: isActive });
-    res.status(201).json({ success:true, message:'Product created', data: row });
+    res.status(201).json({ success:true, message:'Product created', data: adapt(row) });
   } catch(e){ console.error('Create master product error',e); res.status(400).json({success:false,error:e.message}); }
 });
 
@@ -40,12 +55,23 @@ router.put('/:id', auth.authMiddleware(), auth.requirePermission('productManagem
     if (!Object.keys(update).length) return res.status(400).json({ success:false, error:'No fields to update'});
     const row = await db.update('master_products', req.params.id, update);
     if (!row) return res.status(404).json({ success:false, error:'Not found'});
-    res.json({ success:true, message:'Product updated', data: row });
+    res.json({ success:true, message:'Product updated', data: adapt(row) });
   } catch(e){ console.error('Update master product error',e); res.status(400).json({success:false,error:e.message}); }
 });
 
 router.delete('/:id', auth.authMiddleware(), auth.requirePermission('productManagement'), async (req,res)=>{
-  try { const row = await db.update('master_products', req.params.id, { is_active:false }); if(!row) return res.status(404).json({success:false,error:'Not found'}); res.json({success:true,message:'Product deactivated'}); } catch(e){ console.error('Delete master product error',e); res.status(400).json({success:false,error:e.message}); }
+  try { const row = await db.update('master_products', req.params.id, { is_active:false }); if(!row) return res.status(404).json({success:false,error:'Not found'}); res.json({success:true,message:'Product deactivated', data: adapt(row)}); } catch(e){ console.error('Delete master product error',e); res.status(400).json({success:false,error:e.message}); }
+});
+
+// PUT /api/master-products/:id/status (toggle active)
+router.put('/:id/status', auth.authMiddleware(), auth.requirePermission('productManagement'), async (req,res)=>{
+  try {
+    const { isActive } = req.body;
+    if (typeof isActive !== 'boolean') return res.status(400).json({ success:false, error:'isActive boolean required'});
+    const row = await db.update('master_products', req.params.id, { is_active: isActive });
+    if(!row) return res.status(404).json({ success:false, error:'Not found'});
+    res.json({ success:true, message:'Status updated', data: adapt(row) });
+  } catch(e){ console.error('Status update master product error',e); res.status(400).json({success:false,error:e.message}); }
 });
 
 module.exports = router;
