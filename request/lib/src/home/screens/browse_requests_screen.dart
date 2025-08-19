@@ -26,6 +26,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     'Deliver',
     'Ride',
   ];
+
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -97,6 +98,12 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
         .toList();
   }
 
+  String _formatBudget(RequestModel r) {
+    if (r.budget == null) return 'No budget';
+    final cur = r.currency ?? '';
+    return '$cur${r.budget!.toStringAsFixed(0)}';
+  }
+
   String _relativeTime(DateTime dt) {
     final diff = DateTime.now().difference(dt);
     if (diff.inMinutes < 1) return 'just now';
@@ -109,86 +116,52 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA), // Light gray background
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Modern Search Header
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(24),
-                  bottomRight: Radius.circular(24),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Text(
-                        'Discover Requests',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.refresh),
-                        onPressed: _loadInitial,
-                        tooltip: 'Refresh',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Find requests that match your skills',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            _buildCategoryChips(),
-            _buildResultCount(),
-            Expanded(
-              child: _initialLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _error != null
-                      ? _buildErrorState()
-                      : _filteredRequests.isEmpty
-                          ? _buildEmptyState()
-                          : RefreshIndicator(
-                              onRefresh: _loadInitial,
-                              child: ListView.builder(
-                                controller: _scrollController,
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 16),
-                                itemCount: _filteredRequests.length +
-                                    (_fetchingMore ? 1 : 0),
-                                itemBuilder: (context, index) {
-                                  if (index == _filteredRequests.length) {
-                                    return const Padding(
-                                      padding:
-                                          EdgeInsets.symmetric(vertical: 16),
-                                      child: Center(
-                                          child: CircularProgressIndicator()),
-                                    );
-                                  }
-                                  final request = _filteredRequests[index];
-                                  return _buildRequestCard(request);
-                                },
-                              ),
+      appBar: AppBar(
+        title: const Text('Browse Requests'),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadInitial,
+            tooltip: 'Refresh',
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          _buildCategoryChips(),
+          _buildResultCount(),
+          Expanded(
+            child: _initialLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                    ? _buildErrorState()
+                    : _filteredRequests.isEmpty
+                        ? _buildEmptyState()
+                        : RefreshIndicator(
+                            onRefresh: _loadInitial,
+                            child: ListView.builder(
+                              controller: _scrollController,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: _filteredRequests.length +
+                                  (_fetchingMore ? 1 : 0),
+                              itemBuilder: (context, index) {
+                                if (index == _filteredRequests.length) {
+                                  return const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 16),
+                                    child: Center(
+                                        child: CircularProgressIndicator()),
+                                  );
+                                }
+                                final request = _filteredRequests[index];
+                                return _buildRequestCard(request);
+                              },
                             ),
-            ),
-          ],
-        ),
+                          ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -320,29 +293,25 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
   }
 
   Widget _buildRequestCard(RequestModel request) {
-    // Map request types to colors based on your second image
+    // Map request types to colors based on content
     String requestType = _getRequestTypeFromCategory(
         request.categoryName, request.title, request.description);
 
-    // Request TYPE colors (matching your second image icons)
+    // Request TYPE colors
     final typeColors = {
-      'Items':
-          const Color(0xFFFF6B35).withOpacity(0.1), // Orange (Item Request)
-      'Service':
-          const Color(0xFF00BCD4).withOpacity(0.1), // Teal (Service Request)
-      'Rent': const Color(0xFF2196F3).withOpacity(0.1), // Blue (Rental Request)
-      'Deliver':
-          const Color(0xFF4CAF50).withOpacity(0.1), // Green (Delivery Request)
-      'Ride':
-          const Color(0xFFFFC107).withOpacity(0.1), // Yellow (Ride Request)
+      'Items': const Color(0xFFFF6B35).withOpacity(0.1), // Orange
+      'Service': const Color(0xFF00BCD4).withOpacity(0.1), // Teal
+      'Rent': const Color(0xFF2196F3).withOpacity(0.1), // Blue
+      'Deliver': const Color(0xFF4CAF50).withOpacity(0.1), // Green
+      'Ride': const Color(0xFFFFC107).withOpacity(0.1), // Yellow
     };
 
     final typeTagColors = {
-      'Items': const Color(0xFFFF6B35), // Orange (Item Request)
-      'Service': const Color(0xFF00BCD4), // Teal (Service Request)
-      'Rent': const Color(0xFF2196F3), // Blue (Rental Request)
-      'Deliver': const Color(0xFF4CAF50), // Green (Delivery Request)
-      'Ride': const Color(0xFFFFC107), // Yellow (Ride Request)
+      'Items': const Color(0xFFFF6B35), // Orange
+      'Service': const Color(0xFF00BCD4), // Teal
+      'Rent': const Color(0xFF2196F3), // Blue
+      'Deliver': const Color(0xFF4CAF50), // Green
+      'Ride': const Color(0xFFFFC107), // Yellow
     };
 
     final cardColor = typeColors[requestType] ?? Colors.grey[50]!;
@@ -362,22 +331,26 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Category and subcategory tag
+              // Category chip with modern design
               Row(
                 children: [
                   Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: tagColor.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(6),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: tagColor.withOpacity(0.3),
+                        width: 1,
+                      ),
                     ),
                     child: Text(
                       '${request.categoryName ?? 'General'}${request.subcategoryName != null ? ' • ${request.subcategoryName}' : ''}',
                       style: TextStyle(
                         color: tagColor,
                         fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
