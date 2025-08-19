@@ -381,7 +381,11 @@ const VariablesModule = () => {
                 </TableCell>
                 <TableCell>
                   <Typography variant="body2">
-                    {variable.label || 'No Label'}
+                    {Array.isArray(variable.values) && variable.values.length > 0
+                      ? variable.values.join(', ')
+                      : (Array.isArray(variable.possibleValues) && variable.possibleValues.length > 0
+                          ? variable.possibleValues.join(', ')
+                          : (variable.label || 'No Values'))}
                   </Typography>
                 </TableCell>
                 <TableCell>
