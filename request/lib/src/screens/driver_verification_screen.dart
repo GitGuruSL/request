@@ -364,6 +364,19 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
     super.dispose();
   }
 
+  // Validate phone number format
+  bool _isValidPhoneNumber(String phone) {
+    if (phone.trim().isEmpty) return false;
+
+    // Clean phone number (remove spaces, dashes, parentheses)
+    final cleanPhone = phone.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+
+    // Basic phone number validation - should be at least 7 digits and max 15
+    // Must start with + or a digit, and contain only digits after cleaning
+    final phoneRegex = RegExp(r'^\+?[1-9]\d{6,14}$');
+    return phoneRegex.hasMatch(cleanPhone);
+  }
+
   // Check if phone number needs OTP verification
   bool _isPhoneVerifiedByFirebase() {
     final currentUser = RestAuthService.instance.currentUser;
@@ -760,11 +773,9 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
                             if (value == null || value.trim().isEmpty) {
                               return 'Phone number is required for driver registration';
                             }
-                            // Basic phone number validation
-                            final phoneRegex = RegExp(r'^\+?[1-9]\d{1,14}$');
-                            if (!phoneRegex.hasMatch(
-                                value.replaceAll(RegExp(r'[\s\-\(\)]'), ''))) {
-                              return 'Please enter a valid phone number';
+                            // Use the same validation as the OTP trigger
+                            if (!_isValidPhoneNumber(value)) {
+                              return 'Please enter a valid phone number (minimum 7 digits)';
                             }
                             return null;
                           },
@@ -780,7 +791,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
                       ],
 
                       // Show current phone number if available but not verified
-                      if (_phoneController.text.isNotEmpty &&
+                      if (_isValidPhoneNumber(_phoneController.text) &&
                           !_isPhoneVerifiedByFirebase()) ...[
                         Container(
                           width: double.infinity,
@@ -820,7 +831,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
                       // OTP Verification UI
                       if (!_isPhoneVerified &&
                           !_isPhoneOtpSent &&
-                          _phoneController.text.isNotEmpty) ...[
+                          _isValidPhoneNumber(_phoneController.text)) ...[
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
