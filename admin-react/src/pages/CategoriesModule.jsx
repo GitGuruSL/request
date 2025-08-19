@@ -95,9 +95,10 @@ const CategoriesModule = () => {
 
       // Always request inactive too so local status filter works
       const [catsData, subcatsData] = await Promise.all([
-        getFilteredData('categories', adminData, { includeInactive: true }),
-        getFilteredData('subcategories', adminData, { includeInactive: true })
+        getFilteredData('categories', { includeInactive: true }),
+        getFilteredData('subcategories', { includeInactive: true })
       ]);
+      console.debug('[CategoriesModule] Raw categories fetch length=', Array.isArray(catsData)?catsData.length:'n/a', 'sampleInactive?', catsData?.filter(c=>c.is_active===false).map(c=>c.name));
       
       // Normalize status field for UI
       const normalized = (catsData || []).map(c => ({
@@ -107,7 +108,9 @@ const CategoriesModule = () => {
       setCategories(normalized);
       setSubcategories(subcatsData || []);
       
-      console.log(`📊 Loaded ${catsData?.length || 0} categories and ${subcatsData?.length || 0} subcategories for ${isSuperAdmin ? 'super admin' : `country admin (${userCountry})`}`);
+    const act = normalized.filter(c=>c.status==='active').length;
+    const inact = normalized.filter(c=>c.status==='inactive').length;
+    console.log(`📊 Loaded categories total=${normalized.length} active=${act} inactive=${inact} (raw=${catsData?.length || 0}) subcategories=${subcatsData?.length || 0}`);
     } catch (err) {
       console.error('Error loading categories:', err);
       setError('Failed to load categories: ' + err.message);
@@ -116,9 +119,9 @@ const CategoriesModule = () => {
     }
   };
 
-  useEffect(() => {
-    loadCategories();
-  }, [adminData]);
+  // Load on mount and again when adminData becomes available/changes
+  useEffect(() => { loadCategories(); }, [adminData]);
+  // Remove second unconditional effect that caused duplicate / race loads
 
   const handleViewCategory = (category) => {
     setSelectedCategory(category);
@@ -279,21 +282,21 @@ const CategoriesModule = () => {
   };
 
   const getCategoryStats = () => {
-    return {
-      total: filteredCategories.length,
-      active: filteredCategories.filter(c => {
-        const status = c.status || (c.isActive !== false ? 'active' : 'inactive');
-        return status === 'active';
-      }).length,
-      inactive: filteredCategories.filter(c => {
-        const status = c.status || (c.isActive !== false ? 'active' : 'inactive');
-        return status === 'inactive';
-      }).length,
-      draft: filteredCategories.filter(c => c.status === 'draft').length,
-    };
+    const all = categories;
+    const active = all.filter(c => c.status === 'active').length;
+    const inactive = all.filter(c => c.status === 'inactive').length;
+    const draft = all.filter(c => c.status === 'draft').length;
+    return { total: all.length, active, inactive, draft };
   };
 
   const stats = getCategoryStats();
+
+  useEffect(()=>{
+    if(!loading){
+      console.debug('[CategoriesModule] Stats after load', stats, 'categoriesLen=', categories.length);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, categories.length]);
 
   if (loading) {
     return (

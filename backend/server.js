@@ -26,6 +26,7 @@ const brandRoutes = require('./routes/brands');
 const masterProductRoutes = require('./routes/master-products');
 const entityActivationRoutes = require('./routes/entity-activations');
 const subscriptionPlansNewRoutes = require('./routes/subscription-plans-new');
+const dashboardRoutes = require('./routes/dashboard');
 
 // New country-specific routes
 const countryProductRoutes = require('./routes/country-products');
@@ -147,6 +148,7 @@ app.use('/api/brands', brandRoutes);
 app.use('/api/master-products', masterProductRoutes);
 app.use('/api/entity-activations', entityActivationRoutes);
 app.use('/api/subscription-plans-new', subscriptionPlansNewRoutes);
+app.use('/api', dashboardRoutes);
 
 // Country-specific routes
 app.use('/api/country-products', countryProductRoutes);

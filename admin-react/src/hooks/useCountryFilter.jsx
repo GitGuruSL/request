@@ -30,10 +30,26 @@ export const useCountryFilter = () => {
   }
 
   // Memoized functions to prevent unnecessary re-renders
+  // Flexible wrapper to tolerate legacy/misused call signatures found in codebase:
+  // Supported patterns now:
+  //  1) getFilteredData('categories')
+  //  2) getFilteredData('categories', { includeInactive: true })
+  //  3) getFilteredData('categories', adminData, { includeInactive: true })  <-- legacy incorrect usage (adminData ignored)
+  //  4) getFilteredData('categories', undefined, { includeInactive: true })
+  // The second argument SHOULD be the params object. If an adminData-like object (with role) is detected
+  // it will be ignored in favor of the third argument.
   const getFilteredData = useCallback(
-    async (collection, additionalFilters = []) => {
+    async (collection, maybeParams, maybeParams2) => {
       try {
-        return await countryDataService.getFilteredData(collection, adminData, additionalFilters);
+        let params = {};
+        if (maybeParams2) {
+          // Signature (collection, adminData, params)
+            params = maybeParams2 || {};
+        } else if (maybeParams && !maybeParams.role) {
+          // Signature (collection, params)
+          params = maybeParams || {};
+        }
+        return await countryDataService.getFilteredData(collection, adminData, params);
       } catch (error) {
         console.error(`Error getting filtered data from ${collection}:`, error);
         throw error;

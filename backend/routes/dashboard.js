@@ -1,0 +1,66 @@
+const express = require('express');
+const db = require('../services/database');
+const auth = require('../services/auth');
+const router = express.Router();
+
+async function countTable(table, whereSql = '', params = []) {
+  const sql = `SELECT COUNT(*)::int AS count FROM ${table} ${whereSql}`;
+  const res = await db.query(sql, params);
+  return res.rows[0]?.count || 0;
+}
+
+// Legacy dashboard expectation: /api/products/master/count
+router.get('/products/master/count', auth.authMiddleware(), async (req, res) => {
+  try {
+    const count = await countTable('master_products', 'WHERE is_active = true');
+    res.json({ success: true, count });
+  } catch (e) {
+    console.error('Dashboard products count error', e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// /api/admin-users/count
+router.get('/admin-users/count', auth.authMiddleware(), async (req, res) => {
+  try {
+    const count = await countTable('admin_users', 'WHERE is_active = true');
+    res.json({ success: true, count });
+  } catch (e) {
+    console.error('Dashboard admin users count error', e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// /api/dashboard/stats aggregate
+router.get('/dashboard/stats', auth.authMiddleware(), async (req, res) => {
+  try {
+    const user = req.user;
+    const scoped = user.role !== 'super_admin';
+    const countryCode = user.country_code;
+
+    // NOTE: For now we do not have country-specific tables for all entities; using global counts.
+    // If later we introduce per-country tables or columns, adjust filters accordingly.
+
+    const [businesses, drivers, requests, responses, users] = await Promise.all([
+      countTable('businesses').catch(()=>0),
+      countTable('drivers').catch(()=>0),
+      countTable('requests').catch(()=>0),
+      countTable('responses').catch(()=>0),
+      countTable('users').catch(()=>0)
+    ]);
+
+    res.json({
+      success: true,
+      businesses: { total: businesses },
+      drivers: { total: drivers },
+      requests: { total: requests },
+      responses: { total: responses },
+      users: { total: users }
+    });
+  } catch (e) {
+    console.error('Dashboard stats error', e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+module.exports = router;
