@@ -360,7 +360,7 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
           child: ElevatedButton(
             onPressed: _isLoading ? null : _submitResponse,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).primaryColor,
+              backgroundColor: _getTypeColor(widget.request.type),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
@@ -385,6 +385,23 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
         ),
       ),
     );
+  }
+
+  Color _getTypeColor(RequestType type) {
+    switch (type) {
+      case RequestType.item:
+        return const Color(0xFFFF6B35); // Orange/red
+      case RequestType.service:
+        return const Color(0xFF00BCD4); // Teal
+      case RequestType.rental:
+        return const Color(0xFF2196F3); // Blue
+      case RequestType.delivery:
+        return const Color(0xFF4CAF50); // Green
+      case RequestType.ride:
+        return const Color(0xFFFFC107); // Yellow
+      case RequestType.price:
+        return const Color(0xFF9C27B0); // Purple
+    }
   }
 
   String _getTypeDisplayName(RequestType type) {
@@ -418,7 +435,7 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
             children: [
               Icon(
                 _getTypeIcon(widget.request.type),
-                color: Theme.of(context).primaryColor,
+                color: _getTypeColor(widget.request.type),
                 size: 20,
               ),
               const SizedBox(width: 8),
@@ -427,7 +444,7 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
-                  color: Theme.of(context).primaryColor,
+                  color: _getTypeColor(widget.request.type),
                 ),
               ),
             ],

@@ -120,30 +120,32 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    
+
                     // Title
                     Text(
                       'Create New Request',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Request types list
                     Flexible(
                       child: SingleChildScrollView(
                         child: Column(
-                          children: items.map(
-                            (it) => _RequestTypeTile(
-                              icon: it.icon,
-                              iconColor: it.color,
-                              title: it.title,
-                              subtitle: it.subtitle,
-                              onTap: () => _selectRequestType(it.type),
-                            ),
-                          ).toList(),
+                          children: items
+                              .map(
+                                (it) => _RequestTypeTile(
+                                  icon: it.icon,
+                                  iconColor: it.color,
+                                  title: it.title,
+                                  subtitle: it.subtitle,
+                                  onTap: () => _selectRequestType(it.type),
+                                ),
+                              )
+                              .toList(),
                         ),
                       ),
                     ),
@@ -273,7 +275,7 @@ class _RequestTypeTile extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
-                icon, 
+                icon,
                 color: iconColor,
                 size: 24,
               ),
@@ -284,7 +286,7 @@ class _RequestTypeTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title, 
+                    title,
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 16,
