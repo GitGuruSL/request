@@ -94,6 +94,7 @@ import {
   LocalOffer
 } from '@mui/icons-material';
 import useCountryFilter from '../hooks/useCountryFilter.jsx';
+import api from '../services/apiClient.js';
 
 /**
  * SMS Provider Templates
@@ -209,18 +210,17 @@ const SMSConfigurationModule = () => {
     try {
       setLoading(true);
       setError(null);
-
-      // Load SMS configuration for the current country
-      const configData = await getFilteredData('sms_configurations', adminData);
-      
-      if (configData && configData.length > 0) {
-        const config = configData[0];
-        setSmsConfig(config);
-        setSelectedProvider(config.provider || 'twilio');
-        setProviderConfig(config.configuration || {});
-        setIsEnabled(config.enabled || false);
+      // Fetch provider configs from backend
+      const res = await api.get(`/sms/config/${userCountry}`);
+      const list = res.data?.data || [];
+      // choose active provider or first
+      const active = list.find(p => p.is_active) || list[0];
+      if (active) {
+        setSmsConfig(active);
+        setSelectedProvider(active.provider);
+        setProviderConfig(active.config || {});
+        setIsEnabled(active.is_active);
       } else {
-        // Set default configuration
         setSmsConfig(null);
         setSelectedProvider('twilio');
         setProviderConfig({});
@@ -239,10 +239,8 @@ const SMSConfigurationModule = () => {
    */
   const loadStatistics = async () => {
     try {
-      const statsData = await getFilteredData('sms_statistics', adminData);
-      if (statsData && statsData.length > 0) {
-        setStatistics(statsData[0]);
-      }
+      const res = await api.get(`/sms/statistics/${userCountry}`);
+      if (res.data?.data) setStatistics(res.data.data);
     } catch (error) {
       console.error('Error loading SMS statistics:', error);
     }
@@ -296,23 +294,9 @@ const SMSConfigurationModule = () => {
         }
       }
 
-      // Prepare configuration data
-      const configData = {
-        country: userCountry,
-        provider: selectedProvider,
-        providerName: provider.name,
-        configuration: providerConfig,
-        enabled: isEnabled,
-        createdAt: new Date(),
-        createdBy: adminData.email,
-        lastUpdated: new Date()
-      };
-
-      // Here you would save to Firestore
-      // await saveToFirestore('sms_configurations', configData);
-      
-      console.log('SMS Configuration to save:', configData);
-      setSmsConfig(configData);
+  // Persist via API
+  const saveRes = await api.put(`/sms/config/${userCountry}/${selectedProvider}`, { config: providerConfig, is_active: isEnabled, exclusive: true });
+  setSmsConfig(saveRes.data?.data);
       setSuccess('SMS configuration saved successfully!');
       
       setTimeout(() => setSuccess(null), 5000);
@@ -342,15 +326,11 @@ const SMSConfigurationModule = () => {
         throw new Error('Please enter a valid phone number with country code (e.g., +1234567890)');
       }
 
-      // Here you would implement actual SMS sending logic
-      // const result = await sendTestSMS(selectedProvider, providerConfig, testPhoneNumber, testMessage);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      console.log('Test SMS sent to:', testPhoneNumber);
-      setSuccess('Test SMS sent successfully! Check your phone.');
+  const sendRes = await api.post('/sms/send-otp', { phone: testPhoneNumber, country_code: userCountry });
+  if (!sendRes.data?.success) throw new Error('Send failed');
+  setSuccess(`Test SMS queued via ${sendRes.data.provider}`);
       setTestDialogOpen(false);
+  loadStatistics();
       
       setTimeout(() => setSuccess(null), 5000);
     } catch (error) {

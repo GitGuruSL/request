@@ -28,6 +28,18 @@ router.get('/:countryCode', async (req, res) => {
   }
 });
 
+// Simple public (no auth) endpoint for mobile app to fetch enabled modules quickly
+router.get('/public/:countryCode', async (req,res)=>{
+  try {
+    const { countryCode } = req.params;
+    const row = await db.queryOne('SELECT modules FROM country_modules WHERE country_code=$1', [countryCode.toUpperCase()]);
+    res.json({ success:true, modules: row?.modules || {} });
+  } catch(e){
+    console.error('Fetch country modules public error', e);
+    res.status(500).json({ success:false, message:'Error fetching modules'});
+  }
+});
+
 // PUT /api/country-modules/:countryCode (upsert)
 router.put('/:countryCode', auth.authMiddleware(), auth.roleMiddleware(['super_admin','country_admin']), async (req, res) => {
   try {

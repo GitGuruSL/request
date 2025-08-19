@@ -124,21 +124,50 @@ class CountryModules {
 class ModuleService {
   ModuleService._();
   static final Map<String, CountryModules> _cache = {};
+  static DateTime? _lastFetch;
+  static const _ttl = Duration(minutes: 15);
 
-  static Future<CountryModules> getCountryModules(String countryCode) async {
-    if (_cache.containsKey(countryCode)) return _cache[countryCode]!;
-    final modules = CountryModules({
-      'ride': true,
-      'delivery': true,
-      'item': true,
-      'service': true,
-      'rent': true,
-      'price': true,
-    });
-    _cache[countryCode] = modules;
-    if (kDebugMode) {
-      print('Loaded default module set for $countryCode');
+  static Future<CountryModules> getCountryModules(String countryCode,
+      {bool forceRefresh = false}) async {
+    final now = DateTime.now();
+    if (!forceRefresh &&
+        _cache.containsKey(countryCode) &&
+        _lastFetch != null &&
+        now.difference(_lastFetch!) < _ttl) {
+      return _cache[countryCode]!;
     }
-    return modules;
+    try {
+      final base = CountryService.instance.baseUrl;
+      final uri = Uri.parse('$base/api/country-modules/public/$countryCode');
+      if (kDebugMode) print('Fetching modules for $countryCode -> $uri');
+      final resp = await http.get(uri).timeout(const Duration(seconds: 8));
+      if (resp.statusCode == 200) {
+        final decoded = json.decode(resp.body) as Map<String, dynamic>;
+        final raw = (decoded['modules'] as Map?)?.cast<String, dynamic>() ?? {};
+        final mapped = raw
+            .map((k, v) => MapEntry(k.toString(), v is bool ? v : (v == true)));
+        final cm = CountryModules(mapped);
+        _cache[countryCode] = cm;
+        _lastFetch = now;
+        if (kDebugMode) print('Modules loaded: $mapped');
+        return cm;
+      } else {
+        throw Exception('HTTP ${resp.statusCode}');
+      }
+    } catch (e) {
+      if (kDebugMode)
+        print('Module fetch failed ($e); using fallback defaults');
+      // Fallback defaults (all true enables legacy behavior)
+      final fallback = CountryModules({
+        'ride': true,
+        'delivery': true,
+        'item': true,
+        'service': true,
+        'rent': true,
+        'price': true,
+      });
+      _cache[countryCode] = fallback;
+      return fallback;
+    }
   }
 }
