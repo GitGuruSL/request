@@ -571,7 +571,7 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
           ),
           const SizedBox(height: 20),
           const Text(
-            'Responder Location (optional)',
+            'Responder Location*',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 12),
@@ -1756,6 +1756,20 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
       final currentUser = await _userService.getCurrentUserModel();
       if (currentUser == null) {
         throw Exception('User not found');
+      }
+
+      // Enforce location required on edit too
+      if (_locationAddressController.text.trim().isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Please provide responder location'),
+            backgroundColor: Colors.red,
+          ));
+        }
+        setState(() {
+          _isLoading = false;
+        });
+        return;
       }
 
       // Role-based validation

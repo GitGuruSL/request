@@ -408,15 +408,15 @@ class _UnifiedResponseCreateScreenState
           ),
           const SizedBox(height: 20),
           const Text(
-            'Responder Location (optional)',
+            'Responder Location*',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
           AccurateLocationPickerWidget(
             controller: _locationAddressController,
             labelText: '',
-            hintText: 'Tap to pick location (optional)',
-            isRequired: false,
+            hintText: 'Tap to pick responder location',
+            isRequired: true,
             prefixIcon: Icons.location_on,
             onLocationSelected: (address, lat, lng) {
               setState(() {
@@ -1568,6 +1568,22 @@ class _UnifiedResponseCreateScreenState
         throw Exception('User not found');
       }
 
+      // Enforce location requirement
+      if (_locationAddressController.text.trim().isEmpty ||
+          _locationLat == null ||
+          _locationLon == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Please pick a responder location'),
+            backgroundColor: Colors.red,
+          ));
+        }
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
       // Role-based validation
       final validationError = _validateUserRole(currentUser);
       if (validationError != null) {
@@ -1701,10 +1717,10 @@ class _UnifiedResponseCreateScreenState
           'availableDate': _availableFrom?.toIso8601String(),
           'images': _uploadedImages,
           'additionalData': additionalInfo,
-          if (_locationAddressController.text.trim().isNotEmpty)
-            'location_address': _locationAddressController.text.trim(),
-          if (_locationLat != null) 'location_latitude': _locationLat,
-          if (_locationLon != null) 'location_longitude': _locationLon,
+          // Location is mandatory now
+          'location_address': _locationAddressController.text.trim(),
+          'location_latitude': _locationLat,
+          'location_longitude': _locationLon,
           // Country code could be inferred later; left out unless needed
         },
       );
