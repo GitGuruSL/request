@@ -213,7 +213,7 @@ const Dashboard = () => {
 
       {/* Statistics Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="Products"
             value={stats.products}
@@ -223,7 +223,7 @@ const Dashboard = () => {
           />
         </Grid>
         
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="Businesses"
             value={stats.businesses}
@@ -233,7 +233,7 @@ const Dashboard = () => {
           />
         </Grid>
         
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="Drivers"
             value={stats.drivers}
@@ -243,7 +243,7 @@ const Dashboard = () => {
           />
         </Grid>
         
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="Admin Users"
             value={stats.adminUsers}
@@ -254,7 +254,7 @@ const Dashboard = () => {
         </Grid>
 
         {/* Additional Stats Row */}
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="Requests"
             value={stats.requests}
@@ -264,7 +264,7 @@ const Dashboard = () => {
           />
         </Grid>
         
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="Responses"
             value={stats.responses}
@@ -274,7 +274,7 @@ const Dashboard = () => {
           />
         </Grid>
         
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="Price Listings"
             value={stats.priceListings}
@@ -284,7 +284,7 @@ const Dashboard = () => {
           />
         </Grid>
         
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="Users"
             value={stats.users}

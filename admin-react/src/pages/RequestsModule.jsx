@@ -236,7 +236,7 @@ const RequestsModule = () => {
 
       {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom variant="h6">
@@ -248,7 +248,7 @@ const RequestsModule = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom variant="h6">
@@ -260,7 +260,7 @@ const RequestsModule = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom variant="h6">
@@ -272,7 +272,7 @@ const RequestsModule = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom variant="h6">
@@ -469,19 +469,19 @@ const RequestsModule = () => {
           {selectedRequest && (
             <Box sx={{ pt: 1 }}>
               <Grid container spacing={2}>
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Typography variant="h6">{selectedRequest.title}</Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                     {selectedRequest.description}
                   </Typography>
                 </Grid>
                 
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <Typography variant="subtitle2">Type:</Typography>
                   <Typography variant="body2">{selectedRequest.type?.replace('_', ' ')}</Typography>
                 </Grid>
                 
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <Typography variant="subtitle2">Status:</Typography>
                   <Chip 
                     label={selectedRequest.status?.toUpperCase()}
@@ -490,46 +490,46 @@ const RequestsModule = () => {
                   />
                 </Grid>
                 
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <Typography variant="subtitle2">Budget:</Typography>
                   <Typography variant="body2">
                     {formatCurrency(selectedRequest.budget, selectedRequest.currency)}
                   </Typography>
                 </Grid>
                 
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <Typography variant="subtitle2">Country:</Typography>
                   <Typography variant="body2">
                     {getCountryDisplayName(selectedRequest.country)}
                   </Typography>
                 </Grid>
                 
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Typography variant="subtitle2">Location:</Typography>
                   <Typography variant="body2">
                     {selectedRequest.location?.address || selectedRequest.location?.name || 'N/A'}
                   </Typography>
                 </Grid>
                 
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <Typography variant="subtitle2">Created:</Typography>
                   <Typography variant="body2">{formatDate(selectedRequest.createdAt)}</Typography>
                 </Grid>
                 
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <Typography variant="subtitle2">Updated:</Typography>
                   <Typography variant="body2">{formatDate(selectedRequest.updatedAt)}</Typography>
                 </Grid>
 
                 {selectedRequest.deadline && (
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <Typography variant="subtitle2">Deadline:</Typography>
                     <Typography variant="body2">{formatDate(selectedRequest.deadline)}</Typography>
                   </Grid>
                 )}
                 
                 {selectedRequest.tags && selectedRequest.tags.length > 0 && (
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <Typography variant="subtitle2">Tags:</Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
                       {selectedRequest.tags.map((tag, index) => (

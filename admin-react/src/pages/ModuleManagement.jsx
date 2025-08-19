@@ -272,11 +272,11 @@ const ModuleManagement = () => {
               
               <Grid container spacing={2}>
                 {Object.entries(CORE_DEPENDENCIES).map(([key, name]) => (
-                  <Grid item xs={12} sm={6} md={4} key={key}>
+                  <Grid key={key} size={{ xs: 12, sm: 6, md: 4 }}>
                     <FormControlLabel
                       control={
                         <Switch
-                          checked={countryDependencies[key] || false}
+                          checked={Boolean(countryDependencies[key])}
                           onChange={(e) => handleDependencyToggle(key, e.target.checked)}
                         />
                       }
@@ -293,14 +293,14 @@ const ModuleManagement = () => {
             Business Modules for {countries.find(c => c.code === selectedCountry)?.name || selectedCountry}
           </Typography>
           
-          <Grid container spacing={3}>
+      <Grid container spacing={3}>
             {Object.keys(BUSINESS_MODULES).map((key) => {
               const module = BUSINESS_MODULES[key];
               const moduleStatus = getModuleStatus(module.id);
               const isEnabled = countryModules[module.id];
               
               return (
-                <Grid item xs={12} md={6} xl={4} key={module.id}>
+        <Grid key={module.id} size={{ xs: 12, md: 6, xl: 4 }}>
                   <Card 
                     sx={{ 
                       height: '100%',
@@ -380,7 +380,7 @@ const ModuleManagement = () => {
                       <FormControlLabel
                         control={
                           <Switch
-                            checked={isEnabled}
+                            checked={Boolean(isEnabled)}
                             onChange={(e) => handleModuleToggle(module.id, e.target.checked)}
                             disabled={loading}
                           />
