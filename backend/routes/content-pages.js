@@ -27,6 +27,7 @@ function adapt(row){
     type: fromDbType(row.page_type),
     content: row.content,
     countries: row.page_type === 'centralized' ? ['global'] : (row.country_code ? [row.country_code] : []),
+  country: row.country_code || null,
     keywords: metadata.keywords || [],
     metaDescription: metadata.metaDescription || metadata.meta_description || null,
     requiresApproval: metadata.requiresApproval ?? true,

@@ -448,7 +448,7 @@ const PagesModule = () => {
                 <TableCell>
                   <Box>
                     <Typography variant="caption" color="text.secondary">
-                      {page.createdBy === adminData.uid ? 'You' : 'Other Admin'}
+                      {page.createdBy && adminData?.uid && page.createdBy === adminData.uid ? 'You' : 'Other Admin'}
                     </Typography>
                     <Typography variant="caption" display="block" color="text.secondary">
                       {getCountryDisplayName(page.country) || 'Global'}

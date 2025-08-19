@@ -226,6 +226,15 @@ const CentralizedPagesModule = () => {
   };
 
   const stats = getPageStats();
+
+  const formatDate = (value) => {
+    if(!value) return 'Never';
+    try {
+      const d = value?.toDate ? value.toDate() : new Date(value);
+      if(isNaN(d.getTime())) return 'Never';
+      return d.toLocaleDateString();
+    } catch { return 'Never'; }
+  };
   const filteredPages = getFilteredPages();
 
   return (
@@ -248,7 +257,7 @@ const CentralizedPagesModule = () => {
         <Typography variant="h6" gutterBottom>Page Categories Guide</Typography>
         <Grid container spacing={2}>
           {Object.entries(centralizedCategories).map(([key, category]) => (
-            <Grid item xs={12} md={6} lg={4} key={key}>
+            <Grid item xs={12} md={6} xl={4} key={key}>
               <Accordion>
                 <AccordionSummary expandIcon={<ExpandMore />}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -439,7 +448,7 @@ const CentralizedPagesModule = () => {
                 </TableCell>
                 <TableCell>
                   <Typography variant="caption" color="text.secondary">
-                    {page.updatedAt ? new Date(page.updatedAt.toDate()).toLocaleDateString() : 'Never'}
+                    {formatDate(page.updatedAt)}
                   </Typography>
                 </TableCell>
                 <TableCell>
