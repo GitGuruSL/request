@@ -340,10 +340,6 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: tagColor.withOpacity(0.3),
-                        width: 1,
-                      ),
                     ),
                     child: Text(
                       '${request.categoryName ?? 'General'}${request.subcategoryName != null ? ' • ${request.subcategoryName}' : ''}',
