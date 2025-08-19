@@ -829,7 +829,7 @@ const AdminUsers = () => {
                     control={
                       <Switch
                         size="small"
-                        checked={formData.permissions?.requestManagement}
+                        checked={formData.permissions?.requestManagement || false}
                         onChange={(e) => handlePermissionChange('requestManagement', e.target.checked)}
                       />
                     }
@@ -841,7 +841,7 @@ const AdminUsers = () => {
                     control={
                       <Switch
                         size="small"
-                        checked={formData.permissions?.responseManagement}
+                        checked={formData.permissions?.responseManagement || false}
                         onChange={(e) => handlePermissionChange('responseManagement', e.target.checked)}
                       />
                     }
@@ -853,7 +853,7 @@ const AdminUsers = () => {
                     control={
                       <Switch
                         size="small"
-                        checked={formData.permissions?.priceListingManagement}
+                        checked={formData.permissions?.priceListingManagement || false}
                         onChange={(e) => handlePermissionChange('priceListingManagement', e.target.checked)}
                       />
                     }
@@ -872,7 +872,7 @@ const AdminUsers = () => {
                     control={
                       <Switch
                         size="small"
-                        checked={formData.permissions?.productManagement}
+                        checked={formData.permissions?.productManagement || false}
                         onChange={(e) => handlePermissionChange('productManagement', e.target.checked)}
                       />
                     }
@@ -884,7 +884,7 @@ const AdminUsers = () => {
                     control={
                       <Switch
                         size="small"
-                        checked={formData.permissions?.businessManagement}
+                        checked={formData.permissions?.businessManagement || false}
                         onChange={(e) => handlePermissionChange('businessManagement', e.target.checked)}
                       />
                     }
@@ -896,7 +896,7 @@ const AdminUsers = () => {
                     control={
                       <Switch
                         size="small"
-                        checked={formData.permissions?.driverVerification}
+                        checked={formData.permissions?.driverVerification || false}
                         onChange={(e) => handlePermissionChange('driverVerification', e.target.checked)}
                       />
                     }
@@ -915,7 +915,7 @@ const AdminUsers = () => {
                     control={
                       <Switch
                         size="small"
-                        checked={formData.permissions?.vehicleManagement}
+                        checked={formData.permissions?.vehicleManagement || false}
                         onChange={(e) => handlePermissionChange('vehicleManagement', e.target.checked)}
                       />
                     }
@@ -927,7 +927,7 @@ const AdminUsers = () => {
                     control={
                       <Switch
                         size="small"
-                        checked={formData.permissions?.countryVehicleTypeManagement}
+                        checked={formData.permissions?.countryVehicleTypeManagement || false}
                         onChange={(e) => handlePermissionChange('countryVehicleTypeManagement', e.target.checked)}
                       />
                     }
@@ -946,7 +946,7 @@ const AdminUsers = () => {
                     control={
                       <Switch
                         size="small"
-                        checked={formData.permissions?.cityManagement}
+                        checked={formData.permissions?.cityManagement || false}
                         onChange={(e) => handlePermissionChange('cityManagement', e.target.checked)}
                       />
                     }
@@ -965,7 +965,7 @@ const AdminUsers = () => {
                     control={
                       <Switch
                         size="small"
-                        checked={formData.permissions?.userManagement}
+                        checked={formData.permissions?.userManagement || false}
                         onChange={(e) => handlePermissionChange('userManagement', e.target.checked)}
                       />
                     }
@@ -977,7 +977,7 @@ const AdminUsers = () => {
                     control={
                       <Switch
                         size="small"
-                        checked={formData.permissions?.promoCodeManagement}
+                        checked={formData.permissions?.promoCodeManagement || false}
                         onChange={(e) => handlePermissionChange('promoCodeManagement', e.target.checked)}
                       />
                     }
@@ -989,7 +989,7 @@ const AdminUsers = () => {
                     control={
                       <Switch
                         size="small"
-                        checked={formData.permissions?.moduleManagement}
+                        checked={formData.permissions?.moduleManagement || false}
                         onChange={(e) => handlePermissionChange('moduleManagement', e.target.checked)}
                       />
                     }
@@ -1008,7 +1008,7 @@ const AdminUsers = () => {
                     control={
                       <Switch
                         size="small"
-                        checked={formData.permissions?.categoryManagement}
+                        checked={formData.permissions?.categoryManagement || false}
                         onChange={(e) => handlePermissionChange('categoryManagement', e.target.checked)}
                       />
                     }
@@ -1020,7 +1020,7 @@ const AdminUsers = () => {
                     control={
                       <Switch
                         size="small"
-                        checked={formData.permissions?.subcategoryManagement}
+                        checked={formData.permissions?.subcategoryManagement || false}
                         onChange={(e) => handlePermissionChange('subcategoryManagement', e.target.checked)}
                       />
                     }
@@ -1032,7 +1032,7 @@ const AdminUsers = () => {
                     control={
                       <Switch
                         size="small"
-                        checked={formData.permissions?.brandManagement}
+                        checked={formData.permissions?.brandManagement || false}
                         onChange={(e) => handlePermissionChange('brandManagement', e.target.checked)}
                       />
                     }
@@ -1044,7 +1044,7 @@ const AdminUsers = () => {
                     control={
                       <Switch
                         size="small"
-                        checked={formData.permissions?.variableTypeManagement}
+                        checked={formData.permissions?.variableTypeManagement || false}
                         onChange={(e) => handlePermissionChange('variableTypeManagement', e.target.checked)}
                       />
                     }
@@ -1063,7 +1063,7 @@ const AdminUsers = () => {
                     control={
                       <Switch
                         size="small"
-                        checked={formData.permissions?.paymentMethodManagement}
+                        checked={formData.permissions?.paymentMethodManagement || false}
                         onChange={(e) => handlePermissionChange('paymentMethodManagement', e.target.checked)}
                       />
                     }
@@ -1075,7 +1075,7 @@ const AdminUsers = () => {
                     control={
                       <Switch
                         size="small"
-                        checked={formData.permissions?.subscriptionManagement}
+                        checked={formData.permissions?.subscriptionManagement || false}
                         onChange={(e) => handlePermissionChange('subscriptionManagement', e.target.checked)}
                       />
                     }
@@ -1087,7 +1087,7 @@ const AdminUsers = () => {
                     control={
                       <Switch
                         size="small"
-                        checked={formData.permissions?.legalDocumentManagement}
+                        checked={formData.permissions?.legalDocumentManagement || false}
                         onChange={(e) => handlePermissionChange('legalDocumentManagement', e.target.checked)}
                       />
                     }
@@ -1099,7 +1099,7 @@ const AdminUsers = () => {
                     control={
                       <Switch
                         size="small"
-                        checked={formData.permissions?.countryPageManagement}
+                        checked={formData.permissions?.countryPageManagement || false}
                         onChange={(e) => handlePermissionChange('countryPageManagement', e.target.checked)}
                       />
                     }
@@ -1118,7 +1118,7 @@ const AdminUsers = () => {
                     control={
                       <Switch
                         size="small"
-                        checked={formData.permissions?.smsConfiguration}
+                        checked={formData.permissions?.smsConfiguration || false}
                         onChange={(e) => handlePermissionChange('smsConfiguration', e.target.checked)}
                       />
                     }
@@ -1137,7 +1137,7 @@ const AdminUsers = () => {
                     control={
                       <Switch
                         size="small"
-                        checked={formData.permissions?.adminUsersManagement}
+                        checked={formData.permissions?.adminUsersManagement || false}
                         onChange={(e) => handlePermissionChange('adminUsersManagement', e.target.checked)}
                         disabled={formData.role !== 'super_admin'}
                       />
