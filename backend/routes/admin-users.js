@@ -5,26 +5,25 @@ const authService = require('../services/auth');
 
 // Helper to adapt DB row -> API response (camelCase + legacy fields)
 function adapt(row){
-    if(!row) return row;
-    const { password_hash, country_code, display_name, is_active, ...rest } = row;
-    return {
-        ...rest,
-        id: row.id,
-        email: row.email,
-        displayName: display_name,
-        role: row.role,
-        country: country_code,
-        country_code, // keep original for safety
-        permissions: row.permissions || {},
-        isActive: is_active,
-        is_active,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        country_name: row.country_name
-    };
-}
-
-// Build WHERE conditions based on query & auth
+  if(!row) return row;
+  const { password_hash, country_code, name, is_active, ...rest } = row;
+  return {
+    ...rest,
+    id: row.id,
+    email: row.email,
+    displayName: name, // map name -> displayName for frontend
+    name, // keep original for safety
+    role: row.role,
+    country: country_code,
+    country_code, // keep original for safety
+    permissions: row.permissions || {},
+    isActive: is_active,
+    is_active,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    country_name: row.country_name
+  };
+}// Build WHERE conditions based on query & auth
 function buildListQuery(req){
     const where = [];
     const params = [];
@@ -112,7 +111,7 @@ router.post('/', authService.authMiddleware(), async (req, res) => {
         }
 
         const passwordHash = await authService.hashPassword(rawPassword);
-        const insert = await dbService.query(`INSERT INTO admin_users (email,password_hash,display_name,role,country_code,permissions,is_active) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`, [email, passwordHash, displayName, role, countryCode, permissions, isActive]);
+        const insert = await dbService.query(`INSERT INTO admin_users (email,password_hash,name,role,country_code,permissions,is_active) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`, [email, passwordHash, displayName, role, countryCode, permissions, isActive]);
         const row = insert.rows[0];
         res.status(201).json({ success:true, message:'Admin user created successfully', data: adapt(row) });
     } catch (error) {
@@ -152,14 +151,14 @@ router.put('/:id', authService.authMiddleware(), async (req, res) => {
         }
 
         const updates = {
-            display_name: displayName !== undefined ? displayName : current.display_name,
+            name: displayName !== undefined ? displayName : current.name,
             role: role || current.role,
             country_code: countryCode || current.country_code,
             permissions: Object.keys(permissions).length ? permissions : current.permissions,
             is_active: isActive !== undefined ? isActive : current.is_active
         };
 
-        const result = await dbService.query(`UPDATE admin_users SET display_name=$1, role=$2, country_code=$3, permissions=$4, is_active=$5, updated_at=CURRENT_TIMESTAMP WHERE id=$6 RETURNING *`, [updates.display_name, updates.role, updates.country_code, updates.permissions, updates.is_active, id]);
+        const result = await dbService.query(`UPDATE admin_users SET name=$1, role=$2, country_code=$3, permissions=$4, is_active=$5, updated_at=CURRENT_TIMESTAMP WHERE id=$6 RETURNING *`, [updates.name, updates.role, updates.country_code, updates.permissions, updates.is_active, id]);
         const row = result.rows[0];
         res.json({ success:true, message:'Admin user updated successfully', data: adapt(row) });
     } catch (error) {
@@ -191,18 +190,58 @@ router.put('/:id/status', authService.authMiddleware(), async (req,res) => {
 
 // DELETE /api/admin-users/:id  (super_admin only)
 router.delete('/:id', authService.authMiddleware(), async (req, res) => {
-    try {
-        if(req.user.role !== 'super_admin'){
-            return res.status(403).json({ success:false, message:'Only super admins can delete admin users' });
-        }
-        const { id } = req.params;
-        const result = await dbService.query('DELETE FROM admin_users WHERE id = $1 RETURNING *', [id]);
-        if(!result.rows.length) return res.status(404).json({ success:false, message:'Admin user not found' });
-        res.json({ success:true, message:'Admin user deleted successfully' });
-    } catch (error) {
-        console.error('Error deleting admin user:', error);
-        res.status(500).json({ success:false, message:'Failed to delete admin user' });
+  try {
+    if(req.user.role !== 'super_admin'){
+      return res.status(403).json({ success:false, message:'Only super admins can delete admin users' });
     }
+    const { id } = req.params;
+    const result = await dbService.query('DELETE FROM admin_users WHERE id = $1 RETURNING *', [id]);
+    if(!result.rows.length) return res.status(404).json({ success:false, message:'Admin user not found' });
+    res.json({ success:true, message:'Admin user deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting admin user:', error);
+    res.status(500).json({ success:false, message:'Failed to delete admin user' });
+  }
+});
+
+// POST /api/admin-users/:id/password-reset (send password reset email)
+router.post('/:id/password-reset', authService.authMiddleware(), async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Get user details
+    const existing = await dbService.query('SELECT * FROM admin_users WHERE id = $1', [id]);
+    if(!existing.rows.length) return res.status(404).json({ success:false, message:'Admin user not found' });
+    const user = existing.rows[0];
+    
+    // Permission check: super admin can reset anyone, country admin can only reset users in their country
+    if(req.user.role === 'country_admin'){
+      const ownCountry = req.user.country_code || req.user.country;
+      if(user.country_code !== ownCountry) {
+        return res.status(403).json({ success:false, message:'Cannot reset password for users in other countries' });
+      }
+    }
+    
+    // Generate new temporary password
+    const tempPassword = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12).toUpperCase() + '!';
+    const passwordHash = await authService.hashPassword(tempPassword);
+    
+    // Update password in database
+    await dbService.query('UPDATE admin_users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [passwordHash, id]);
+    
+    // TODO: Send email with new password (implement email service)
+    console.log(`🔑 Password reset for ${user.email}: ${tempPassword}`);
+    
+    res.json({ 
+      success: true, 
+      message: `Password reset initiated for ${user.email}`,
+      // In production, don't return password - send via email only
+      tempPassword: tempPassword // Remove this in production
+    });
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    res.status(500).json({ success:false, message:'Failed to reset password' });
+  }
 });
 
 module.exports = router;
