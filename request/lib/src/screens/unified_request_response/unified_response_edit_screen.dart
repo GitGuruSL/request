@@ -92,12 +92,28 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         setState(() {});
-        // If metadata fields are missing (common when navigating from a list that didn't hydrate), fetch fresh response
-        if (widget.response.additionalInfo.isEmpty) {
+        // Reload metadata if empty OR required item fields missing
+        if (widget.response.additionalInfo.isEmpty ||
+            _needsItemFieldHydration()) {
           _attemptReloadMetadata();
         }
       }
     });
+  }
+
+  bool _needsItemFieldHydration() {
+    if (widget.request.type != RequestType.item) return false;
+    final info = widget.response.additionalInfo;
+    bool missing(String k) => !(info.containsKey(k)) || info[k] == null;
+    // Controllers empty or metadata keys absent
+    return _itemConditionController.text.isEmpty && missing('itemCondition') ||
+        _offerDescriptionController.text.isEmpty &&
+            missing('offerDescription') ||
+        _deliveryCostController.text.isEmpty && missing('deliveryCost') ||
+        _estimatedDeliveryController.text.isEmpty &&
+            missing('estimatedDelivery') ||
+        _warrantyController.text.isEmpty && missing('warranty') ||
+        _selectedDeliveryMethod.isEmpty && missing('deliveryMethod');
   }
 
   Future<void> _attemptReloadMetadata() async {
@@ -257,14 +273,6 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
         } else {
           _deliveryFeeController.text = _formatPrice(widget.response.price);
         }
-        _estimatedPickupTimeController.text =
-            additionalInfo['estimatedPickupTime']?.toString() ?? '';
-        _estimatedDropoffTimeController.text =
-            additionalInfo['estimatedDropoffTime']?.toString() ?? '';
-        _packageSizeController.text =
-            additionalInfo['packageSize']?.toString() ?? '';
-        _specialInstructionsController.text =
-            additionalInfo['specialInstructions']?.toString() ?? '';
         _deliveryNotesController.text =
             additionalInfo['deliveryNotes']?.toString() ?? '';
         _selectedVehicleType =
