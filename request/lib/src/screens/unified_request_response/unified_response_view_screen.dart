@@ -355,6 +355,10 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (info['offerDescription'] != null) ...[
+          _buildDetailRow('Description', info['offerDescription']),
+          const SizedBox(height: 8),
+        ],
         if (info['itemCondition'] != null) ...[
           _buildDetailRow('Condition', info['itemCondition']),
           const SizedBox(height: 8),
@@ -366,6 +370,11 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
         if (info['deliveryCost'] != null) ...[
           _buildDetailRow('Delivery Cost',
               '${widget.response.currency ?? 'LKR'} ${_formatPrice(info['deliveryCost'])}'),
+          const SizedBox(height: 8),
+        ],
+        if (info['estimatedDelivery'] != null) ...[
+          _buildDetailRow(
+              'Estimated Delivery', '${info['estimatedDelivery']} days'),
           const SizedBox(height: 8),
         ],
         if (info['warranty'] != null) ...[
@@ -695,7 +704,10 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
             const SizedBox(height: 16),
 
             // Images (if any)
-            if (widget.response.images.isNotEmpty) ...[
+            if (widget.response.images.isNotEmpty ||
+                (widget.response.additionalInfo['images'] is List &&
+                    (widget.response.additionalInfo['images'] as List)
+                        .isNotEmpty)) ...[
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -716,15 +728,23 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
                       height: 120,
                       child: ListView.builder(
                         scrollDirection: Axis.horizontal,
-                        itemCount: widget.response.images.length,
+                        itemCount: (widget.response.images.isNotEmpty
+                                ? widget.response.images
+                                : List<String>.from(widget
+                                    .response.additionalInfo['images'] as List))
+                            .length,
                         itemBuilder: (context, index) {
+                          final images = widget.response.images.isNotEmpty
+                              ? widget.response.images
+                              : List<String>.from(widget
+                                  .response.additionalInfo['images'] as List);
                           return Container(
                             width: 120,
                             margin: const EdgeInsets.only(right: 8),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(8),
                               child: Image.network(
-                                widget.response.images[index],
+                                images[index],
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) {
                                   return Container(

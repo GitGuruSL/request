@@ -154,13 +154,12 @@ router.post('/', optionalAuth(async (req, res) => {
 router.put('/:responseId', auth.authMiddleware(), async (req, res) => {
   try {
     const { requestId, responseId } = req.params;
-  const userId = req.user.id || req.user.userId;
-    const { message, price, status } = req.body;
+    const userId = req.user.id || req.user.userId;
+    const { message, price, status, metadata, image_urls, imageUrls, images, location_address, location_latitude, location_longitude, country_code } = req.body || {};
 
     const existing = await db.queryOne('SELECT * FROM responses WHERE id = $1 AND request_id = $2', [responseId, requestId]);
     if (!existing) return res.status(404).json({ success: false, message: 'Response not found' });
     if (existing.user_id !== userId) return res.status(403).json({ success: false, message: 'Not permitted' });
-    // If this response is accepted, disallow edits except maybe price? For now block entirely
     const reqRow = await db.queryOne('SELECT accepted_response_id FROM requests WHERE id=$1', [requestId]);
     if (reqRow && reqRow.accepted_response_id === responseId) {
       return res.status(400).json({ success: false, message: 'Cannot edit an accepted response' });
@@ -172,6 +171,15 @@ router.put('/:responseId', auth.authMiddleware(), async (req, res) => {
     if (message !== undefined) { updates.push(`message = $${p++}`); values.push(message); }
     if (price !== undefined) { updates.push(`price = $${p++}`); values.push(price); }
     if (status !== undefined) { updates.push(`status = $${p++}`); values.push(status); }
+    if (metadata !== undefined) { updates.push(`metadata = $${p++}`); values.push(metadata || null); }
+    // Normalize image field variations
+    const finalImages = image_urls || imageUrls || images;
+    if (finalImages !== undefined) { updates.push(`image_urls = $${p++}`); values.push(finalImages || null); }
+    if (location_address !== undefined) { updates.push(`location_address = $${p++}`); values.push(location_address || null); }
+    if (location_latitude !== undefined) { updates.push(`location_latitude = $${p++}`); values.push(location_latitude || null); }
+    if (location_longitude !== undefined) { updates.push(`location_longitude = $${p++}`); values.push(location_longitude || null); }
+    if (country_code !== undefined) { updates.push(`country_code = $${p++}`); values.push(country_code || null); }
+
     if (updates.length === 0) return res.status(400).json({ success: false, message: 'No fields to update' });
     values.push(responseId, requestId);
 

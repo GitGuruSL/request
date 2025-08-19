@@ -89,8 +89,9 @@ class EnhancedRequestService {
     if (price != null) map['price'] = price;
     if (currency != null) map['currency'] = currency;
     if (images != null) map['image_urls'] = images;
-    if (additionalInfo != null && additionalInfo.isNotEmpty) {
-      map['metadata'] = additionalInfo;
+    // Allow clearing by sending empty object explicitly
+    if (additionalInfo != null) {
+      map['metadata'] = additionalInfo.isEmpty ? {} : additionalInfo;
     }
     // Location fields (backend PUT not yet supporting; include for future)
     if (locationAddress != null) map['location_address'] = locationAddress;
