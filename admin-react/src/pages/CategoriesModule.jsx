@@ -264,6 +264,14 @@ const CategoriesModule = () => {
     return matchesSearch && matchesStatus;
   });
 
+  // TEMP debug: print status distribution once after load
+  useEffect(() => {
+    if (categories.length) {
+      const dist = categories.reduce((acc,c)=>{const s=c.status || (c.is_active!==undefined?(c.is_active?'active':'inactive'):(c.isActive!==false?'active':'inactive'));acc[s]=(acc[s]||0)+1;return acc;},{});
+      console.debug('[CategoriesModule] Status distribution', dist);
+    }
+  }, [categories]);
+
   const formatDate = (timestamp) => {
     if (!timestamp) return 'N/A';
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
