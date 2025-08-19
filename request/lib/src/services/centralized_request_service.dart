@@ -272,7 +272,85 @@ class CentralizedRequestService {
   }) async {}
   Future<void> deleteRequest(String id) async {}
   Future<void> createResponse(
-      String requestId, Map<String, dynamic> data) async {}
+      String requestId, Map<String, dynamic> data) async {
+    try {
+      // Accept various client-side field names and normalize.
+      final message = (data['message'] ?? data['text'] ?? '').toString().trim();
+      if (message.isEmpty) {
+        throw Exception('Response message is required');
+      }
+
+      // Price can arrive as num / String / null.
+      double? price;
+      final rawPrice = data['price'];
+      if (rawPrice != null && rawPrice.toString().trim().isNotEmpty) {
+        if (rawPrice is num) {
+          price = rawPrice.toDouble();
+        } else {
+          price = double.tryParse(rawPrice.toString().trim());
+        }
+      }
+
+      final currency = data['currency']?.toString();
+
+      // Images: allow keys images, imageUrls, image_urls
+      List<String>? images;
+      for (final key in ['images', 'imageUrls', 'image_urls']) {
+        final v = data[key];
+        if (v is List) {
+          images =
+              v.whereType<String>().where((s) => s.trim().isNotEmpty).toList();
+          if (images.isEmpty) images = null;
+          if (images != null) break;
+        }
+      }
+
+      // Additional metadata: merge additionalData / additional_info / metadata / availableDate
+      final Map<String, dynamic> meta = {};
+      void mergeMap(dynamic m) {
+        if (m is Map) {
+          m.forEach((k, v) {
+            if (v != null) meta[k.toString()] = v;
+          });
+        }
+      }
+
+      mergeMap(data['additionalData']);
+      mergeMap(data['additional_info']);
+      mergeMap(data['metadata']);
+      if (data['availableDate'] != null) {
+        meta['availableDate'] = data['availableDate'];
+      }
+      if (data['additionalData'] == null && meta.isEmpty) {
+        // Nothing to send -> keep null to avoid empty object clutter in DB
+      }
+
+      final payload = CreateResponseData(
+        message: message,
+        price: price,
+        currency: currency,
+        metadata: meta.isEmpty ? null : meta,
+        imageUrls: images,
+      );
+
+      // Debug log (non-sensitive)
+      // ignore: avoid_print
+      print(
+          '[CentralizedRequestService][createResponse] requestId=$requestId msgLen=${message.length} price=$price currency=$currency images=${images?.length ?? 0} metaKeys=${payload.metadata?.keys.toList()}');
+
+      final created = await _rest.createResponse(requestId, payload);
+      if (created == null) {
+        throw Exception('Failed to create response (null result)');
+      }
+      // ignore: avoid_print
+      print(
+          '[CentralizedRequestService][createResponse] created id=${created.id}');
+    } catch (e) {
+      print('[CentralizedRequestService][createResponse][error] $e');
+      rethrow;
+    }
+  }
+
   Future<void> createResponseNamed({
     String? requestId,
     String? message,
@@ -280,7 +358,18 @@ class CentralizedRequestService {
     String? currency,
     Map<String, dynamic>? additionalData,
     List<String>? images,
-  }) async {}
+  }) async {
+    if (requestId == null) throw Exception('requestId required');
+    final map = <String, dynamic>{
+      'message': message,
+      if (price != null) 'price': price,
+      if (currency != null) 'currency': currency,
+      if (images != null) 'images': images,
+      if (additionalData != null) 'additionalData': additionalData,
+    };
+    await createResponse(requestId, map);
+  }
+
   Future<void> updateResponse(
       String responseId, Map<String, dynamic> data) async {}
 }
