@@ -188,10 +188,11 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
       });
 
       final countryCode = _userCountry ?? 'LK';
+      if (kDebugMode)
+        debugPrint('🔄 Loading vehicle types for country: $countryCode');
       final response = await ApiClient.instance.get(
         '/api/vehicle-types/public/$countryCode',
       );
-
       if (response.data['success'] == true) {
         final vehicleTypes = (response.data['data'] as List)
             .map((vt) => {
@@ -225,6 +226,9 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
             }
             _loadingVehicleTypes = false;
           });
+          if (kDebugMode)
+            debugPrint(
+                '✅ Loaded ${vehicleTypes.length} vehicle types for $countryCode: ${vehicleTypes.map((v) => v['name']).join(', ')}');
         }
       } else {
         throw Exception('API returned success: false');
@@ -255,6 +259,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
       });
 
       final countryCode = _userCountry ?? 'LK';
+      if (kDebugMode) debugPrint('🔄 Loading cities for country: $countryCode');
       final response = await ApiClient.instance.get(
         '/api/cities',
         queryParameters: {'country': countryCode},
@@ -283,6 +288,9 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
                   ];
             _loadingCities = false;
           });
+          if (kDebugMode)
+            debugPrint(
+                '✅ Loaded ${cities.length} cities for $countryCode: ${cities.map((c) => c['name']).join(', ')}');
         }
       } else {
         throw Exception('API returned success: false');
@@ -1407,9 +1415,24 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                if (_availableVehicleTypes.isEmpty)
+                if (_loadingVehicleTypes)
+                  const Row(
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        'Loading vehicle types...',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  )
+                else if (_availableVehicleTypes.isEmpty)
                   const Text(
-                    'Loading vehicle types...',
+                    'No vehicle types available',
                     style: TextStyle(color: Colors.grey),
                   )
                 else
