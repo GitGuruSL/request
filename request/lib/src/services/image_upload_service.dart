@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 import 'package:flutter/foundation.dart';
 import '../utils/image_url_helper.dart';
+import 'package:http_parser/http_parser.dart';
 
 class ImageUploadService {
   final ImagePicker _picker = ImagePicker();
@@ -50,13 +51,40 @@ class ImageUploadService {
       final request = http.MultipartRequest('POST', uri);
 
       // Add file
-      request.files.add(
-        http.MultipartFile.fromBytes(
-          'image',
-          bytes,
-          filename: uniqueFileName,
-        ),
-      );
+      // Determine mime type (simple extension-based mapping)
+      final ext = path.extension(fileName).toLowerCase();
+      MediaType? mediaType;
+      switch (ext) {
+        case '.jpg':
+        case '.jpeg':
+          mediaType = MediaType('image', 'jpeg');
+          break;
+        case '.png':
+          mediaType = MediaType('image', 'png');
+          break;
+        case '.gif':
+          mediaType = MediaType('image', 'gif');
+          break;
+        case '.webp':
+          mediaType = MediaType('image', 'webp');
+          break;
+        case '.bmp':
+          mediaType = MediaType('image', 'bmp');
+          break;
+        case '.heic':
+        case '.heif':
+          mediaType = MediaType('image', 'heic');
+          break;
+        default:
+          mediaType = MediaType('application', 'octet-stream');
+      }
+
+      request.files.add(http.MultipartFile.fromBytes(
+        'image',
+        bytes,
+        filename: uniqueFileName,
+        contentType: mediaType,
+      ));
 
       // Add upload path
       request.fields['path'] = uploadPath;
@@ -74,14 +102,48 @@ class ImageUploadService {
 
       if (response.statusCode == 200) {
         final responseBody = await response.stream.bytesToString();
-        final data = jsonDecode(responseBody);
-        final imageUrl = data['url'] as String?;
-
         if (kDebugMode) {
-          print('🖼️ [ImageUpload] Upload successful: $imageUrl');
+          print('🖼️ [ImageUpload] Raw success body: $responseBody');
         }
-
-        return imageUrl;
+        try {
+          final data = jsonDecode(responseBody);
+          dynamic extracted;
+          if (data is Map) {
+            // Support multiple shapes
+            if (data['url'] != null)
+              extracted = data['url'];
+            else if (data['data'] is Map && data['data']['url'] != null)
+              extracted = data['data']['url'];
+          }
+          if (extracted is String) {
+            final cleaned = extracted.trim();
+            if (kDebugMode) {
+              print(
+                  '🖼️ [ImageUpload] Upload successful URL (cleaned): $cleaned');
+            }
+            if (cleaned.startsWith('http')) {
+              return cleaned;
+            } else {
+              if (kDebugMode) {
+                print('⚠️ [ImageUpload] Returned URL not absolute: "$cleaned"');
+              }
+              // Attempt to convert relative path
+              if (cleaned.startsWith('/uploads')) {
+                return _baseUrl + cleaned; // ensure absolute
+              }
+            }
+          } else {
+            if (kDebugMode) {
+              print(
+                  '⚠️ [ImageUpload] Could not extract URL from response JSON');
+            }
+          }
+        } catch (parseErr) {
+          if (kDebugMode) {
+            print('⚠️ [ImageUpload] JSON parse error: $parseErr');
+          }
+        }
+        return null; // fallthrough if not extracted
       } else {
         final responseBody = await response.stream.bytesToString();
         if (kDebugMode) {

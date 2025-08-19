@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:developer' as dev;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -53,17 +54,56 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
         return;
       }
 
+      dev.log(
+          '[ImageUploadWidget] Picking up to $availableSlots images (multi)',
+          name: 'image_upload');
       final List<XFile>? images = await _imageService.pickMultipleImages(
         maxImages: availableSlots,
       );
+      dev.log(
+          '[ImageUploadWidget] Multi picker returned ${images?.length ?? 0}',
+          name: 'image_upload');
 
+      List<XFile> finalSelection = [];
       if (images != null && images.isNotEmpty) {
-        setState(() {
-          _pendingImages.addAll(images);
-        });
-        await _uploadPendingImages();
+        finalSelection = images;
+      } else {
+        // Fallback: some devices / permissions return empty list for multi picker
+        dev.log(
+            '[ImageUploadWidget] Multi picker empty -> fallback to single picker',
+            name: 'image_upload');
+        final single =
+            await ImagePicker().pickImage(source: ImageSource.gallery);
+        if (single != null) {
+          finalSelection = [single];
+          dev.log('[ImageUploadWidget] Single picker selected 1 image',
+              name: 'image_upload');
+        } else {
+          dev.log('[ImageUploadWidget] Single picker also returned null',
+              name: 'image_upload');
+        }
       }
+
+      if (finalSelection.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('No images selected')), // surface to user
+          );
+        }
+        return;
+      }
+
+      setState(() {
+        _pendingImages.addAll(finalSelection);
+      });
+      dev.log(
+          '[ImageUploadWidget] Added ${finalSelection.length} pending images (total pending: ${_pendingImages.length})',
+          name: 'image_upload');
+      await _uploadPendingImages();
     } catch (e) {
+      dev.log('[ImageUploadWidget] Error picking images: $e',
+          name: 'image_upload', error: e);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error selecting images: $e')),
       );
@@ -79,6 +119,8 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
 
     try {
       for (final XFile image in _pendingImages) {
+        dev.log('[ImageUploadWidget] Uploading image ${image.path}',
+            name: 'image_upload');
         final String? url = await _imageService.uploadImage(
           image,
           '${widget.uploadPath}/${DateTime.now().millisecondsSinceEpoch}',
@@ -89,12 +131,24 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
             _imageUrls.add(url);
             _localPreviewFiles[url] = image; // keep local fallback
           });
+          dev.log(
+              '[ImageUploadWidget] Upload success -> added URL: $url (total uploaded: ${_imageUrls.length})',
+              name: 'image_upload');
+        } else {
+          dev.log(
+              '[ImageUploadWidget] Upload returned null URL for ${image.path}',
+              name: 'image_upload');
         }
       }
 
+      dev.log(
+          '[ImageUploadWidget] Clearing ${_pendingImages.length} pending images after upload',
+          name: 'image_upload');
       _pendingImages.clear();
       widget.onImagesChanged(_imageUrls);
     } catch (e) {
+      dev.log('[ImageUploadWidget] Error uploading images: $e',
+          name: 'image_upload', error: e);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error uploading images: $e')),
       );
@@ -102,6 +156,9 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
       setState(() {
         _isUploading = false;
       });
+      dev.log(
+          '[ImageUploadWidget] Upload cycle finished. Uploaded: ${_imageUrls.length}',
+          name: 'image_upload');
     }
   }
 
