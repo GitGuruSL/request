@@ -159,12 +159,26 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Find requests that match your skills',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[600],
+                    const SizedBox(height: 16),
+                    // Search bar (moved up to replace subtitle)
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: TextField(
+                        decoration: InputDecoration(
+                          hintText: 'Find requests that match your skills',
+                          hintStyle: TextStyle(color: Colors.grey[500]),
+                          prefixIcon: Icon(Icons.search_outlined,
+                              color: Colors.grey[500]),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                        ),
+                        onChanged: (value) {
+                          // Add search functionality here
+                        },
                       ),
                     ),
                   ],
