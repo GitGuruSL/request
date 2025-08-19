@@ -136,23 +136,64 @@ const Dashboard = () => {
   };
 
   const StatCard = ({ title, value, icon, color = 'primary', subtitle }) => (
-    <Card>
-      <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+    <Card sx={{ height: 160, display: 'flex', flexDirection: 'column' }}>
+      <CardContent sx={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        justifyContent: 'space-between',
+        height: '100%',
+        p: 2,
+        '&:last-child': { pb: 2 }
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, minHeight: 32 }}>
           {icon}
-          <Typography variant="h6" sx={{ ml: 1, fontWeight: 'bold' }}>
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              ml: 1, 
+              fontWeight: 'bold',
+              fontSize: '0.75rem',
+              lineHeight: 1.2,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical'
+            }}
+          >
             {title}
           </Typography>
         </Box>
-        <Typography variant="h3" color={color} sx={{ fontWeight: 'bold' }}>
+        <Typography 
+          variant="h4" 
+          color={color} 
+          sx={{ 
+            fontWeight: 'bold',
+            textAlign: 'center',
+            my: 1
+          }}
+        >
           {stats.loading ? '-' : value}
         </Typography>
         {subtitle && (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          <Typography 
+            variant="caption" 
+            color="text.secondary" 
+            sx={{ 
+              textAlign: 'center',
+              fontSize: '0.65rem',
+              lineHeight: 1.2,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical'
+            }}
+          >
             {subtitle}
           </Typography>
         )}
-        {stats.loading && <LinearProgress sx={{ mt: 2 }} />}
+        {stats.loading && <LinearProgress sx={{ mt: 1 }} />}
       </CardContent>
     </Card>
   );
@@ -211,9 +252,9 @@ const Dashboard = () => {
         </Typography>
       </Alert>
 
-      {/* Statistics Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+      {/* Statistics Cards - Single Row Layout */}
+      <Grid container spacing={2} sx={{ mb: 4 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 1.5 }}>
           <StatCard
             title="Products"
             value={stats.products}
@@ -223,7 +264,7 @@ const Dashboard = () => {
           />
         </Grid>
         
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 1.5 }}>
           <StatCard
             title="Businesses"
             value={stats.businesses}
@@ -233,7 +274,7 @@ const Dashboard = () => {
           />
         </Grid>
         
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 1.5 }}>
           <StatCard
             title="Drivers"
             value={stats.drivers}
@@ -243,7 +284,7 @@ const Dashboard = () => {
           />
         </Grid>
         
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 1.5 }}>
           <StatCard
             title="Admin Users"
             value={stats.adminUsers}
@@ -253,8 +294,7 @@ const Dashboard = () => {
           />
         </Grid>
 
-        {/* Additional Stats Row */}
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 1.5 }}>
           <StatCard
             title="Requests"
             value={stats.requests}
@@ -264,7 +304,7 @@ const Dashboard = () => {
           />
         </Grid>
         
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 1.5 }}>
           <StatCard
             title="Responses"
             value={stats.responses}
@@ -274,7 +314,7 @@ const Dashboard = () => {
           />
         </Grid>
         
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 1.5 }}>
           <StatCard
             title="Price Listings"
             value={stats.priceListings}
@@ -284,7 +324,7 @@ const Dashboard = () => {
           />
         </Grid>
         
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 1.5 }}>
           <StatCard
             title="Users"
             value={stats.users}
