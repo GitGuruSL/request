@@ -61,6 +61,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
   // Cities selection
   List<Map<String, dynamic>> _availableCities = [];
   bool _loadingCities = false;
+  bool _loadingVehicleTypes = false;
 
   // Document files
   File? _driverImage; // Driver's photo (Profile Photo)
@@ -181,27 +182,69 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
   }
 
   Future<void> _loadAvailableVehicleTypes() async {
-    // Stubbed vehicle types until REST endpoint implemented
-    if (mounted) {
+    try {
       setState(() {
-        _availableVehicleTypes = [
-          {
-            'id': 'car',
-            'name': 'Car',
-            'icon': 'DirectionsCar',
-            'displayOrder': 1
-          },
-          {
-            'id': 'motorcycle',
-            'name': 'Motorcycle',
-            'icon': 'TwoWheeler',
-            'displayOrder': 2
-          },
-        ];
-        if (_selectedVehicleType == null && _availableVehicleTypes.isNotEmpty) {
-          _selectedVehicleType = _availableVehicleTypes.first['id'];
-        }
+        _loadingVehicleTypes = true;
       });
+
+      final countryCode = _userCountry ?? 'LK';
+      final response = await ApiClient.instance.get(
+        '/api/vehicle-types/public/$countryCode',
+      );
+
+      if (response.data['success'] == true) {
+        final vehicleTypes = (response.data['data'] as List)
+            .map((vt) => {
+                  'id': vt['id'] as String,
+                  'name': vt['name'] as String,
+                  'icon': vt['icon'] ?? 'DirectionsCar',
+                  'displayOrder': vt['displayOrder'] ?? 0,
+                  'passengerCapacity': vt['passengerCapacity'] ?? 1,
+                })
+            .toList();
+
+        if (mounted) {
+          setState(() {
+            _availableVehicleTypes = vehicleTypes.isNotEmpty
+                ? vehicleTypes
+                : [
+                    {
+                      'id': 'no_vehicles',
+                      'name': 'No vehicle types enabled for your country',
+                      'icon': 'DirectionsCar',
+                      'displayOrder': 0,
+                      'passengerCapacity': 1
+                    }
+                  ];
+
+            // Auto-select first available vehicle type
+            if (_selectedVehicleType == null &&
+                _availableVehicleTypes.isNotEmpty &&
+                _availableVehicleTypes.first['id'] != 'no_vehicles') {
+              _selectedVehicleType = _availableVehicleTypes.first['id'];
+            }
+            _loadingVehicleTypes = false;
+          });
+        }
+      } else {
+        throw Exception('API returned success: false');
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('Error loading vehicle types: $e');
+      if (mounted) {
+        setState(() {
+          _availableVehicleTypes = [
+            {
+              'id': 'error',
+              'name': 'Network error - contact support',
+              'icon': 'DirectionsCar',
+              'displayOrder': 0,
+              'passengerCapacity': 1
+            }
+          ];
+          _loadingVehicleTypes = false;
+        });
+      }
     }
   }
 
@@ -453,18 +496,19 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
               Expanded(
                 child: TextFormField(
                   controller: _firstNameController,
-                  readOnly: true, // Auto-populated from user account
+                  readOnly: false, // Allow editing for ID card accuracy
                   decoration: const InputDecoration(
-                    labelText: 'First Name * (from account)',
+                    labelText: 'First Name * (as on ID card)',
+                    helperText: 'Edit if different from your ID card',
                     prefixIcon: Icon(Icons.person_outline),
                     border: InputBorder.none,
                     filled: true,
-                    fillColor: Color(
-                        0xFFF5F5F5), // Slightly grayed to indicate read-only
+                    fillColor:
+                        Color(0xFFF9F9F9), // Lighter fill to show it's editable
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'First name is required. Please update your account profile.';
+                      return 'First name is required (as shown on ID card)';
                     }
                     return null;
                   },
@@ -474,18 +518,19 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
               Expanded(
                 child: TextFormField(
                   controller: _lastNameController,
-                  readOnly: true, // Auto-populated from user account
+                  readOnly: false, // Allow editing for ID card accuracy
                   decoration: const InputDecoration(
-                    labelText: 'Last Name * (from account)',
+                    labelText: 'Last Name * (as on ID card)',
+                    helperText: 'Edit if different from your ID card',
                     prefixIcon: Icon(Icons.person_outline),
                     border: InputBorder.none,
                     filled: true,
-                    fillColor: Color(
-                        0xFFF5F5F5), // Slightly grayed to indicate read-only
+                    fillColor:
+                        Color(0xFFF9F9F9), // Lighter fill to show it's editable
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Last name is required. Please update your account profile.';
+                      return 'Last name is required (as shown on ID card)';
                     }
                     return null;
                   },

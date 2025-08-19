@@ -221,4 +221,102 @@ router.delete('/:id', auth.authMiddleware(), auth.roleMiddleware(['super_admin']
   }
 });
 
+// Initialize country vehicle types (auto-populate when country admin first accesses)
+router.post('/initialize-country', auth.authMiddleware(), async (req, res) => {
+  try {
+    const countryCode = (req.user.country_code || req.user.country || 'LK').toUpperCase();
+    
+    // Check if country already has vehicle types configured
+    const existingCount = await database.queryOne(
+      'SELECT COUNT(*) as count FROM country_vehicle_types WHERE country_code = $1',
+      [countryCode]
+    );
+    
+    if (existingCount.count > 0) {
+      return res.json({ 
+        success: true, 
+        message: 'Country vehicle types already initialized',
+        count: existingCount.count 
+      });
+    }
+    
+    // Get all active vehicle types and add them as disabled for this country
+    const vehicleTypes = await database.query(
+      'SELECT id, name FROM vehicle_types WHERE is_active = true ORDER BY name'
+    );
+    
+    if (vehicleTypes.rows.length === 0) {
+      return res.json({ 
+        success: true, 
+        message: 'No vehicle types available to initialize' 
+      });
+    }
+    
+    // Insert all vehicle types as disabled for this country
+    const insertPromises = vehicleTypes.rows.map(vt => 
+      database.query(`
+        INSERT INTO country_vehicle_types (vehicle_type_id, country_code, is_active)
+        VALUES ($1, $2, false)
+      `, [vt.id, countryCode])
+    );
+    
+    await Promise.all(insertPromises);
+    
+    res.json({ 
+      success: true, 
+      message: `Initialized ${vehicleTypes.rows.length} vehicle types for ${countryCode} (all disabled by default)`,
+      count: vehicleTypes.rows.length,
+      countryCode: countryCode
+    });
+  } catch (error) {
+    console.error('Error initializing country vehicle types:', error);
+    res.status(500).json({ success: false, message: 'Error initializing country vehicle types', error: error.message });
+  }
+});
+
+// Public endpoint for drivers to get enabled vehicle types for their country
+router.get('/public/:countryCode', async (req, res) => {
+  try {
+    const countryCode = (req.params.countryCode || 'LK').toUpperCase();
+    
+    const result = await database.query(`
+      SELECT 
+        vt.id,
+        vt.name,
+        vt.description,
+        vt.icon,
+        0 AS display_order,
+        COALESCE(vt.capacity, 1) AS passenger_capacity,
+        vt.is_active,
+        vt.created_at,
+        vt.updated_at
+      FROM vehicle_types vt
+      INNER JOIN country_vehicle_types cvt 
+        ON vt.id = cvt.vehicle_type_id 
+       AND cvt.country_code = $1
+       AND cvt.is_active = true
+      WHERE vt.is_active = true
+      ORDER BY vt.name
+    `, [countryCode]);
+
+    // Adapt to frontend expected camelCase keys
+    const data = result.rows.map(r => ({
+      id: r.id,
+      name: r.name,
+      description: r.description,
+      icon: r.icon || 'DirectionsCar',
+      displayOrder: r.display_order,
+      passengerCapacity: r.passenger_capacity,
+      isActive: r.is_active,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at
+    }));
+
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Error fetching public vehicle types:', error);
+    res.status(500).json({ success: false, message: 'Error fetching vehicle types', error: error.message });
+  }
+});
+
 module.exports = router;
