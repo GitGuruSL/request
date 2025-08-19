@@ -17,6 +17,7 @@ const flutterAuthRoutes = require('./routes/flutter-auth');
 const categoryRoutes = require('./routes/categories');
 const subcategoryRoutes = require('./routes/subcategories');
 const countryModuleRoutes = require('./routes/country-modules');
+const countriesRoutes = require('./routes/countries');
 const cityRoutes = require('./routes/cities');
 const requestRoutes = require('./routes/requests');
 const vehicleTypeRoutes = require('./routes/vehicle-types');
@@ -147,6 +148,7 @@ app.use('/api/vehicle-types', vehicleTypeRoutes);
 app.use('/api/upload', uploadRoutes); // Image upload endpoint
 app.use('/api/chat', chatRoutes); // Chat endpoints
 app.use('/api/country-modules', countryModuleRoutes);
+app.use('/api/countries', countriesRoutes);
 app.use('/api/brands', brandRoutes);
 app.use('/api/master-products', masterProductRoutes);
 app.use('/api/entity-activations', entityActivationRoutes);
@@ -183,19 +185,19 @@ app.use((err, req, res, next) => {
     });
 });
 
-// 404 handler
-app.use('*', (req, res) => {
-    res.status(404).json({
-        success: false,
-        error: 'Endpoint not found',
-        path: req.originalUrl,
-        method: req.method
-    });
-});
-
-// Simple ping endpoint for connectivity diagnostics (before starting server)
+// Simple ping endpoint for connectivity diagnostics
 app.get('/api/ping', (req, res) => {
   res.json({ success: true, message: 'pong', time: new Date().toISOString() });
+});
+
+// 404 handler LAST
+app.use('*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    error: 'Endpoint not found',
+    path: req.originalUrl,
+    method: req.method
+  });
 });
 
 // Start server
