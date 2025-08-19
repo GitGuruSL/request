@@ -22,43 +22,43 @@ class _HomeScreenState extends State<HomeScreen> {
           type: 'item',
           title: 'Item Request',
           subtitle: 'Request for products or items',
-          icon: Icons.shopping_bag_outlined,
-          color: const Color(0xFFFF8A3D),
+          icon: Icons.shopping_bag,
+          color: const Color(0xFFFF6B35), // Orange/red color like in the image
         ),
         _RequestType(
           type: 'service',
           title: 'Service Request',
           subtitle: 'Request for services',
-          icon: Icons.build_outlined,
-          color: const Color(0xFF22B8A7),
+          icon: Icons.build,
+          color: const Color(0xFF00BCD4), // Teal color like in the image
         ),
         _RequestType(
           type: 'rental',
           title: 'Rental Request',
           subtitle: 'Rent vehicles, equipment, or items',
-          icon: Icons.vpn_key_outlined,
-          color: const Color(0xFF37A7FF),
+          icon: Icons.vpn_key,
+          color: const Color(0xFF2196F3), // Blue color like in the image
         ),
         _RequestType(
           type: 'delivery',
           title: 'Delivery Request',
           subtitle: 'Request for delivery services',
-          icon: Icons.local_shipping_outlined,
-          color: const Color(0xFF3BB273),
+          icon: Icons.local_shipping,
+          color: const Color(0xFF4CAF50), // Green color like in the image
         ),
         _RequestType(
           type: 'ride',
           title: 'Ride Request',
           subtitle: 'Request for transportation',
-          icon: Icons.directions_car_filled_outlined,
-          color: const Color(0xFFFFC84A),
+          icon: Icons.directions_car,
+          color: const Color(0xFFFFC107), // Yellow color like in the image
         ),
         _RequestType(
           type: 'price',
           title: 'Price Request',
           subtitle: 'Request price quotes for items or services',
-          icon: Icons.price_check_outlined,
-          color: const Color(0xFFB085F5),
+          icon: Icons.trending_up,
+          color: const Color(0xFF9C27B0), // Purple color like in the image
         ),
       ];
 
@@ -94,54 +94,61 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) {
         final items = _requestTypes;
-        return ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          child: Material(
-            color: Theme.of(context).colorScheme.surface,
-            child: SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    // Limit height to 80% of screen; rest scrolls
-                    maxHeight: MediaQuery.of(ctx).size.height * 0.8,
-                  ),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const SizedBox(height: 10),
-                        Container(
-                          width: 44,
-                          height: 5,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade300,
-                            borderRadius: BorderRadius.circular(3),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Text(
-                          'Create New Request',
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                        ),
-                        const SizedBox(height: 12),
-                        ...items.map(
-                          (it) => _RequestTypeTile(
-                            icon: it.icon,
-                            iconColor: it.color,
-                            title: it.title,
-                            subtitle: it.subtitle,
-                            onTap: () => _selectRequestType(it.type),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                      ],
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(ctx).size.height * 0.8,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Handle bar
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 20),
+                    
+                    // Title
+                    Text(
+                      'Create New Request',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // Request types list
+                    Flexible(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children: items.map(
+                            (it) => _RequestTypeTile(
+                              icon: it.icon,
+                              iconColor: it.color,
+                              title: it.title,
+                              subtitle: it.subtitle,
+                              onTap: () => _selectRequestType(it.type),
+                            ),
+                          ).toList(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                 ),
               ),
             ),
@@ -252,20 +259,53 @@ class _RequestTypeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: iconColor.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(icon, color: iconColor),
-      ),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: Text(subtitle),
+    return InkWell(
       onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                icon, 
+                color: iconColor,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title, 
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                      height: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
