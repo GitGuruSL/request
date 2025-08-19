@@ -11,30 +11,17 @@ const router = express.Router();
 router.get('/', async (req, res) => {
     try {
         const { includeInactive = false, country = 'LK', type } = req.query;
-        const user = req.user || { role: 'super_admin' }; // Default to super_admin for testing
+        const user = req.user || { role: 'super_admin' }; // Default for testing
 
         let categories;
-        
-        if (user.role === 'super_admin') {
-            // Super Admin: Get all global categories
-            let conditions = {};
-            if (!includeInactive) {
-                conditions.is_active = true;
-            }
-            
-            // Filter by type if specified
-            if (type) {
-                conditions.type = type;
-            }
 
-            categories = await dbService.findMany('categories', conditions, {
-                orderBy: 'name',
-                orderDirection: 'ASC'
-            });
+        if (user.role === 'super_admin') {
+            const conditions = {};
+            if (!includeInactive) conditions.is_active = true;
+            if (type) conditions.type = type;
+            categories = await dbService.findMany('categories', conditions, { orderBy: 'name', orderDirection: 'ASC' });
         } else {
-            // Country Admin: Get categories enabled for their country
-            const countryCode = user.country_code || country; // Use country from query if not in user profile
-            
+            const countryCode = user.country_code || country;
             let query = `
                 SELECT c.*, cc.is_active as country_active, cc.display_order
                 FROM categories c
@@ -42,34 +29,23 @@ router.get('/', async (req, res) => {
                 WHERE cc.country_code = $1
                 ${!includeInactive ? 'AND c.is_active = true AND cc.is_active = true' : ''}
             `;
-            
             const params = [countryCode];
-            
-            // Add type filter if specified
-            if (type) {
-                query += ` AND c.type = $${params.length + 1}`;
-                params.push(type);
-            }
-            
-            query += ` ORDER BY cc.display_order ASC, c.name ASC`;
-            
+            if (type) { query += ` AND c.type = $${params.length + 1}`; params.push(type); }
+            query += ' ORDER BY cc.display_order ASC NULLS LAST, c.name ASC';
             const result = await dbService.query(query, params);
             categories = result.rows;
         }
 
-        res.json({
-            success: true,
-            data: categories,
-            count: categories.length,
-            isGlobalView: user.role === 'super_admin',
-            filteredByType: type || null
-        });
+        // Surface description (legacy front-end expectation) from metadata.description if present
+        const enriched = categories.map(c => ({
+            ...c,
+            description: c.description || (c.metadata && c.metadata.description) || null
+        }));
+
+        res.json({ success: true, data: enriched, count: enriched.length, isGlobalView: user.role === 'super_admin', filteredByType: type || null });
     } catch (error) {
         console.error('Get categories error:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -80,26 +56,12 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        
         const category = await dbService.findById('categories', id);
-        
-        if (!category) {
-            return res.status(404).json({
-                success: false,
-                error: 'Category not found'
-            });
-        }
-
-        res.json({
-            success: true,
-            data: category
-        });
+        if (!category) return res.status(404).json({ success: false, error: 'Category not found' });
+        res.json({ success: true, data: { ...category, description: category.metadata?.description || null } });
     } catch (error) {
         console.error('Get category error:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -142,39 +104,30 @@ router.get('/:id/subcategories', async (req, res) => {
  */
 router.post('/', 
     authService.authMiddleware(), 
-    authService.roleMiddleware(['admin','super_admin']), 
+    authService.roleMiddleware(['super_admin']), 
     async (req, res) => {
         try {
-            const { name, description, icon, displayOrder, countryCode = 'LK' } = req.body;
+            const { name, description, type = 'item', status, isActive } = req.body;
+            if (!name) return res.status(400).json({ error: 'Category name is required' });
 
-            if (!name) {
-                return res.status(400).json({
-                    error: 'Category name is required'
-                });
-            }
+            const active = typeof isActive === 'boolean' ? isActive : (status ? status === 'active' : true);
+            const slug = name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+            const metadata = description ? { description } : null;
 
             const category = await dbService.insert('categories', {
                 name,
-                description,
-                icon,
-                display_order: displayOrder || 0,
-                country_code: countryCode,
-                is_active: true,
+                slug,
+                type,
+                is_active: active,
+                metadata,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
             });
 
-            res.status(201).json({
-                success: true,
-                message: 'Category created successfully',
-                data: category
-            });
+            res.status(201).json({ success: true, message: 'Category created successfully', data: { ...category, description } });
         } catch (error) {
             console.error('Create category error:', error);
-            res.status(400).json({
-                success: false,
-                error: error.message
-            });
+            res.status(400).json({ success: false, error: error.message });
         }
     }
 );
@@ -185,45 +138,43 @@ router.post('/',
  */
 router.put('/:id', 
     authService.authMiddleware(), 
-    authService.roleMiddleware(['admin','super_admin']), 
+    authService.roleMiddleware(['super_admin']), 
     async (req, res) => {
         try {
             const { id } = req.params;
-            const { name, description, icon, displayOrder, isActive } = req.body;
+            const { name, description, type, status, isActive } = req.body;
+
+            const existing = await dbService.findById('categories', id);
+            if (!existing) return res.status(404).json({ success: false, error: 'Category not found' });
 
             const updateData = {};
             if (name !== undefined) updateData.name = name;
-            if (description !== undefined) updateData.description = description;
-            if (icon !== undefined) updateData.icon = icon;
-            if (displayOrder !== undefined) updateData.display_order = displayOrder;
-            if (isActive !== undefined) updateData.is_active = isActive;
+            if (type !== undefined) updateData.type = type;
+            if (isActive !== undefined) updateData.is_active = isActive; else if (status) updateData.is_active = status === 'active';
+            // If name changed, also regenerate slug
+            if (name !== undefined && name !== existing.name) {
+                updateData.slug = name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+            }
+
+            // Merge description into metadata JSONB
+            if (description !== undefined) {
+                const meta = existing.metadata && typeof existing.metadata === 'object' ? { ...existing.metadata } : {};
+                if (description === null || description === '') delete meta.description; else meta.description = description;
+                updateData.metadata = Object.keys(meta).length ? meta : null;
+            }
 
             if (Object.keys(updateData).length === 0) {
-                return res.status(400).json({
-                    error: 'No valid fields to update'
-                });
+                console.log('[Categories][UPDATE] No changes detected for id', id, 'incoming body:', req.body);
+                return res.status(200).json({ success: true, message: 'No changes applied', data: { ...existing, description: existing.metadata?.description || null } });
             }
 
+            console.log('[Categories][UPDATE] Applying update', { id, updateData, body: req.body });
             const category = await dbService.update('categories', id, updateData);
-
-            if (!category) {
-                return res.status(404).json({
-                    success: false,
-                    error: 'Category not found'
-                });
-            }
-
-            res.json({
-                success: true,
-                message: 'Category updated successfully',
-                data: category
-            });
+            console.log('[Categories][UPDATE] Success', { id, updated: category });
+            res.json({ success: true, message: 'Category updated successfully', data: { ...category, description: category.metadata?.description || null } });
         } catch (error) {
-            console.error('Update category error:', error);
-            res.status(400).json({
-                success: false,
-                error: error.message
-            });
+            console.error('Update category error:', error.message, error.stack);
+            res.status(400).json({ success: false, error: error.message, details: error.detail || null });
         }
     }
 );
@@ -234,7 +185,7 @@ router.put('/:id',
  */
 router.delete('/:id', 
     authService.authMiddleware(), 
-    authService.roleMiddleware(['admin','super_admin']), 
+    authService.roleMiddleware(['super_admin']), 
     async (req, res) => {
         try {
             const { id } = req.params;
@@ -277,7 +228,7 @@ router.delete('/:id',
  */
 router.post('/:id/country-toggle', 
     authService.authMiddleware(), 
-    authService.roleMiddleware(['admin', 'country_admin']), 
+    authService.roleMiddleware(['super_admin']), 
     async (req, res) => {
         try {
             const { id: categoryId } = req.params;

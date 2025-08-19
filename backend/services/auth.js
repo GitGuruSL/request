@@ -500,13 +500,22 @@ class AuthService {
                 const token = authHeader.substring(7);
                 const decoded = this.verifyToken(token);
                 
-                // Get user from database
-                const user = await dbService.findById('users', decoded.userId);
+                // Get user from database - check both users and admin_users tables
+                let user = await dbService.findById('users', decoded.userId);
+                let isAdmin = false;
+                
+                // If not found in users table, check admin_users table
+                if (!user) {
+                    user = await dbService.findById('admin_users', decoded.userId);
+                    isAdmin = true;
+                }
+                
                 if (!user || !user.is_active) {
                     return res.status(401).json({ error: 'User not found or inactive' });
                 }
 
                 req.user = this.sanitizeUser(user);
+                req.isAdmin = isAdmin; // Add flag to indicate if this is an admin user
                 next();
             } catch (error) {
                 res.status(401).json({ error: error.message });

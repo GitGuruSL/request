@@ -163,15 +163,17 @@ const CategoriesModule = () => {
     try {
       setOperationLoading(true);
       
+      // Backend expects: name, description (stored in metadata), type, isActive OR status
       const categoryPayload = {
-        name: formData.name,
-        category: formData.name,
-        description: formData.description,
-        status: formData.status,
+        name: formData.name?.trim(),
+        description: formData.description?.trim() || null,
         type: formData.type,
+        // Provide both forms for safety while migrating
         isActive: formData.status === 'active',
-        country: formData.country || undefined
+        status: formData.status
       };
+
+      console.debug('[CategoriesModule] Saving category', { mode: selectedCategory ? 'update' : 'create', id: selectedCategory?.id, payload: categoryPayload });
 
       if (selectedCategory) {
         await api.put(`/categories/${selectedCategory.id}`, {
@@ -201,7 +203,7 @@ const CategoriesModule = () => {
       console.error('Error saving category:', error);
       setSnackbar({
         open: true,
-        message: 'Error saving category: ' + error.message,
+  message: 'Error saving category: ' + (error.response?.data?.error || error.message),
         severity: 'error'
       });
     } finally {
