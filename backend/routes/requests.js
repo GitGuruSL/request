@@ -71,13 +71,17 @@ router.get('/', async (req, res) => {
         u.display_name as user_name,
         u.email as user_email,
         c.name as category_name,
+        c.request_type as category_request_type,
         sc.name as subcategory_name,
-        ct.name as city_name
+        ct.name as city_name,
+        COALESCE(r.country_code, ct.country_code) as effective_country_code,
+        co.default_currency as country_default_currency
       FROM requests r
       LEFT JOIN users u ON r.user_id = u.id
       LEFT JOIN categories c ON r.category_id = c.id
       LEFT JOIN sub_categories sc ON r.subcategory_id = sc.id
       LEFT JOIN cities ct ON r.location_city_id = ct.id
+      LEFT JOIN countries co ON r.country_code = co.code
       WHERE ${conditions.join(' AND ')}
       ORDER BY r.${finalSortBy} ${finalSortOrder}
       LIMIT $${paramCounter++} OFFSET $${paramCounter++}
@@ -176,13 +180,17 @@ router.get('/search', async (req, res) => {
         u.display_name as user_name,
         u.email as user_email,
         c.name as category_name,
+        c.request_type as category_request_type,
         sc.name as subcategory_name,
-        ct.name as city_name
+        ct.name as city_name,
+        COALESCE(r.country_code, ct.country_code) as effective_country_code,
+        co.default_currency as country_default_currency
       FROM requests r
       LEFT JOIN users u ON r.user_id = u.id
       LEFT JOIN categories c ON r.category_id = c.id
       LEFT JOIN sub_categories sc ON r.subcategory_id = sc.id
       LEFT JOIN cities ct ON r.location_city_id = ct.id
+      LEFT JOIN countries co ON r.country_code = co.code
       WHERE ${conditions.join(' AND ')}
       ORDER BY r.${finalSortBy} ${finalSortOrder}
       LIMIT $${paramCounter++} OFFSET $${paramCounter++}
@@ -225,15 +233,19 @@ router.get('/:id', async (req, res) => {
         u.email as user_email,
         u.phone as user_phone,
         c.name as category_name,
+        c.request_type as category_request_type,
         sc.name as subcategory_name,
         ct.name as city_name,
-        ar.user_id as accepted_response_user_id
+        ar.user_id as accepted_response_user_id,
+        COALESCE(r.country_code, ct.country_code) as effective_country_code,
+        co.default_currency as country_default_currency
       FROM requests r
       LEFT JOIN users u ON r.user_id = u.id
       LEFT JOIN categories c ON r.category_id = c.id
       LEFT JOIN sub_categories sc ON r.subcategory_id = sc.id
       LEFT JOIN cities ct ON r.location_city_id = ct.id
       LEFT JOIN responses ar ON r.accepted_response_id = ar.id
+      LEFT JOIN countries co ON r.country_code = co.code
       WHERE r.id = $1
     `, [requestId]);
 
@@ -655,12 +667,16 @@ router.get('/user/my-requests', auth.authMiddleware(), async (req, res) => {
       SELECT 
         r.*,
         c.name as category_name,
+        c.request_type as category_request_type,
         sc.name as subcategory_name,
-        ct.name as city_name
+        ct.name as city_name,
+        COALESCE(r.country_code, ct.country_code) as effective_country_code,
+        co.default_currency as country_default_currency
       FROM requests r
       LEFT JOIN categories c ON r.category_id = c.id
       LEFT JOIN sub_categories sc ON r.subcategory_id = sc.id
       LEFT JOIN cities ct ON r.location_city_id = ct.id
+      LEFT JOIN countries co ON r.country_code = co.code
       WHERE ${conditions.join(' AND ')}
       ORDER BY r.created_at DESC
       LIMIT $${paramCounter++} OFFSET $${paramCounter++}

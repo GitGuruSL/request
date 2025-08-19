@@ -91,7 +91,25 @@ const RequestsModule = () => {
       const data = Array.isArray(raw)
         ? raw
         : (raw?.requests && Array.isArray(raw.requests) ? raw.requests : []);
-      setRequests(data);
+      const mapped = data.map(r => ({
+        id: r.id,
+        title: r.title,
+        description: r.description,
+        status: r.status,
+        budget: r.budget ?? r.budget_min ?? null,
+  currency: r.currency || r.country_default_currency,
+        type: r.type || r.request_type || r.category_request_type || r.categoryRequestType || r.category_requestType || r.category_request_type,
+  requesterId: r.user_id,
+  requesterName: r.user_name || r.user_display_name,
+  requesterEmail: r.user_email,
+        createdAt: r.created_at || r.createdAt,
+        updatedAt: r.updated_at || r.updatedAt,
+        location_address: r.location_address,
+        city_name: r.city_name,
+  country_code: r.effective_country_code || r.country_code || r.country,
+        category_name: r.category_name
+      }));
+      setRequests(mapped);
       
       // Fetch user data for all requesters
       if (data && data.length > 0) {
@@ -146,7 +164,8 @@ const RequestsModule = () => {
                            ?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = selectedStatus === 'all' || request.status === selectedStatus;
-    const matchesType = selectedType === 'all' || request.type === selectedType;
+  const derivedType = request.type || request.request_type || request.categoryRequestType || request.category_type || request.categoryType || request.category_name?.includes('service') ? 'service_request' : (request.category_name?.includes('ride') ? 'ride_request' : request.type);
+  const matchesType = selectedType === 'all' || derivedType === selectedType;
 
     return matchesSearch && matchesStatus && matchesType;
   });  const formatDate = (dateValue) => {
@@ -164,9 +183,9 @@ const RequestsModule = () => {
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
   };
 
-  const formatCurrency = (amount, currency) => {
+  const formatCurrency = (amount, currency, countryCode) => {
     if (!amount && amount !== 0) return 'N/A';
-    return CurrencyService.formatCurrency(amount, currency, userCountry);
+    return CurrencyService.formatCurrency(amount, currency, countryCode || userCountry);
   };
 
   const getRequestStats = () => {
@@ -179,6 +198,14 @@ const RequestsModule = () => {
   };
 
   const stats = getRequestStats();
+
+  // Helper formatting moved up for reuse
+  const formatLocation = (r) => {
+    if (r.location_address) return r.location_address;
+    if (r.location?.address) return r.location.address;
+    if (r.city_name) return r.city_name;
+    return 'N/A';
+  };
 
   if (loading) {
     return (
@@ -333,7 +360,9 @@ const RequestsModule = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredRequests.map((request) => (
+            {filteredRequests.map((request) => {
+              const derivedType = request.type || request.category_request_type || request.category_name;
+              return (
               <TableRow key={request.id} hover>
                 <TableCell>
                   <Box>
@@ -347,8 +376,8 @@ const RequestsModule = () => {
                 </TableCell>
                 <TableCell>
                   <Chip 
-                    label={request.type?.replace('_', ' ').toUpperCase() || 'N/A'}
-                    color={typeColors[request.type] || 'default'}
+                    label={derivedType ? String(derivedType).replace('_',' ').toUpperCase() : 'N/A'}
+                    color={typeColors[derivedType] || 'default'}
                     size="small"
                   />
                 </TableCell>
@@ -363,7 +392,7 @@ const RequestsModule = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Person fontSize="small" color="action" />
                     <Typography variant="body2" noWrap>
-                      {DataLookupService.formatUserDisplayName(userDataMap.get(request.requesterId)) || 'Unknown User'}
+                      {request.requesterName || DataLookupService.formatUserDisplayName(userDataMap.get(request.requesterId)) || 'Unknown User'}
                     </Typography>
                   </Box>
                 </TableCell>
@@ -371,7 +400,7 @@ const RequestsModule = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <AttachMoney fontSize="small" color="action" />
                     <Typography variant="body2">
-                      {formatCurrency(request.budget, request.currency)}
+                      {formatCurrency(request.budget, request.currency, request.country_code)}
                     </Typography>
                   </Box>
                 </TableCell>
@@ -379,7 +408,7 @@ const RequestsModule = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <LocationOn fontSize="small" color="action" />
                     <Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>
-                      {request.location?.address || request.location?.name || 'N/A'}
+                      {request.location_address || request.city_name || request.location?.address || 'N/A'}
                     </Typography>
                   </Box>
                 </TableCell>
@@ -393,7 +422,7 @@ const RequestsModule = () => {
                 </TableCell>
                 <TableCell>
                   <Chip 
-                    label={getCountryDisplayName(request.country)}
+                    label={getCountryDisplayName(request.country_code || request.country)}
                     size="small"
                     variant="outlined"
                   />
@@ -412,7 +441,7 @@ const RequestsModule = () => {
                   </Box>
                 </TableCell>
               </TableRow>
-            ))}
+            )})}
             {filteredRequests.length === 0 && (
               <TableRow>
                 <TableCell colSpan={9} align="center">
