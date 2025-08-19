@@ -93,12 +93,18 @@ const CategoriesModule = () => {
       setLoading(true);
       setError(null);
 
+      // Always request inactive too so local status filter works
       const [catsData, subcatsData] = await Promise.all([
-        getFilteredData('categories', adminData),
-        getFilteredData('subcategories', adminData)
+        getFilteredData('categories', adminData, { includeInactive: true }),
+        getFilteredData('subcategories', adminData, { includeInactive: true })
       ]);
       
-      setCategories(catsData || []);
+      // Normalize status field for UI
+      const normalized = (catsData || []).map(c => ({
+        ...c,
+        status: c.status || (c.is_active !== undefined ? (c.is_active ? 'active' : 'inactive') : (c.isActive !== false ? 'active' : 'inactive'))
+      }));
+      setCategories(normalized);
       setSubcategories(subcatsData || []);
       
       console.log(`📊 Loaded ${catsData?.length || 0} categories and ${subcatsData?.length || 0} subcategories for ${isSuperAdmin ? 'super admin' : `country admin (${userCountry})`}`);
@@ -252,7 +258,7 @@ const CategoriesModule = () => {
                          (category.name || category.category)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          category.description?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const categoryStatus = category.status || (category.isActive !== false ? 'active' : 'inactive');
+  const categoryStatus = category.status || (category.is_active !== undefined ? (category.is_active ? 'active' : 'inactive') : (category.isActive !== false ? 'active' : 'inactive'));
     const matchesStatus = selectedStatus === 'all' || categoryStatus === selectedStatus;
 
     return matchesSearch && matchesStatus;
