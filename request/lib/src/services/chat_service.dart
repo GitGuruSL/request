@@ -58,6 +58,11 @@ class ChatService {
     required String content,
   }) async {
     final uri = Uri.parse('$_baseUrl/api/chat/messages');
+
+    print('🔥 [ChatService] sendMessage to: $uri');
+    print(
+        '🔥 [ChatService] payload: conversationId=$conversationId, senderId=$senderId, content="$content"');
+
     final resp = await http.post(uri,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -65,8 +70,22 @@ class ChatService {
           'senderId': senderId,
           'content': content,
         }));
-    if (resp.statusCode != 200) throw Exception('Failed to send');
-    final data = jsonDecode(resp.body);
-    return ChatMessage.fromJson(data['message']);
+
+    print('🔥 [ChatService] sendMessage response: ${resp.statusCode}');
+    print('🔥 [ChatService] response body: ${resp.body}');
+
+    if (resp.statusCode != 200) {
+      throw Exception(
+          'Failed to send message: ${resp.statusCode} - ${resp.body}');
+    }
+
+    try {
+      final data = jsonDecode(resp.body);
+      return ChatMessage.fromJson(data['message']);
+    } catch (e, stack) {
+      print('🔥 [ChatService] sendMessage JSON parsing error: $e');
+      print('🔥 [ChatService] Stack trace: $stack');
+      rethrow;
+    }
   }
 }

@@ -24,6 +24,8 @@ async function ensureSchema() {
   await db.query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS participant_a UUID;`);
   await db.query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS participant_b UUID;`);
   await db.query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS created_by UUID;`);
+  await db.query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS last_message_text TEXT;`);
+  await db.query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS last_message_at TIMESTAMPTZ;`);
 
   // Attempt to migrate legacy participant_ids -> participant_a / participant_b (only where not already set)
   await db.query(`UPDATE conversations SET participant_a = participant_ids[1], participant_b = participant_ids[2]
