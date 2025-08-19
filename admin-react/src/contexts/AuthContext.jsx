@@ -25,6 +25,7 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
   user,
+  adminData: user, // Alias for user - many components expect adminData
   loading,
   logout,
   isAuthenticated: !!user,
