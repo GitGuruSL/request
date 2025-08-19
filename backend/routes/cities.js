@@ -207,4 +207,35 @@ router.delete('/:id', auth.authMiddleware(), async (req, res) => {
   }
 });
 
+// Public endpoint for cities by country (no authentication required)
+router.get('/public/:countryCode', async (req, res) => {
+  try {
+    const countryCode = req.params.countryCode.toUpperCase();
+    
+    console.log(`🌍 Public cities endpoint called for country: ${countryCode}`);
+    
+    const result = await database.query(
+      'SELECT * FROM cities WHERE country_code = $1 AND is_active = true ORDER BY name',
+      [countryCode]
+    );
+    
+    const cities = result.rows.map(adaptCity);
+    console.log(`📍 Found ${cities.length} active cities for ${countryCode}:`, cities.map(c => c.name).join(', '));
+    
+    res.json({ 
+      success: true, 
+      data: cities,
+      count: cities.length,
+      countryCode: countryCode
+    });
+  } catch (error) {
+    console.error('Error fetching public cities:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching cities', 
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error' 
+    });
+  }
+});
+
 module.exports = router;
