@@ -983,14 +983,7 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                                       fontWeight: FontWeight.w600)),
                             ),
                           ]),
-                          if (r.locationLatitude != null &&
-                              r.locationLongitude != null) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                                'Coordinates: ${r.locationLatitude!.toStringAsFixed(6)}, ${r.locationLongitude!.toStringAsFixed(6)}',
-                                style: TextStyle(
-                                    color: Colors.grey[600], fontSize: 12)),
-                          ],
+                          // Coordinates intentionally hidden per requirement: show only human-readable location
                         ],
                       ),
                     ),
