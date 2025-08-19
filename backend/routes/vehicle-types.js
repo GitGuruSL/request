@@ -8,9 +8,15 @@ router.get('/', async (req, res) => {
     const countryCode = req.query.country || 'LK';
     
     const result = await database.query(`
-      SELECT vt.*, cvt.is_enabled as country_enabled
+      SELECT 
+        vt.*, 
+        cvt.is_active AS country_specific_active,
+        COALESCE(cvt.is_active, vt.is_active) AS country_enabled,
+        cvt.id AS country_vehicle_type_id
       FROM vehicle_types vt
-      LEFT JOIN country_vehicle_types cvt ON vt.id = cvt.vehicle_type_id AND cvt.country_code = $1
+      LEFT JOIN country_vehicle_types cvt 
+        ON vt.id = cvt.vehicle_type_id 
+       AND cvt.country_code = $1
       WHERE vt.is_active = true
       ORDER BY vt.name
     `, [countryCode]);
