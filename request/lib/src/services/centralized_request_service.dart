@@ -325,12 +325,30 @@ class CentralizedRequestService {
         // Nothing to send -> keep null to avoid empty object clutter in DB
       }
 
+      // Location fields (optional). Accept multiple key variants.
+      final locationAddress =
+          data['location_address'] ?? data['locationAddress'];
+      final locationLatitudeRaw =
+          data['location_latitude'] ?? data['locationLatitude'];
+      final locationLongitudeRaw =
+          data['location_longitude'] ?? data['locationLongitude'];
+      final countryCode = data['country_code'] ?? data['countryCode'];
+      double? locationLatitude = _asDoubleInternal(locationLatitudeRaw);
+      double? locationLongitude = _asDoubleInternal(locationLongitudeRaw);
+
       final payload = CreateResponseData(
         message: message,
         price: price,
         currency: currency,
         metadata: meta.isEmpty ? null : meta,
         imageUrls: images,
+        locationAddress:
+            (locationAddress?.toString().trim().isNotEmpty ?? false)
+                ? locationAddress.toString().trim()
+                : null,
+        locationLatitude: locationLatitude,
+        locationLongitude: locationLongitude,
+        countryCode: countryCode?.toString(),
       );
 
       // Debug log (non-sensitive)

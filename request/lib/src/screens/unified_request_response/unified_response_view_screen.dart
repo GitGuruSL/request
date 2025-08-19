@@ -239,7 +239,6 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
 
   Widget _buildActionButtons() {
     final isRequester = _currentUser?.id == widget.request.requesterId;
-    final isResponder = _currentUser?.id == widget.response.responderId;
 
     if (_isProcessing) {
       return const Center(child: CircularProgressIndicator());
@@ -594,6 +593,38 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
                                   color: Colors.grey[600],
                                   fontSize: 14,
                                 ),
+                              ),
+                            ],
+                            if (widget.response
+                                        .additionalInfo['location_address'] !=
+                                    null ||
+                                widget.response
+                                        .additionalInfo['locationAddress'] !=
+                                    null) ...[
+                              const SizedBox(height: 6),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Icon(Icons.location_on,
+                                      size: 16, color: Colors.redAccent),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      widget
+                                              .response
+                                              .additionalInfo[
+                                                  'location_address']
+                                              ?.toString() ??
+                                          widget.response
+                                              .additionalInfo['locationAddress']
+                                              ?.toString() ??
+                                          '',
+                                      style: TextStyle(
+                                          color: Colors.grey[700],
+                                          fontSize: 13),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ],

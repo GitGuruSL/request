@@ -7,13 +7,21 @@ const auth = require('../services/auth');
 function optionalAuth(handler){
   return async (req,res,next)=>{
     try {
-      try {
-        await auth.authMiddleware()(req,res,()=>{});
-      } catch(err){
+      const hasAuthHeader = !!req.headers.authorization;
+      if (hasAuthHeader) {
+        let authErrored = false;
+        // Wrap auth middleware to capture response without prematurely ending request chain in dev
+        await auth.authMiddleware()(req, {
+          status:(code)=>({ json:(obj)=>{ authErrored = true; res.status(code).json(obj); } })
+        }, ()=>{});
+        if (authErrored) {
+          // In prod: stop. In dev: fall through only if configured
+          if (process.env.NODE_ENV !== 'development') return; // response already sent
+          console.warn('[responses][optionalAuth] auth header present but failed verification; continuing (dev only).');
+        }
+      } else {
         if (process.env.NODE_ENV === 'development') {
-          console.warn('[responses][optionalAuth] auth failed in dev, allowing unauthenticated create:', err.message);
-        } else {
-          return res.status(401).json({ success:false, message:'Unauthorized: ' + err.message });
+          console.warn('[responses][optionalAuth] no Authorization header; continuing unauthenticated (dev only).');
         }
       }
       return handler(req,res,next);
@@ -24,30 +32,47 @@ function optionalAuth(handler){
 }
 
 // List responses for a request with pagination
-router.get('/', async (req, res) => {
+router.get('/', optionalAuth(async (req, res) => {
   try {
     const requestId = req.params.requestId;
+    const userId = req.user?.id || req.user?.userId;
     const { page = 1, limit = 20 } = req.query;
     const pageNum = parseInt(page) || 1;
     const lim = Math.min(parseInt(limit) || 20, 100);
     const offset = (pageNum - 1) * lim;
 
-    // Verify request exists (cheap check)
-    const exists = await db.queryOne('SELECT id FROM requests WHERE id = $1', [requestId]);
-    if (!exists) {
-      return res.status(404).json({ success: false, message: 'Request not found' });
+    // Verify request & owner
+    const requestRow = await db.queryOne('SELECT id, user_id FROM requests WHERE id = $1', [requestId]);
+    if (!requestRow) return res.status(404).json({ success:false, message:'Request not found' });
+    const isOwner = userId && requestRow.user_id === userId;
+
+    // If not owner, only show the current user's own response (privacy)
+    let rows, countRow;
+    if (isOwner) {
+      rows = await db.query(`
+        SELECT r.*, u.display_name as user_name
+        FROM responses r
+        LEFT JOIN users u ON r.user_id = u.id
+        WHERE r.request_id = $1
+        ORDER BY r.created_at DESC
+        LIMIT $2 OFFSET $3
+      `, [requestId, lim, offset]);
+      countRow = await db.queryOne('SELECT COUNT(*)::int AS total FROM responses WHERE request_id = $1', [requestId]);
+    } else if (userId) {
+      rows = await db.query(`
+        SELECT r.*, u.display_name as user_name
+        FROM responses r
+        LEFT JOIN users u ON r.user_id = u.id
+        WHERE r.request_id = $1 AND r.user_id = $2
+        ORDER BY r.created_at DESC
+        LIMIT $3 OFFSET $4
+      `, [requestId, userId, lim, offset]);
+      countRow = await db.queryOne('SELECT COUNT(*)::int AS total FROM responses WHERE request_id = $1 AND user_id = $2', [requestId, userId]);
+    } else {
+      // Unauthenticated: hide responses entirely
+      rows = { rows: [] };
+      countRow = { total: 0 };
     }
-
-    const rows = await db.query(`
-      SELECT r.*, u.display_name as user_name
-      FROM responses r
-      LEFT JOIN users u ON r.user_id = u.id
-      WHERE r.request_id = $1
-      ORDER BY r.created_at DESC
-      LIMIT $2 OFFSET $3
-    `, [requestId, lim, offset]);
-
-    const countRow = await db.queryOne('SELECT COUNT(*)::int AS total FROM responses WHERE request_id = $1', [requestId]);
 
     res.json({
       success: true,
@@ -55,9 +80,9 @@ router.get('/', async (req, res) => {
         responses: rows.rows,
         pagination: {
           page: pageNum,
-            limit: lim,
-            total: countRow.total,
-            totalPages: Math.ceil(countRow.total / lim)
+          limit: lim,
+          total: countRow.total,
+          totalPages: Math.ceil((countRow.total || 0) / lim)
         }
       }
     });
@@ -65,14 +90,14 @@ router.get('/', async (req, res) => {
     console.error('Error listing responses:', error);
     res.status(500).json({ success: false, message: 'Error listing responses', error: error.message });
   }
-});
+}));
 
 // Create a response (one per user per request enforced by unique index)
 router.post('/', optionalAuth(async (req, res) => {
   try {
     const requestId = req.params.requestId;
-    const userId = req.user?.userId;
-    const { message, price, currency, metadata, image_urls, imageUrls, images } = req.body || {};
+  const userId = req.user?.id || req.user?.userId; // auth middleware sets id
+  const { message, price, currency, metadata, image_urls, imageUrls, images, location_address, location_latitude, location_longitude, country_code } = req.body || {};
 
     console.log('[responses][create] incoming', {
       requestId,
@@ -109,10 +134,10 @@ router.post('/', optionalAuth(async (req, res) => {
     const finalImages = image_urls || imageUrls || images || null;
 
     const insert = await db.queryOne(`
-      INSERT INTO responses (request_id, user_id, message, price, currency, metadata, image_urls)
-      VALUES ($1,$2,$3,$4,$5,$6,$7)
+      INSERT INTO responses (request_id, user_id, message, price, currency, metadata, image_urls, location_address, location_latitude, location_longitude, country_code)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
       RETURNING *
-    `, [requestId, userId, message.trim(), price ?? null, currency || request.currency, metadata || null, finalImages]);
+    `, [requestId, userId, message.trim(), price ?? null, currency || request.currency, metadata || null, finalImages, location_address || null, location_latitude || null, location_longitude || null, country_code || request.country_code || null]);
 
     console.log('[responses][create] inserted', { id: insert.id, requestId });
   res.status(201).json({ success: true, message: 'Response created', data: insert });
@@ -129,7 +154,7 @@ router.post('/', optionalAuth(async (req, res) => {
 router.put('/:responseId', auth.authMiddleware(), async (req, res) => {
   try {
     const { requestId, responseId } = req.params;
-    const userId = req.user.userId;
+  const userId = req.user.id || req.user.userId;
     const { message, price, status } = req.body;
 
     const existing = await db.queryOne('SELECT * FROM responses WHERE id = $1 AND request_id = $2', [responseId, requestId]);
@@ -167,7 +192,7 @@ router.put('/:responseId', auth.authMiddleware(), async (req, res) => {
 router.delete('/:responseId', auth.authMiddleware(), async (req, res) => {
   try {
     const { requestId, responseId } = req.params;
-    const userId = req.user.userId;
+  const userId = req.user.id || req.user.userId;
 
     const existing = await db.queryOne('SELECT r.*, req.user_id as request_owner FROM responses r JOIN requests req ON r.request_id = req.id WHERE r.id = $1 AND r.request_id = $2', [responseId, requestId]);
     if (!existing) return res.status(404).json({ success: false, message: 'Response not found' });

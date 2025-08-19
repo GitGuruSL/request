@@ -238,6 +238,10 @@ class ResponseModel {
   final String? currency;
   final Map<String, dynamic>? metadata;
   final List<String>? imageUrls;
+  final String? locationAddress;
+  final double? locationLatitude;
+  final double? locationLongitude;
+  final String? countryCode;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -251,6 +255,10 @@ class ResponseModel {
     this.currency,
     this.metadata,
     this.imageUrls,
+    this.locationAddress,
+    this.locationLatitude,
+    this.locationLongitude,
+    this.countryCode,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -267,6 +275,10 @@ class ResponseModel {
         imageUrls: json['image_urls'] != null
             ? List<String>.from(json['image_urls'])
             : null,
+        locationAddress: json['location_address'],
+        locationLatitude: _asDouble(json['location_latitude']),
+        locationLongitude: _asDouble(json['location_longitude']),
+        countryCode: json['country_code'],
         createdAt: DateTime.parse(json['created_at']),
         updatedAt: DateTime.parse(json['updated_at']),
       );
@@ -280,6 +292,10 @@ class ResponseModel {
         'currency': currency,
         'metadata': metadata,
         'image_urls': imageUrls,
+        'location_address': locationAddress,
+        'location_latitude': locationLatitude,
+        'location_longitude': locationLongitude,
+        'country_code': countryCode,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
       };
@@ -291,12 +307,20 @@ class CreateResponseData {
   final String? currency;
   final Map<String, dynamic>? metadata;
   final List<String>? imageUrls;
+  final String? locationAddress;
+  final double? locationLatitude;
+  final double? locationLongitude;
+  final String? countryCode;
   CreateResponseData({
     required this.message,
     this.price,
     this.currency,
     this.metadata,
     this.imageUrls,
+    this.locationAddress,
+    this.locationLatitude,
+    this.locationLongitude,
+    this.countryCode,
   });
   Map<String, dynamic> toJson() => {
         'message': message,
@@ -304,6 +328,11 @@ class CreateResponseData {
         if (currency != null) 'currency': currency,
         if (metadata != null) 'metadata': metadata,
         if (imageUrls != null) 'image_urls': imageUrls,
+        if (locationAddress != null && locationAddress!.isNotEmpty)
+          'location_address': locationAddress,
+        if (locationLatitude != null) 'location_latitude': locationLatitude,
+        if (locationLongitude != null) 'location_longitude': locationLongitude,
+        if (countryCode != null) 'country_code': countryCode,
       };
 }
 
