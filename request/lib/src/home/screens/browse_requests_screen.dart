@@ -23,7 +23,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     'Items',
     'Service',
     'Rent',
-    'Deliver',
+    'Delivery',
     'Ride',
   ];
 
@@ -116,20 +116,62 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Browse Requests'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadInitial,
-            tooltip: 'Refresh',
-          ),
-        ],
-      ),
       body: Column(
         children: [
+          // Modern header without AppBar
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(24),
+                bottomRight: Radius.circular(24),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  spreadRadius: 1,
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Text(
+                          'Discover Requests',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(Icons.refresh),
+                          onPressed: _loadInitial,
+                          tooltip: 'Refresh',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Find requests that match your skills',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
           _buildCategoryChips(),
           _buildResultCount(),
           Expanded(
@@ -302,7 +344,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
       'Items': const Color(0xFFFF6B35).withOpacity(0.1), // Orange
       'Service': const Color(0xFF00BCD4).withOpacity(0.1), // Teal
       'Rent': const Color(0xFF2196F3).withOpacity(0.1), // Blue
-      'Deliver': const Color(0xFF4CAF50).withOpacity(0.1), // Green
+      'Delivery': const Color(0xFF4CAF50).withOpacity(0.1), // Green
       'Ride': const Color(0xFFFFC107).withOpacity(0.1), // Yellow
     };
 
@@ -310,7 +352,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
       'Items': const Color(0xFFFF6B35), // Orange
       'Service': const Color(0xFF00BCD4), // Teal
       'Rent': const Color(0xFF2196F3), // Blue
-      'Deliver': const Color(0xFF4CAF50), // Green
+      'Delivery': const Color(0xFF4CAF50), // Green
       'Ride': const Color(0xFFFFC107), // Yellow
     };
 
@@ -456,7 +498,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
         searchText.contains('deliver') ||
         searchText.contains('courier') ||
         searchText.contains('shipping')) {
-      return 'Deliver';
+      return 'Delivery';
     }
 
     // Check for rental keywords
