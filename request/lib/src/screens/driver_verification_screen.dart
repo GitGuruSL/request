@@ -754,41 +754,39 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
                       ),
                       const SizedBox(height: 12),
 
-                      // Phone Number Input Field (when no phone number is available)
-                      if (_phoneController.text.isEmpty) ...[
-                        TextFormField(
-                          controller: _phoneController,
-                          decoration: InputDecoration(
-                            labelText: 'Phone Number *',
-                            hintText: 'Enter your phone number',
-                            prefixIcon: Icon(Icons.phone),
-                            prefixText:
-                                '${_userCountryPhoneCode ?? '+94'} ', // Show country code
-                            border: OutlineInputBorder(),
-                            helperText:
-                                'This number will be used for driver verification',
-                          ),
-                          keyboardType: TextInputType.phone,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Phone number is required for driver registration';
-                            }
-                            // Use the same validation as the OTP trigger
-                            if (!_isValidPhoneNumber(value)) {
-                              return 'Please enter a valid phone number (minimum 7 digits)';
-                            }
-                            return null;
-                          },
-                          onChanged: (value) {
-                            setState(() {
-                              // Reset verification status when phone number changes
-                              _isPhoneVerified = false;
-                              _isPhoneOtpSent = false;
-                            });
-                          },
+                      // Phone Number Input Field (always editable)
+                      TextFormField(
+                        controller: _phoneController,
+                        decoration: InputDecoration(
+                          labelText: 'Phone Number *',
+                          hintText: 'Enter your phone number',
+                          prefixIcon: Icon(Icons.phone),
+                          prefixText:
+                              '${_userCountryPhoneCode ?? '+94'} ', // Show country code
+                          border: OutlineInputBorder(),
+                          helperText:
+                              'This number will be used for driver verification',
                         ),
-                        const SizedBox(height: 12),
-                      ],
+                        keyboardType: TextInputType.phone,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Phone number is required for driver registration';
+                          }
+                          // Use the same validation as the OTP trigger
+                          if (!_isValidPhoneNumber(value)) {
+                            return 'Please enter a valid phone number (minimum 7 digits)';
+                          }
+                          return null;
+                        },
+                        onChanged: (value) {
+                          setState(() {
+                            // Reset verification status when phone number changes
+                            _isPhoneVerified = false;
+                            _isPhoneOtpSent = false;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 12),
 
                       // Show current phone number if available but not verified
                       if (_isValidPhoneNumber(_phoneController.text) &&
