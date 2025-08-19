@@ -65,6 +65,7 @@ const testImageRoutes = require('./routes/test-images'); // TEST
 const subscriptionPlansLegacy = require('./routes/subscription-plans-legacy');
 const subscriptionPlansNew = require('./routes/subscription-plans-new');
 const contentPagesRoutes = require('./routes/content-pages');
+const driverVerificationRoutes = require('./routes/driver-verifications'); // NEW
 
 // Serve static files (uploaded images)
 app.use('/uploads', express.static('uploads', {
@@ -89,6 +90,7 @@ app.use('/api/test-images', testImageRoutes); // TEST - image serving test
 app.use('/api', subscriptionPlansLegacy); // legacy paths /subscription-plans, /user-subscriptions
 app.use('/api', subscriptionPlansNew); // new CRUD under /subscription-plans-new
 app.use('/api/content-pages', contentPagesRoutes); // content pages management
+app.use('/api/driver-verifications', driverVerificationRoutes); // NEW - driver verification management
 
 // Error handling middleware
 app.use((err, req, res, next) => {
