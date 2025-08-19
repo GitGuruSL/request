@@ -10,16 +10,14 @@ class ImageUploadService {
   final ImagePicker _picker = ImagePicker();
 
   // Get the base URL for the API (same logic as ImageUrlHelper)
+  // Optionally override via --dart-define=API_HOST=http://192.168.1.50:3001
+  static const String _apiHostOverride = String.fromEnvironment('API_HOST');
   static String get _baseUrl {
-    if (kIsWeb) {
-      return 'http://localhost:3001'; // Web
-    } else if (Platform.isAndroid) {
-      return 'http://10.0.2.2:3001'; // Android emulator
-    } else if (Platform.isIOS) {
-      return 'http://localhost:3001'; // iOS simulator
-    } else {
-      return 'http://localhost:3001'; // Desktop/other
-    }
+    if (_apiHostOverride.isNotEmpty) return _apiHostOverride;
+    if (kIsWeb) return 'http://localhost:3001';
+    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
+    if (Platform.isIOS) return 'http://localhost:3001';
+    return 'http://localhost:3001';
   }
 
   Future<List<XFile>?> pickMultipleImages({int maxImages = 5}) async {
@@ -67,7 +65,8 @@ class ImageUploadService {
         print('🖼️ [ImageUpload] Sending request to: ${uri.toString()}');
       }
 
-      final response = await request.send();
+      final response =
+          await request.send().timeout(const Duration(seconds: 15));
 
       if (kDebugMode) {
         print('🖼️ [ImageUpload] Response status: ${response.statusCode}');
@@ -95,6 +94,14 @@ class ImageUploadService {
     } catch (e) {
       if (kDebugMode) {
         print('🖼️ [ImageUpload] Error uploading image: $e');
+        try {
+          // Quick connectivity probe
+          final probe = await http.get(Uri.parse('$_baseUrl/api/ping'));
+          print(
+              '🖼️ [ImageUpload] Ping status: ${probe.statusCode} body: ${probe.body}');
+        } catch (probeError) {
+          print('🖼️ [ImageUpload] Ping failed: $probeError');
+        }
         print('🖼️ [ImageUpload] Falling back to local file path');
       }
       // Fallback to local file path for development

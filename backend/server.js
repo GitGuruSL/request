@@ -182,13 +182,21 @@ app.use('*', (req, res) => {
     });
 });
 
+// Simple ping endpoint for connectivity diagnostics (before starting server)
+app.get('/api/ping', (req, res) => {
+  res.json({ success: true, message: 'pong', time: new Date().toISOString() });
+});
+
 // Start server
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-    console.log(`📊 API base: http://localhost:${PORT}/api`);
-    console.log(`🌍 CORS allowed origins: ${allowedOrigins.join(', ')}`);
+const HOST = process.env.HOST || '0.0.0.0'; // Bind to all interfaces for Android emulator / devices
+app.listen(PORT, HOST, () => {
+  console.log(`🚀 Server running on ${HOST}:${PORT}`);
+  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+  console.log(`📊 API base: http://localhost:${PORT}/api`);
+  console.log(`🤖 Android emulator: http://10.0.2.2:${PORT}/api`);
+  console.log(`📶 Ping: http://localhost:${PORT}/api/ping`);
+  console.log(`🌍 CORS allowed origins: ${allowedOrigins.join(', ')}`);
 });
 
 module.exports = app;
