@@ -118,86 +118,52 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA), // Light gray background
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Modern Search Header
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(24),
-                  bottomRight: Radius.circular(24),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Text(
-                        'Discover Requests',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.refresh),
-                        onPressed: _loadInitial,
-                        tooltip: 'Refresh',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Find requests that match your skills',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            _buildCategoryChips(),
-            _buildResultCount(),
-            Expanded(
-              child: _initialLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _error != null
-                      ? _buildErrorState()
-                      : _filteredRequests.isEmpty
-                          ? _buildEmptyState()
-                          : RefreshIndicator(
-                              onRefresh: _loadInitial,
-                              child: ListView.builder(
-                                controller: _scrollController,
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 16),
-                                itemCount: _filteredRequests.length +
-                                    (_fetchingMore ? 1 : 0),
-                                itemBuilder: (context, index) {
-                                  if (index == _filteredRequests.length) {
-                                    return const Padding(
-                                      padding:
-                                          EdgeInsets.symmetric(vertical: 16),
-                                      child: Center(
-                                          child: CircularProgressIndicator()),
-                                    );
-                                  }
-                                  final request = _filteredRequests[index];
-                                  return _buildRequestCard(request);
-                                },
-                              ),
+      appBar: AppBar(
+        title: const Text('Browse Requests'),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadInitial,
+            tooltip: 'Refresh',
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          _buildCategoryChips(),
+          _buildResultCount(),
+          Expanded(
+            child: _initialLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                    ? _buildErrorState()
+                    : _filteredRequests.isEmpty
+                        ? _buildEmptyState()
+                        : RefreshIndicator(
+                            onRefresh: _loadInitial,
+                            child: ListView.builder(
+                              controller: _scrollController,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: _filteredRequests.length +
+                                  (_fetchingMore ? 1 : 0),
+                              itemBuilder: (context, index) {
+                                if (index == _filteredRequests.length) {
+                                  return const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 16),
+                                    child: Center(
+                                        child: CircularProgressIndicator()),
+                                  );
+                                }
+                                final request = _filteredRequests[index];
+                                return _buildRequestCard(request);
+                              },
                             ),
-            ),
-          ],
-        ),
+                          ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -322,145 +288,117 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
   }
 
   Widget _buildRequestCard(RequestModel request) {
-    // Define category colors
-    final categoryColors = {
-      'Transportation': const Color(0xFFFFC107).withOpacity(0.1), // Yellow
-      'Moving': const Color(0xFF2196F3).withOpacity(0.1), // Blue
-      'Education': const Color(0xFF9C27B0).withOpacity(0.1), // Purple
-      'Delivery': const Color(0xFF4CAF50).withOpacity(0.1), // Green
-      'Household': const Color(0xFFFF6B35).withOpacity(0.1), // Orange
-      'Technology': const Color(0xFF00BCD4).withOpacity(0.1), // Teal
-    };
-
-    final categoryBorderColors = {
-      'Transportation': const Color(0xFFFFC107), // Yellow
-      'Moving': const Color(0xFF2196F3), // Blue
-      'Education': const Color(0xFF9C27B0), // Purple
-      'Delivery': const Color(0xFF4CAF50), // Green
-      'Household': const Color(0xFFFF6B35), // Orange
-      'Technology': const Color(0xFF00BCD4), // Teal
-    };
-
-    final categoryName = request.categoryName ?? 'Other';
-    final cardColor = categoryColors[categoryName] ?? Colors.grey[100]!;
-    final borderColor = categoryBorderColors[categoryName] ?? Colors.grey[400]!;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: borderColor.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
       child: InkWell(
         onTap: () => _showRequestDetails(request),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(8),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header with category and status
               Row(
                 children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: borderColor,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                  Expanded(
                     child: Text(
-                      categoryName,
+                      request.title,
                       style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                  const Spacer(),
                   if (request.status.toLowerCase() != 'active')
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
-                        color: Colors.green[100],
-                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.orange[100],
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         request.status.toUpperCase(),
                         style: TextStyle(
-                          color: Colors.green[700],
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange[700],
                         ),
                       ),
                     ),
                 ],
               ),
-
-              const SizedBox(height: 12),
-
-              // Title
-              Text(
-                request.title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-
               const SizedBox(height: 8),
-
-              // Description
               Text(
                 request.description,
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey[700],
-                  height: 1.4,
                 ),
-                maxLines: 3,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-
               const SizedBox(height: 12),
-
-              // Footer with budget and timestamp
               Row(
                 children: [
                   Icon(
-                    Icons.attach_money,
-                    size: 16,
-                    color: Colors.grey[600],
-                  ),
-                  Text(
-                    _formatBudget(request),
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: borderColor,
-                    ),
-                  ),
-                  const Spacer(),
-                  Icon(
-                    Icons.access_time,
+                    Icons.category,
                     size: 16,
                     color: Colors.grey[600],
                   ),
                   const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      request.categoryName ?? request.categoryId,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Icon(
+                    Icons.location_on,
+                    size: 16,
+                    color: Colors.grey[600],
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      request.cityName ?? request.countryCode,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(
+                    child: Text(
+                      _formatBudget(request),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                   Text(
                     _relativeTime(request.createdAt),
                     style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
+                      fontSize: 12,
+                      color: Colors.grey[500],
                     ),
                   ),
                 ],
