@@ -4,7 +4,7 @@ class Conversation {
   final String? participantA;
   final String? participantB;
   final String? lastMessageText;
-  final DateTime lastMessageAt;
+  final DateTime? lastMessageAt;
   final String? requestTitle;
 
   Conversation({
@@ -13,7 +13,7 @@ class Conversation {
     this.participantA,
     this.participantB,
     this.lastMessageText,
-    required this.lastMessageAt,
+    this.lastMessageAt,
     this.requestTitle,
   });
 
@@ -23,7 +23,9 @@ class Conversation {
         participantA: j['participant_a'] as String?,
         participantB: j['participant_b'] as String?,
         lastMessageText: j['last_message_text'] as String?,
-        lastMessageAt: DateTime.parse(j['last_message_at'] as String),
+        lastMessageAt: j['last_message_at'] != null
+            ? DateTime.parse(j['last_message_at'] as String)
+            : null,
         requestTitle: (j['requestTitle'] ?? j['request_title']) as String?,
       );
 }
