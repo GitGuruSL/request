@@ -79,15 +79,15 @@ const ModuleManagement = () => {
     try {
       setLoading(true);
       const res = await api.get(`/country-modules/${countryCode}`);
-      if (res.data) {
-        setCountryModules(res.data.modules || {});
-        setCountryDependencies(res.data.coreDependencies || {});
-      } else {
-        const defaultModules = {}; const defaultDependencies = {};
-        Object.keys(BUSINESS_MODULES).forEach(key => { const module = BUSINESS_MODULES[key]; defaultModules[module.id] = module.defaultEnabled; });
-        Object.keys(CORE_DEPENDENCIES).forEach(key => { defaultDependencies[key] = true; });
-        setCountryModules(defaultModules); setCountryDependencies(defaultDependencies);
-      }
+  const payload = res.data?.data || res.data;
+  const existingModules = payload?.modules || payload?.data?.modules || {};
+  const existingCore = payload?.core_dependencies || payload?.coreDependencies || {};
+
+  // Merge defaults so new modules appear enabled per defaultEnabled if not explicitly stored
+  const mergedModules = { ...Object.fromEntries(Object.values(BUSINESS_MODULES).map(m => [m.id, m.defaultEnabled])), ...existingModules };
+  const mergedCore = { ...Object.fromEntries(Object.keys(CORE_DEPENDENCIES).map(k => [k, true])), ...existingCore };
+  setCountryModules(mergedModules);
+  setCountryDependencies(mergedCore);
     } catch (error) {
       console.error('Error fetching country modules:', error);
       setSnackbar({ open: true, message: 'Error fetching country modules', severity: 'error' });
@@ -204,8 +204,8 @@ const ModuleManagement = () => {
   };
 
   const saveCountryConfiguration = async (modules, dependencies) => {
-    const payload = { modules, coreDependencies: dependencies };
-    await api.put(`/country-modules/${selectedCountry}`, payload);
+  const payload = { modules, coreDependencies: dependencies };
+  await api.put(`/country-modules/${selectedCountry}`, payload);
   };
 
   const getModuleStatus = (moduleId) => {

@@ -8,8 +8,20 @@ router.get('/:countryCode', async (req, res) => {
   try {
     const { countryCode } = req.params;
     const row = await db.queryOne('SELECT * FROM country_modules WHERE country_code = $1', [countryCode.toUpperCase()]);
-    if (!row) return res.status(404).json({ success: false, message: 'No module configuration found' });
-    res.json({ success: true, ...row });
+    if (!row) {
+      // Provide defaults instead of 404 so frontend can show toggles & then save
+      return res.json({
+        success: true,
+        data: {
+          country_code: countryCode.toUpperCase(),
+          modules: {},
+          core_dependencies: {},
+          version: '1.0.0'
+        },
+        default: true
+      });
+    }
+    res.json({ success: true, data: row });
   } catch (e) {
     console.error('Fetch country modules error', e);
     res.status(500).json({ success: false, message: 'Error fetching country modules' });
@@ -37,7 +49,7 @@ router.put('/:countryCode', auth.authMiddleware(), auth.roleMiddleware(['super_a
             updated_at = NOW()
       RETURNING *
     `, [countryCode.toUpperCase(), JSON.stringify(modules), JSON.stringify(coreDependencies), version]);
-    res.json({ success:true, message:'Configuration saved', data: upsert });
+  res.json({ success:true, message:'Configuration saved', data: upsert });
   } catch (e) {
     console.error('Upsert country modules error', e);
     res.status(500).json({ success:false, message:'Error saving configuration' });
