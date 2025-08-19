@@ -27,14 +27,29 @@ class ChatService {
           'currentUserId': currentUserId,
           'otherUserId': otherUserId,
         }));
+
+    print('🔥 [ChatService] openConversation response: ${resp.statusCode}');
+    print('🔥 [ChatService] response body: ${resp.body}');
+
     if (resp.statusCode != 200) {
-      throw Exception('Failed to open conversation');
+      throw Exception(
+          'Failed to open conversation: ${resp.statusCode} - ${resp.body}');
     }
-    final data = jsonDecode(resp.body);
-    final convo = Conversation.fromJson(data['conversation']);
-    final messages =
-        (data['messages'] as List).map((m) => ChatMessage.fromJson(m)).toList();
-    return (convo, messages);
+
+    try {
+      final data = jsonDecode(resp.body);
+      print('🔥 [ChatService] parsed data: $data');
+
+      final convo = Conversation.fromJson(data['conversation']);
+      final messages = (data['messages'] as List)
+          .map((m) => ChatMessage.fromJson(m as Map<String, dynamic>))
+          .toList();
+      return (convo, messages);
+    } catch (e, stack) {
+      print('🔥 [ChatService] JSON parsing error: $e');
+      print('🔥 [ChatService] Stack trace: $stack');
+      rethrow;
+    }
   }
 
   Future<ChatMessage> sendMessage({

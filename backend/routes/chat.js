@@ -6,16 +6,41 @@ const db = require('../services/database');
 async function ensureSchema() {
   // Enable pgcrypto for gen_random_uuid (ignore error if not permitted)
   try { await db.query('CREATE EXTENSION IF NOT EXISTS pgcrypto'); } catch (_) {}
+  // Initial create (legacy installations may already have conversations with participant_ids UUID[] instead)
   await db.query(`CREATE TABLE IF NOT EXISTS conversations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     request_id UUID NOT NULL,
-    participant_a UUID NOT NULL,
-    participant_b UUID NOT NULL,
+    -- New normalized columns (may be added later via ALTER if legacy)
+    participant_a UUID,
+    participant_b UUID,
+    -- Legacy column (may or may not exist)
+    participant_ids UUID[],
     last_message_text TEXT,
     last_message_at TIMESTAMPTZ DEFAULT NOW(),
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(request_id, participant_a, participant_b)
+    created_at TIMESTAMPTZ DEFAULT NOW()
   );`);
+
+  // Ensure new columns exist if table was created previously without them
+  await db.query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS participant_a UUID;`);
+  await db.query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS participant_b UUID;`);
+  await db.query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS created_by UUID;`);
+
+  // Attempt to migrate legacy participant_ids -> participant_a / participant_b (only where not already set)
+  await db.query(`UPDATE conversations SET participant_a = participant_ids[1], participant_b = participant_ids[2]
+                  WHERE participant_a IS NULL AND participant_ids IS NOT NULL AND array_length(participant_ids,1)=2;`);
+
+  // Backfill created_by where possible (prefer participant_a then first legacy id)
+  await db.query(`UPDATE conversations SET created_by = COALESCE(participant_a, participant_ids[1]) WHERE created_by IS NULL;`);
+
+  // Add unique constraint on (request_id, participant_a, participant_b) if it doesn't already exist and both columns are present
+  await db.query(`DO $$ BEGIN
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_constraint WHERE conname = 'conversations_request_participants_key'
+    ) THEN
+      ALTER TABLE conversations
+        ADD CONSTRAINT conversations_request_participants_key UNIQUE (request_id, participant_a, participant_b);
+    END IF;
+  END $$;`);
   await db.query(`CREATE TABLE IF NOT EXISTS messages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
@@ -35,9 +60,21 @@ router.post('/open', async (req, res) => {
     }
     await ensureSchema();
     const [a, b] = canonicalPair(currentUserId, otherUserId);
+    // Try to find an existing normalized conversation
     let convo = await db.queryOne(`SELECT * FROM conversations WHERE request_id=$1 AND participant_a=$2 AND participant_b=$3`, [requestId, a, b]);
     if (!convo) {
-      convo = await db.queryOne(`INSERT INTO conversations (request_id, participant_a, participant_b) VALUES ($1,$2,$3) RETURNING *`, [requestId, a, b]);
+      // Fallback: look in legacy rows that still only have participant_ids
+      convo = await db.queryOne(`SELECT * FROM conversations WHERE request_id=$1 AND participant_a IS NULL AND participant_ids @> ARRAY[$2,$3]::uuid[] AND array_length(participant_ids,1)=2`, [requestId, a, b]);
+    }
+    if (!convo) {
+      // Insert new normalized row (created_by = current user who initiated open)
+      convo = await db.queryOne(`INSERT INTO conversations (request_id, participant_a, participant_b, participant_ids, created_by) VALUES ($1,$2,$3, ARRAY[$2,$3]::uuid[], $4) RETURNING *`, [requestId, a, b, currentUserId]);
+    } else if (!convo.participant_a) {
+      // Migrate this legacy row now (best effort)
+      try {
+        await db.query(`UPDATE conversations SET participant_a=$1, participant_b=$2 WHERE id=$3`, [a, b, convo.id]);
+        convo.participant_a = a; convo.participant_b = b;
+      } catch (_) { /* ignore */ }
     }
     const messages = await db.query(`SELECT * FROM messages WHERE conversation_id=$1 ORDER BY created_at ASC LIMIT 100`, [convo.id]);
     const requestRow = await db.queryOne(`SELECT title FROM requests WHERE id=$1`, [requestId]);
@@ -53,7 +90,9 @@ router.get('/conversations', async (req, res) => {
     const { userId } = req.query;
     if (!userId) return res.status(400).json({ success: false, error: 'userId required' });
     await ensureSchema();
-    const rows = await db.query(`SELECT c.*, r.title AS request_title FROM conversations c JOIN requests r ON r.id = c.request_id WHERE participant_a=$1 OR participant_b=$1 ORDER BY last_message_at DESC LIMIT 200`, [userId]);
+    const rows = await db.query(`SELECT c.*, r.title AS request_title FROM conversations c JOIN requests r ON r.id = c.request_id 
+      WHERE (participant_a=$1 OR participant_b=$1 OR (participant_a IS NULL AND participant_ids @> ARRAY[$1]::uuid[]))
+      ORDER BY last_message_at DESC LIMIT 200`, [userId]);
     res.json({ success: true, conversations: rows.rows });
   } catch (e) {
     console.error('Chat list error', e);

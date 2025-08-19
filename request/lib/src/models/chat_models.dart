@@ -1,8 +1,8 @@
 class Conversation {
   final String id;
   final String requestId;
-  final String participantA;
-  final String participantB;
+  final String? participantA;
+  final String? participantB;
   final String? lastMessageText;
   final DateTime lastMessageAt;
   final String? requestTitle;
@@ -10,21 +10,21 @@ class Conversation {
   Conversation({
     required this.id,
     required this.requestId,
-    required this.participantA,
-    required this.participantB,
-    required this.lastMessageText,
+    this.participantA,
+    this.participantB,
+    this.lastMessageText,
     required this.lastMessageAt,
-    required this.requestTitle,
+    this.requestTitle,
   });
 
   factory Conversation.fromJson(Map<String, dynamic> j) => Conversation(
-        id: j['id'],
-        requestId: j['request_id'],
-        participantA: j['participant_a'],
-        participantB: j['participant_b'],
-        lastMessageText: j['last_message_text'],
-        lastMessageAt: DateTime.parse(j['last_message_at']),
-        requestTitle: j['requestTitle'] ?? j['request_title'],
+        id: j['id'] as String,
+        requestId: j['request_id'] as String,
+        participantA: j['participant_a'] as String?,
+        participantB: j['participant_b'] as String?,
+        lastMessageText: j['last_message_text'] as String?,
+        lastMessageAt: DateTime.parse(j['last_message_at'] as String),
+        requestTitle: (j['requestTitle'] ?? j['request_title']) as String?,
       );
 }
 
@@ -44,10 +44,10 @@ class ChatMessage {
   });
 
   factory ChatMessage.fromJson(Map<String, dynamic> j) => ChatMessage(
-        id: j['id'],
-        conversationId: j['conversation_id'],
-        senderId: j['sender_id'],
-        content: j['content'],
-        createdAt: DateTime.parse(j['created_at']),
+        id: j['id'] as String,
+        conversationId: j['conversation_id'] as String,
+        senderId: j['sender_id'] as String,
+        content: j['content'] as String,
+        createdAt: DateTime.parse(j['created_at'] as String),
       );
 }
