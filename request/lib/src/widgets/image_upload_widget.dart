@@ -201,11 +201,9 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
           ],
         ),
         const SizedBox(height: 8),
+        // Outer container without border (border removed per design request)
         Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(8),
-          ),
+          // Removed BoxDecoration border & radius to eliminate outer border appearance
           child: Column(
             children: [
               // Upload Area
@@ -295,10 +293,10 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
   Widget _buildImageItem(String imageUrl, int index, bool isUploaded) {
     return Stack(
       children: [
+        // Image wrapper without border (border removed)
         Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.shade300),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
@@ -333,10 +331,10 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
   Widget _buildPendingImageItem(XFile imageFile) {
     return Stack(
       children: [
+        // Pending image wrapper without border
         Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.shade300),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),

@@ -769,7 +769,7 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                             decoration: BoxDecoration(
                               color: Colors.grey[100],
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.grey[300]!),
+                              // Border removed per design update
                             ),
                             child: Center(
                               child: Column(
@@ -814,7 +814,7 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                                 width: 120,
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.grey[300]!),
+                                  // Border removed
                                 ),
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(8),
