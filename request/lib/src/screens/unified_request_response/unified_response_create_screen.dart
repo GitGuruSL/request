@@ -5,6 +5,7 @@ import '../../services/centralized_request_service.dart';
 import '../../services/enhanced_user_service.dart';
 import '../../widgets/image_upload_widget.dart';
 import '../../utils/currency_helper.dart';
+import '../../widgets/accurate_location_picker_widget.dart';
 
 class UnifiedResponseCreateScreen extends StatefulWidget {
   final RequestModel request;
@@ -70,9 +71,14 @@ class _UnifiedResponseCreateScreenState
   DateTime? _availableUntil;
   List<String> _uploadedImages = [];
   bool _isLoading = false;
+  // Location fields
+  final _locationAddressController = TextEditingController();
+  double? _locationLat;
+  double? _locationLon;
 
   @override
   void dispose() {
+    _locationAddressController.dispose();
     _messageController.dispose();
     _priceController.dispose();
     _offerPriceController.dispose();
@@ -398,6 +404,26 @@ class _UnifiedResponseCreateScreenState
                 return 'Please enter a message';
               }
               return null;
+            },
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Responder Location (optional)',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          AccurateLocationPickerWidget(
+            controller: _locationAddressController,
+            labelText: '',
+            hintText: 'Tap to pick location (optional)',
+            isRequired: false,
+            prefixIcon: Icons.location_on,
+            onLocationSelected: (address, lat, lng) {
+              setState(() {
+                _locationAddressController.text = address;
+                _locationLat = lat;
+                _locationLon = lng;
+              });
             },
           ),
         ],
@@ -1675,6 +1701,11 @@ class _UnifiedResponseCreateScreenState
           'availableDate': _availableFrom?.toIso8601String(),
           'images': _uploadedImages,
           'additionalData': additionalInfo,
+          if (_locationAddressController.text.trim().isNotEmpty)
+            'location_address': _locationAddressController.text.trim(),
+          if (_locationLat != null) 'location_latitude': _locationLat,
+          if (_locationLon != null) 'location_longitude': _locationLon,
+          // Country code could be inferred later; left out unless needed
         },
       );
 

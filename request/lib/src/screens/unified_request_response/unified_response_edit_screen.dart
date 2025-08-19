@@ -78,6 +78,10 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
   DateTime? _availableUntil;
   List<String> _uploadedImages = [];
   bool _isLoading = false;
+  // Location controllers
+  final _locationAddressController = TextEditingController();
+  final _locationLatitudeController = TextEditingController();
+  final _locationLongitudeController = TextEditingController();
 
   @override
   void initState() {
@@ -111,6 +115,19 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
     _uploadedImages = List<String>.from(widget.response.images);
     if (_uploadedImages.isEmpty && additionalInfo['images'] != null) {
       _uploadedImages = List<String>.from(additionalInfo['images'] ?? []);
+    }
+
+    // Initialize location (if stored either at top-level additionalInfo or future response fields)
+    final locAddr =
+        additionalInfo['location_address'] ?? additionalInfo['locationAddress'];
+    if (locAddr != null) _locationAddressController.text = locAddr.toString();
+    if (additionalInfo['location_latitude'] != null) {
+      _locationLatitudeController.text =
+          additionalInfo['location_latitude'].toString();
+    }
+    if (additionalInfo['location_longitude'] != null) {
+      _locationLongitudeController.text =
+          additionalInfo['location_longitude'].toString();
     }
 
     // Initialize type-specific fields based on request type
@@ -238,6 +255,9 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
     _driverNotesController.dispose();
     _notesController.dispose();
     _specialConsiderationsController.dispose();
+    _locationAddressController.dispose();
+    _locationLatitudeController.dispose();
+    _locationLongitudeController.dispose();
     super.dispose();
   }
 
@@ -548,6 +568,44 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
               }
               return null;
             },
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Responder Location (optional)',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _locationAddressController,
+            decoration: const InputDecoration(
+              labelText: 'Address / Area',
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _locationLatitudeController,
+                  decoration: const InputDecoration(
+                    labelText: 'Latitude',
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true, signed: true),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextFormField(
+                  controller: _locationLongitudeController,
+                  decoration: const InputDecoration(
+                    labelText: 'Longitude',
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true, signed: true),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1849,6 +1907,7 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
         images: _uploadedImages,
         additionalInfo: additionalInfo,
       );
+      // NOTE: location fields not yet persisted on update route backend; include once implemented
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
