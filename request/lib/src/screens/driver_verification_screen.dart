@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 // Removed firebase_shim after REST migration
 import '../services/rest_auth_service.dart' hide UserModel;
@@ -9,6 +10,7 @@ import 'dart:async';
 import '../services/enhanced_user_service.dart';
 import '../services/file_upload_service.dart';
 import '../services/contact_verification_service.dart';
+import '../services/api_client.dart';
 import '../theme/app_theme.dart';
 
 class DriverVerificationScreen extends StatefulWidget {
@@ -54,6 +56,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
   String? _selectedVehicleType;
   List<Map<String, dynamic>> _availableVehicleTypes = [];
   String? _userCountry;
+  String? _userCountryPhoneCode; // Add country phone code
 
   // Cities selection
   List<Map<String, dynamic>> _availableCities = [];
@@ -72,7 +75,6 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
   List<File> _vehicleImages = []; // Vehicle photos (4 images)
 
   bool _isLoading = false;
-  bool _isUploading = false;
 
   // OTP Verification variables
   TextEditingController _phoneOtpController = TextEditingController();
@@ -94,11 +96,33 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
       final user = await _userService.getCurrentUserModel();
       if (user != null && mounted) {
         setState(() {
-          _fullNameController.text = user.name ?? '';
+          _fullNameController.text = user.name;
+
+          // Auto-populate first name and last name from user data
+          // If not available, try to split the display name
+          if (user.firstName != null && user.firstName!.isNotEmpty) {
+            _firstNameController.text = user.firstName!;
+          } else if (user.name.isNotEmpty) {
+            // Try to split display name into first and last names
+            final nameParts = user.name.split(' ');
+            _firstNameController.text = nameParts.first;
+          }
+
+          if (user.lastName != null && user.lastName!.isNotEmpty) {
+            _lastNameController.text = user.lastName!;
+          } else if (user.name.split(' ').length > 1) {
+            // Use remaining parts as last name
+            final nameParts = user.name.split(' ');
+            _lastNameController.text = nameParts.skip(1).join(' ');
+          }
+
           _phoneController.text = user.phoneNumber ?? '';
           _userCountry =
               user.countryCode ?? 'LK'; // Default to Sri Lanka if not set
         });
+
+        // Load country phone code
+        await _loadCountryPhoneCode();
 
         // Load available vehicle types for user's country
         await _loadAvailableVehicleTypes();
@@ -108,6 +132,51 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
       }
     } catch (e) {
       print('Error loading user data: $e');
+    }
+  }
+
+  Future<void> _loadCountryPhoneCode() async {
+    try {
+      // For now, use a simple mapping. In a real app, you might fetch this from an API
+      final phoneCodeMap = {
+        'LK': '+94', // Sri Lanka
+        'US': '+1', // United States
+        'IN': '+91', // India
+        'UK': '+44', // United Kingdom
+        'AU': '+61', // Australia
+        'CA': '+1', // Canada
+        'SG': '+65', // Singapore
+        'MY': '+60', // Malaysia
+        'TH': '+66', // Thailand
+        'AE': '+971', // UAE
+        'PH': '+63', // Philippines
+        'ID': '+62', // Indonesia
+        'VN': '+84', // Vietnam
+        'BD': '+880', // Bangladesh
+        'PK': '+92', // Pakistan
+        'NP': '+977', // Nepal
+        'JP': '+81', // Japan
+        'KR': '+82', // South Korea
+        'CN': '+86', // China
+        'DE': '+49', // Germany
+        'FR': '+33', // France
+        'IT': '+39', // Italy
+        'ES': '+34', // Spain
+        'NL': '+31', // Netherlands
+        'BR': '+55', // Brazil
+        'AR': '+54', // Argentina
+        'CL': '+56', // Chile
+        'MX': '+52', // Mexico
+      };
+
+      setState(() {
+        _userCountryPhoneCode = phoneCodeMap[_userCountry ?? 'LK'] ?? '+94';
+      });
+    } catch (e) {
+      print('Error loading country phone code: $e');
+      setState(() {
+        _userCountryPhoneCode = '+94'; // Default to Sri Lanka
+      });
     }
   }
 
@@ -137,16 +206,58 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
   }
 
   Future<void> _loadAvailableCities() async {
-    // Stubbed city list (previous Firestore logic removed during REST migration)
-    if (mounted) {
+    try {
       setState(() {
-        _availableCities = [
-          {'id': 'colombo', 'name': 'Colombo', 'countryCode': _userCountry},
-          {'id': 'galle', 'name': 'Galle', 'countryCode': _userCountry},
-          {'id': 'kandy', 'name': 'Kandy', 'countryCode': _userCountry},
-        ];
-        _loadingCities = false;
+        _loadingCities = true;
       });
+
+      final countryCode = _userCountry ?? 'LK';
+      final response = await ApiClient.instance.get(
+        '/api/cities',
+        queryParameters: {'country': countryCode},
+      );
+
+      if (response.data['success'] == true) {
+        final cities = (response.data['data'] as List)
+            .map((city) => {
+                  'id': city['id']?.toString() ?? city['name'],
+                  'name': city['name'] as String,
+                  'countryCode': city['countryCode'] ?? countryCode,
+                })
+            .where((city) => city['name']?.isNotEmpty == true)
+            .toList();
+
+        if (mounted) {
+          setState(() {
+            _availableCities = cities.isNotEmpty
+                ? cities
+                : [
+                    {
+                      'id': 'no_cities',
+                      'name': 'No cities available',
+                      'countryCode': countryCode
+                    }
+                  ];
+            _loadingCities = false;
+          });
+        }
+      } else {
+        throw Exception('API returned success: false');
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('Error loading cities: $e');
+      if (mounted) {
+        setState(() {
+          _availableCities = [
+            {
+              'id': 'error',
+              'name': 'Network error - try again',
+              'countryCode': _userCountry ?? 'LK'
+            }
+          ];
+          _loadingCities = false;
+        });
+      }
     }
   }
 
@@ -342,16 +453,18 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
               Expanded(
                 child: TextFormField(
                   controller: _firstNameController,
+                  readOnly: true, // Auto-populated from user account
                   decoration: const InputDecoration(
-                    labelText: 'First Name *',
+                    labelText: 'First Name * (from account)',
                     prefixIcon: Icon(Icons.person_outline),
                     border: InputBorder.none,
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: Color(
+                        0xFFF5F5F5), // Slightly grayed to indicate read-only
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Please enter your first name';
+                      return 'First name is required. Please update your account profile.';
                     }
                     return null;
                   },
@@ -361,16 +474,18 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
               Expanded(
                 child: TextFormField(
                   controller: _lastNameController,
+                  readOnly: true, // Auto-populated from user account
                   decoration: const InputDecoration(
-                    labelText: 'Last Name *',
+                    labelText: 'Last Name * (from account)',
                     prefixIcon: Icon(Icons.person_outline),
                     border: InputBorder.none,
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: Color(
+                        0xFFF5F5F5), // Slightly grayed to indicate read-only
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Please enter your last name';
+                      return 'Last name is required. Please update your account profile.';
                     }
                     return null;
                   },
@@ -528,7 +643,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
                   decoration: BoxDecoration(
                     color: Colors.orange.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                    // Removed border and shadow as requested
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -551,25 +666,108 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
                       Text(
                         _phoneController.text.isNotEmpty
                             ? _phoneController.text
-                            : 'No phone number',
-                        style: const TextStyle(
+                            : 'Phone number required for driver registration',
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
-                          color: AppTheme.textPrimary,
+                          color: _phoneController.text.isEmpty
+                              ? Colors.red[700]
+                              : AppTheme.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
-                        'This number is different from your account phone. Please verify:',
-                        style: TextStyle(
+                      // Dynamic message based on phone number availability
+                      Text(
+                        _phoneController.text.isEmpty
+                            ? 'Please enter your phone number below. This is required for driver verification.'
+                            : 'This number is different from your account phone. Please verify:',
+                        style: const TextStyle(
                           fontSize: 12,
                           color: AppTheme.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 12),
 
+                      // Phone Number Input Field (when no phone number is available)
+                      if (_phoneController.text.isEmpty) ...[
+                        TextFormField(
+                          controller: _phoneController,
+                          decoration: InputDecoration(
+                            labelText: 'Phone Number *',
+                            hintText: 'Enter your phone number',
+                            prefixIcon: Icon(Icons.phone),
+                            prefixText:
+                                '${_userCountryPhoneCode ?? '+94'} ', // Show country code
+                            border: OutlineInputBorder(),
+                            helperText:
+                                'This number will be used for driver verification',
+                          ),
+                          keyboardType: TextInputType.phone,
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Phone number is required for driver registration';
+                            }
+                            // Basic phone number validation
+                            final phoneRegex = RegExp(r'^\+?[1-9]\d{1,14}$');
+                            if (!phoneRegex.hasMatch(
+                                value.replaceAll(RegExp(r'[\s\-\(\)]'), ''))) {
+                              return 'Please enter a valid phone number';
+                            }
+                            return null;
+                          },
+                          onChanged: (value) {
+                            setState(() {
+                              // Reset verification status when phone number changes
+                              _isPhoneVerified = false;
+                              _isPhoneOtpSent = false;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+
+                      // Show current phone number if available but not verified
+                      if (_phoneController.text.isNotEmpty &&
+                          !_isPhoneVerifiedByFirebase()) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border:
+                                Border.all(color: Colors.blue.withOpacity(0.3)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Phone Number to Verify:',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.blue[700],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _phoneController.text,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.textPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+
                       // OTP Verification UI
-                      if (!_isPhoneVerified && !_isPhoneOtpSent) ...[
+                      if (!_isPhoneVerified &&
+                          !_isPhoneOtpSent &&
+                          _phoneController.text.isNotEmpty) ...[
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(

@@ -19,6 +19,8 @@ enum VerificationStatus { pending, approved, rejected, notRequired }
 class UserModel {
   final String id;
   final String name;
+  final String? firstName;
+  final String? lastName;
   final String email;
   final String? phoneNumber;
   final List<UserRole> roles;
@@ -35,6 +37,8 @@ class UserModel {
   UserModel({
     required this.id,
     required this.name,
+    this.firstName,
+    this.lastName,
     required this.email,
     this.phoneNumber,
     required this.roles,
@@ -72,19 +76,21 @@ class UserModel {
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
       id: map['id'] ?? '',
-      name: map['name'] ?? '',
+      name: map['name'] ?? map['display_name'] ?? '',
+      firstName: map['first_name'] ?? map['firstName'],
+      lastName: map['last_name'] ?? map['lastName'],
       email: map['email'] ?? '',
-      phoneNumber: map['phoneNumber'],
+      phoneNumber: map['phoneNumber'] ?? map['phone'],
       roles: _parseRoles(map['roles']) ?? [UserRole.general],
       activeRole: UserRole.values.byName(map['activeRole'] ?? 'general'),
       roleData: _parseRoleData(map['roleData']) ?? {},
-      isEmailVerified: map['isEmailVerified'] ?? false,
-      isPhoneVerified: map['isPhoneVerified'] ?? false,
+      isEmailVerified: map['isEmailVerified'] ?? map['email_verified'] ?? false,
+      isPhoneVerified: map['isPhoneVerified'] ?? map['phone_verified'] ?? false,
       profileComplete: map['profileComplete'] ?? false,
-      countryCode: map['countryCode'],
-      countryName: map['countryName'],
-      createdAt: _parseDateTime(map['createdAt']),
-      updatedAt: _parseDateTime(map['updatedAt']),
+      countryCode: map['countryCode'] ?? map['country_code'],
+      countryName: map['countryName'] ?? map['country_name'],
+      createdAt: _parseDateTime(map['createdAt'] ?? map['created_at']),
+      updatedAt: _parseDateTime(map['updatedAt'] ?? map['updated_at']),
     );
   }
 
@@ -92,6 +98,8 @@ class UserModel {
     return {
       'id': id,
       'name': name,
+      'firstName': firstName,
+      'lastName': lastName,
       'email': email,
       'phoneNumber': phoneNumber,
       'roles': roles.map((e) => e.name).toList(),
