@@ -40,6 +40,10 @@ router.get('/', async (req, res) => {
         r.price,
         COALESCE(r.currency, req.currency, countries.default_currency) AS currency,
         r.image_urls,
+        r.metadata,
+        -- Availability (stored inside metadata JSONB typical keys)
+        COALESCE(r.metadata->>'available_from', r.metadata->>'availableFrom') AS available_from,
+        COALESCE(r.metadata->>'available_until', r.metadata->>'availableUntil') AS available_until,
         r.status AS raw_status,
         r.created_at,
         r.updated_at,
@@ -48,10 +52,16 @@ router.get('/', async (req, res) => {
         req.accepted_response_id,
         (req.accepted_response_id = r.id) AS accepted,
         u.display_name AS responder_name,
+        u.email AS responder_email,
+        u.phone AS responder_phone,
+        req_owner.display_name AS requester_name,
+        req_owner.email AS requester_email,
+        req_owner.phone AS requester_phone,
         countries.default_currency AS country_default_currency
       FROM responses r
       JOIN requests req ON r.request_id = req.id
       LEFT JOIN users u ON r.user_id = u.id
+      LEFT JOIN users req_owner ON req.user_id = req_owner.id
       LEFT JOIN countries ON countries.code = req.country_code
       ${whereSql}
       ORDER BY r.created_at DESC

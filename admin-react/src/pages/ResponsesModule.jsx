@@ -75,23 +75,35 @@ const ResponsesModule = () => {
 
       const raw = await getFilteredData('responses', adminData);
       const arr = Array.isArray(raw) ? raw : (Array.isArray(raw?.responses) ? raw.responses : []);
-      const mapped = arr.map(r => ({
-        id: r.id,
-        requestId: r.request_id || r.requestId,
-        responderId: r.user_id || r.userId,
-        message: r.message,
-        price: r.price,
-        currency: r.currency || r.country_default_currency,
-        images: r.image_urls || r.images,
-        createdAt: r.created_at || r.createdAt,
-        updatedAt: r.updated_at || r.updatedAt,
-        country: r.country_code || r.country,
-        accepted: r.accepted === true || (r.accepted_response_id && (r.accepted_response_id === r.id)),
-        status: r.raw_status || (r.accepted ? 'accepted' : 'pending')
-      }));
+      const mapped = arr.map(r => {
+        const status = r.raw_status || (r.accepted ? 'accepted' : 'pending');
+        const metadata = r.metadata || {};
+        return {
+          id: r.id,
+          requestId: r.request_id || r.requestId,
+          responderId: r.user_id || r.userId,
+          responderName: r.responder_name || r.user_name || metadata.responder_name,
+          responderEmail: r.responder_email || metadata.responder_email,
+          responderPhone: r.responder_phone || metadata.responder_phone,
+          requesterName: r.requester_name,
+          requesterEmail: r.requester_email,
+            requesterPhone: r.requester_phone,
+          message: r.message,
+          price: r.price,
+          currency: r.currency || r.country_default_currency,
+          images: r.image_urls || r.images,
+          createdAt: r.created_at || r.createdAt,
+          updatedAt: r.updated_at || r.updatedAt,
+          country: r.country_code || r.country,
+          accepted: r.accepted === true || (r.accepted_response_id && (r.accepted_response_id === r.id)),
+          status,
+          availableFrom: r.available_from || r.availableFrom || metadata.available_from || metadata.availableFrom,
+          availableUntil: r.available_until || r.availableUntil || metadata.available_until || metadata.availableUntil,
+          additionalInfo: metadata
+        };
+      });
       setResponses(mapped);
-      
-      console.log(`📊 Loaded ${data?.length || 0} responses for ${isSuperAdmin ? 'super admin' : `country admin (${userCountry})`}`);
+      console.log(`📊 Loaded ${mapped.length} responses for ${isSuperAdmin ? 'super admin' : `country admin (${userCountry})`}`);
     } catch (err) {
       console.error('Error loading responses:', err);
       setError('Failed to load responses: ' + err.message);
@@ -300,6 +312,7 @@ const ResponsesModule = () => {
               <TableCell>Response</TableCell>
               <TableCell>Request ID</TableCell>
               <TableCell>Responder</TableCell>
+              <TableCell>Requester</TableCell>
               <TableCell>Price</TableCell>
               <TableCell>Status</TableCell>
               <TableCell>Available Date</TableCell>
@@ -332,10 +345,33 @@ const ResponsesModule = () => {
                   </Box>
                 </TableCell>
                 <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Person fontSize="small" color="action" />
-                    <Typography variant="body2" noWrap>
-                      {response.responderId ? response.responderId.substring(0, 12) + '...' : 'N/A'}
+                  <Box sx={{ display: 'flex', flexDirection:'column', gap: 0.25 }}>
+                    <Box sx={{ display:'flex', alignItems:'center', gap:1 }}>
+                      <Person fontSize="small" color="action" />
+                      <Typography variant="body2" noWrap title={response.responderId}>
+                        {response.responderName || 'Unknown'}
+                      </Typography>
+                    </Box>
+                    <Typography variant="caption" color="text.secondary" noWrap>
+                      {response.responderEmail || response.responderId?.substring(0,12) || ''}
+                    </Typography>
+                    {response.responderPhone && (
+                      <Typography variant="caption" color="text.secondary" noWrap>
+                        {response.responderPhone}
+                      </Typography>
+                    )}
+                  </Box>
+                </TableCell>
+                <TableCell>
+                  <Box sx={{ display: 'flex', flexDirection:'column', gap: 0.25 }}>
+                    <Box sx={{ display:'flex', alignItems:'center', gap:1 }}>
+                      <Person fontSize="small" color="action" />
+                      <Typography variant="body2" noWrap>
+                        {response.requesterName || 'Unknown'}
+                      </Typography>
+                    </Box>
+                    <Typography variant="caption" color="text.secondary" noWrap>
+                      {response.requesterEmail || ''}
                     </Typography>
                   </Box>
                 </TableCell>
@@ -431,8 +467,20 @@ const ResponsesModule = () => {
                 </Grid>
                 
                 <Grid size={6}>
-                  <Typography variant="subtitle2">Responder ID:</Typography>
-                  <Typography variant="body2">{selectedResponse.responderId || 'N/A'}</Typography>
+                  <Typography variant="subtitle2">Responder:</Typography>
+                  <Typography variant="body2">
+                    {selectedResponse.responderName || 'Unknown'}
+                    {selectedResponse.responderEmail && ` | ${selectedResponse.responderEmail}`}
+                    {selectedResponse.responderPhone && ` | ${selectedResponse.responderPhone}`}
+                  </Typography>
+                </Grid>
+                <Grid size={6}>
+                  <Typography variant="subtitle2">Requester:</Typography>
+                  <Typography variant="body2">
+                    {selectedResponse.requesterName || 'Unknown'}
+                    {selectedResponse.requesterEmail && ` | ${selectedResponse.requesterEmail}`}
+                    {selectedResponse.requesterPhone && ` | ${selectedResponse.requesterPhone}`}
+                  </Typography>
                 </Grid>
                 
                 <Grid size={6}>
