@@ -216,24 +216,27 @@ class RestAuthService {
     required String countryCode,
   }) async {
     try {
-      // Use new dedicated endpoints (email/phone) which do not return otpToken.
-      // Legacy combined endpoint '/send-otp' provided otpToken; we fall back if new endpoints fail.
-      final endpoint =
-          isEmail ? '/api/auth/send-email-otp' : '/api/auth/send-phone-otp';
-      ApiResponse<Map<String, dynamic>> response =
-          await _apiClient.post<Map<String, dynamic>>(
-        endpoint,
-        data: isEmail
-            ? {
-                'email': emailOrPhone.toLowerCase().trim(),
-              }
-            : {
-                'phone': emailOrPhone.toLowerCase().trim(),
-              },
-      );
+      ApiResponse<Map<String, dynamic>> response;
+      
+      if (isEmail) {
+        // Use legacy email endpoint for now
+        response = await _apiClient.post<Map<String, dynamic>>(
+          '/api/auth/send-email-otp',
+          data: {'email': emailOrPhone.toLowerCase().trim()},
+        );
+      } else {
+        // Use new SMS OTP endpoint for phone numbers
+        response = await _apiClient.post<Map<String, dynamic>>(
+          '/api/sms/send-otp',
+          data: {
+            'phone': emailOrPhone.trim(),
+            'countryCode': countryCode,
+          },
+        );
+      }
 
-      // If the new endpoint failed, try legacy combined endpoint (provides otpToken)
-      if (!response.success) {
+      // Fallback to legacy combined endpoint if SMS endpoint fails
+      if (!response.success && !isEmail) {
         final legacy = await _apiClient.post<Map<String, dynamic>>(
           '/api/auth/send-otp',
           data: {
@@ -242,7 +245,7 @@ class RestAuthService {
             'countryCode': countryCode,
           },
         );
-        response = legacy; // use legacy response
+        response = legacy;
       }
 
       if (kDebugMode) {

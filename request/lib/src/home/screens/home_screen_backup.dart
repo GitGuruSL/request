@@ -4,6 +4,8 @@ import '../../screens/unified_request_response/unified_request_create_screen.dar
 import '../../models/enhanced_user_model.dart' show RequestType;
 import '../../screens/requests/ride/create_ride_request_screen.dart';
 import '../../screens/requests/create_price_request_screen.dart';
+import '../../services/rest_support_services.dart'
+    show CountryService, ModuleService, CountryModules; // Module gating
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -12,9 +14,32 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  CountryModules? _modules;
+  bool _loadingModules = false;
+
   @override
   void initState() {
     super.initState();
+    _loadModules();
+  }
+
+  Future<void> _loadModules() async {
+    if (_loadingModules) return;
+    setState(() => _loadingModules = true);
+    try {
+      // Ensure country code is available
+      final cs = CountryService.instance;
+      if (cs.countryCode == null) {
+        await cs.loadPersistedCountry();
+      }
+      final code = cs.getCurrentCountryCode();
+      final mods = await ModuleService.getCountryModules(code);
+      if (mounted) setState(() => _modules = mods);
+    } catch (_) {
+      // Silent; fallback logic in _moduleEnabled
+    } finally {
+      if (mounted) setState(() => _loadingModules = false);
+    }
   }
 
   List<_RequestType> get _requestTypes => [
@@ -94,6 +119,7 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) {
         final items = _requestTypes;
+        final loading = _loadingModules && _modules == null;
         return Container(
           decoration: const BoxDecoration(
             color: Colors.white,
@@ -131,6 +157,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 24),
 
+                    if (loading)
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 12),
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+
                     // Request types list
                     Flexible(
                       child: SingleChildScrollView(
@@ -142,7 +174,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                   iconColor: it.color,
                                   title: it.title,
                                   subtitle: it.subtitle,
-                                  onTap: () => _selectRequestType(it.type),
+                                  disabled: !_moduleEnabled(it.type),
+                                  onTap: () => _handleTap(it),
                                 ),
                               )
                               .toList(),
@@ -158,6 +191,27 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
     );
+  }
+
+  bool _moduleEnabled(String type) {
+    // Map request type -> module key used in backend
+    final key = switch (type) {
+      'rental' => 'rent',
+      _ => type, // item, service, delivery, ride, price
+    };
+    final mods = _modules;
+    if (mods == null) return true; // fallback enable while loading/failure
+    return mods.isModuleEnabled(key);
+  }
+
+  void _handleTap(_RequestType it) {
+    if (!_moduleEnabled(it.type)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${it.title} - Coming Soon in your country')),
+      );
+      return;
+    }
+    _selectRequestType(it.type);
   }
 
   void _selectRequestType(String type) {
@@ -250,19 +304,21 @@ class _RequestTypeTile extends StatelessWidget {
   final Color iconColor;
   final String title;
   final String subtitle;
+  final bool disabled;
   final VoidCallback onTap;
   const _RequestTypeTile({
     required this.icon,
     required this.iconColor,
     required this.title,
     required this.subtitle,
+    required this.disabled,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onTap,
+      onTap: disabled ? null : onTap,
       borderRadius: BorderRadius.circular(12),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -273,10 +329,11 @@ class _RequestTypeTile extends StatelessWidget {
               height: 48,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
+                color: disabled ? Colors.grey.withOpacity(0.05) : null,
               ),
               child: Icon(
                 icon,
-                color: iconColor,
+                color: disabled ? Colors.grey : iconColor,
                 size: 24,
               ),
             ),
@@ -298,13 +355,31 @@ class _RequestTypeTile extends StatelessWidget {
                     subtitle,
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey[600],
+                      color: disabled ? Colors.grey[400] : Colors.grey[600],
                       height: 1.2,
                     ),
                   ),
                 ],
               ),
             ),
+            if (disabled)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orange.withOpacity(0.4)),
+                ),
+                child: const Text(
+                  'Coming Soon',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.orange,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
