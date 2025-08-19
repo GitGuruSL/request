@@ -233,6 +233,8 @@ class ResponseModel {
   final String requestId;
   final String userId;
   final String? userName;
+  final String? userEmail;
+  final String? userPhone;
   final String message;
   final double? price;
   final String? currency;
@@ -250,6 +252,8 @@ class ResponseModel {
     required this.requestId,
     required this.userId,
     this.userName,
+    this.userEmail,
+    this.userPhone,
     required this.message,
     this.price,
     this.currency,
@@ -268,6 +272,8 @@ class ResponseModel {
         requestId: json['request_id'].toString(),
         userId: json['user_id'].toString(),
         userName: json['user_name'],
+        userEmail: json['user_email'],
+        userPhone: json['user_phone'],
         message: json['message'] ?? '',
         price: _asDouble(json['price']),
         currency: json['currency'],
@@ -287,6 +293,9 @@ class ResponseModel {
         'id': id,
         'request_id': requestId,
         'user_id': userId,
+        'user_name': userName,
+        'user_email': userEmail,
+        'user_phone': userPhone,
         'message': message,
         'price': price,
         'currency': currency,

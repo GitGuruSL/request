@@ -606,14 +606,45 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
                                 fontSize: 18,
                               ),
                             ),
-                            if (_responder?.email != null) ...[
+                            // Email (if available)
+                            if (_responder?.email != null &&
+                                _responder!.email.isNotEmpty) ...[
                               const SizedBox(height: 4),
-                              Text(
-                                _responder!.email,
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 14,
-                                ),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Icon(Icons.email,
+                                      size: 14, color: Colors.grey),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      _responder!.email,
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            // Phone (only if available)
+                            if (_responder?.phoneNumber != null &&
+                                _responder!.phoneNumber!.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(Icons.phone,
+                                      size: 14, color: Colors.grey),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    _responder!.phoneNumber!,
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                             if (widget.response

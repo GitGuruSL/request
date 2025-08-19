@@ -214,6 +214,9 @@ class EnhancedRequestService {
           if (r.locationLongitude != null)
             'location_longitude': r.locationLongitude,
           if (r.countryCode != null) 'country_code': r.countryCode,
+          if (r.userName != null) 'responder_name': r.userName,
+          if (r.userEmail != null) 'responder_email': r.userEmail,
+          if (r.userPhone != null) 'responder_phone': r.userPhone,
         },
         createdAt: r.createdAt,
         isAccepted: false, // derive when backend supplies accepted id
