@@ -8,6 +8,9 @@ import 'unified_response_create_screen.dart';
 import 'unified_request_edit_screen.dart';
 import 'unified_response_edit_screen.dart';
 import 'view_all_responses_screen.dart';
+import '../chat/conversation_screen.dart';
+import '../../services/chat_service.dart';
+import '../../models/chat_models.dart';
 
 /// UnifiedRequestViewScreen (Minimal REST Migration)
 /// Legacy Firebase-based logic removed. Displays core request info only.
@@ -131,6 +134,37 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
             UnifiedResponseCreateScreen(request: requestModel),
       ),
     ).then((_) => _reloadResponses()); // Refresh responses when returning
+  }
+
+  Future<void> _messageRequester(rest.RequestModel r) async {
+    final currentUserId = RestAuthService.instance.currentUser?.uid;
+    if (currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('You must be logged in to chat')));
+      return;
+    }
+    if (currentUserId == r.userId) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content:
+              Text('This is your own request. You cannot message yourself.')));
+      return;
+    }
+    try {
+      final (convo, messages) = await ChatService.instance.openConversation(
+          requestId: r.id, currentUserId: currentUserId, otherUserId: r.userId);
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ConversationScreen(
+              conversation: convo, initialMessages: messages),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Failed to open chat: $e')));
+    }
   }
 
   void _navigateToRequestEdit() {
@@ -571,40 +605,7 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
     if (mounted) setState(() => _deletingRequest = false);
   }
 
-  void _messageRequester(rest.RequestModel request) {
-    // Navigate to messaging screen or show messaging interface
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Message ${request.userName ?? 'Requester'}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Contact: ${request.userEmail ?? 'No email available'}'),
-            const SizedBox(height: 16),
-            const Text(
-                'Messaging feature will be implemented to allow direct communication with the requester.'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Close'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              // TODO: Implement actual messaging navigation
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Messaging feature coming soon!')),
-              );
-            },
-            child: const Text('Start Chat'),
-          ),
-        ],
-      ),
-    );
-  }
+  // (Removed obsolete placeholder _messageRequester definition; real implementation placed earlier.)
 
   void _showImageFullScreen(String imageUrl) {
     // Ensure we have the full URL
