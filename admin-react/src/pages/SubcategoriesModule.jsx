@@ -89,8 +89,8 @@ const SubcategoriesModule = () => {
       setError(null);
 
       const [subcatsData, catsData] = await Promise.all([
-        getFilteredData('subcategories', adminData),
-        getFilteredData('categories', adminData)
+        getFilteredData('subcategories', { includeInactive: true }),
+        getFilteredData('categories', { includeInactive: true })
       ]);
       
       setSubcategories(subcatsData || []);
@@ -146,19 +146,19 @@ const SubcategoriesModule = () => {
       setOperationLoading(true);
       
       const payload = {
-        name: formData.name,
-        description: formData.description,
-        categoryId: formData.categoryId,
-        country: formData.country,
-        isActive: true,
-        updatedBy: adminData?.email || 'admin'
+        name: formData.name?.trim(),
+        // Backend stores description inside metadata JSON (mirror categories approach)
+        slug: formData.name?.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,''),
+        category_id: formData.categoryId,
+        metadata: formData.description ? { description: formData.description } : null,
+        is_active: true
       };
 
       if (selectedSubcategory) {
-        await api.put(`/subcategories/${selectedSubcategory.id}`, payload);
+  await api.put(`/subcategories/${selectedSubcategory.id}`, payload);
         setSnackbar({ open: true, message: 'Subcategory updated successfully!', severity: 'success' });
       } else {
-        await api.post('/subcategories', { ...payload, createdBy: adminData?.email || 'admin' });
+  await api.post('/subcategories', payload);
         setSnackbar({ open: true, message: 'Subcategory added successfully!', severity: 'success' });
       }
 

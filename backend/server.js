@@ -27,6 +27,7 @@ const masterProductRoutes = require('./routes/master-products');
 const entityActivationRoutes = require('./routes/entity-activations');
 const subscriptionPlansNewRoutes = require('./routes/subscription-plans-new');
 const dashboardRoutes = require('./routes/dashboard');
+const customProductVariableRoutes = require('./routes/custom-product-variables');
 
 // New country-specific routes
 const countryProductRoutes = require('./routes/country-products');
@@ -149,6 +150,7 @@ app.use('/api/master-products', masterProductRoutes);
 app.use('/api/entity-activations', entityActivationRoutes);
 app.use('/api/subscription-plans-new', subscriptionPlansNewRoutes);
 app.use('/api', dashboardRoutes);
+app.use('/api', customProductVariableRoutes);
 
 // Country-specific routes
 app.use('/api/country-products', countryProductRoutes);
