@@ -20,15 +20,13 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
   String _selectedCategory = 'All';
   final List<String> _categories = [
     'All',
-    // Static placeholders until category service wiring
-    'Transportation',
-    'Moving',
-    'Education',
+    'Items',
+    'Service',
+    'Rent',
     'Delivery',
-    'Household',
-    'Technology',
+    'Rides',
+    'Quotes',
   ];
-
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -98,12 +96,6 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
             (r.categoryName ?? '').toLowerCase() ==
             _selectedCategory.toLowerCase())
         .toList();
-  }
-
-  String _formatBudget(RequestModel r) {
-    if (r.budget == null) return 'No budget';
-    final cur = r.currency ?? '';
-    return '$cur${r.budget!.toStringAsFixed(0)}';
   }
 
   String _relativeTime(DateTime dt) {
@@ -233,10 +225,17 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                 });
                 _loadInitial();
               },
-              backgroundColor: Colors.grey[200],
-              selectedColor:
-                  Theme.of(context).colorScheme.primary.withOpacity(0.2),
-              checkmarkColor: Theme.of(context).colorScheme.primary,
+              backgroundColor: Colors.grey[100],
+              selectedColor: Colors.blue[50],
+              checkmarkColor: Colors.blue[600],
+              labelStyle: TextStyle(
+                color: isSelected ? Colors.blue[600] : Colors.grey[700],
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide.none, // Remove borders
+              ),
             ),
           );
         },
@@ -322,84 +321,78 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
   }
 
   Widget _buildRequestCard(RequestModel request) {
-    // Define category colors
-    final categoryColors = {
-      'Transportation': const Color(0xFFFFC107).withOpacity(0.1), // Yellow
-      'Moving': const Color(0xFF2196F3).withOpacity(0.1), // Blue
-      'Education': const Color(0xFF9C27B0).withOpacity(0.1), // Purple
-      'Delivery': const Color(0xFF4CAF50).withOpacity(0.1), // Green
-      'Household': const Color(0xFFFF6B35).withOpacity(0.1), // Orange
-      'Technology': const Color(0xFF00BCD4).withOpacity(0.1), // Teal
+    // Map request types to colors based on your second image
+    String requestType = _getRequestTypeFromCategory(
+        request.categoryName, request.title, request.description);
+
+    // Request TYPE colors (matching your second image icons)
+    final typeColors = {
+      'Items':
+          const Color(0xFFFF6B35).withOpacity(0.1), // Orange (Item Request)
+      'Service':
+          const Color(0xFF00BCD4).withOpacity(0.1), // Teal (Service Request)
+      'Rent': const Color(0xFF2196F3).withOpacity(0.1), // Blue (Rental Request)
+      'Delivery':
+          const Color(0xFF4CAF50).withOpacity(0.1), // Green (Delivery Request)
+      'Rides':
+          const Color(0xFFFFC107).withOpacity(0.1), // Yellow (Ride Request)
+      'Quotes':
+          const Color(0xFF9C27B0).withOpacity(0.1), // Purple (Price Request)
     };
 
-    final categoryBorderColors = {
-      'Transportation': const Color(0xFFFFC107), // Yellow
-      'Moving': const Color(0xFF2196F3), // Blue
-      'Education': const Color(0xFF9C27B0), // Purple
-      'Delivery': const Color(0xFF4CAF50), // Green
-      'Household': const Color(0xFFFF6B35), // Orange
-      'Technology': const Color(0xFF00BCD4), // Teal
+    final typeTagColors = {
+      'Items': const Color(0xFFFF6B35), // Orange (Item Request)
+      'Service': const Color(0xFF00BCD4), // Teal (Service Request)
+      'Rent': const Color(0xFF2196F3), // Blue (Rental Request)
+      'Delivery': const Color(0xFF4CAF50), // Green (Delivery Request)
+      'Rides': const Color(0xFFFFC107), // Yellow (Ride Request)
+      'Quotes': const Color(0xFF9C27B0), // Purple (Price Request)
     };
 
-    final categoryName = request.categoryName ?? 'Other';
-    final cardColor = categoryColors[categoryName] ?? Colors.grey[100]!;
-    final borderColor = categoryBorderColors[categoryName] ?? Colors.grey[400]!;
+    final cardColor = typeColors[requestType] ?? Colors.grey[50]!;
+    final tagColor = typeTagColors[requestType] ?? Colors.grey[400]!;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: borderColor.withOpacity(0.2),
-          width: 1,
-        ),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: InkWell(
         onTap: () => _showRequestDetails(request),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header with category and status
+              // Request type tag
               Row(
                 children: [
                   Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: borderColor,
-                      borderRadius: BorderRadius.circular(8),
+                      color: tagColor.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      categoryName,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      requestType,
+                      style: TextStyle(
+                        color: tagColor,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                   const Spacer(),
-                  if (request.status.toLowerCase() != 'active')
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.green[100],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        request.status.toUpperCase(),
-                        style: TextStyle(
-                          color: Colors.green[700],
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                  Text(
+                    _relativeTime(request.createdAt),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[500],
                     ),
+                  ),
                 ],
               ),
 
@@ -409,67 +402,89 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
               Text(
                 request.title,
                 style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
                   color: Colors.black87,
                 ),
-                maxLines: 2,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
 
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
 
               // Description
               Text(
                 request.description,
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey[700],
-                  height: 1.4,
+                  color: Colors.grey[600],
+                  height: 1.3,
                 ),
-                maxLines: 3,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-              ),
-
-              const SizedBox(height: 12),
-
-              // Footer with budget and timestamp
-              Row(
-                children: [
-                  Icon(
-                    Icons.attach_money,
-                    size: 16,
-                    color: Colors.grey[600],
-                  ),
-                  Text(
-                    _formatBudget(request),
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: borderColor,
-                    ),
-                  ),
-                  const Spacer(),
-                  Icon(
-                    Icons.access_time,
-                    size: 16,
-                    color: Colors.grey[600],
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    _relativeTime(request.createdAt),
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
               ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  // Helper method to map categories to request types
+  String _getRequestTypeFromCategory(
+      String? categoryName, String? title, String? description) {
+    if (categoryName == null && title == null) return 'Items';
+
+    // Check title and description for keywords first
+    String searchText =
+        (title ?? '').toLowerCase() + ' ' + (description ?? '').toLowerCase();
+
+    // Check for delivery keywords
+    if (searchText.contains('delivery') ||
+        searchText.contains('deliver') ||
+        searchText.contains('courier') ||
+        searchText.contains('shipping')) {
+      return 'Delivery';
+    }
+
+    // Check for rental keywords
+    if (searchText.contains('rent') ||
+        searchText.contains('rental') ||
+        searchText.contains('lease') ||
+        searchText.contains('hire')) {
+      return 'Rent';
+    }
+
+    // Check for service keywords
+    if (searchText.contains('service') ||
+        searchText.contains('repair') ||
+        searchText.contains('maintenance') ||
+        searchText.contains('fix') ||
+        searchText.contains('consultation') ||
+        searchText.contains('support')) {
+      return 'Service';
+    }
+
+    // Check for ride keywords
+    if (searchText.contains('ride') ||
+        searchText.contains('transport') ||
+        searchText.contains('taxi') ||
+        searchText.contains('driver') ||
+        searchText.contains('travel') ||
+        searchText.contains('trip')) {
+      return 'Rides';
+    }
+
+    // Check for quote/price keywords
+    if (searchText.contains('quote') ||
+        searchText.contains('price') ||
+        searchText.contains('estimate') ||
+        searchText.contains('pricing')) {
+      return 'Quotes';
+    }
+
+    // Default to Items for any physical objects or general requests
+    return 'Items';
   }
 
   void _showRequestDetails(RequestModel request) {
