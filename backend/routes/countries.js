@@ -28,6 +28,17 @@ const COUNTRY_PHONE_PREFIX_MAP = {
   LK: '+94', GB: '+44', AE: '+971', US: '+1', IN: '+91', TH: '+66', SG: '+65', MY: '+60'
 };
 
+// Optional default VAT / tax rate percentages (set only if client does not provide a value)
+// Keep conservative (0) where unknown so business can fill later.
+const DEFAULT_TAX_RATE_MAP = {
+  GB: 20.0, AE: 0.0, LK: 0.0, US: 0.0, IN: 0.0, TH: 0.0, SG: 8.0, MY: 0.0
+};
+
+function buildFlagUrl(code){
+  // Use flagcdn (public CDN). 80px width PNG; stored for quick access.
+  return `https://flagcdn.com/w80/${code.toLowerCase()}.png`;
+}
+
 function buildUpdate(fields) {
   const sets = [];
   const values = [];
@@ -45,6 +56,8 @@ function adapt(row){
   // Provide camelCase convenience fields and comingSoonMessage for admin/frontend usage
   const base = { ...row, isActive: row.is_active, isEnabled: row.is_active };
   if (!base.phoneCode && row.phone_prefix) base.phoneCode = row.phone_prefix;
+  if (!base.flagUrl && row.flag_url) base.flagUrl = row.flag_url;
+  if (row.tax_rate !== undefined && row.tax_rate !== null && base.taxRate === undefined) base.taxRate = parseFloat(row.tax_rate);
   if (!row.is_active) {
     base.comingSoonMessage = row.coming_soon_message || 'Coming soon to your country! Stay tuned for updates.';
   } else {
@@ -140,9 +153,11 @@ router.post('/', auth.authMiddleware(), auth.roleMiddleware(['admin','super_admi
   const finalFlagEmoji = flag_emoji || flag || null;
   const finalPhonePrefix = (phone_prefix || phoneCode || COUNTRY_PHONE_PREFIX_MAP[code.toUpperCase()] || '').trim() || null;
   const finalLocale = (locale || COUNTRY_LOCALE_MAP[code.toUpperCase()] || `en_${code.toUpperCase()}`).trim();
+  const finalTaxRate = (tax_rate !== undefined && tax_rate !== null && tax_rate !== '') ? tax_rate : (DEFAULT_TAX_RATE_MAP[code.toUpperCase()] || 0);
+  const finalFlagUrl = (flag_url && flag_url.trim()) ? flag_url.trim() : buildFlagUrl(code);
   const row = await db.queryOne(`INSERT INTO countries (code, name, default_currency, phone_prefix, locale, tax_rate, flag_url, is_active, coming_soon_message, flag_emoji)
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-    RETURNING *`, [code.toUpperCase(), name, resolvedCurrency, finalPhonePrefix, finalLocale, tax_rate, flag_url, activeValue, finalComingSoonMsg, finalFlagEmoji]);
+    RETURNING *`, [code.toUpperCase(), name, resolvedCurrency, finalPhonePrefix, finalLocale, finalTaxRate, finalFlagUrl, activeValue, finalComingSoonMsg, finalFlagEmoji]);
    res.status(201).json({ success:true, message:'Country created', data: adapt(row) });
   } catch (e) {
     console.error('Create country error', e);
@@ -155,6 +170,8 @@ router.put('/:codeOrId', auth.authMiddleware(), auth.roleMiddleware(['admin','su
   try {
     const v = req.params.codeOrId;
   const fields = { name: req.body.name, default_currency: req.body.default_currency, phone_prefix: req.body.phone_prefix || req.body.phoneCode, locale: req.body.locale, tax_rate: req.body.tax_rate, flag_url: req.body.flag_url, is_active: req.body.is_active, coming_soon_message: req.body.coming_soon_message, flag_emoji: req.body.flag_emoji || req.body.flag };
+  // Auto-supply missing flag_url if explicitly set empty string
+  if (fields.flag_url === '') fields.flag_url = buildFlagUrl((req.body.code || '').toUpperCase());
   // If updating to inactive and no message provided but existing row lacks one, we'll handle in status toggle endpoint; here only set locale/phone if provided.
     const upd = buildUpdate(fields);
     if (!upd) return res.status(400).json({ success:false, message:'No valid fields to update' });
