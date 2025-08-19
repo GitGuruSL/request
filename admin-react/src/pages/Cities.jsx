@@ -364,10 +364,12 @@ const Cities = () => {
                     {city.population ? city.population.toLocaleString() : 'N/A'}
                   </TableCell>
                   <TableCell>
-                    {city.createdAt ? 
-                      new Date(city.createdAt.toDate()).toLocaleDateString() : 
-                      'N/A'
-                    }
+                    {city.createdAt ? (()=>{
+                      const raw = city.createdAt;
+                      const d = raw && raw.toDate ? raw.toDate() : new Date(raw);
+                      if (isNaN(d.getTime())) return 'N/A';
+                      return d.toLocaleDateString();
+                    })() : 'N/A'}
                   </TableCell>
                   <TableCell align="center">
                     <IconButton
