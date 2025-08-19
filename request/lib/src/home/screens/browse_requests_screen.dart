@@ -23,9 +23,8 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     'Items',
     'Service',
     'Rent',
-    'Delivery',
-    'Rides',
-    'Quotes',
+    'Deliver',
+    'Ride',
   ];
   final ScrollController _scrollController = ScrollController();
 
@@ -332,21 +331,18 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
       'Service':
           const Color(0xFF00BCD4).withOpacity(0.1), // Teal (Service Request)
       'Rent': const Color(0xFF2196F3).withOpacity(0.1), // Blue (Rental Request)
-      'Delivery':
+      'Deliver':
           const Color(0xFF4CAF50).withOpacity(0.1), // Green (Delivery Request)
-      'Rides':
+      'Ride':
           const Color(0xFFFFC107).withOpacity(0.1), // Yellow (Ride Request)
-      'Quotes':
-          const Color(0xFF9C27B0).withOpacity(0.1), // Purple (Price Request)
     };
 
     final typeTagColors = {
       'Items': const Color(0xFFFF6B35), // Orange (Item Request)
       'Service': const Color(0xFF00BCD4), // Teal (Service Request)
       'Rent': const Color(0xFF2196F3), // Blue (Rental Request)
-      'Delivery': const Color(0xFF4CAF50), // Green (Delivery Request)
-      'Rides': const Color(0xFFFFC107), // Yellow (Ride Request)
-      'Quotes': const Color(0xFF9C27B0), // Purple (Price Request)
+      'Deliver': const Color(0xFF4CAF50), // Green (Delivery Request)
+      'Ride': const Color(0xFFFFC107), // Yellow (Ride Request)
     };
 
     final cardColor = typeColors[requestType] ?? Colors.grey[50]!;
@@ -366,7 +362,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Request type tag
+              // Category and subcategory tag
               Row(
                 children: [
                   Container(
@@ -377,7 +373,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      requestType,
+                      '${request.categoryName ?? 'General'}${request.subcategoryName != null ? ' • ${request.subcategoryName}' : ''}',
                       style: TextStyle(
                         color: tagColor,
                         fontSize: 12,
@@ -423,6 +419,53 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
+
+              const SizedBox(height: 12),
+
+              // Bottom row with responses/likes on left and location on right
+              Row(
+                children: [
+                  // Left side - responses and likes icons
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.chat_bubble_outline,
+                        size: 16,
+                        color: Colors.grey[500],
+                      ),
+                      const SizedBox(width: 12),
+                      Icon(
+                        Icons.favorite_border,
+                        size: 16,
+                        color: Colors.grey[500],
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  // Right side - location
+                  if (request.cityName != null)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.location_on_outlined,
+                          size: 14,
+                          color: Colors.grey[500],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          request.cityName!,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                ],
+              ),
             ],
           ),
         ),
@@ -444,7 +487,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
         searchText.contains('deliver') ||
         searchText.contains('courier') ||
         searchText.contains('shipping')) {
-      return 'Delivery';
+      return 'Deliver';
     }
 
     // Check for rental keywords
@@ -472,15 +515,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
         searchText.contains('driver') ||
         searchText.contains('travel') ||
         searchText.contains('trip')) {
-      return 'Rides';
-    }
-
-    // Check for quote/price keywords
-    if (searchText.contains('quote') ||
-        searchText.contains('price') ||
-        searchText.contains('estimate') ||
-        searchText.contains('pricing')) {
-      return 'Quotes';
+      return 'Ride';
     }
 
     // Default to Items for any physical objects or general requests
