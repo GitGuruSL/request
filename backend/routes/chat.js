@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const DatabaseService = require('../services/database');
-const db = new DatabaseService();
+// database.js exports a singleton instance already
+const db = require('../services/database');
 
 async function ensureSchema() {
+  // Enable pgcrypto for gen_random_uuid (ignore error if not permitted)
+  try { await db.query('CREATE EXTENSION IF NOT EXISTS pgcrypto'); } catch (_) {}
   await db.query(`CREATE TABLE IF NOT EXISTS conversations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     request_id UUID NOT NULL,
