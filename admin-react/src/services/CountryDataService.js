@@ -42,6 +42,7 @@ export class CountryDataService {
         brands: '/brands',
         vehicles: '/vehicles',
         vehicle_types: '/vehicle-types',
+  master_products: '/master-products',
         variables: '/variables',
         requests: '/requests',
         responses: '/responses',
