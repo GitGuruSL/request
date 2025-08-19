@@ -215,9 +215,98 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
 
   RequestType _getCurrentRequestType() {
     if (_request == null) return RequestType.item;
-    final typeString = _request!.metadata?['type']?.toString() ?? 'item';
-    print('DEBUG: Request metadata type: $typeString'); // Debug line
-    return _getRequestTypeFromString(typeString);
+
+    // Check multiple possible locations for the type
+    String? typeString;
+
+    // First check metadata
+    if (_request!.metadata != null) {
+      typeString = _request!.metadata!['type']?.toString();
+    }
+
+    // If no type in metadata, try to infer from category name
+    if (typeString == null || typeString.isEmpty) {
+      typeString = _inferTypeFromCategory(_request!.categoryName);
+    }
+
+    // If still no type, try to infer from title
+    if (typeString.isEmpty || typeString == 'item') {
+      final titleType = _inferTypeFromTitle(_request!.title);
+      if (titleType != 'item') {
+        typeString = titleType;
+      }
+    }
+
+    return _getRequestTypeFromString(
+        typeString.isNotEmpty ? typeString : 'item');
+  }
+
+  String _inferTypeFromCategory(String? categoryName) {
+    if (categoryName == null) return 'item';
+    final category = categoryName.toLowerCase();
+
+    if (category.contains('delivery') ||
+        category.contains('transport') ||
+        category.contains('shipping') ||
+        category.contains('courier')) {
+      return 'delivery';
+    } else if (category.contains('service') ||
+        category.contains('repair') ||
+        category.contains('maintenance') ||
+        category.contains('installation')) {
+      return 'service';
+    } else if (category.contains('rental') ||
+        category.contains('rent') ||
+        category.contains('hire') ||
+        category.contains('lease')) {
+      return 'rental';
+    } else if (category.contains('ride') ||
+        category.contains('taxi') ||
+        category.contains('uber') ||
+        category.contains('transport')) {
+      return 'ride';
+    } else if (category.contains('price') ||
+        category.contains('quote') ||
+        category.contains('estimate') ||
+        category.contains('valuation')) {
+      return 'price';
+    }
+
+    return 'item'; // Default to item
+  }
+
+  String _inferTypeFromTitle(String? title) {
+    if (title == null) return 'item';
+    final titleLower = title.toLowerCase();
+
+    if (titleLower.contains('delivery') ||
+        titleLower.contains('transport') ||
+        titleLower.contains('shipping') ||
+        titleLower.contains('courier')) {
+      return 'delivery';
+    } else if (titleLower.contains('service') ||
+        titleLower.contains('repair') ||
+        titleLower.contains('fix') ||
+        titleLower.contains('install')) {
+      return 'service';
+    } else if (titleLower.contains('rental') ||
+        titleLower.contains('rent') ||
+        titleLower.contains('hire') ||
+        titleLower.contains('lease')) {
+      return 'rental';
+    } else if (titleLower.contains('ride') ||
+        titleLower.contains('taxi') ||
+        titleLower.contains('uber') ||
+        titleLower.contains('trip')) {
+      return 'ride';
+    } else if (titleLower.contains('price') ||
+        titleLower.contains('quote') ||
+        titleLower.contains('estimate') ||
+        titleLower.contains('cost')) {
+      return 'price';
+    }
+
+    return 'item'; // Default to item
   }
 
   Color _getTypeColor(RequestType type) {
@@ -298,7 +387,13 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
   }
 
   RequestType _getRequestTypeFromString(String type) {
-    switch (type.toLowerCase()) {
+    // Handle both "RequestType.item" and "item" formats
+    String cleanType = type.toLowerCase();
+    if (cleanType.startsWith('requesttype.')) {
+      cleanType = cleanType.substring('requesttype.'.length);
+    }
+
+    switch (cleanType) {
       case 'item':
         return RequestType.item;
       case 'service':
