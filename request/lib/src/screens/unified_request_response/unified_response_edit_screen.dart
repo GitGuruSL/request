@@ -5,6 +5,7 @@ import '../../services/enhanced_request_service.dart';
 import '../../services/enhanced_user_service.dart';
 import '../../widgets/image_upload_widget.dart';
 import '../../utils/currency_helper.dart';
+import '../../widgets/accurate_location_picker_widget.dart';
 
 class UnifiedResponseEditScreen extends StatefulWidget {
   final RequestModel request;
@@ -91,8 +92,109 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         setState(() {});
+        // If metadata fields are missing (common when navigating from a list that didn't hydrate), fetch fresh response
+        if (widget.response.additionalInfo.isEmpty) {
+          _attemptReloadMetadata();
+        }
       }
     });
+  }
+
+  Future<void> _attemptReloadMetadata() async {
+    try {
+      final responses =
+          await _requestService.getResponsesForRequest(widget.request.id);
+      ResponseModel? fresh;
+      for (final r in responses) {
+        if (r.id == widget.response.id) {
+          fresh = r;
+          break;
+        }
+      }
+      if (fresh == null || fresh.additionalInfo.isEmpty) return;
+      final info = fresh.additionalInfo;
+      setState(() {
+        // Only fill if still empty so we don't overwrite user edits
+        if (_itemConditionController.text.isEmpty &&
+            info['itemCondition'] != null) {
+          _itemConditionController.text = info['itemCondition'].toString();
+        }
+        if (_offerDescriptionController.text.isEmpty &&
+            info['offerDescription'] != null) {
+          _offerDescriptionController.text =
+              info['offerDescription'].toString();
+        }
+        if (_rentalItemConditionController.text.isEmpty &&
+            info['itemCondition'] != null) {
+          _rentalItemConditionController.text =
+              info['itemCondition'].toString();
+        }
+        if (_rentalDescriptionController.text.isEmpty &&
+            info['itemDescription'] != null) {
+          _rentalDescriptionController.text =
+              info['itemDescription'].toString();
+        }
+        if (_solutionDescriptionController.text.isEmpty &&
+            info['solutionDescription'] != null) {
+          _solutionDescriptionController.text =
+              info['solutionDescription'].toString();
+        }
+        if (_timeframeController.text.isEmpty && info['timeframe'] != null) {
+          _timeframeController.text = info['timeframe'].toString();
+        }
+        if (_deliveryFeeController.text.isEmpty &&
+            info['deliveryFee'] != null) {
+          _deliveryFeeController.text = _formatPrice(info['deliveryFee']);
+        }
+        if (_fareController.text.isEmpty && info['fare'] != null) {
+          _fareController.text = _formatPrice(info['fare']);
+        }
+        if (_notesController.text.isEmpty && info['notes'] != null) {
+          _notesController.text = info['notes'].toString();
+        }
+        if (_specialConsiderationsController.text.isEmpty &&
+            info['specialConsiderations'] != null) {
+          _specialConsiderationsController.text =
+              info['specialConsiderations'].toString();
+        }
+        // Select values
+        if (info['deliveryMethod'] != null)
+          _selectedDeliveryMethod = info['deliveryMethod'].toString();
+        if (info['priceType'] != null)
+          _selectedPriceType = info['priceType'].toString();
+        if (info['rentalPeriod'] != null)
+          _selectedRentalPeriod = info['rentalPeriod'].toString();
+        if (info['pickupDeliveryOption'] != null)
+          _selectedPickupDeliveryOption =
+              info['pickupDeliveryOption'].toString();
+        if (info['vehicleType'] != null)
+          _selectedVehicleType = info['vehicleType'].toString();
+        // Images
+        if (_uploadedImages.isEmpty && fresh!.images.isNotEmpty) {
+          _uploadedImages = List<String>.from(fresh.images);
+        }
+        // Location
+        if (_locationAddressController.text.isEmpty) {
+          final locAddr = info['location_address'] ?? info['locationAddress'];
+          if (locAddr != null)
+            _locationAddressController.text = locAddr.toString();
+        }
+        if (_locationLatitudeController.text.isEmpty &&
+            info['location_latitude'] != null) {
+          _locationLatitudeController.text =
+              info['location_latitude'].toString();
+        }
+        if (_locationLongitudeController.text.isEmpty &&
+            info['location_longitude'] != null) {
+          _locationLongitudeController.text =
+              info['location_longitude'].toString();
+        }
+      });
+    } catch (e) {
+      // Silent fail; dev log
+      // ignore: avoid_print
+      print('[UnifiedResponseEditScreen] metadata reload failed: $e');
+    }
   }
 
   void _initializeFormData() {
@@ -570,42 +672,21 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
             },
           ),
           const SizedBox(height: 20),
-          const Text(
-            'Responder Location*',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
+          const Text('Responder Location*',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          AccurateLocationPickerWidget(
             controller: _locationAddressController,
-            decoration: const InputDecoration(
-              labelText: 'Address / Area',
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _locationLatitudeController,
-                  decoration: const InputDecoration(
-                    labelText: 'Latitude',
-                  ),
-                  keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true, signed: true),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextFormField(
-                  controller: _locationLongitudeController,
-                  decoration: const InputDecoration(
-                    labelText: 'Longitude',
-                  ),
-                  keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true, signed: true),
-                ),
-              ),
-            ],
+            hintText: 'Tap to pick responder location',
+            isRequired: true,
+            prefixIcon: Icons.location_on,
+            onLocationSelected: (address, lat, lng) {
+              setState(() {
+                _locationAddressController.text = address;
+                _locationLatitudeController.text = lat.toString();
+                _locationLongitudeController.text = lng.toString();
+              });
+            },
           ),
         ],
       ),
@@ -1913,6 +1994,7 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
       // Update the response
       await _requestService.updateResponseNamed(
         responseId: widget.response.id,
+        requestId: widget.request.id,
         message: _messageController.text.trim(),
         price: price,
         currency: _selectedCurrency,
@@ -1920,6 +2002,11 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
         availableUntil: _availableUntil,
         images: _uploadedImages,
         additionalInfo: additionalInfo,
+        locationAddress: _locationAddressController.text.trim(),
+        locationLatitude:
+            double.tryParse(_locationLatitudeController.text.trim()),
+        locationLongitude:
+            double.tryParse(_locationLongitudeController.text.trim()),
       );
       // NOTE: location fields not yet persisted on update route backend; include once implemented
 
