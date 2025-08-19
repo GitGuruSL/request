@@ -16,6 +16,18 @@ const COUNTRY_CURRENCY_MAP = {
   HU: 'HUF', RO: 'RON', BG: 'BGN', GR: 'EUR', TR: 'TRY', RU: 'RUB', UA: 'UAH',
 };
 
+// Basic country -> default locale mapping (extend as needed)
+const COUNTRY_LOCALE_MAP = {
+  US: 'en_US', GB: 'en_GB', LK: 'en_LK', IN: 'en_IN', AE: 'ar_AE', TH: 'th_TH',
+  SG: 'en_SG', MY: 'en_MY', AU: 'en_AU', NZ: 'en_NZ', CA: 'en_CA', IE: 'en_IE',
+  PH: 'en_PH', PK: 'en_PK', ZA: 'en_ZA'
+};
+
+// Country -> phone prefix fallback (subset; admin UI already has list but backend will be resilient)
+const COUNTRY_PHONE_PREFIX_MAP = {
+  LK: '+94', GB: '+44', AE: '+971', US: '+1', IN: '+91', TH: '+66', SG: '+65', MY: '+60'
+};
+
 function buildUpdate(fields) {
   const sets = [];
   const values = [];
@@ -32,6 +44,7 @@ function adapt(row){
   if(!row) return row;
   // Provide camelCase convenience fields and comingSoonMessage for admin/frontend usage
   const base = { ...row, isActive: row.is_active, isEnabled: row.is_active };
+  if (!base.phoneCode && row.phone_prefix) base.phoneCode = row.phone_prefix;
   if (!row.is_active) {
     base.comingSoonMessage = row.coming_soon_message || 'Coming soon to your country! Stay tuned for updates.';
   } else {
@@ -111,7 +124,7 @@ router.get('/:codeOrId', async (req,res) => {
 // POST /api/countries
 router.post('/', auth.authMiddleware(), auth.roleMiddleware(['admin','super_admin']), async (req,res) => {
   try {
-  const { code, name, default_currency, phone_prefix, locale, tax_rate, flag_url, is_active, coming_soon_message, flag_emoji, flag } = req.body;
+  const { code, name, default_currency, phone_prefix, phoneCode, locale, tax_rate, flag_url, is_active, coming_soon_message, flag_emoji, flag } = req.body;
     if (!code || !name) return res.status(400).json({ success:false, message:'code and name required' });
     const existing = await db.queryOne('SELECT id FROM countries WHERE code = $1', [code.toUpperCase()]);
     if (existing) return res.status(409).json({ success:false, message:'Country code already exists' });
@@ -125,9 +138,11 @@ router.post('/', auth.authMiddleware(), auth.roleMiddleware(['admin','super_admi
    }
   const finalComingSoonMsg = !activeValue ? (coming_soon_message || 'Coming soon to your country! Stay tuned for updates.') : coming_soon_message || null;
   const finalFlagEmoji = flag_emoji || flag || null;
+  const finalPhonePrefix = (phone_prefix || phoneCode || COUNTRY_PHONE_PREFIX_MAP[code.toUpperCase()] || '').trim() || null;
+  const finalLocale = (locale || COUNTRY_LOCALE_MAP[code.toUpperCase()] || `en_${code.toUpperCase()}`).trim();
   const row = await db.queryOne(`INSERT INTO countries (code, name, default_currency, phone_prefix, locale, tax_rate, flag_url, is_active, coming_soon_message, flag_emoji)
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-    RETURNING *`, [code.toUpperCase(), name, resolvedCurrency, phone_prefix, locale, tax_rate, flag_url, activeValue, finalComingSoonMsg, finalFlagEmoji]);
+    RETURNING *`, [code.toUpperCase(), name, resolvedCurrency, finalPhonePrefix, finalLocale, tax_rate, flag_url, activeValue, finalComingSoonMsg, finalFlagEmoji]);
    res.status(201).json({ success:true, message:'Country created', data: adapt(row) });
   } catch (e) {
     console.error('Create country error', e);
@@ -139,7 +154,8 @@ router.post('/', auth.authMiddleware(), auth.roleMiddleware(['admin','super_admi
 router.put('/:codeOrId', auth.authMiddleware(), auth.roleMiddleware(['admin','super_admin']), async (req,res) => {
   try {
     const v = req.params.codeOrId;
-  const fields = { name: req.body.name, default_currency: req.body.default_currency, phone_prefix: req.body.phone_prefix, locale: req.body.locale, tax_rate: req.body.tax_rate, flag_url: req.body.flag_url, is_active: req.body.is_active, coming_soon_message: req.body.coming_soon_message, flag_emoji: req.body.flag_emoji || req.body.flag };
+  const fields = { name: req.body.name, default_currency: req.body.default_currency, phone_prefix: req.body.phone_prefix || req.body.phoneCode, locale: req.body.locale, tax_rate: req.body.tax_rate, flag_url: req.body.flag_url, is_active: req.body.is_active, coming_soon_message: req.body.coming_soon_message, flag_emoji: req.body.flag_emoji || req.body.flag };
+  // If updating to inactive and no message provided but existing row lacks one, we'll handle in status toggle endpoint; here only set locale/phone if provided.
     const upd = buildUpdate(fields);
     if (!upd) return res.status(400).json({ success:false, message:'No valid fields to update' });
     let row;
