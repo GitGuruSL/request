@@ -3,6 +3,26 @@ const router = express.Router({ mergeParams: true });
 const db = require('../services/database');
 const auth = require('../services/auth');
 
+// Dev-friendly optional auth (copied pattern from master-products)
+function optionalAuth(handler){
+  return async (req,res,next)=>{
+    try {
+      try {
+        await auth.authMiddleware()(req,res,()=>{});
+      } catch(err){
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[responses][optionalAuth] auth failed in dev, allowing unauthenticated create:', err.message);
+        } else {
+          return res.status(401).json({ success:false, message:'Unauthorized: ' + err.message });
+        }
+      }
+      return handler(req,res,next);
+    } catch(e){
+      next(e);
+    }
+  };
+}
+
 // List responses for a request with pagination
 router.get('/', async (req, res) => {
   try {
@@ -48,29 +68,54 @@ router.get('/', async (req, res) => {
 });
 
 // Create a response (one per user per request enforced by unique index)
-router.post('/', auth.authMiddleware(), async (req, res) => {
+router.post('/', optionalAuth(async (req, res) => {
   try {
     const requestId = req.params.requestId;
-    const userId = req.user.userId;
-    const { message, price, currency, metadata, image_urls } = req.body;
+    const userId = req.user?.userId;
+    const { message, price, currency, metadata, image_urls, imageUrls, images } = req.body || {};
+
+    console.log('[responses][create] incoming', {
+      requestId,
+      userId,
+      hasMessage: Boolean(message && message.trim().length),
+      price,
+      currency,
+      imgCounts: {
+        image_urls: Array.isArray(image_urls) ? image_urls.length : null,
+        imageUrls: Array.isArray(imageUrls) ? imageUrls.length : null,
+        images: Array.isArray(images) ? images.length : null
+      }
+    });
 
     if (!message || message.trim().length === 0) {
       return res.status(400).json({ success: false, message: 'Message is required' });
     }
 
-    // Ensure request is active and not owned by responding user
+    if (!userId) {
+      return res.status(401).json({ success:false, message:'Missing user (auth token required). Provide Authorization: Bearer <token>' });
+    }
+
+    // Ensure request is active and not owned by responding user (case-insensitive status)
     const request = await db.queryOne('SELECT id, user_id, status, currency FROM requests WHERE id = $1', [requestId]);
     if (!request) return res.status(404).json({ success: false, message: 'Request not found' });
+    const reqStatus = (request.status || '').toLowerCase();
     if (request.user_id === userId) return res.status(400).json({ success: false, message: 'Cannot respond to your own request' });
-    if (request.status !== 'active') return res.status(400).json({ success: false, message: 'Request not active' });
+    if (reqStatus !== 'active') {
+      console.warn('[responses][create] blocked: request not active', { requestId, status: request.status });
+      return res.status(400).json({ success: false, message: 'Request not active', status: request.status });
+    }
+
+    // Normalize images field naming differences
+    const finalImages = image_urls || imageUrls || images || null;
 
     const insert = await db.queryOne(`
       INSERT INTO responses (request_id, user_id, message, price, currency, metadata, image_urls)
       VALUES ($1,$2,$3,$4,$5,$6,$7)
       RETURNING *
-    `, [requestId, userId, message.trim(), price ?? null, currency || request.currency, metadata || null, image_urls || null]);
+    `, [requestId, userId, message.trim(), price ?? null, currency || request.currency, metadata || null, finalImages]);
 
-    res.status(201).json({ success: true, message: 'Response created', data: insert });
+    console.log('[responses][create] inserted', { id: insert.id, requestId });
+  res.status(201).json({ success: true, message: 'Response created', data: insert });
   } catch (error) {
     if (error.code === '23505') { // unique violation
       return res.status(400).json({ success: false, message: 'You have already responded to this request' });
@@ -78,7 +123,7 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
     console.error('Error creating response:', error);
     res.status(500).json({ success: false, message: 'Error creating response', error: error.message });
   }
-});
+}));
 
 // Update a response (only owner)
 router.put('/:responseId', auth.authMiddleware(), async (req, res) => {

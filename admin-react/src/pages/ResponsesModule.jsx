@@ -73,8 +73,23 @@ const ResponsesModule = () => {
       setLoading(true);
       setError(null);
 
-      const data = await getFilteredData('responses', adminData);
-      setResponses(data || []);
+      const raw = await getFilteredData('responses', adminData);
+      const arr = Array.isArray(raw) ? raw : (Array.isArray(raw?.responses) ? raw.responses : []);
+      const mapped = arr.map(r => ({
+        id: r.id,
+        requestId: r.request_id || r.requestId,
+        responderId: r.user_id || r.userId,
+        message: r.message,
+        price: r.price,
+        currency: r.currency || r.country_default_currency,
+        images: r.image_urls || r.images,
+        createdAt: r.created_at || r.createdAt,
+        updatedAt: r.updated_at || r.updatedAt,
+        country: r.country_code || r.country,
+        accepted: r.accepted === true || (r.accepted_response_id && (r.accepted_response_id === r.id)),
+        status: r.raw_status || (r.accepted ? 'accepted' : 'pending')
+      }));
+      setResponses(mapped);
       
       console.log(`📊 Loaded ${data?.length || 0} responses for ${isSuperAdmin ? 'super admin' : `country admin (${userCountry})`}`);
     } catch (err) {
@@ -133,17 +148,17 @@ const ResponsesModule = () => {
   };
 
   const getResponseStatus = (response) => {
-    if (response.isAccepted === true) return 'accepted';
-    if (response.rejectionReason) return 'rejected';
+    if (response.accepted || response.status === 'accepted') return 'accepted';
+    if (response.status === 'rejected') return 'rejected';
     return 'pending';
   };
 
   const getResponseStats = () => {
     return {
       total: filteredResponses.length,
-      accepted: filteredResponses.filter(r => r.isAccepted === true).length,
-      pending: filteredResponses.filter(r => r.isAccepted === false && !r.rejectionReason).length,
-      rejected: filteredResponses.filter(r => r.rejectionReason).length,
+  accepted: filteredResponses.filter(r => getResponseStatus(r) === 'accepted').length,
+  pending: filteredResponses.filter(r => getResponseStatus(r) === 'pending').length,
+  rejected: filteredResponses.filter(r => getResponseStatus(r) === 'rejected').length,
     };
   };
 
@@ -178,7 +193,7 @@ const ResponsesModule = () => {
 
       {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom variant="h6">
@@ -190,7 +205,7 @@ const ResponsesModule = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom variant="h6">
@@ -202,7 +217,7 @@ const ResponsesModule = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom variant="h6">
@@ -214,7 +229,7 @@ const ResponsesModule = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom variant="h6">
@@ -403,31 +418,31 @@ const ResponsesModule = () => {
           {selectedResponse && (
             <Box sx={{ pt: 1 }}>
               <Grid container spacing={2}>
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Typography variant="subtitle2">Message:</Typography>
                   <Typography variant="body2" sx={{ mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
                     {selectedResponse.message || 'No message provided'}
                   </Typography>
                 </Grid>
                 
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <Typography variant="subtitle2">Request ID:</Typography>
                   <Typography variant="body2">{selectedResponse.requestId || 'N/A'}</Typography>
                 </Grid>
                 
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <Typography variant="subtitle2">Responder ID:</Typography>
                   <Typography variant="body2">{selectedResponse.responderId || 'N/A'}</Typography>
                 </Grid>
                 
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <Typography variant="subtitle2">Price:</Typography>
                   <Typography variant="body2">
                     {formatCurrency(selectedResponse.price, selectedResponse.currency)}
                   </Typography>
                 </Grid>
                 
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <Typography variant="subtitle2">Status:</Typography>
                   <Chip 
                     label={getResponseStatus(selectedResponse).toUpperCase()}
@@ -436,30 +451,30 @@ const ResponsesModule = () => {
                   />
                 </Grid>
                 
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <Typography variant="subtitle2">Country:</Typography>
                   <Typography variant="body2">
                     {getCountryDisplayName(selectedResponse.country)}
                   </Typography>
                 </Grid>
                 
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <Typography variant="subtitle2">Available From:</Typography>
                   <Typography variant="body2">{formatDate(selectedResponse.availableFrom) || 'Not specified'}</Typography>
                 </Grid>
                 
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <Typography variant="subtitle2">Available Until:</Typography>
                   <Typography variant="body2">{formatDate(selectedResponse.availableUntil) || 'Not specified'}</Typography>
                 </Grid>
                 
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <Typography variant="subtitle2">Created:</Typography>
                   <Typography variant="body2">{formatDate(selectedResponse.createdAt)}</Typography>
                 </Grid>
 
                 {selectedResponse.rejectionReason && (
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <Divider sx={{ my: 2 }} />
                     <Typography variant="subtitle2" color="error">Rejection Reason:</Typography>
                     <Typography variant="body2" color="error" sx={{ p: 2, bgcolor: 'error.light', borderRadius: 1 }}>
@@ -469,7 +484,7 @@ const ResponsesModule = () => {
                 )}
 
                 {selectedResponse.images && selectedResponse.images.length > 0 && (
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <Divider sx={{ my: 2 }} />
                     <Typography variant="subtitle2" sx={{ mb: 1 }}>Images:</Typography>
                     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -487,7 +502,7 @@ const ResponsesModule = () => {
                 )}
 
                 {selectedResponse.additionalInfo && Object.keys(selectedResponse.additionalInfo).length > 0 && (
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <Divider sx={{ my: 2 }} />
                     <Typography variant="subtitle2" sx={{ mb: 1 }}>Additional Information:</Typography>
                     <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>

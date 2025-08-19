@@ -31,6 +31,7 @@ const subscriptionPlansLegacyRoutes = require('./routes/subscription-plans-legac
 const dashboardRoutes = require('./routes/dashboard');
 const customProductVariableRoutes = require('./routes/custom-product-variables');
 const contentPagesRoutes = require('./routes/content-pages');
+const globalResponsesRoutes = require('./routes/responses-global');
 
 // New country-specific routes
 const countryProductRoutes = require('./routes/country-products');
@@ -157,6 +158,7 @@ app.use('/api', subscriptionPlansLegacyRoutes);
 app.use('/api', dashboardRoutes);
 app.use('/api', customProductVariableRoutes);
 app.use('/api/content-pages', contentPagesRoutes);
+app.use('/api/responses', globalResponsesRoutes);
 
 // Country-specific routes
 app.use('/api/country-products', countryProductRoutes);
