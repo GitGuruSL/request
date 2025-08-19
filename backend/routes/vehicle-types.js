@@ -1,11 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const database = require('../services/database');
+const auth = require('../services/auth');
 
 // Get all vehicle types for a country
-router.get('/', async (req, res) => {
+router.get('/', auth.authMiddleware(), async (req, res) => {
   try {
-    const countryCode = (req.query.country || 'LK').toUpperCase();
+    // For country admins, force their country; for super admins, allow any country
+    let countryCode;
+    if (req.user.role === 'country_admin') {
+      countryCode = (req.user.country_code || req.user.country || 'LK').toUpperCase();
+    } else {
+      countryCode = (req.query.country || 'LK').toUpperCase();
+    }
+    
     const includeInactive = req.query.includeInactive === 'true';
 
     const result = await database.query(`
@@ -14,8 +22,8 @@ router.get('/', async (req, res) => {
         vt.name,
         vt.description,
         vt.icon,
-        COALESCE(vt.display_order, 0) AS display_order,
-        COALESCE(vt.passenger_capacity, vt.capacity, 1) AS passenger_capacity,
+        0 AS display_order,
+        COALESCE(vt.capacity, 1) AS passenger_capacity,
         vt.is_active,
         vt.created_at,
         vt.updated_at,
@@ -27,7 +35,7 @@ router.get('/', async (req, res) => {
         ON vt.id = cvt.vehicle_type_id 
        AND cvt.country_code = $1
       WHERE ($2 OR vt.is_active = true)
-      ORDER BY COALESCE(vt.display_order, 9999), vt.name
+      ORDER BY vt.name
     `, [countryCode, includeInactive]);
 
     // Adapt to frontend expected camelCase keys
@@ -53,8 +61,43 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Toggle vehicle type status for a specific country (country admin only)
+router.post('/:id/toggle-country', auth.authMiddleware(), async (req, res) => {
+  try {
+    const vehicleTypeId = req.params.id;
+    const { isActive } = req.body;
+    
+    // Get user's country
+    const countryCode = (req.user.country_code || req.user.country || 'LK').toUpperCase();
+    
+    // Check if vehicle type exists
+    const vehicleType = await database.queryOne('SELECT * FROM vehicle_types WHERE id = $1', [vehicleTypeId]);
+    if (!vehicleType) {
+      return res.status(404).json({ success: false, message: 'Vehicle type not found' });
+    }
+    
+    // Upsert country_vehicle_types record
+    const result = await database.query(`
+      INSERT INTO country_vehicle_types (vehicle_type_id, country_code, is_active)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (vehicle_type_id, country_code)
+      DO UPDATE SET is_active = EXCLUDED.is_active, updated_at = CURRENT_TIMESTAMP
+      RETURNING *
+    `, [vehicleTypeId, countryCode, isActive]);
+    
+    res.json({ 
+      success: true, 
+      message: `Vehicle type ${isActive ? 'enabled' : 'disabled'} for ${countryCode}`,
+      data: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error toggling vehicle type for country:', error);
+    res.status(500).json({ success: false, message: 'Error updating vehicle type status', error: error.message });
+  }
+});
+
 // Create a vehicle type
-router.post('/', async (req, res) => {
+router.post('/', auth.authMiddleware(), auth.roleMiddleware(['super_admin']), async (req, res) => {
   try {
     const { name, description, icon, capacity, passengerCapacity, displayOrder, is_active, isActive } = req.body || {};
     if (!name || !name.trim()) return res.status(400).json({ success: false, message: 'Name is required' });
@@ -87,7 +130,7 @@ router.post('/', async (req, res) => {
 });
 
 // Get vehicle type by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', auth.authMiddleware(), async (req, res) => {
   try {
     const vehicleTypeId = req.params.id;
     
@@ -117,8 +160,8 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Update vehicle type
-router.put('/:id', async (req, res) => {
+// Update vehicle type (super admin only)
+router.put('/:id', auth.authMiddleware(), auth.roleMiddleware(['super_admin']), async (req, res) => {
   try {
     const id = req.params.id;
     const { name, description, icon, capacity, passengerCapacity, displayOrder, is_active, isActive } = req.body || {};
@@ -165,8 +208,8 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// Delete vehicle type
-router.delete('/:id', async (req, res) => {
+// Delete vehicle type (super admin only)
+router.delete('/:id', auth.authMiddleware(), auth.roleMiddleware(['super_admin']), async (req, res) => {
   try {
     const id = req.params.id;
     const deleted = await database.queryOne('DELETE FROM vehicle_types WHERE id = $1 RETURNING id,name', [id]);

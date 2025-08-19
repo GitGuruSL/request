@@ -94,7 +94,11 @@ const Vehicles = () => {
 
   const fetchVehicles = async () => {
     try {
-      const res = await api.get('/vehicle-types');
+      const params = {};
+      if (!isSuperAdmin && adminData?.country) {
+        params.country = adminData.country;
+      }
+      const res = await api.get('/vehicle-types', { params });
       const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
       setVehicles(list.sort((a,b)=> (a.displayOrder||0)-(b.displayOrder||0)));
     } catch (error) {
@@ -106,8 +110,10 @@ const Vehicles = () => {
   const fetchCountryVehicles = async () => {
     try {
       if (!adminData?.country) return;
-      const res = await api.get(`/country-vehicles?country=${adminData.country}`);
-      setCountryVehicles(res.data?.enabledVehicles || res.data?.data?.enabledVehicles || []);
+      // Use the same endpoint with country parameter for country-specific vehicle types
+      const res = await api.get('/vehicle-types', { params: { country: adminData.country } });
+      const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      setCountryVehicles(list.filter(v => v.countryEnabled));
     } catch (e) { console.error('Error fetching country vehicles', e); setCountryVehicles([]);} }
 
   const handleSubmit = async () => {
@@ -150,9 +156,16 @@ const Vehicles = () => {
   const handleToggleCountryVehicle = async (vehicleId, enabled) => {
     try {
       if (!adminData?.country) throw new Error('Country information not available');
-      const updatedVehicles = enabled ? [...countryVehicles, vehicleId] : countryVehicles.filter(id => id !== vehicleId);
-      await api.put('/country-vehicles', { countryCode: adminData.country, enabledVehicles: updatedVehicles });
-      await fetchCountryVehicles();
+      
+      // Use the new toggle endpoint
+      await api.post(`/vehicle-types/${vehicleId}/toggle-country`, { isActive: enabled });
+      
+      // Refresh the vehicle list to get updated country status
+      await fetchVehicles();
+      if (!isSuperAdmin) {
+        await fetchCountryVehicles();
+      }
+      
       showSnackbar(`Vehicle ${enabled ? 'enabled' : 'disabled'} for ${adminData.country}`);
     } catch (error) {
       console.error('Error updating country vehicles:', error);
@@ -431,10 +444,11 @@ const Vehicles = () => {
 
           <Grid container spacing={3}>
             {vehicles.map((vehicle) => {
-              const isEnabled = countryVehicles.includes(vehicle.id);
+              // For country admins, use the countryEnabled field from the API response
+              const isEnabled = isSuperAdmin ? vehicle.isActive : (vehicle.countryEnabled || false);
               
-              // Debug: Log the comparison
-              console.log(`Vehicle ${vehicle.name}: ID=${vehicle.id} (type: ${typeof vehicle.id}), countryVehicles=`, countryVehicles, `isEnabled=${isEnabled}`);
+              // Debug: Log the vehicle status
+              console.log(`Vehicle ${vehicle.name}: ID=${vehicle.id}, isActive=${vehicle.isActive}, countryEnabled=${vehicle.countryEnabled}, isEnabled=${isEnabled}`);
               
               return (
                 <Grid item xs={12} sm={6} md={4} key={vehicle.id}>
