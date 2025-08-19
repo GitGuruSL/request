@@ -23,7 +23,26 @@ router.get('/products/master/count', auth.authMiddleware(), async (req, res) => 
 // /api/admin-users/count
 router.get('/admin-users/count', auth.authMiddleware(), async (req, res) => {
   try {
-    const count = await countTable('admin_users', 'WHERE is_active = true');
+    let whereSql = 'WHERE is_active = true';
+    const params = [];
+    let paramIndex = 1;
+
+    // Apply country filtering
+    if (req.user.role === 'country_admin') {
+      // Country admin can only see admins from their country
+      // Exclude super admins from the count for country admins
+      whereSql += ` AND country_code = $${paramIndex} AND role = 'country_admin'`;
+      params.push(req.user.country_code || req.user.country || '');
+      paramIndex++;
+    } else if (req.query.country) {
+      // Super admin requesting specific country - count only country admins from that country
+      whereSql += ` AND country_code = $${paramIndex} AND role = 'country_admin'`;
+      params.push(req.query.country);
+      paramIndex++;
+    }
+    // If super admin with no country filter, count all admin users
+
+    const count = await countTable('admin_users', whereSql, params);
     res.json({ success: true, count });
   } catch (e) {
     console.error('Dashboard admin users count error', e);
