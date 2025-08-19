@@ -6,11 +6,10 @@ import '../../models/enhanced_user_model.dart';
 import '../../utils/image_url_helper.dart';
 import 'unified_response_create_screen.dart';
 import 'unified_request_edit_screen.dart';
-import 'unified_response_edit_screen.dart';
 import 'view_all_responses_screen.dart';
+import 'unified_response_edit_screen.dart';
 import '../chat/conversation_screen.dart';
 import '../../services/chat_service.dart';
-import '../../models/chat_models.dart';
 
 /// UnifiedRequestViewScreen (Minimal REST Migration)
 /// Legacy Firebase-based logic removed. Displays core request info only.
@@ -29,11 +28,8 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
   bool _isOwner = false;
   // Added state
   List<rest.ResponseModel> _responses = [];
-  int _responsesPage = 1;
-  int _responsesTotalPages = 1;
   bool _responsesLoading = false;
-  final Set<String> _updating = {};
-  final Set<String> _deleting = {};
+  // Removed per simplification: individual response update/delete no longer supported here
   bool _updatingRequest = false;
   bool _deletingRequest = false;
 
@@ -51,13 +47,11 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
       bool owner =
           r != null && currentUserId != null && r.userId == currentUserId;
       List<rest.ResponseModel> responses = [];
-      int totalPages = 1;
       if (r != null) {
-        final page = await _service.getResponses(r.id, page: 1, limit: 10);
-        responses = page.responses;
-        totalPages = page.totalPages;
-        _responsesPage = 2; // next page
-        _responsesTotalPages = totalPages;
+        try {
+          final page = await _service.getResponses(r.id, page: 1, limit: 50);
+          responses = page.responses;
+        } catch (_) {}
       }
       if (mounted) {
         setState(() {
@@ -78,62 +72,42 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
 
   Future<void> _reloadResponses() async {
     if (_request == null) return;
-    _responsesPage = 1;
-    _responsesTotalPages = 1;
-    _responses.clear();
-    await _fetchResponses(reset: true);
-  }
-
-  Future<void> _fetchResponses({bool reset = false}) async {
-    if (_request == null) return;
-    if (_responsesLoading) return;
-    if (!reset && _responsesPage > _responsesTotalPages) return;
     setState(() => _responsesLoading = true);
-    final pageToLoad = reset ? 1 : _responsesPage;
-    final page =
-        await _service.getResponses(_request!.id, page: pageToLoad, limit: 10);
-    if (mounted) {
-      setState(() {
-        if (reset) {
-          _responses = page.responses;
-          _responsesPage = 2;
-        } else {
-          _responses.addAll(page.responses);
-          _responsesPage = page.page + 1;
-        }
-        _responsesTotalPages = page.totalPages;
-        _responsesLoading = false;
-      });
+    try {
+      final page =
+          await _service.getResponses(_request!.id, page: 1, limit: 50);
+      if (mounted) setState(() => _responses = page.responses);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to reload responses: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _responsesLoading = false);
     }
-  }
-
-  bool get _hasUserResponded {
-    final uid = RestAuthService.instance.currentUser?.uid;
-    if (uid == null) return false;
-    return _responses.any((r) => r.userId == uid);
   }
 
   bool get _canRespond {
     if (_request == null) return false;
-    if (_isOwner) return false;
-    if (_hasUserResponded) return false;
-    if (_request!.status.toLowerCase() != 'active') return false;
-    return RestAuthService.instance.currentUser != null;
+    final userId = RestAuthService.instance.currentUser?.uid;
+    if (userId == null) return false;
+    if (userId == _request!.userId) return false; // owner cannot respond
+    final status = _request!.status.toLowerCase();
+    if (!(status == 'active' || status == 'open')) return false;
+    // Only allow one response per user on this screen
+    return !_responses.any((r) => r.userId == userId);
   }
 
   void _openCreateResponseSheet() {
     if (_request == null) return;
-
-    // Convert REST model to enhanced model
     final requestModel = _convertToRequestModel(_request!);
-
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) =>
             UnifiedResponseCreateScreen(request: requestModel),
       ),
-    ).then((_) => _reloadResponses()); // Refresh responses when returning
+    ).then((_) => _reloadResponses());
   }
 
   Future<void> _messageRequester(rest.RequestModel r) async {
@@ -194,14 +168,12 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
       ),
     ).then((_) => _reloadResponses()); // Refresh responses when returning
   }
+  // Removed _navigateToResponseEdit (individual response editing hidden here)
 
   void _navigateToResponseEdit(rest.ResponseModel response) {
     if (_request == null) return;
-
-    // Convert REST models to enhanced models
     final requestModel = _convertToRequestModel(_request!);
     final responseModel = _convertToResponseModel(response);
-
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -210,7 +182,7 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
           response: responseModel,
         ),
       ),
-    ).then((_) => _reloadResponses()); // Refresh responses when returning
+    ).then((_) => _reloadResponses());
   }
 
   RequestType _getCurrentRequestType() {
@@ -367,24 +339,7 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
     );
   }
 
-  // Helper method to convert REST ResponseModel to enhanced ResponseModel
-  ResponseModel _convertToResponseModel(rest.ResponseModel restResponse) {
-    return ResponseModel(
-      id: restResponse.id,
-      requestId: restResponse.requestId,
-      responderId: restResponse.userId,
-      message: restResponse.message,
-      price: restResponse.price,
-      currency: restResponse.currency,
-      images: [],
-      isAccepted: _request?.acceptedResponseId == restResponse.id,
-      createdAt: restResponse.createdAt,
-      availableFrom: null,
-      availableUntil: null,
-      additionalInfo: {},
-      rejectionReason: null,
-    );
-  }
+  // Removed _convertToResponseModel (no individual response render)
 
   RequestType _getRequestTypeFromString(String type) {
     // Handle both "RequestType.item" and "item" formats
@@ -412,6 +367,25 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
     }
   }
 
+  // Needed again for response edit navigation
+  ResponseModel _convertToResponseModel(rest.ResponseModel restResponse) {
+    return ResponseModel(
+      id: restResponse.id,
+      requestId: restResponse.requestId,
+      responderId: restResponse.userId,
+      message: restResponse.message,
+      price: restResponse.price,
+      currency: restResponse.currency,
+      images: restResponse.imageUrls ?? [],
+      isAccepted: _request?.acceptedResponseId == restResponse.id,
+      createdAt: restResponse.createdAt,
+      availableFrom: null,
+      availableUntil: null,
+      additionalInfo: restResponse.metadata ?? {},
+      rejectionReason: null,
+    );
+  }
+
   RequestStatus _getRequestStatusFromString(String status) {
     switch (status.toLowerCase()) {
       case 'active':
@@ -431,140 +405,7 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
     }
   }
 
-  void _openEditResponseSheet(rest.ResponseModel response) {
-    final messageController = TextEditingController(text: response.message);
-    final priceController = TextEditingController(
-        text: response.price != null ? response.price!.toStringAsFixed(0) : '');
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-        child: StatefulBuilder(builder: (ctx, setSheet) {
-          final isBusy = _updating.contains(response.id);
-          return Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(children: [
-                    const Expanded(
-                        child: Text('Edit Response',
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold))),
-                    IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(ctx))
-                  ]),
-                  TextField(
-                      controller: messageController,
-                      maxLines: 4,
-                      decoration: const InputDecoration(
-                          labelText: 'Message', border: OutlineInputBorder())),
-                  const SizedBox(height: 12),
-                  TextField(
-                      controller: priceController,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(
-                          labelText: 'Price (optional)',
-                          prefixIcon: Icon(Icons.attach_money))),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: isBusy
-                            ? null
-                            : () async {
-                                final msg = messageController.text.trim();
-                                if (msg.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content: Text('Message required')));
-                                  return;
-                                }
-                                setState(() => _updating.add(response.id));
-                                setSheet(() => {});
-                                final priceText = priceController.text.trim();
-                                final priceVal = priceText.isEmpty
-                                    ? null
-                                    : double.tryParse(priceText);
-                                final updated = await _service
-                                    .updateResponse(_request!.id, response.id, {
-                                  'message': msg,
-                                  'price': priceVal,
-                                });
-                                if (updated != null) {
-                                  final idx = _responses
-                                      .indexWhere((r) => r.id == response.id);
-                                  if (idx != -1)
-                                    setState(() => _responses[idx] = updated);
-                                  if (mounted) Navigator.pop(ctx);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content: Text('Response updated')));
-                                } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content: Text(
-                                              'Failed to update response')));
-                                }
-                                if (mounted)
-                                  setState(() => _updating.remove(response.id));
-                              },
-                        icon: isBusy
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: Colors.white))
-                            : const Icon(Icons.save),
-                        label: Text(isBusy ? 'Saving...' : 'Save Changes'),
-                      )),
-                  const SizedBox(height: 12),
-                ]),
-          );
-        }),
-      ),
-    );
-  }
-
-  void _confirmDelete(rest.ResponseModel response) async {
-    final isBusy = _deleting.contains(response.id);
-    if (isBusy) return;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Response'),
-        content: const Text(
-            'Are you sure you want to delete this response? This action cannot be undone.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
-          FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: FilledButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('Delete')),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    setState(() => _deleting.add(response.id));
-    final success = await _service.deleteResponse(_request!.id, response.id);
-    if (success) {
-      setState(() => _responses.removeWhere((r) => r.id == response.id));
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Response deleted')));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to delete response')));
-    }
-    if (mounted) setState(() => _deleting.remove(response.id));
-  }
+  // Removed edit & delete response methods (aggregate-only view)
 
   void _openEditRequestSheet() {
     if (_request == null) return;
@@ -1352,178 +1193,121 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
   }
 
   Widget _responsesSection() {
-    final canLoadMore =
-        _responsesPage <= _responsesTotalPages && !_responsesLoading;
-    return _sectionCard(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [
-        const Text('Responses',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        const Spacer(),
-        if (_responses.isNotEmpty)
-          TextButton(
-            onPressed: _navigateToViewAllResponses,
-            child: const Text('View All'),
-          ),
-        IconButton(
-            onPressed: _reloadResponses,
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Reload')
-      ]),
-      const SizedBox(height: 8),
-      if (_responses.isEmpty && !_responsesLoading)
-        Text(_canRespond ? 'Be the first to respond.' : 'No responses yet.',
-            style: TextStyle(color: Colors.grey[600])),
-      ..._responses.map(_responseTile),
-      if (_responsesLoading)
-        const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: Center(child: CircularProgressIndicator())),
-      if (canLoadMore)
-        Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-                onPressed: () => _fetchResponses(),
-                icon: const Icon(Icons.more_horiz),
-                label: const Text('Load more'))),
-    ]));
-  }
+    // Compute cheapest price
+    double? cheapest;
+    String? cheapestCurrency;
+    for (final r in _responses) {
+      if (r.price != null) {
+        if (cheapest == null || r.price! < cheapest) {
+          cheapest = r.price;
+          cheapestCurrency = r.currency ?? _request?.currency;
+        }
+      }
+    }
 
-  Widget _responseTile(rest.ResponseModel r) {
-    final myUid = RestAuthService.instance.currentUser?.uid;
-    final isMine = myUid != null && r.userId == myUid;
-    final isAccepted = _request?.acceptedResponseId == r.id;
-    final busy = _updating.contains(r.id) || _deleting.contains(r.id);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isAccepted
-            ? Colors.green[50]
-            : (isMine ? Colors.blue[50] : Colors.grey[50]),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-            color: isAccepted
-                ? Colors.green
-                : (isMine ? Colors.blue[100]! : Colors.grey[200]!)),
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Icon(isMine ? Icons.person_pin : Icons.person,
-              size: 16, color: Colors.grey[600]),
-          const SizedBox(width: 4),
-          Expanded(
-              child: Text(r.userName ?? 'User ${r.userId}',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: isAccepted
-                          ? Colors.green[800]
-                          : (isMine ? Colors.blue[800] : null)))),
-          if (busy)
-            const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2)),
-          Text(_relativeTime(r.createdAt),
-              style: TextStyle(fontSize: 11, color: Colors.grey[500])),
-          if (!busy)
-            PopupMenuButton<String>(
-              onSelected: (val) {
-                if (val == 'edit') {
-                  _openEditResponseSheet(r);
-                } else if (val == 'edit_full') {
-                  _navigateToResponseEdit(r);
-                } else if (val == 'delete') {
-                  _confirmDelete(r);
-                } else if (val == 'accept') {
-                  _acceptResponse(r.id);
-                } else if (val == 'unaccept') {
-                  _clearAccepted();
-                }
-              },
-              itemBuilder: (ctx) {
-                final items = <PopupMenuEntry<String>>[];
-                if (isMine) {
-                  items.add(const PopupMenuItem(
-                      value: 'edit', child: Text('Quick Edit')));
-                  items.add(const PopupMenuItem(
-                      value: 'edit_full', child: Text('Full Edit Screen')));
-                  items.add(const PopupMenuItem(
-                      value: 'delete', child: Text('Delete')));
-                }
-                if (_isOwner) {
-                  if (isAccepted) {
-                    items.add(const PopupMenuItem(
-                        value: 'unaccept', child: Text('Unaccept')));
-                  } else {
-                    items.add(const PopupMenuItem(
-                        value: 'accept', child: Text('Accept')));
+    final typeColor = _getTypeColor(_getCurrentRequestType());
+
+    return Card(
+      elevation: 0,
+      color: typeColor.withOpacity(0.06),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Builder(builder: (context) {
+              // Determine if current user is a responder
+              final currentUserId = RestAuthService.instance.currentUser?.uid;
+              rest.ResponseModel? myResponse;
+              if (currentUserId != null) {
+                for (final resp in _responses) {
+                  if (resp.userId == currentUserId) {
+                    myResponse = resp;
+                    break;
                   }
                 }
-                return items;
-              },
-            ),
-        ]),
-        const SizedBox(height: 6),
-        Text(r.message, style: const TextStyle(fontSize: 14)),
-        if (r.price != null) ...[
-          const SizedBox(height: 6),
-          Row(children: [
-            const Icon(Icons.attach_money, size: 16, color: Colors.green),
-            Text(
-                '${r.currency ?? _request?.currency ?? ''}${r.price!.toStringAsFixed(0)}',
-                style: const TextStyle(fontWeight: FontWeight.w600))
-          ])
-        ],
-        if (isAccepted) ...[
-          const SizedBox(height: 8),
-          Row(children: const [
-            Icon(Icons.verified, size: 16, color: Colors.green),
-            SizedBox(width: 4),
-            Text('ACCEPTED',
-                style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green))
-          ])
-        ]
-      ]),
+              }
+              return Row(children: [
+                const Text('Responses',
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const Spacer(),
+                if (myResponse != null)
+                  TextButton.icon(
+                    onPressed: () => _navigateToResponseEdit(myResponse!),
+                    icon: const Icon(Icons.edit, size: 16),
+                    label: const Text('Edit Response'),
+                  ),
+                if (_responses.isNotEmpty && _isOwner)
+                  TextButton(
+                    onPressed: _navigateToViewAllResponses,
+                    child: const Text('View All'),
+                  ),
+                IconButton(
+                  tooltip: 'Reload',
+                  icon: const Icon(Icons.refresh),
+                  onPressed: _responsesLoading ? null : _reloadResponses,
+                )
+              ]);
+            }),
+            const SizedBox(height: 12),
+            if (_responsesLoading)
+              const SizedBox(
+                  height: 24,
+                  child:
+                      Center(child: CircularProgressIndicator(strokeWidth: 2))),
+            if (!_responsesLoading) ...[
+              if (_responses.isEmpty)
+                Text(
+                    _canRespond
+                        ? 'Be the first to respond.'
+                        : 'No responses yet.',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+              if (_responses.isNotEmpty)
+                Row(children: [
+                  _infoChip(
+                      label: 'Total',
+                      value: _responses.length.toString(),
+                      color: typeColor),
+                  const SizedBox(width: 8),
+                  _infoChip(
+                      label: 'Cheapest',
+                      value: cheapest != null
+                          ? '${cheapestCurrency ?? ''}${cheapest.toStringAsFixed(0)}'
+                          : '—',
+                      color: typeColor),
+                ])
+            ]
+          ],
+        ),
+      ),
     );
   }
 
-  Future<void> _acceptResponse(String responseId) async {
-    if (_request == null) return;
-    try {
-      final res = await _service.acceptResponse(_request!.id, responseId);
-      if (res != null) {
-        setState(() => _request = res);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Response accepted')));
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to accept response')));
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error: $e')));
-    }
-  }
+  Widget _infoChip(
+          {required String label,
+          required String value,
+          required Color color}) =>
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(label,
+                style: TextStyle(
+                    fontSize: 12, color: color, fontWeight: FontWeight.w600)),
+            const SizedBox(width: 6),
+            Text(value,
+                style:
+                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      );
 
-  Future<void> _clearAccepted() async {
-    if (_request == null) return;
-    try {
-      final res = await _service.clearAcceptedResponse(_request!.id);
-      if (res != null) {
-        setState(() => _request = res);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Cleared acceptance')));
-      } else {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Failed to unaccept')));
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error: $e')));
-    }
-  }
+  // Removed individual response tiles & accept/unaccept logic per new privacy requirement.
 }
