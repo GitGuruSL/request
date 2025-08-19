@@ -41,6 +41,28 @@ router.get('/', async (req,res) => {
   }
 });
 
+// Public list for mobile selection (must be BEFORE :codeOrId)
+router.get('/public', async (req,res)=>{
+  try {
+    const rows = await db.query('SELECT code,name,default_currency,phone_prefix,locale,tax_rate,flag_url,is_active FROM countries ORDER BY name');
+    const data = rows.rows.map(r=>({
+      code: r.code,
+      name: r.name,
+      phoneCode: r.phone_prefix,
+      currency: r.default_currency,
+      flagUrl: r.flag_url,
+      isActive: r.is_active,
+      comingSoon: !r.is_active,
+      statusLabel: r.is_active ? 'Active' : 'Coming Soon',
+      comingSoonMessage: !r.is_active ? 'This country is coming soon. Please select an active country.' : null
+    }));
+    res.json({ success:true, data });
+  } catch(e){
+    console.error('Public countries list error', e);
+    res.status(500).json({ success:false, message:'Error loading countries'});
+  }
+});
+
 // GET /api/countries/:codeOrId
 router.get('/:codeOrId', async (req,res) => {
   try {
@@ -60,7 +82,7 @@ router.get('/:codeOrId', async (req,res) => {
 });
 
 // POST /api/countries
-router.post('/', auth.authMiddleware(), auth.roleMiddleware(['admin']), async (req,res) => {
+router.post('/', auth.authMiddleware(), auth.roleMiddleware(['admin','super_admin']), async (req,res) => {
   try {
     const { code, name, default_currency, phone_prefix, locale, tax_rate, flag_url, is_active = true } = req.body;
     if (!code || !name) return res.status(400).json({ success:false, message:'code and name required' });
@@ -77,7 +99,7 @@ router.post('/', auth.authMiddleware(), auth.roleMiddleware(['admin']), async (r
 });
 
 // PUT /api/countries/:codeOrId
-router.put('/:codeOrId', auth.authMiddleware(), auth.roleMiddleware(['admin']), async (req,res) => {
+router.put('/:codeOrId', auth.authMiddleware(), auth.roleMiddleware(['admin','super_admin']), async (req,res) => {
   try {
     const v = req.params.codeOrId;
     const fields = { name: req.body.name, default_currency: req.body.default_currency, phone_prefix: req.body.phone_prefix, locale: req.body.locale, tax_rate: req.body.tax_rate, flag_url: req.body.flag_url, is_active: req.body.is_active };
@@ -100,7 +122,7 @@ router.put('/:codeOrId', auth.authMiddleware(), auth.roleMiddleware(['admin']), 
 });
 
 // DELETE (soft deactivate)
-router.delete('/:codeOrId', auth.authMiddleware(), auth.roleMiddleware(['admin']), async (req,res) => {
+router.delete('/:codeOrId', auth.authMiddleware(), auth.roleMiddleware(['admin','super_admin']), async (req,res) => {
   try {
     const v = req.params.codeOrId;
     let row;
@@ -118,3 +140,29 @@ router.delete('/:codeOrId', auth.authMiddleware(), auth.roleMiddleware(['admin']
 });
 
 module.exports = router;
+
+// Additional endpoint for status toggle expected by frontend: PUT /api/countries/:codeOrId/status
+router.put('/:codeOrId/status', auth.authMiddleware(), auth.roleMiddleware(['admin','super_admin']), async (req,res) => {
+  try {
+    const v = req.params.codeOrId;
+    const desired = req.body && typeof req.body.isActive === 'boolean' ? req.body.isActive : undefined;
+    let row;
+    if (/^\d+$/.test(v)) {
+      row = await db.queryOne('SELECT * FROM countries WHERE id=$1',[parseInt(v,10)]);
+    } else {
+      row = await db.queryOne('SELECT * FROM countries WHERE code=$1',[v.toUpperCase()]);
+    }
+    if(!row) return res.status(404).json({ success:false, message:'Country not found'});
+    const newVal = desired !== undefined ? desired : !row.is_active;
+    let updated;
+    if (/^\d+$/.test(v)) {
+      updated = await db.queryOne('UPDATE countries SET is_active=$1, updated_at=NOW() WHERE id=$2 RETURNING *',[newVal, parseInt(v,10)]);
+    } else {
+      updated = await db.queryOne('UPDATE countries SET is_active=$1, updated_at=NOW() WHERE code=$2 RETURNING *',[newVal, v.toUpperCase()]);
+    }
+    res.json({ success:true, message:'Status updated', data: updated });
+  } catch(e){
+    console.error('Toggle country status error', e);
+    res.status(500).json({ success:false, message:'Error updating country status'});
+  }
+});
