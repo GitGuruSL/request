@@ -87,8 +87,11 @@ const RequestsModule = () => {
       setLoading(true);
       setError(null);
 
-      const data = await getFilteredData('requests', adminData);
-      setRequests(data || []);
+      const raw = await getFilteredData('requests', adminData);
+      const data = Array.isArray(raw)
+        ? raw
+        : (raw?.requests && Array.isArray(raw.requests) ? raw.requests : []);
+      setRequests(data);
       
       // Fetch user data for all requesters
       if (data && data.length > 0) {
@@ -132,7 +135,8 @@ const RequestsModule = () => {
     setFilterAnchorEl(null);
   };
 
-  const filteredRequests = requests.filter(request => {
+  const safeRequests = Array.isArray(requests) ? requests : [];
+  const filteredRequests = safeRequests.filter(request => {
     const matchesSearch = !searchTerm || 
                          request.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          request.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||

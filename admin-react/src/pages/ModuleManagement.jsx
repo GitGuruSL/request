@@ -65,7 +65,9 @@ const ModuleManagement = () => {
   const fetchCountries = async () => {
     try {
       const res = await api.get('/countries');
-      const list = (res.data || []).map(c => ({ id: c.id || c.code, code: c.code, name: c.name }));
+  const raw = res.data;
+  const arr = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
+  const list = arr.map(c => ({ id: c.id || c.code, code: c.code, name: c.name }));
       setCountries(list);
     } catch (error) {
       console.error('Error fetching countries:', error);

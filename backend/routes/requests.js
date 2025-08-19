@@ -11,7 +11,7 @@ router.get('/', async (req, res) => {
       category_id,
       subcategory_id,
       city_id,
-      country_code = 'LK',
+      country_code, // no default so super admins (or unspecified) see all countries
       status,
       user_id,
       has_accepted,
@@ -48,7 +48,7 @@ router.get('/', async (req, res) => {
       conditions.push(`r.location_city_id = $${paramCounter++}`);
       values.push(city_id);
     }
-    if (country_code) {
+  if (country_code) { // only filter when explicitly provided
       conditions.push(`r.country_code = $${paramCounter++}`);
       values.push(country_code);
     }
@@ -128,7 +128,7 @@ router.get('/search', async (req, res) => {
       category_id,
       subcategory_id,
       city_id,
-      country_code = 'LK',
+      country_code,
       status,
       user_id,
   has_accepted,

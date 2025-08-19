@@ -54,7 +54,18 @@ export class CountryDataService {
       const path = endpointMap[collectionName] || `/${collectionName}`;
       const res = await api.get(path, { params: queryParams });
       // Assume API returns { data: [...] } or array directly
-      const data = Array.isArray(res.data) ? res.data : (res.data.data || []);
+      let data;
+      if (Array.isArray(res.data)) {
+        data = res.data;
+      } else if (res.data && Array.isArray(res.data.data)) {
+        data = res.data.data;
+      } else if (res.data && res.data.data && Array.isArray(res.data.data.requests)) {
+        data = res.data.data.requests; // nested shape (requests endpoint)
+      } else if (res.data && res.data.requests && Array.isArray(res.data.requests)) {
+        data = res.data.requests;
+      } else {
+        data = [];
+      }
       return data;
     } catch (error) {
       console.error(`Error fetching filtered data from ${collectionName}:`, error);
