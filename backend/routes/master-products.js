@@ -5,15 +5,31 @@ const auth = require('../services/auth');
 // Helper: wrap protected handlers but allow dev fallback without auth header
 function optionalAuth(handler){
   return async (req,res,next)=>{
-    const hasAuth = !!req.headers.authorization;
-    if(!hasAuth && process.env.NODE_ENV !== 'production'){
-      // skip auth in non-production if no header
+    const hasAuthHeader = !!req.headers.authorization;
+    const isProd = process.env.NODE_ENV === 'production';
+
+    // Fast path: no header & dev => skip
+    if(!hasAuthHeader && !isProd){
       return handler(req,res,next);
     }
-    return auth.authMiddleware()(req,res,(err)=>{
-      if(err) return next(err);
-      auth.requirePermission('productManagement')(req,res,(err2)=>{
-        if(err2) return next(err2);
+
+    // Try auth, but in dev fall back if it fails
+    auth.authMiddleware()(req,res,(err)=>{
+      if(err){
+        if(!isProd){
+          console.warn('[optionalAuth] Auth failed in dev, continuing without user:', err.message);
+          return handler(req,res,next);
+        }
+        return next(err);
+      }
+      auth.requirePermission('productManagement')(req,res,(permErr)=>{
+        if(permErr){
+          if(!isProd){
+            console.warn('[optionalAuth] Permission check failed in dev, continuing:', permErr.message);
+            return handler(req,res,next);
+          }
+          return next(permErr);
+        }
         handler(req,res,next);
       });
     });
@@ -30,7 +46,10 @@ function adapt(row){
     slug: row.slug,
     brandId: row.brand_id || null,
     baseUnit: row.base_unit || null,
-    isActive: row.is_active,
+    // Normalize possible representations (boolean, int, char)
+    isActive: typeof row.is_active === 'boolean'
+      ? row.is_active
+      : (row.is_active === 1 || row.is_active === '1' || row.is_active === 't' || row.is_active === 'true'),
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };

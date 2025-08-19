@@ -81,7 +81,7 @@ const Products = () => {
 
   useEffect(() => {
     filterProducts();
-  }, [products, searchTerm, categoryFilter, brandFilter]);
+  }, [products, searchTerm, categoryFilter, brandFilter, statusFilter]);
 
   // Load subcategories when category changes
   useEffect(() => {
