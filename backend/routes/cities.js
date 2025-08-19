@@ -3,27 +3,38 @@ const router = express.Router();
 const database = require('../services/database');
 const auth = require('../services/auth');
 
-// Get all cities for a country
+// Adapter to provide camelCase fields for frontend consistency
+function adaptCity(row){
+  if(!row) return row;
+  return {
+    ...row,
+    countryCode: row.country_code,
+    isActive: row.is_active,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+// Get all (or by country) cities
 router.get('/', async (req, res) => {
   try {
-    const countryCode = req.query.country || 'LK';
-    
-    const result = await database.query(
-      'SELECT * FROM cities WHERE country_code = $1 ORDER BY name',
-      [countryCode]
-    );
-
-    res.json({
-      success: true,
-      data: result.rows
-    });
+    const countryParam = req.query.country;
+    const all = req.query.all === '1' || req.query.all === 'true';
+    let result;
+    if (all || !countryParam) {
+      // If no country specified, keep previous behavior defaulting to LK unless all=1 explicitly requested
+      if (all) {
+        result = await database.query('SELECT * FROM cities ORDER BY name');
+      } else {
+        result = await database.query('SELECT * FROM cities WHERE country_code = $1 ORDER BY name',[ (countryParam || 'LK').toUpperCase() ]);
+      }
+    } else {
+      result = await database.query('SELECT * FROM cities WHERE country_code = $1 ORDER BY name',[ countryParam.toUpperCase() ]);
+    }
+    res.json({ success:true, data: result.rows.map(adaptCity) });
   } catch (error) {
     console.error('Error fetching cities:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching cities',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-    });
+    res.status(500).json({ success:false, message:'Error fetching cities', error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error' });
   }
 });
 
@@ -44,10 +55,7 @@ router.get('/:id', async (req, res) => {
       });
     }
 
-    res.json({
-      success: true,
-      data: city
-    });
+  res.json({ success:true, data: adaptCity(city) });
   } catch (error) {
     console.error('Error fetching city:', error);
     res.status(500).json({
@@ -63,27 +71,18 @@ router.get('/:id', async (req, res) => {
 // Create new city (admin only)
 router.post('/', auth.authMiddleware(), async (req, res) => {
   try {
-    const { name, country_code, is_active = true } = req.body;
-
-    if (!name || !country_code) {
-      return res.status(400).json({
-        success: false,
-        message: 'Name and country_code are required'
-      });
+    const { name, country_code, countryCode, is_active = true } = req.body;
+    const cc = (country_code || countryCode || '').toUpperCase();
+    if (!name || !cc) {
+      return res.status(400).json({ success:false, message:'Name and countryCode are required' });
     }
-
     const city = await database.queryOne(
       `INSERT INTO cities (name, country_code, is_active, created_at, updated_at)
-       VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+       VALUES ($1,$2,$3,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
        RETURNING *`,
-      [name, country_code, is_active]
+      [name, cc, is_active]
     );
-
-    res.status(201).json({
-      success: true,
-      message: 'City created successfully',
-      data: city
-    });
+    res.status(201).json({ success:true, message:'City created successfully', data: adaptCity(city) });
   } catch (error) {
     console.error('Error creating city:', error);
     
@@ -106,7 +105,8 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
 router.put('/:id', auth.authMiddleware(), async (req, res) => {
   try {
     const cityId = req.params.id;
-    const { name, country_code, is_active } = req.body;
+    const { name, country_code, countryCode, is_active } = req.body;
+    const cc = country_code || countryCode;
 
     // Build dynamic update query
     const updates = [];
@@ -117,9 +117,9 @@ router.put('/:id', auth.authMiddleware(), async (req, res) => {
       updates.push(`name = $${paramCounter++}`);
       values.push(name);
     }
-    if (country_code !== undefined) {
+    if (cc !== undefined) {
       updates.push(`country_code = $${paramCounter++}`);
-      values.push(country_code);
+      values.push((cc || '').toUpperCase());
     }
     if (is_active !== undefined) {
       updates.push(`is_active = $${paramCounter++}`);
@@ -152,11 +152,7 @@ router.put('/:id', auth.authMiddleware(), async (req, res) => {
       });
     }
 
-    res.json({
-      success: true,
-      message: 'City updated successfully',
-      data: city
-    });
+  res.json({ success:true, message:'City updated successfully', data: adaptCity(city) });
   } catch (error) {
     console.error('Error updating city:', error);
     
@@ -192,11 +188,7 @@ router.delete('/:id', auth.authMiddleware(), async (req, res) => {
       });
     }
 
-    res.json({
-      success: true,
-      message: 'City deleted successfully',
-      data: city
-    });
+  res.json({ success:true, message:'City deleted successfully', data: adaptCity(city) });
   } catch (error) {
     console.error('Error deleting city:', error);
     
