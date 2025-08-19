@@ -859,36 +859,34 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
           ),
         ),
 
-        // Delivery Cost (conditional)
-        if (_selectedDeliveryMethod == 'I can deliver') ...[
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: const BoxDecoration(color: Colors.white),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Delivery Cost',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        // Delivery Cost (show always if value exists or delivery selected; keeps visibility for editing existing data)
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: const BoxDecoration(color: Colors.white),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Delivery Cost',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _deliveryCostController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  hintText: 'Cost to deliver the item (if you deliver)',
+                  prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.all(16),
+                  filled: true,
+                  fillColor: const Color(0xFFF8F9FA),
                 ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _deliveryCostController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    hintText: 'Cost to deliver the item',
-                    prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.all(16),
-                    filled: true,
-                    fillColor: const Color(0xFFF8F9FA),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
 
         const SizedBox(height: 16),
 
