@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const dbService = require('../services/database');
 const authService = require('../services/auth');
+const { getDefaultPermissionsForRole } = require('../services/adminPermissions');
 
 // Helper to adapt DB row -> API response (camelCase + legacy fields)
 function adapt(row){
@@ -83,7 +84,11 @@ router.post('/', authService.authMiddleware(), async (req, res) => {
         const displayName = body.display_name || body.displayName || body.name || '';
         let role = body.role || 'country_admin';
         let countryCode = body.country_code || body.country || body.countryCode || null;
-        const permissions = body.permissions || {};
+        
+        // Use default permissions for role instead of frontend-provided permissions
+        // This ensures all new admin users get the complete set of permissions
+        const permissions = getDefaultPermissionsForRole(role);
+        
         const isActive = body.is_active !== undefined ? body.is_active : (body.isActive !== undefined ? body.isActive : true);
 
         if(!email || !rawPassword || !displayName){
