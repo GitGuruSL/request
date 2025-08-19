@@ -91,11 +91,11 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
 
   List<RequestModel> get _filteredRequests {
     if (_selectedCategory == 'All') return _requests;
-    return _requests
-        .where((r) =>
-            (r.categoryName ?? '').toLowerCase() ==
-            _selectedCategory.toLowerCase())
-        .toList();
+    return _requests.where((r) {
+      String requestType =
+          _getRequestTypeFromCategory(r.categoryName, r.title, r.description);
+      return requestType == _selectedCategory;
+    }).toList();
   }
 
   String _formatBudget(RequestModel r) {
@@ -262,8 +262,10 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
               ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
-                side: BorderSide.none, // Remove borders
+                side: const BorderSide(color: Colors.transparent, width: 0),
               ),
+              elevation: 0,
+              pressElevation: 0,
             ),
           );
         },
