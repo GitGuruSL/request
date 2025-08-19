@@ -3,189 +3,205 @@ const router = express.Router();
 const dbService = require('../services/database');
 const authService = require('../services/auth');
 
-// Get all admin users
+// Helper to adapt DB row -> API response (camelCase + legacy fields)
+function adapt(row){
+    if(!row) return row;
+    const { password_hash, country_code, display_name, is_active, ...rest } = row;
+    return {
+        ...rest,
+        id: row.id,
+        email: row.email,
+        displayName: display_name,
+        role: row.role,
+        country: country_code,
+        country_code, // keep original for safety
+        permissions: row.permissions || {},
+        isActive: is_active,
+        is_active,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        country_name: row.country_name
+    };
+}
+
+// Build WHERE conditions based on query & auth
+function buildListQuery(req){
+    const where = [];
+    const params = [];
+    let p = 1;
+    const q = req.query || {};
+    if(q.email){
+        where.push(`LOWER(au.email) = LOWER($${p})`); params.push(q.email); p++;
+    }
+    // Country filtering: if requester is country_admin force their country
+    if(req.user.role === 'country_admin'){
+        where.push(`au.country_code = $${p}`); params.push(req.user.country_code || req.user.country || ''); p++;
+    } else if(q.country){
+        where.push(`au.country_code = $${p}`); params.push(q.country); p++;
+    }
+    const whereSql = where.length ? 'WHERE ' + where.join(' AND ') : '';
+    return { whereSql, params };
+}
+
+// GET /api/admin-users  (supports ?email= & ?country=) + role-based scoping
 router.get('/', authService.authMiddleware(), async (req, res) => {
     try {
-        console.log('Fetching admin users...');
-        
-        const result = await dbService.query(`
-            SELECT 
-                au.*,
-                c.name as country_name
-            FROM admin_users au
-            LEFT JOIN countries c ON au.country_code = c.code
-            ORDER BY au.created_at DESC
-        `);
-
-        console.log(`Found ${result.rows.length} admin users`);
-        
-        res.json({
-            success: true,
-            data: result.rows,
-            count: result.rows.length
-        });
+        const { whereSql, params } = buildListQuery(req);
+        const sql = `SELECT au.*, c.name as country_name FROM admin_users au LEFT JOIN countries c ON au.country_code = c.code ${whereSql} ORDER BY au.created_at DESC`;
+        const result = await dbService.query(sql, params);
+        res.json({ success:true, data: result.rows.map(adapt), count: result.rows.length });
     } catch (error) {
         console.error('Error fetching admin users:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to fetch admin users'
-        });
+        res.status(500).json({ success:false, message:'Failed to fetch admin users' });
     }
 });
 
-// Get admin user by ID
+// GET /api/admin-users/:id
 router.get('/:id', authService.authMiddleware(), async (req, res) => {
     try {
         const { id } = req.params;
-        
-        const result = await dbService.query(`
-            SELECT 
-                au.*,
-                c.name as country_name
-            FROM admin_users au
-            LEFT JOIN countries c ON au.country_code = c.code
-            WHERE au.id = $1
-        `, [id]);
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                error: 'Admin user not found'
-            });
+        const result = await dbService.query(`SELECT au.*, c.name as country_name FROM admin_users au LEFT JOIN countries c ON au.country_code = c.code WHERE au.id = $1`, [id]);
+        if(!result.rows.length) return res.status(404).json({ success:false, message:'Admin user not found' });
+        // Country admin cannot access other countries' users
+        const row = result.rows[0];
+        if(req.user.role === 'country_admin' && row.country_code !== (req.user.country_code || req.user.country)){
+            return res.status(403).json({ success:false, message:'Forbidden' });
         }
-
-        res.json({
-            success: true,
-            data: result.rows[0]
-        });
+        res.json({ success:true, data: adapt(row) });
     } catch (error) {
         console.error('Error fetching admin user:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to fetch admin user'
-        });
+        res.status(500).json({ success:false, message:'Failed to fetch admin user' });
     }
 });
 
-// Create new admin user (Super admin only)
+// POST /api/admin-users  (super_admin OR country_admin with restrictions)
 router.post('/', authService.authMiddleware(), async (req, res) => {
     try {
-        // Check if user is super admin
-        if (req.user.role !== 'super_admin') {
-            return res.status(403).json({
-                success: false,
-                error: 'Only super admins can create admin users'
-            });
+        const body = req.body || {};
+        // Normalise field names from frontend
+        const email = (body.email || '').toLowerCase().trim();
+        const rawPassword = body.password;
+        const displayName = body.display_name || body.displayName || body.name || '';
+        let role = body.role || 'country_admin';
+        let countryCode = body.country_code || body.country || body.countryCode || null;
+        const permissions = body.permissions || {};
+        const isActive = body.is_active !== undefined ? body.is_active : (body.isActive !== undefined ? body.isActive : true);
+
+        if(!email || !rawPassword || !displayName){
+            return res.status(400).json({ success:false, message:'email, password, displayName required' });
         }
 
-        const { email, password, display_name, role, country_code, permissions, is_active } = req.body;
+        // Country admin restrictions
+        if(req.user.role === 'country_admin'){
+            role = 'country_admin'; // cannot create super admins
+            const ownCountry = req.user.country_code || req.user.country;
+            countryCode = ownCountry; // force to own country
+        }
+        // Super admin must supply country code
+        if(!countryCode){
+            return res.status(400).json({ success:false, message:'country code required' });
+        }
+        if(role === 'super_admin' && req.user.role !== 'super_admin'){
+            return res.status(403).json({ success:false, message:'Only super admins can create super admin users' });
+        }
 
-        // Hash password
-        const hashedPassword = await authService.hashPassword(password);
+        // Check duplicate email
+        const dup = await dbService.query('SELECT 1 FROM admin_users WHERE LOWER(email)=LOWER($1)', [email]);
+        if(dup.rows.length){
+            return res.status(409).json({ success:false, message:'Email already registered' });
+        }
 
-        const result = await dbService.query(`
-            INSERT INTO admin_users (email, password_hash, display_name, role, country_code, permissions, is_active)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-            RETURNING *
-        `, [email, hashedPassword, display_name, role, country_code, permissions || {}, is_active !== false]);
-
-        // Remove password hash from response
-        const { password_hash, ...adminUser } = result.rows[0];
-
-        res.status(201).json({
-            success: true,
-            message: 'Admin user created successfully',
-            data: adminUser
-        });
+        const passwordHash = await authService.hashPassword(rawPassword);
+        const insert = await dbService.query(`INSERT INTO admin_users (email,password_hash,display_name,role,country_code,permissions,is_active) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`, [email, passwordHash, displayName, role, countryCode, permissions, isActive]);
+        const row = insert.rows[0];
+        res.status(201).json({ success:true, message:'Admin user created successfully', data: adapt(row) });
     } catch (error) {
         console.error('Error creating admin user:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to create admin user'
-        });
+        res.status(500).json({ success:false, message:'Failed to create admin user' });
     }
 });
 
-// Update admin user
+// PUT /api/admin-users/:id  (country_admin limited)
 router.put('/:id', authService.authMiddleware(), async (req, res) => {
     try {
         const { id } = req.params;
-        const { display_name, role, country_code, permissions, is_active } = req.body;
+        const body = req.body || {};
+        const displayName = body.display_name || body.displayName;
+        let role = body.role;
+        let countryCode = body.country_code || body.country;
+        const permissions = body.permissions || {};
+        const isActive = body.is_active !== undefined ? body.is_active : body.isActive;
 
-        // Check if user can update (super admin or updating their own profile)
-        if (req.user.role !== 'super_admin' && req.user.id !== id) {
-            return res.status(403).json({
-                success: false,
-                error: 'Insufficient permissions'
-            });
+        // Load existing user
+        const existing = await dbService.query('SELECT * FROM admin_users WHERE id = $1', [id]);
+        if(!existing.rows.length) return res.status(404).json({ success:false, message:'Admin user not found' });
+        const current = existing.rows[0];
+
+        // Country admin restrictions
+        if(req.user.role === 'country_admin'){
+            const ownCountry = req.user.country_code || req.user.country;
+            if(current.country_code !== ownCountry){
+                return res.status(403).json({ success:false, message:'Cannot modify users from another country' });
+            }
+            // Force constraints
+            role = 'country_admin';
+            countryCode = ownCountry;
+        }
+        if(role === 'super_admin' && req.user.role !== 'super_admin'){
+            return res.status(403).json({ success:false, message:'Cannot promote to super admin' });
         }
 
-        const result = await dbService.query(`
-            UPDATE admin_users 
-            SET display_name = $1, role = $2, country_code = $3, 
-                permissions = $4, is_active = $5, updated_at = CURRENT_TIMESTAMP
-            WHERE id = $6
-            RETURNING *
-        `, [display_name, role, country_code, permissions, is_active, id]);
+        const updates = {
+            display_name: displayName !== undefined ? displayName : current.display_name,
+            role: role || current.role,
+            country_code: countryCode || current.country_code,
+            permissions: Object.keys(permissions).length ? permissions : current.permissions,
+            is_active: isActive !== undefined ? isActive : current.is_active
+        };
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                error: 'Admin user not found'
-            });
-        }
-
-        // Remove password hash from response
-        const { password_hash, ...adminUser } = result.rows[0];
-
-        res.json({
-            success: true,
-            message: 'Admin user updated successfully',
-            data: adminUser
-        });
+        const result = await dbService.query(`UPDATE admin_users SET display_name=$1, role=$2, country_code=$3, permissions=$4, is_active=$5, updated_at=CURRENT_TIMESTAMP WHERE id=$6 RETURNING *`, [updates.display_name, updates.role, updates.country_code, updates.permissions, updates.is_active, id]);
+        const row = result.rows[0];
+        res.json({ success:true, message:'Admin user updated successfully', data: adapt(row) });
     } catch (error) {
         console.error('Error updating admin user:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to update admin user'
-        });
+        res.status(500).json({ success:false, message:'Failed to update admin user' });
     }
 });
 
-// Delete admin user (Super admin only)
+// PUT /api/admin-users/:id/status  (toggle active)
+router.put('/:id/status', authService.authMiddleware(), async (req,res) => {
+    try {
+        const { id } = req.params;
+        const body = req.body || {};
+        const existing = await dbService.query('SELECT * FROM admin_users WHERE id=$1', [id]);
+        if(!existing.rows.length) return res.status(404).json({ success:false, message:'Admin user not found' });
+        const row = existing.rows[0];
+        if(req.user.role === 'country_admin'){
+            const ownCountry = req.user.country_code || req.user.country;
+            if(row.country_code !== ownCountry) return res.status(403).json({ success:false, message:'Forbidden' });
+        }
+        const newStatus = typeof body.isActive === 'boolean' ? body.isActive : !row.is_active;
+        const upd = await dbService.query('UPDATE admin_users SET is_active=$1, updated_at=CURRENT_TIMESTAMP WHERE id=$2 RETURNING *', [newStatus, id]);
+        res.json({ success:true, message:'Status updated', data: adapt(upd.rows[0]) });
+    } catch (e){
+        console.error('Toggle admin user status error', e);
+        res.status(500).json({ success:false, message:'Error updating status' });
+    }
+});
+
+// DELETE /api/admin-users/:id  (super_admin only)
 router.delete('/:id', authService.authMiddleware(), async (req, res) => {
     try {
-        // Check if user is super admin
-        if (req.user.role !== 'super_admin') {
-            return res.status(403).json({
-                success: false,
-                error: 'Only super admins can delete admin users'
-            });
+        if(req.user.role !== 'super_admin'){
+            return res.status(403).json({ success:false, message:'Only super admins can delete admin users' });
         }
-
         const { id } = req.params;
-
-        const result = await dbService.query(`
-            DELETE FROM admin_users WHERE id = $1 RETURNING *
-        `, [id]);
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                error: 'Admin user not found'
-            });
-        }
-
-        res.json({
-            success: true,
-            message: 'Admin user deleted successfully'
-        });
+        const result = await dbService.query('DELETE FROM admin_users WHERE id = $1 RETURNING *', [id]);
+        if(!result.rows.length) return res.status(404).json({ success:false, message:'Admin user not found' });
+        res.json({ success:true, message:'Admin user deleted successfully' });
     } catch (error) {
         console.error('Error deleting admin user:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to delete admin user'
-        });
+        res.status(500).json({ success:false, message:'Failed to delete admin user' });
     }
 });
 

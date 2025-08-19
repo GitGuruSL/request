@@ -113,9 +113,11 @@ const AdminUsers = () => {
     console.log('User Role:', userRole);
     console.log('User Country:', userCountry);
     
+    // Always fetch countries (needed for dropdown)
+    fetchCountries();
+    
     if (user && adminData) {
       fetchAdminUsers();
-      fetchCountries();
     }
   }, [user, adminData]);
 
@@ -134,15 +136,25 @@ const AdminUsers = () => {
 
   const fetchCountries = async () => {
     try {
+      console.log('🌍 Fetching countries...');
       const res = await api.get('/countries');
+      console.log('🌍 Countries API response:', res.data);
       const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+      console.log('🌍 Countries list:', list);
       if (list.length === 0) throw new Error('No countries');
-      setCountries(list.map(c => ({ id: c.id || c.code, ...c })));
+      
+      // For admin user creation, show all countries (not just active ones)
+      // Super admins need to assign country admins to any country
+      const mappedCountries = list.map(c => ({ id: c.id || c.code, ...c }));
+      console.log('🌍 Mapped countries for admin user creation:', mappedCountries);
+      setCountries(mappedCountries);
     } catch (error) {
       console.error('Error fetching countries:', error);
       const fallbackCountries = [
         { id: 'LK', code: 'LK', name: 'Sri Lanka', isEnabled: true },
-        { id: 'US', code: 'US', name: 'United States', isEnabled: true }
+        { id: 'US', code: 'US', name: 'United States', isEnabled: true },
+        { id: 'AE', code: 'AE', name: 'UAE', isEnabled: false },
+        { id: 'GB', code: 'GB', name: 'United Kingdom', isEnabled: false }
       ];
       setCountries(fallbackCountries);
       setSnackbar({ open: true, message: 'Using fallback countries (fetch failed)', severity: 'warning' });
@@ -760,11 +772,14 @@ const AdminUsers = () => {
                     label="Country"
                     onChange={(e) => handleInputChange('country', e.target.value)}
                   >
-                    {countries.map((country) => (
-                      <MenuItem key={country.id} value={country.code}>
-                        {country.name} ({country.code})
-                      </MenuItem>
-                    ))}
+                    {(() => {
+                      console.log('🔍 Rendering countries dropdown, countries state:', countries);
+                      return countries.map((country) => (
+                        <MenuItem key={country.id} value={country.code}>
+                          {country.name} ({country.code})
+                        </MenuItem>
+                      ));
+                    })()}
                   </Select>
                 </FormControl>
               ) : (
