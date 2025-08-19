@@ -20,6 +20,7 @@ const countryModuleRoutes = require('./routes/country-modules');
 const cityRoutes = require('./routes/cities');
 const requestRoutes = require('./routes/requests');
 const vehicleTypeRoutes = require('./routes/vehicle-types');
+const uploadRoutes = require('./routes/upload'); // Image upload routes
 const brandRoutes = require('./routes/brands');
 const masterProductRoutes = require('./routes/master-products');
 const entityActivationRoutes = require('./routes/entity-activations');
@@ -119,6 +120,16 @@ app.get('/test', (req, res) => {
     });
 });
 
+// Serve static files (uploaded images)
+app.use('/uploads', express.static('uploads', {
+  setHeaders: (res, path) => {
+    // Set CORS headers for images
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  }
+}));
+
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/flutter/auth', flutterAuthRoutes);
@@ -127,6 +138,7 @@ app.use('/api/subcategories', subcategoryRoutes);
 app.use('/api/cities', cityRoutes);
 app.use('/api/requests', requestRoutes);
 app.use('/api/vehicle-types', vehicleTypeRoutes);
+app.use('/api/upload', uploadRoutes); // Image upload endpoint
 app.use('/api/country-modules', countryModuleRoutes);
 app.use('/api/brands', brandRoutes);
 app.use('/api/master-products', masterProductRoutes);

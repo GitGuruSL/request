@@ -61,9 +61,17 @@ const vehicleTypeRoutes = require('./routes/vehicle-types');
 const requestRoutes = require('./routes/requests');
 const countryRoutes = require('./routes/countries');
 const uploadRoutes = require('./routes/upload'); // NEW
+const testImageRoutes = require('./routes/test-images'); // TEST
 
 // Serve static files (uploaded images)
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static('uploads', {
+  setHeaders: (res, path) => {
+    // Set CORS headers for images
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  }
+}));
 
 // Use routes
 app.use('/api/auth', authRoutes);
@@ -74,6 +82,7 @@ app.use('/api/vehicle-types', vehicleTypeRoutes);
 app.use('/api/requests', requestRoutes);
 app.use('/api/countries', countryRoutes);
 app.use('/api/upload', uploadRoutes); // NEW - image upload endpoint
+app.use('/api/test-images', testImageRoutes); // TEST - image serving test
 
 // Error handling middleware
 app.use((err, req, res, next) => {

@@ -3,6 +3,7 @@ import '../../services/rest_request_service.dart' as rest;
 import '../../services/rest_auth_service.dart';
 import '../../models/request_model.dart';
 import '../../models/enhanced_user_model.dart';
+import '../../utils/image_url_helper.dart';
 import 'unified_response_create_screen.dart';
 import 'unified_request_edit_screen.dart';
 import 'unified_response_edit_screen.dart';
@@ -606,6 +607,10 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
   }
 
   void _showImageFullScreen(String imageUrl) {
+    // Ensure we have the full URL
+    final fullImageUrl = ImageUrlHelper.getFullImageUrl(imageUrl);
+    ImageUrlHelper.debugImageUrl(imageUrl); // Debug output
+
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
@@ -615,11 +620,47 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
             Center(
               child: InteractiveViewer(
                 child: Image.network(
-                  imageUrl,
+                  fullImageUrl,
                   fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) => const Center(
-                    child: Icon(Icons.error, color: Colors.white, size: 50),
+                  errorBuilder: (context, error, stackTrace) => Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error, color: Colors.white, size: 50),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Failed to load image',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        fullImageUrl,
+                        style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                                : null,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Loading image...',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
@@ -715,36 +756,143 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                         style: TextStyle(
                             fontSize: 16, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
-                    SizedBox(
-                      height: 120,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: r.imageUrls!.length,
-                        itemBuilder: (context, index) => GestureDetector(
-                          onTap: () =>
-                              _showImageFullScreen(r.imageUrls![index]),
-                          child: Container(
-                            margin: const EdgeInsets.only(right: 8),
-                            width: 120,
+                    Builder(
+                      builder: (context) {
+                        // Clean and filter valid image URLs
+                        final validImageUrls =
+                            ImageUrlHelper.cleanImageUrls(r.imageUrls);
+
+                        if (validImageUrls.isEmpty) {
+                          return Container(
+                            height: 120,
                             decoration: BoxDecoration(
+                              color: Colors.grey[100],
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: Colors.grey[300]!),
                             ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                r.imageUrls![index],
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    Container(
-                                  color: Colors.grey[200],
-                                  child: const Icon(Icons.image_not_supported),
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.image_not_supported,
+                                      color: Colors.grey[400], size: 32),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'No valid images available',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  if (r.imageUrls!.isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${r.imageUrls!.length} invalid URL(s) filtered out',
+                                      style: TextStyle(
+                                        color: Colors.orange[600],
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
+                        return SizedBox(
+                          height: 120,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: validImageUrls.length,
+                            itemBuilder: (context, index) => GestureDetector(
+                              onTap: () =>
+                                  _showImageFullScreen(validImageUrls[index]),
+                              child: Container(
+                                margin: const EdgeInsets.only(right: 8),
+                                width: 120,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.grey[300]!),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(
+                                    validImageUrls[index],
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      // Debug the image URL issue
+                                      ImageUrlHelper.debugImageUrl(
+                                          r.imageUrls![index]);
+                                      return Container(
+                                        color: Colors.grey[200],
+                                        child: Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            const Icon(
+                                                Icons.image_not_supported),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              'Load Error',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                color: Colors.grey[600],
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              '${index + 1}/${validImageUrls.length}',
+                                              style: TextStyle(
+                                                fontSize: 8,
+                                                color: Colors.grey[500],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                    loadingBuilder:
+                                        (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return Container(
+                                        color: Colors.grey[100],
+                                        child: Center(
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              CircularProgressIndicator(
+                                                value: loadingProgress
+                                                            .expectedTotalBytes !=
+                                                        null
+                                                    ? loadingProgress
+                                                            .cumulativeBytesLoaded /
+                                                        loadingProgress
+                                                            .expectedTotalBytes!
+                                                    : null,
+                                                strokeWidth: 2,
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                'Loading...',
+                                                style: TextStyle(
+                                                  fontSize: 8,
+                                                  color: Colors.grey[600],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      ),
+                        );
+                      },
                     ),
                   ],
 

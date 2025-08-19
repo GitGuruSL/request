@@ -1,13 +1,26 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
+import 'package:flutter/foundation.dart';
+import '../utils/image_url_helper.dart';
 
 class ImageUploadService {
   final ImagePicker _picker = ImagePicker();
-  
-  // For development - use local backend
-  static const String _baseUrl = 'http://localhost:3001';
+
+  // Get the base URL for the API (same logic as ImageUrlHelper)
+  static String get _baseUrl {
+    if (kIsWeb) {
+      return 'http://localhost:3001'; // Web
+    } else if (Platform.isAndroid) {
+      return 'http://10.0.2.2:3001'; // Android emulator
+    } else if (Platform.isIOS) {
+      return 'http://localhost:3001'; // iOS simulator
+    } else {
+      return 'http://localhost:3001'; // Desktop/other
+    }
+  }
 
   Future<List<XFile>?> pickMultipleImages({int maxImages = 5}) async {
     try {
@@ -23,15 +36,21 @@ class ImageUploadService {
 
   Future<String?> uploadImage(XFile file, String uploadPath) async {
     try {
+      if (kDebugMode) {
+        print('🖼️ [ImageUpload] Starting upload to: $_baseUrl/api/upload');
+        print('🖼️ [ImageUpload] File: ${file.path}');
+        print('🖼️ [ImageUpload] Upload path: $uploadPath');
+      }
+
       final bytes = await file.readAsBytes();
       final fileName = path.basename(file.path);
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final uniqueFileName = '${timestamp}_$fileName';
-      
+
       // Create multipart request
       final uri = Uri.parse('$_baseUrl/api/upload');
       final request = http.MultipartRequest('POST', uri);
-      
+
       // Add file
       request.files.add(
         http.MultipartFile.fromBytes(
@@ -40,22 +59,44 @@ class ImageUploadService {
           filename: uniqueFileName,
         ),
       );
-      
+
       // Add upload path
       request.fields['path'] = uploadPath;
-      
+
+      if (kDebugMode) {
+        print('🖼️ [ImageUpload] Sending request to: ${uri.toString()}');
+      }
+
       final response = await request.send();
-      
+
+      if (kDebugMode) {
+        print('🖼️ [ImageUpload] Response status: ${response.statusCode}');
+      }
+
       if (response.statusCode == 200) {
         final responseBody = await response.stream.bytesToString();
         final data = jsonDecode(responseBody);
-        return data['url'] as String?;
+        final imageUrl = data['url'] as String?;
+
+        if (kDebugMode) {
+          print('🖼️ [ImageUpload] Upload successful: $imageUrl');
+        }
+
+        return imageUrl;
       } else {
-        print('Image upload failed with status: ${response.statusCode}');
+        final responseBody = await response.stream.bytesToString();
+        if (kDebugMode) {
+          print(
+              '🖼️ [ImageUpload] Upload failed with status: ${response.statusCode}');
+          print('🖼️ [ImageUpload] Response body: $responseBody');
+        }
         return null;
       }
     } catch (e) {
-      print('Error uploading image: $e');
+      if (kDebugMode) {
+        print('🖼️ [ImageUpload] Error uploading image: $e');
+        print('🖼️ [ImageUpload] Falling back to local file path');
+      }
       // Fallback to local file path for development
       return 'file://${file.path}';
     }
@@ -73,5 +114,54 @@ class ImageUploadService {
     } catch (e) {
       print('Error deleting image: $e');
     }
+  }
+
+  /// Process a list of image paths/URLs and ensure they're all server URLs
+  /// Local file paths will be uploaded, server URLs will be returned as-is
+  Future<List<String>> processImageUrls(List<String> imageUrls) async {
+    final List<String> processedUrls = [];
+
+    for (final url in imageUrls) {
+      if (ImageUrlHelper.isLocalFilePath(url)) {
+        // This is a local file, try to upload it
+        if (kDebugMode) {
+          print('🖼️ [ImageUpload] Processing local file: $url');
+        }
+
+        try {
+          final file = File(url.replaceFirst('file://', ''));
+          if (await file.exists()) {
+            // Convert File to XFile for upload
+            final xFile = XFile(file.path);
+            final uploadedUrl = await uploadImage(xFile, 'images');
+            if (uploadedUrl != null && !uploadedUrl.startsWith('file://')) {
+              processedUrls.add(uploadedUrl);
+            } else {
+              if (kDebugMode) {
+                print('⚠️ [ImageUpload] Failed to upload local file: $url');
+              }
+            }
+          } else {
+            if (kDebugMode) {
+              print('⚠️ [ImageUpload] Local file does not exist: $url');
+            }
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print('⚠️ [ImageUpload] Error processing local file $url: $e');
+          }
+        }
+      } else if (ImageUrlHelper.isPlaceholderUrl(url)) {
+        // Skip placeholder URLs
+        if (kDebugMode) {
+          print('🖼️ [ImageUpload] Skipping placeholder URL: $url');
+        }
+      } else {
+        // This is already a server URL or valid external URL
+        processedUrls.add(ImageUrlHelper.getFullImageUrl(url));
+      }
+    }
+
+    return processedUrls;
   }
 }
