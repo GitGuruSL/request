@@ -28,6 +28,10 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
 
   UserModel? _responder;
   UserModel? _currentUser;
+  // Fallback responder details extracted from response.additionalInfo
+  String? _responderNameFallback;
+  String? _responderEmailFallback;
+  String? _responderPhoneFallback;
   bool _isLoading = true;
   bool _isProcessing = false;
 
@@ -42,6 +46,12 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
       final currentUser = await _userService.getCurrentUserModel();
       final responder =
           await _userService.getUserById(widget.response.responderId);
+      if (responder == null) {
+        final info = widget.response.additionalInfo;
+        _responderNameFallback = info['responder_name']?.toString();
+        _responderEmailFallback = info['responder_email']?.toString();
+        _responderPhoneFallback = info['responder_phone']?.toString();
+      }
 
       setState(() {
         _currentUser = currentUser;
@@ -586,7 +596,10 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
                         child: Text(
                           (_responder != null && _responder!.name.isNotEmpty)
                               ? _responder!.name[0]
-                              : 'U',
+                              : (_responderNameFallback != null &&
+                                      _responderNameFallback!.isNotEmpty
+                                  ? _responderNameFallback![0]
+                                  : 'U'),
                           style: TextStyle(
                             color: Colors.blue[700],
                             fontWeight: FontWeight.bold,
@@ -600,15 +613,18 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _responder?.name ?? 'Unknown User',
+                              _responder?.name ??
+                                  _responderNameFallback ??
+                                  'Unknown User',
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 18,
                               ),
                             ),
                             // Email (if available)
-                            if (_responder?.email != null &&
-                                _responder!.email.isNotEmpty) ...[
+                            if (((_responder?.email ?? '').isNotEmpty) ||
+                                ((_responderEmailFallback ?? '')
+                                    .isNotEmpty)) ...[
                               const SizedBox(height: 4),
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -618,7 +634,9 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
                                   const SizedBox(width: 4),
                                   Expanded(
                                     child: Text(
-                                      _responder!.email,
+                                      _responder?.email ??
+                                          _responderEmailFallback ??
+                                          '',
                                       style: TextStyle(
                                         color: Colors.grey[600],
                                         fontSize: 14,
@@ -629,8 +647,9 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
                               ),
                             ],
                             // Phone (only if available)
-                            if (_responder?.phoneNumber != null &&
-                                _responder!.phoneNumber!.isNotEmpty) ...[
+                            if (((_responder?.phoneNumber ?? '').isNotEmpty) ||
+                                ((_responderPhoneFallback ?? '')
+                                    .isNotEmpty)) ...[
                               const SizedBox(height: 4),
                               Row(
                                 children: [
@@ -638,7 +657,9 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
                                       size: 14, color: Colors.grey),
                                   const SizedBox(width: 4),
                                   Text(
-                                    _responder!.phoneNumber!,
+                                    _responder?.phoneNumber ??
+                                        _responderPhoneFallback ??
+                                        '',
                                     style: TextStyle(
                                       color: Colors.grey[600],
                                       fontSize: 14,

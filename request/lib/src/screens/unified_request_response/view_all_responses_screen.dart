@@ -138,6 +138,11 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
   }
 
   Widget _buildResponseItem(ResponseModel response, UserModel? responder) {
+    // Fallbacks from additionalInfo (populated by REST layer)
+    final addl = response.additionalInfo;
+    final fallbackName = addl['responder_name']?.toString();
+    final fallbackEmail = addl['responder_email']?.toString();
+    final fallbackPhone = addl['responder_phone']?.toString();
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -166,7 +171,9 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
                     child: Text(
                       (responder != null && responder.name.isNotEmpty)
                           ? responder.name[0]
-                          : 'U',
+                          : (fallbackName != null && fallbackName.isNotEmpty
+                              ? fallbackName[0]
+                              : 'U'),
                       style: const TextStyle(
                         color: Colors.black54,
                         fontWeight: FontWeight.bold,
@@ -179,7 +186,7 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          responder?.name ?? 'Unknown User',
+                          responder?.name ?? fallbackName ?? 'Unknown User',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -192,9 +199,19 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
                             fontSize: 12,
                           ),
                         ),
-                        if (responder?.email != null) ...[
+                        if (((responder?.email ?? '').isNotEmpty) ||
+                            ((fallbackEmail ?? '').isNotEmpty)) ...[
                           Text(
-                            responder?.email ?? '',
+                            responder?.email ?? fallbackEmail ?? '',
+                            style: const TextStyle(
+                              color: Colors.black45,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                        if ((fallbackPhone ?? '').isNotEmpty) ...[
+                          Text(
+                            fallbackPhone!,
                             style: const TextStyle(
                               color: Colors.black45,
                               fontSize: 11,
