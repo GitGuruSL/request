@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/country_service.dart';
 import '../../theme/app_theme.dart';
 import '../../auth/screens/login_screen.dart';
+import '../../models/country.dart'; // Added
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -20,6 +21,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   @override
   void initState() {
     super.initState();
+    _init();
+  }
+
+  Future<void> _init() async {
+    await _countryService.loadPersistedCountry();
     _checkExistingCountry();
   }
 
@@ -41,7 +47,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         return;
       }
     }
-    
+
     // No country selected, load available countries
     _loadCountries();
   }
@@ -54,7 +60,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       });
 
       final allCountries = await _countryService.getAllCountries();
-      
+
       setState(() {
         _availableCountries = allCountries.where((c) => c.isEnabled).toList();
         _disabledCountries = allCountries.where((c) => !c.isEnabled).toList();
@@ -71,7 +77,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   Future<void> _selectCountry(Country country) async {
     try {
       await _countryService.setCountryFromObject(country);
-      
+
       if (mounted) {
         // Navigate to login screen with country details
         Navigator.of(context).pushReplacement(
@@ -123,9 +129,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           ],
         ),
         content: Text(
-          country.comingSoonMessage.isNotEmpty 
-            ? country.comingSoonMessage
-            : 'Coming soon to your country! Stay tuned for updates.',
+          country.comingSoonMessage.isNotEmpty
+              ? country.comingSoonMessage
+              : 'Coming soon to your country! Stay tuned for updates.',
           style: const TextStyle(
             fontSize: 14,
             color: AppTheme.textSecondary,
@@ -177,7 +183,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 40),
-              
+
               // Content
               Expanded(
                 child: _buildContent(),
@@ -276,11 +282,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             ),
             const SizedBox(height: 16),
             ..._availableCountries.map((country) => _buildCountryTile(
-              country: country,
-              isEnabled: true,
-            )),
+                  country: country,
+                  isEnabled: true,
+                )),
           ],
-          
+
           // Coming soon countries
           if (_disabledCountries.isNotEmpty) ...[
             const SizedBox(height: 24),
@@ -294,9 +300,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             ),
             const SizedBox(height: 16),
             ..._disabledCountries.map((country) => _buildCountryTile(
-              country: country,
-              isEnabled: false,
-            )),
+                  country: country,
+                  isEnabled: false,
+                )),
           ],
         ],
       ),
@@ -331,30 +337,30 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             color: isEnabled ? AppTheme.textSecondary : AppTheme.textTertiary,
           ),
         ),
-        trailing: isEnabled 
-          ? const Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: AppTheme.textSecondary,
-            )
-          : Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppTheme.backgroundColor,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: const Text(
-                'Coming Soon',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppTheme.textSecondary,
-                  fontWeight: FontWeight.w500,
+        trailing: isEnabled
+            ? const Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: AppTheme.textSecondary,
+              )
+            : Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.backgroundColor,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'Coming Soon',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
-            ),
-        onTap: isEnabled 
-          ? () => _selectCountry(country)
-          : () => _showComingSoonDialog(country),
+        onTap: isEnabled
+            ? () => _selectCountry(country)
+            : () => _showComingSoonDialog(country),
       ),
     );
   }

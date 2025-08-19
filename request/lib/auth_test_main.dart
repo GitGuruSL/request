@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:request_marketplace/src/services/rest_auth_service.dart';
 import 'package:request_marketplace/src/models/country.dart';
 import 'package:request_marketplace/src/navigation/main_navigation_screen.dart';
+import 'package:request_marketplace/src/services/country_service.dart';
 
 void main() {
   runApp(AuthTestApp());
@@ -29,6 +30,27 @@ class WelcomeScreen extends StatefulWidget {
 
 class _WelcomeScreenState extends State<WelcomeScreen> {
   String? selectedCountry;
+  List<Country> _countries = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final svc = CountryService.instance;
+      final list = await svc.getAllCountries();
+      setState(() {
+        _countries = list.where((c) => c.isEnabled).toList();
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() => _loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,26 +99,27 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: selectedCountry,
-                    hint: Text('Select your country'),
+                    hint: Text(_loading ? 'Loading...' : 'Select your country'),
                     isExpanded: true,
-                    items: Country.availableCountries.map((country) {
+                    items: _countries.map((country) {
                       return DropdownMenuItem<String>(
                         value: country.code,
                         child: Row(
                           children: [
-                            Text(country.flagEmoji,
-                                style: TextStyle(fontSize: 24)),
+                            Text(country.flag, style: TextStyle(fontSize: 24)),
                             SizedBox(width: 12),
                             Text(country.name),
                           ],
                         ),
                       );
                     }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedCountry = value;
-                      });
-                    },
+                    onChanged: _loading
+                        ? null
+                        : (value) {
+                            setState(() {
+                              selectedCountry = value;
+                            });
+                          },
                   ),
                 ),
               ),

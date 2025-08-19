@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../widgets/custom_logo.dart';
 import '../../models/country.dart';
+import '../../services/country_service.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -14,6 +15,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   Country? _selectedCountry;
   List<Country> _availableCountries = [];
   List<Country> _filteredCountries = [];
+  final CountryService _countryService = CountryService.instance; // Added
   final TextEditingController _searchController = TextEditingController();
   bool _isLoading = true;
   late AnimationController _fadeController;
@@ -60,15 +62,14 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
   Future<void> _loadAvailableCountries() async {
     try {
-      // Load available countries from static list
+      final fetched = await _countryService.getAllCountries();
       setState(() {
-        _availableCountries = Country.availableCountries;
-        _filteredCountries =
-            Country.availableCountries; // Initialize filtered list
+        _availableCountries = fetched;
+        _filteredCountries = fetched; // Initialize filtered list
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading countries: $e');
+      debugPrint('Error loading countries: $e');
       setState(() {
         _isLoading = false;
       });

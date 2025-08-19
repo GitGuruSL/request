@@ -246,7 +246,12 @@ const Countries = () => {
     try {
       const res = await api.get('/countries');
       const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
-      setCountries(list);
+      const normalized = list.map(c=>({
+        ...c,
+        isEnabled: c.isEnabled !== undefined ? c.isEnabled : (c.isActive !== undefined ? c.isActive : c.is_active),
+        is_active: c.is_active !== undefined ? c.is_active : (c.isActive !== undefined ? c.isActive : c.isEnabled)
+      }));
+      setCountries(normalized);
     } catch (error) {
       console.error('Error fetching countries:', error);
       showSnackbar('Error fetching countries', 'error');
@@ -261,8 +266,9 @@ const Countries = () => {
 
   const handleToggleStatus = async (countryId, currentStatus) => {
     try {
-      await api.put(`/countries/${countryId}/status`, { isEnabled: !currentStatus });
-      fetchCountries();
+      const res = await api.put(`/countries/${countryId}/status`, { isActive: !currentStatus });
+      // Optimistic update
+      setCountries(prev => prev.map(c => c.id === countryId ? { ...c, isEnabled: !currentStatus, is_active: !currentStatus, isActive: !currentStatus } : c));
       showSnackbar(`Country ${!currentStatus ? 'enabled' : 'disabled'} successfully`);
     } catch (error) {
       console.error('Error updating country status:', error);
@@ -296,7 +302,9 @@ const Countries = () => {
         name: selectedCountry.name,
         flag: selectedCountry.flag,
         phoneCode: selectedCountry.phoneCode,
-        isEnabled: true,
+        isEnabled: false, // new countries start disabled
+        isActive: false,
+        is_active: false,
         comingSoonMessage,
         updatedAt: new Date()
       };

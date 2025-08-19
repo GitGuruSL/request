@@ -15,6 +15,11 @@ function buildUpdate(fields) {
   return { clause: sets.join(', '), values };
 }
 
+function adapt(row){
+  if(!row) return row;
+  return { ...row, isActive: row.is_active, isEnabled: row.is_active };
+}
+
 // GET /api/countries
 router.get('/', async (req,res) => {
   try {
@@ -33,8 +38,8 @@ router.get('/', async (req,res) => {
     const total = totalResult.rows[0].count;
     const l = Math.min(parseInt(limit)||100, 500);
     const o = parseInt(offset)||0;
-    const dataResult = await db.query(`SELECT * FROM countries ${whereSql} ORDER BY name LIMIT ${l} OFFSET ${o}`, params);
-    res.json({ success:true, data: dataResult.rows, total, limit:l, offset:o });
+  const dataResult = await db.query(`SELECT * FROM countries ${whereSql} ORDER BY name LIMIT ${l} OFFSET ${o}`, params);
+  res.json({ success:true, data: dataResult.rows.map(adapt), total, limit:l, offset:o });
   } catch (e) {
     console.error('List countries error', e);
     res.status(500).json({ success:false, message:'Error listing countries' });
@@ -73,8 +78,8 @@ router.get('/:codeOrId', async (req,res) => {
     } else {
       row = await db.queryOne('SELECT * FROM countries WHERE code = $1', [v.toUpperCase()]);
     }
-    if (!row) return res.status(404).json({ success:false, message:'Country not found' });
-    res.json({ success:true, data: row });
+  if (!row) return res.status(404).json({ success:false, message:'Country not found' });
+  res.json({ success:true, data: adapt(row) });
   } catch (e) {
     console.error('Get country error', e);
     res.status(500).json({ success:false, message:'Error fetching country' });
@@ -84,14 +89,15 @@ router.get('/:codeOrId', async (req,res) => {
 // POST /api/countries
 router.post('/', auth.authMiddleware(), auth.roleMiddleware(['admin','super_admin']), async (req,res) => {
   try {
-    const { code, name, default_currency, phone_prefix, locale, tax_rate, flag_url, is_active = true } = req.body;
+   const { code, name, default_currency, phone_prefix, locale, tax_rate, flag_url, is_active } = req.body;
     if (!code || !name) return res.status(400).json({ success:false, message:'code and name required' });
     const existing = await db.queryOne('SELECT id FROM countries WHERE code = $1', [code.toUpperCase()]);
     if (existing) return res.status(409).json({ success:false, message:'Country code already exists' });
-    const row = await db.queryOne(`INSERT INTO countries (code, name, default_currency, phone_prefix, locale, tax_rate, flag_url, is_active)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-       RETURNING *`, [code.toUpperCase(), name, default_currency || 'USD', phone_prefix, locale, tax_rate, flag_url, is_active]);
-    res.status(201).json({ success:true, message:'Country created', data: row });
+   const activeValue = typeof is_active === 'boolean' ? is_active : false; // default new countries inactive
+   const row = await db.queryOne(`INSERT INTO countries (code, name, default_currency, phone_prefix, locale, tax_rate, flag_url, is_active)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+     RETURNING *`, [code.toUpperCase(), name, default_currency || 'USD', phone_prefix, locale, tax_rate, flag_url, activeValue]);
+   res.status(201).json({ success:true, message:'Country created', data: adapt(row) });
   } catch (e) {
     console.error('Create country error', e);
     res.status(500).json({ success:false, message:'Error creating country' });
@@ -113,8 +119,8 @@ router.put('/:codeOrId', auth.authMiddleware(), auth.roleMiddleware(['admin','su
       upd.values.push(v.toUpperCase());
       row = await db.queryOne(`UPDATE countries SET ${upd.clause} WHERE code = $${upd.values.length} RETURNING *`, upd.values);
     }
-    if (!row) return res.status(404).json({ success:false, message:'Country not found' });
-    res.json({ success:true, message:'Country updated', data: row });
+  if (!row) return res.status(404).json({ success:false, message:'Country not found' });
+  res.json({ success:true, message:'Country updated', data: adapt(row) });
   } catch (e) {
     console.error('Update country error', e);
     res.status(500).json({ success:false, message:'Error updating country' });
@@ -131,8 +137,8 @@ router.delete('/:codeOrId', auth.authMiddleware(), auth.roleMiddleware(['admin',
     } else {
       row = await db.queryOne('UPDATE countries SET is_active = false, updated_at = NOW() WHERE code = $1 RETURNING *', [v.toUpperCase()]);
     }
-    if (!row) return res.status(404).json({ success:false, message:'Country not found' });
-    res.json({ success:true, message:'Country deactivated', data: row });
+  if (!row) return res.status(404).json({ success:false, message:'Country not found' });
+  res.json({ success:true, message:'Country deactivated', data: adapt(row) });
   } catch (e) {
     console.error('Deactivate country error', e);
     res.status(500).json({ success:false, message:'Error deactivating country' });
@@ -160,7 +166,7 @@ router.put('/:codeOrId/status', auth.authMiddleware(), auth.roleMiddleware(['adm
     } else {
       updated = await db.queryOne('UPDATE countries SET is_active=$1, updated_at=NOW() WHERE code=$2 RETURNING *',[newVal, v.toUpperCase()]);
     }
-    res.json({ success:true, message:'Status updated', data: updated });
+  res.json({ success:true, message:'Status updated', data: adapt(updated) });
   } catch(e){
     console.error('Toggle country status error', e);
     res.status(500).json({ success:false, message:'Error updating country status'});

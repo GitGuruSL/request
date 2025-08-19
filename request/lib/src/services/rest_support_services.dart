@@ -1,15 +1,86 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import '../models/country.dart';
 
 class CountryService {
   CountryService._();
   static final CountryService instance = CountryService._();
 
-  String? countryCode = 'LK';
-  String countryName = 'Sri Lanka';
-  String currency = 'LKR';
+  // Selected country state (null until user chooses or restored from prefs)
+  String? countryCode;
+  String countryName = '';
+  String currency = '';
+  String phoneCode = '';
+
+  static const _prefsCountryKey = 'selected_country_code';
+  static const _prefsCountryPhoneKey = 'selected_country_phone_code';
+
+  final List<Country> _cache = [];
+  DateTime? _lastFetch;
+  Duration cacheTtl = const Duration(minutes: 15);
 
   String getCurrencySymbol() => 'Rs';
   String formatPrice(num amount) => 'Rs ${amount.toStringAsFixed(2)}';
+
+  // Backend base URL (assumes same host:port as previously used for API)
+  String baseUrl = const String.fromEnvironment('API_BASE_URL',
+      defaultValue: 'http://localhost:3001');
+
+  Future<List<Country>> getAllCountries({bool forceRefresh = false}) async {
+    if (!forceRefresh && _cache.isNotEmpty && _lastFetch != null) {
+      if (DateTime.now().difference(_lastFetch!) < cacheTtl) {
+        return List.unmodifiable(_cache);
+      }
+    }
+    try {
+      final uri = Uri.parse('$baseUrl/api/countries/public');
+      if (kDebugMode) debugPrint('Fetching countries: $uri');
+      final resp = await http.get(uri);
+      if (resp.statusCode != 200) {
+        throw Exception('HTTP ${resp.statusCode}');
+      }
+      final decoded = json.decode(resp.body) as Map<String, dynamic>;
+      final List data = (decoded['data'] ?? []) as List;
+      _cache
+        ..clear()
+        ..addAll(data.map((e) => Country.fromJson(e as Map<String, dynamic>)));
+      _lastFetch = DateTime.now();
+      return List.unmodifiable(_cache);
+    } catch (e) {
+      if (_cache.isNotEmpty) {
+        if (kDebugMode) debugPrint('Country fetch failed, using cache: $e');
+        return List.unmodifiable(_cache);
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> setCountryFromObject(Country c) async {
+    countryCode = c.code;
+    countryName = c.name;
+    phoneCode = c.phoneCode;
+    // currency not in model yet -> fallback logic
+    currency = c.code == 'LK' ? 'LKR' : (c.code == 'US' ? 'USD' : 'USD');
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_prefsCountryKey, countryCode!);
+    await prefs.setString(_prefsCountryPhoneKey, phoneCode);
+  }
+
+  Future<void> loadPersistedCountry() async {
+    final prefs = await SharedPreferences.getInstance();
+    final code = prefs.getString(_prefsCountryKey);
+    final phone = prefs.getString(_prefsCountryPhoneKey);
+    if (code != null) {
+      countryCode = code;
+      phoneCode = phone ?? phoneCode;
+    }
+  }
+
+  // Backward compatibility helper used by other screens
+  String getCurrentCountryCode() => countryCode ?? 'LK';
+  String getCurrentPhoneCode() => phoneCode.isNotEmpty ? phoneCode : '+94';
 }
 
 class CountryModules {
