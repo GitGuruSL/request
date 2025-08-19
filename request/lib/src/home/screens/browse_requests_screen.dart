@@ -137,7 +137,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
             ),
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -159,7 +159,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     // Search bar (moved up to replace subtitle)
                     Container(
                       decoration: BoxDecoration(
@@ -174,7 +174,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                               color: Colors.grey[500]),
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 14),
+                              horizontal: 16, vertical: 12),
                         ),
                         onChanged: (value) {
                           // Add search functionality here
