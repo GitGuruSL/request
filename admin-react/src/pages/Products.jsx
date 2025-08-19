@@ -56,6 +56,7 @@ const Products = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [brandFilter, setBrandFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('active'); // 'active' | 'inactive' | 'all'
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [brands, setBrands] = useState([]);
@@ -94,7 +95,8 @@ const Products = () => {
   const loadProducts = async () => {
     try {
       setLoading(true);
-      const data = await getFilteredData('master_products', adminData);
+  // Fetch both active & inactive so we can filter client-side
+  const data = await getFilteredData('master_products', adminData, { includeInactive: 'true' });
       const productsData = data || [];
       setProducts(productsData);
     } catch (error) {
@@ -173,6 +175,12 @@ const Products = () => {
     
     if (brandFilter) {
       filtered = filtered.filter(product => product.brand === brandFilter);
+    }
+
+    if (statusFilter === 'active') {
+      filtered = filtered.filter(p => p.isActive !== false);
+    } else if (statusFilter === 'inactive') {
+      filtered = filtered.filter(p => p.isActive === false);
     }
     
     setFilteredProducts(filtered);
@@ -260,7 +268,8 @@ const Products = () => {
       const productData = {
         ...formData,
         images: formData.images || [],
-        updatedBy: adminData.email
+  // updatedBy is optional; guard if adminData not yet loaded
+  ...(adminData?.email ? { updatedBy: adminData.email } : {})
       };
 
       console.log('Saving product with data:', productData);
@@ -293,7 +302,9 @@ const Products = () => {
 
   const toggleProductStatus = async (product) => {
     try {
-      await api.put(`/master-products/${product.id}/status`, { isActive: !product.isActive, updatedBy: adminData.email });
+  const payload = { isActive: !product.isActive };
+  if (adminData?.email) payload.updatedBy = adminData.email;
+  await api.put(`/master-products/${product.id}/status`, payload);
       loadProducts();
     } catch (error) {
       console.error('Error updating product status:', error);
@@ -329,7 +340,7 @@ const Products = () => {
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={3}>
               <TextField
                 fullWidth
                 placeholder="Search products..."
@@ -356,7 +367,7 @@ const Products = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} md={3}>
+            <Grid item xs={12} md={2}>
               <FormControl fullWidth>
                 <InputLabel>Brand</InputLabel>
                 <Select
@@ -369,6 +380,19 @@ const Products = () => {
                       {brand.name || brand.brandName}
                     </MenuItem>
                   ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={2}>
+              <FormControl fullWidth>
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <MenuItem value="active">Active</MenuItem>
+                  <MenuItem value="inactive">Inactive</MenuItem>
+                  <MenuItem value="all">All Statuses</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
