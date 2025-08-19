@@ -173,6 +173,19 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
           _specialConsiderationsController.text =
               info['specialConsiderations'].toString();
         }
+        // Item-specific (previously missing)
+        if (_deliveryCostController.text.isEmpty &&
+            info['deliveryCost'] != null) {
+          _deliveryCostController.text = _formatPrice(info['deliveryCost']);
+        }
+        if (_estimatedDeliveryController.text.isEmpty &&
+            info['estimatedDelivery'] != null) {
+          _estimatedDeliveryController.text =
+              info['estimatedDelivery'].toString();
+        }
+        if (_warrantyController.text.isEmpty && info['warranty'] != null) {
+          _warrantyController.text = info['warranty'].toString();
+        }
         // Select values
         if (info['deliveryMethod'] != null)
           _selectedDeliveryMethod = info['deliveryMethod'].toString();
