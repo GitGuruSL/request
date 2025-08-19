@@ -3,6 +3,19 @@ const router = express.Router();
 const db = require('../services/database');
 const auth = require('../services/auth');
 
+// Basic ISO country code -> primary currency code mapping.
+// Extend as needed; used when client does not explicitly supply default_currency.
+const COUNTRY_CURRENCY_MAP = {
+  US: 'USD', CA: 'CAD', GB: 'GBP', LK: 'LKR', IN: 'INR', EU: 'EUR', AU: 'AUD', NZ: 'NZD',
+  SG: 'SGD', MY: 'MYR', TH: 'THB', PH: 'PHP', PK: 'PKR', CN: 'CNY', JP: 'JPY', KR: 'KRW',
+  AE: 'AED', SA: 'SAR', KW: 'KWD', QA: 'QAR', BH: 'BHD', OM: 'OMR', ZA: 'ZAR', NG: 'NGN',
+  KE: 'KES', UG: 'UGX', TZ: 'TZS', RW: 'RWF', BI: 'BIF', GH: 'GHS', ET: 'ETB', EG: 'EGP',
+  BR: 'BRL', AR: 'ARS', MX: 'MXN', CL: 'CLP', CO: 'COP', PE: 'PEN', VE: 'VES',
+  FR: 'EUR', DE: 'EUR', ES: 'EUR', IT: 'EUR', IE: 'EUR', NL: 'EUR', BE: 'EUR', PT: 'EUR',
+  SE: 'SEK', NO: 'NOK', DK: 'DKK', FI: 'EUR', IS: 'ISK', CH: 'CHF', PL: 'PLN', CZ: 'CZK',
+  HU: 'HUF', RO: 'RON', BG: 'BGN', GR: 'EUR', TR: 'TRY', RU: 'RUB', UA: 'UAH',
+};
+
 function buildUpdate(fields) {
   const sets = [];
   const values = [];
@@ -17,7 +30,15 @@ function buildUpdate(fields) {
 
 function adapt(row){
   if(!row) return row;
-  return { ...row, isActive: row.is_active, isEnabled: row.is_active };
+  // Provide camelCase convenience fields and comingSoonMessage for admin/frontend usage
+  const base = { ...row, isActive: row.is_active, isEnabled: row.is_active };
+  if (!row.is_active) {
+    base.comingSoonMessage = row.coming_soon_message || 'Coming soon to your country! Stay tuned for updates.';
+  } else {
+    base.comingSoonMessage = '';
+  }
+  if (row.flag_emoji && !base.flagEmoji) base.flagEmoji = row.flag_emoji;
+  return base;
 }
 
 // GET /api/countries
@@ -49,17 +70,18 @@ router.get('/', async (req,res) => {
 // Public list for mobile selection (must be BEFORE :codeOrId)
 router.get('/public', async (req,res)=>{
   try {
-    const rows = await db.query('SELECT code,name,default_currency,phone_prefix,locale,tax_rate,flag_url,is_active FROM countries ORDER BY name');
+    const rows = await db.query('SELECT code,name,default_currency,phone_prefix,locale,tax_rate,flag_url,flag_emoji,coming_soon_message,is_active FROM countries ORDER BY name');
     const data = rows.rows.map(r=>({
       code: r.code,
       name: r.name,
       phoneCode: r.phone_prefix,
       currency: r.default_currency,
       flagUrl: r.flag_url,
+      flagEmoji: r.flag_emoji, // may be null; client can compute fallback
       isActive: r.is_active,
       comingSoon: !r.is_active,
       statusLabel: r.is_active ? 'Active' : 'Coming Soon',
-      comingSoonMessage: !r.is_active ? 'This country is coming soon. Please select an active country.' : null
+      comingSoonMessage: !r.is_active ? (r.coming_soon_message || 'This country is coming soon. Please select an active country.') : null
     }));
     res.json({ success:true, data });
   } catch(e){
@@ -89,14 +111,23 @@ router.get('/:codeOrId', async (req,res) => {
 // POST /api/countries
 router.post('/', auth.authMiddleware(), auth.roleMiddleware(['admin','super_admin']), async (req,res) => {
   try {
-   const { code, name, default_currency, phone_prefix, locale, tax_rate, flag_url, is_active } = req.body;
+  const { code, name, default_currency, phone_prefix, locale, tax_rate, flag_url, is_active, coming_soon_message, flag_emoji, flag } = req.body;
     if (!code || !name) return res.status(400).json({ success:false, message:'code and name required' });
     const existing = await db.queryOne('SELECT id FROM countries WHERE code = $1', [code.toUpperCase()]);
     if (existing) return res.status(409).json({ success:false, message:'Country code already exists' });
    const activeValue = typeof is_active === 'boolean' ? is_active : false; // default new countries inactive
-   const row = await db.queryOne(`INSERT INTO countries (code, name, default_currency, phone_prefix, locale, tax_rate, flag_url, is_active)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-     RETURNING *`, [code.toUpperCase(), name, default_currency || 'USD', phone_prefix, locale, tax_rate, flag_url, activeValue]);
+   // Determine currency: prefer explicitly provided value, else mapped currency for code, else USD fallback.
+   let resolvedCurrency = (default_currency || '').trim();
+   if (!resolvedCurrency) {
+     resolvedCurrency = COUNTRY_CURRENCY_MAP[code.toUpperCase()] || 'USD';
+   } else {
+     resolvedCurrency = resolvedCurrency.toUpperCase();
+   }
+  const finalComingSoonMsg = !activeValue ? (coming_soon_message || 'Coming soon to your country! Stay tuned for updates.') : coming_soon_message || null;
+  const finalFlagEmoji = flag_emoji || flag || null;
+  const row = await db.queryOne(`INSERT INTO countries (code, name, default_currency, phone_prefix, locale, tax_rate, flag_url, is_active, coming_soon_message, flag_emoji)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+    RETURNING *`, [code.toUpperCase(), name, resolvedCurrency, phone_prefix, locale, tax_rate, flag_url, activeValue, finalComingSoonMsg, finalFlagEmoji]);
    res.status(201).json({ success:true, message:'Country created', data: adapt(row) });
   } catch (e) {
     console.error('Create country error', e);
@@ -108,7 +139,7 @@ router.post('/', auth.authMiddleware(), auth.roleMiddleware(['admin','super_admi
 router.put('/:codeOrId', auth.authMiddleware(), auth.roleMiddleware(['admin','super_admin']), async (req,res) => {
   try {
     const v = req.params.codeOrId;
-    const fields = { name: req.body.name, default_currency: req.body.default_currency, phone_prefix: req.body.phone_prefix, locale: req.body.locale, tax_rate: req.body.tax_rate, flag_url: req.body.flag_url, is_active: req.body.is_active };
+  const fields = { name: req.body.name, default_currency: req.body.default_currency, phone_prefix: req.body.phone_prefix, locale: req.body.locale, tax_rate: req.body.tax_rate, flag_url: req.body.flag_url, is_active: req.body.is_active, coming_soon_message: req.body.coming_soon_message, flag_emoji: req.body.flag_emoji || req.body.flag };
     const upd = buildUpdate(fields);
     if (!upd) return res.status(400).json({ success:false, message:'No valid fields to update' });
     let row;
@@ -162,9 +193,22 @@ router.put('/:codeOrId/status', auth.authMiddleware(), auth.roleMiddleware(['adm
     const newVal = desired !== undefined ? desired : !row.is_active;
     let updated;
     if (/^\d+$/.test(v)) {
-      updated = await db.queryOne('UPDATE countries SET is_active=$1, updated_at=NOW() WHERE id=$2 RETURNING *',[newVal, parseInt(v,10)]);
+      if (!newVal && !row.coming_soon_message) {
+        updated = await db.queryOne('UPDATE countries SET is_active=$1, coming_soon_message=$2, updated_at=NOW() WHERE id=$3 RETURNING *',[newVal, 'Coming soon to your country! Stay tuned for updates.', parseInt(v,10)]);
+      } else if (newVal) {
+        // When activating, clear message? Keep for history; we blank in adapt anyway. Do not clear DB value.
+        updated = await db.queryOne('UPDATE countries SET is_active=$1, updated_at=NOW() WHERE id=$2 RETURNING *',[newVal, parseInt(v,10)]);
+      } else {
+        updated = await db.queryOne('UPDATE countries SET is_active=$1, updated_at=NOW() WHERE id=$2 RETURNING *',[newVal, parseInt(v,10)]);
+      }
     } else {
-      updated = await db.queryOne('UPDATE countries SET is_active=$1, updated_at=NOW() WHERE code=$2 RETURNING *',[newVal, v.toUpperCase()]);
+      if (!newVal && !row.coming_soon_message) {
+        updated = await db.queryOne('UPDATE countries SET is_active=$1, coming_soon_message=$2, updated_at=NOW() WHERE code=$3 RETURNING *',[newVal, 'Coming soon to your country! Stay tuned for updates.', v.toUpperCase()]);
+      } else if (newVal) {
+        updated = await db.queryOne('UPDATE countries SET is_active=$1, updated_at=NOW() WHERE code=$2 RETURNING *',[newVal, v.toUpperCase()]);
+      } else {
+        updated = await db.queryOne('UPDATE countries SET is_active=$1, updated_at=NOW() WHERE code=$2 RETURNING *',[newVal, v.toUpperCase()]);
+      }
     }
   res.json({ success:true, message:'Status updated', data: adapt(updated) });
   } catch(e){

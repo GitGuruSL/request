@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io' show Platform; // Safe for mobile builds
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,9 +25,34 @@ class CountryService {
   String getCurrencySymbol() => 'Rs';
   String formatPrice(num amount) => 'Rs ${amount.toStringAsFixed(2)}';
 
-  // Backend base URL (assumes same host:port as previously used for API)
-  String baseUrl = const String.fromEnvironment('API_BASE_URL',
-      defaultValue: 'http://localhost:3001');
+  // Resolved backend base URL (call _resolveBaseUrl once then allow override)
+  late String baseUrl = _resolveBaseUrl();
+
+  // Allow runtime override (e.g., from settings screen)
+  void overrideBaseUrl(String url) {
+    if (kDebugMode) debugPrint('Overriding API base URL -> $url');
+    baseUrl = url.replaceFirst(RegExp(r'/+$'), '');
+    // Invalidate cache so fresh fetch uses new host
+    _cache.clear();
+    _lastFetch = null;
+  }
+
+  String _resolveBaseUrl() {
+    // 1. Compile-time define
+    const defined = String.fromEnvironment('API_BASE_URL');
+    if (defined.isNotEmpty) return defined;
+    // 2. Web: use current origin
+    if (kIsWeb) {
+      return Uri.base.origin.replaceFirst(RegExp(r'/+$'), '');
+    }
+    // 3. Android emulator special host mapping
+    try {
+      if (Platform.isAndroid) return 'http://10.0.2.2:3001';
+      if (Platform.isIOS) return 'http://localhost:3001';
+    } catch (_) {/* ignore */}
+    // 4. Fallback
+    return 'http://localhost:3001';
+  }
 
   Future<List<Country>> getAllCountries({bool forceRefresh = false}) async {
     if (!forceRefresh && _cache.isNotEmpty && _lastFetch != null) {
@@ -36,8 +62,9 @@ class CountryService {
     }
     try {
       final uri = Uri.parse('$baseUrl/api/countries/public');
-      if (kDebugMode) debugPrint('Fetching countries: $uri');
-      final resp = await http.get(uri);
+      if (kDebugMode)
+        debugPrint('Fetching countries: $uri (resolved base: $baseUrl)');
+      final resp = await http.get(uri).timeout(const Duration(seconds: 8));
       if (resp.statusCode != 200) {
         throw Exception('HTTP ${resp.statusCode}');
       }
@@ -52,6 +79,10 @@ class CountryService {
       if (_cache.isNotEmpty) {
         if (kDebugMode) debugPrint('Country fetch failed, using cache: $e');
         return List.unmodifiable(_cache);
+      }
+      if (kDebugMode) {
+        debugPrint(
+            'Country fetch failed with baseUrl=$baseUrl. If running on Android emulator make sure to use 10.0.2.2 or call overrideBaseUrl("http://10.0.2.2:3001"). Error: $e');
       }
       rethrow;
     }
