@@ -80,9 +80,15 @@ const Cities = () => {
       setLoading(true);
       const res = await api.get('/cities');
       const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      // Normalize timestamps (server returns snake_case, adaptCity already sets createdAt; ensure it's a string/date not Firestore obj)
+      const normalized = data.map(c => ({
+        ...c,
+        createdAt: c.createdAt && c.createdAt.toDate ? c.createdAt.toDate().toISOString() : c.createdAt,
+        updatedAt: c.updatedAt && c.updatedAt.toDate ? c.updatedAt.toDate().toISOString() : c.updatedAt,
+      }));
       const filteredData = (!isSuperAdmin && userCountry)
-        ? data.filter(c => c.countryCode === userCountry)
-        : data;
+        ? normalized.filter(c => c.countryCode === userCountry)
+        : normalized;
       const citiesData = filteredData.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
       setCities(citiesData);
       setFilteredCities(citiesData);
