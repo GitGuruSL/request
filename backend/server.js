@@ -32,6 +32,7 @@ const dashboardRoutes = require('./routes/dashboard');
 const customProductVariableRoutes = require('./routes/custom-product-variables');
 const contentPagesRoutes = require('./routes/content-pages');
 const globalResponsesRoutes = require('./routes/responses-global');
+const smsRoutes = require('./routes/sms');
 
 // New country-specific routes
 const countryProductRoutes = require('./routes/country-products');
@@ -159,6 +160,7 @@ app.use('/api', dashboardRoutes);
 app.use('/api', customProductVariableRoutes);
 app.use('/api/content-pages', contentPagesRoutes);
 app.use('/api/responses', globalResponsesRoutes);
+app.use('/api/sms', smsRoutes);
 
 // Country-specific routes
 app.use('/api/country-products', countryProductRoutes);
