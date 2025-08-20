@@ -291,18 +291,38 @@ const DriverVerificationEnhanced = () => {
     return vehicleTypeNames[vehicleTypeId] || vehicleTypeId || 'Unknown Vehicle Type';
   };
 
+  // Map frontend camelCase document types to backend snake_case format
+  const mapDocumentTypeToBackend = (frontendDocType) => {
+    const mapping = {
+      'driverImage': 'driver_image',
+      'licenseFront': 'license_front', 
+      'licenseBack': 'license_back',
+      'nicFront': 'nic_front',
+      'nicBack': 'nic_back',
+      'vehicleRegistration': 'vehicle_registration',
+      'vehicleInsurance': 'vehicle_insurance',
+      'billingProof': 'billing_proof',
+      // Legacy mappings
+      'licenseImage': 'license_front', // Map legacy to new format
+      'idImage': 'nic_front',         // Map legacy to new format  
+      'profileImage': 'driver_image'   // Map legacy to new format
+    };
+    return mapping[frontendDocType] || frontendDocType;
+  };
+
   const handleDocumentApprovalWithClose = async (driver, docType, action) => {
     setActionLoading(true);
     try {
+      const backendDocType = mapDocumentTypeToBackend(docType);
       await api.put(`/driver-verifications/${driver.id}/document-status`, { 
-        documentType: docType, 
+        documentType: backendDocType, 
         status: action 
       });
       await loadDrivers();
       // Refresh selected driver
       const res = await api.get(`/driver-verifications/${driver.id}`);
       if (res.data) setSelectedDriver(res.data);
-      console.log(`✅ Document ${docType} ${action} for ${driver.fullName}`);
+      console.log(`✅ Document ${docType} (${backendDocType}) ${action} for ${driver.fullName}`);
     } catch (error) {
       console.error(`Error updating document status:`, error);
     } finally {
@@ -323,12 +343,13 @@ const DriverVerificationEnhanced = () => {
 
   setActionLoading(true);
   try { 
+    const backendDocType = mapDocumentTypeToBackend(docType);
     await api.put(`/driver-verifications/${driver.id}/document-status`, { 
-      documentType: docType, 
+      documentType: backendDocType, 
       status: action 
     }); 
     await loadDrivers(); 
-    console.log(`✅ Document ${docType} ${action} for ${driver.fullName}`);
+    console.log(`✅ Document ${docType} (${backendDocType}) ${action} for ${driver.fullName}`);
   } catch (error){ 
     console.error('Error updating document status', error);
   } finally { 
@@ -403,8 +424,9 @@ const DriverVerificationEnhanced = () => {
 
     try {
       if (type === 'document') {
+        const backendDocType = mapDocumentTypeToBackend(docType);
         await api.put(`/driver-verifications/${target.id}/document-status`, { 
-          documentType: docType, 
+          documentType: backendDocType, 
           status: 'rejected', 
           rejectionReason 
         });
@@ -640,7 +662,7 @@ const DriverVerificationEnhanced = () => {
               <Box>
                 {displayStatus === 'approved' && isDriverApproved && (
                   <Alert severity="success" size="small" sx={{ mb: 1 }}>
-                    <Typography variant="caption">
+                    <Typography variant="caption" component="span">
                       <strong>Document Verified:</strong> This document has been approved as part of the driver verification.
                     </Typography>
                   </Alert>
@@ -648,7 +670,7 @@ const DriverVerificationEnhanced = () => {
                 
                 {rejectionReason && displayStatus === 'rejected' && (
                   <Alert severity="error" size="small" sx={{ mb: 1 }}>
-                    <Typography variant="caption">
+                    <Typography variant="caption" component="span">
                       <strong>Rejection Reason:</strong> {rejectionReason}
                     </Typography>
                   </Alert>
@@ -694,7 +716,7 @@ const DriverVerificationEnhanced = () => {
             <CardActions>
               <Box display="flex" alignItems="center" gap={1} px={1}>
                 <CheckIcon color="success" fontSize="small" />
-                <Typography variant="caption" color="success.main">
+                <Typography variant="caption" component="span" color="success.main">
                   Document verified and approved
                 </Typography>
               </Box>
@@ -812,7 +834,7 @@ const DriverVerificationEnhanced = () => {
           <CardContent>
             {!url && required && (
               <Alert severity="warning" size="small" sx={{ mb: 2 }}>
-                <Typography variant="caption">
+                <Typography variant="caption" component="span">
                   <strong>Required Document:</strong> This document must be submitted for verification.
                 </Typography>
               </Alert>
@@ -820,7 +842,7 @@ const DriverVerificationEnhanced = () => {
             
             {!url && !required && (
               <Alert severity="info" size="small" sx={{ mb: 2 }}>
-                <Typography variant="caption">
+                <Typography variant="caption" component="span">
                   <strong>Optional Document:</strong> Not submitted.
                 </Typography>
               </Alert>
@@ -828,7 +850,7 @@ const DriverVerificationEnhanced = () => {
             
             {displayStatus === 'approved' && isDriverApproved && (
               <Alert severity="success" size="small" sx={{ mb: 2 }}>
-                <Typography variant="caption">
+                <Typography variant="caption" component="span">
                   <strong>Document Verified:</strong> This document has been approved as part of the driver verification.
                 </Typography>
               </Alert>
@@ -836,7 +858,7 @@ const DriverVerificationEnhanced = () => {
             
             {rejectionReason && displayStatus === 'rejected' && (
               <Alert severity="error" size="small" sx={{ mb: 2 }}>
-                <Typography variant="caption">
+                <Typography variant="caption" component="span">
                   <strong>Rejection Reason:</strong> {rejectionReason}
                 </Typography>
               </Alert>
@@ -895,7 +917,7 @@ const DriverVerificationEnhanced = () => {
             <CardActions sx={{ px: 2, py: 1.5 }}>
               <Box display="flex" alignItems="center" gap={1} width="100%">
                 <CheckIcon color="success" fontSize="small" />
-                <Typography variant="caption" color="success.main" fontWeight="medium">
+                <Typography variant="caption" component="span" color="success.main" fontWeight="medium">
                   Document verified and approved
                 </Typography>
               </Box>
@@ -906,7 +928,7 @@ const DriverVerificationEnhanced = () => {
             <CardActions sx={{ px: 2, py: 1.5 }}>
               <Box display="flex" alignItems="center" gap={1} width="100%">
                 <ErrorIcon color="error" fontSize="small" />
-                <Typography variant="caption" color="error.main" fontWeight="medium">
+                <Typography variant="caption" component="span" color="error.main" fontWeight="medium">
                   Document rejected - needs resubmission
                 </Typography>
               </Box>
@@ -954,11 +976,11 @@ const DriverVerificationEnhanced = () => {
               <Typography variant="body2" fontWeight="bold">
                 {title}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" component="span" color="text.secondary">
                 {description}
               </Typography>
               {rejectionReason && isRejected && (
-                <Typography variant="caption" color="error.main" display="block" sx={{ mt: 0.5 }}>
+                <Typography variant="caption" component="span" color="error.main" display="block" sx={{ mt: 0.5 }}>
                   <strong>Reason:</strong> {rejectionReason}
                 </Typography>
               )}
