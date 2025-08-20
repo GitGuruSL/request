@@ -598,6 +598,73 @@ router.put('/:id/document-status', auth.authMiddleware(), auth.roleMiddleware(['
   }
 });
 
+// Update individual vehicle image status (admin only)
+router.put('/:id/vehicle-images/:index', auth.authMiddleware(), auth.roleMiddleware(['super_admin', 'country_admin']), async (req, res) => {
+  try {
+    const { id, index } = req.params;
+    const { status, rejectionReason } = req.body;
+
+    const imageIndex = parseInt(index, 10);
+    if (isNaN(imageIndex) || imageIndex < 0) {
+      return res.status(400).json({ success: false, message: 'Invalid image index' });
+    }
+    if (!status) {
+      return res.status(400).json({ success: false, message: 'Status is required' });
+    }
+
+    // Fetch current record
+    const currentResult = await database.query('SELECT id, vehicle_image_urls, vehicle_image_verification FROM driver_verifications WHERE id = $1', [id]);
+    if (currentResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Driver verification not found' });
+    }
+    const driver = currentResult.rows[0];
+
+    // Parse vehicle images array (may be json string)
+    let vehicleImageUrls = driver.vehicle_image_urls;
+    if (typeof vehicleImageUrls === 'string') {
+      try { vehicleImageUrls = JSON.parse(vehicleImageUrls); } catch { /* ignore */ }
+    }
+    // Optional: validate index does not exceed existing urls length if array
+    if (Array.isArray(vehicleImageUrls) && imageIndex >= vehicleImageUrls.length) {
+      return res.status(400).json({ success: false, message: 'Image index out of range' });
+    }
+
+    // Parse verification object
+    let vehicleImageVerification = driver.vehicle_image_verification;
+    if (typeof vehicleImageVerification === 'string') {
+      try { vehicleImageVerification = JSON.parse(vehicleImageVerification); } catch { vehicleImageVerification = {}; }
+    }
+    if (!vehicleImageVerification || typeof vehicleImageVerification !== 'object') vehicleImageVerification = {};
+
+    // Update specific image entry
+    const existingEntry = vehicleImageVerification[imageIndex] || {};
+    vehicleImageVerification[imageIndex] = {
+      ...existingEntry,
+      status,
+      reviewedAt: new Date().toISOString(),
+      ...(status === 'rejected' && rejectionReason ? { rejectionReason } : {}),
+    };
+    if (status !== 'rejected' && vehicleImageVerification[imageIndex].rejectionReason) {
+      delete vehicleImageVerification[imageIndex].rejectionReason;
+    }
+
+    // Persist JSON only (no per-image columns)
+    await database.query('UPDATE driver_verifications SET vehicle_image_verification = $1, updated_at = NOW() WHERE id = $2', [JSON.stringify(vehicleImageVerification), id]);
+
+    // Return updated row
+    const updatedResult = await database.query('SELECT * FROM driver_verifications WHERE id = $1', [id]);
+
+    res.json({
+      success: true,
+      message: 'Vehicle image status updated successfully',
+      data: updatedResult.rows[0]
+    });
+  } catch (error) {
+    console.error('Error updating vehicle image status:', error);
+    res.status(500).json({ success: false, message: 'Failed to update vehicle image status', error: error.message });
+  }
+});
+
 // Delete driver verification (admin only)
 router.delete('/:id', auth.authMiddleware(), auth.roleMiddleware(['super_admin', 'country_admin']), async (req, res) => {
   try {
