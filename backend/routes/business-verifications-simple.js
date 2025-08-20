@@ -578,4 +578,116 @@ router.put('/:id/status', auth.authMiddleware(), async (req, res) => {
   }
 });
 
+// Phone verification endpoints for business verification
+router.post('/verify-phone/send-otp', auth.authMiddleware(), async (req, res) => {
+  try {
+    const { phoneNumber, countryCode } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated'
+      });
+    }
+
+    if (!phoneNumber) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number is required'
+      });
+    }
+
+    // Check if phone is already verified in user_phone_numbers
+    const existingPhone = await database.query(
+      'SELECT * FROM user_phone_numbers WHERE user_id = $1 AND phone_number = $2 AND is_verified = true',
+      [userId, phoneNumber]
+    );
+
+    if (existingPhone.rows.length > 0) {
+      return res.json({
+        success: true,
+        message: 'Phone number is already verified',
+        already_verified: true
+      });
+    }
+
+    // Send OTP using existing SMS service
+    const smsService = require('../services/sms');
+    const result = await smsService.sendOTP(phoneNumber, countryCode);
+
+    if (result.success) {
+      return res.json({
+        success: true,
+        message: 'OTP sent successfully',
+        otp_id: result.otp_id || result.id
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        message: result.message || 'Failed to send OTP'
+      });
+    }
+
+  } catch (error) {
+    console.error('Error sending OTP for business verification:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+router.post('/verify-phone/verify-otp', auth.authMiddleware(), async (req, res) => {
+  try {
+    const { phoneNumber, otp, otpId } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated'
+      });
+    }
+
+    if (!phoneNumber || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number and OTP are required'
+      });
+    }
+
+    // Verify OTP using existing SMS service
+    const smsService = require('../services/sms');
+    const result = await smsService.verifyOTP(phoneNumber, otp, otpId);
+
+    if (result.success) {
+      // Add verified phone to user_phone_numbers table
+      await database.query(`
+        INSERT INTO user_phone_numbers (user_id, phone_number, country_code, is_verified, label, purpose, verified_at)
+        VALUES ($1, $2, $3, true, 'business', 'business_verification', NOW())
+        ON CONFLICT (user_id, phone_number) 
+        DO UPDATE SET is_verified = true, verified_at = NOW(), purpose = 'business_verification'
+      `, [userId, phoneNumber, smsService.detectCountry(phoneNumber)]);
+
+      return res.json({
+        success: true,
+        message: 'Phone number verified successfully'
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: result.message || 'Invalid OTP'
+      });
+    }
+
+  } catch (error) {
+    console.error('Error verifying OTP for business verification:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
 module.exports = router;

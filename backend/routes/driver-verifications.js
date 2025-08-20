@@ -6,59 +6,116 @@ const { getSignedUrl } = require('../services/s3Upload');
 
 console.log('🔧 Driver verifications route loaded');
 
-// Helper function to check and update phone verification status
+// Helper function to normalize phone numbers for consistent comparison
+function normalizePhoneNumber(phone) {
+  if (!phone) return null;
+  // Remove all non-digit characters except +
+  let normalized = phone.replace(/[^\d+]/g, '');
+  // If starts with +94, keep as is
+  if (normalized.startsWith('+94')) {
+    return normalized;
+  }
+  // If starts with 94, add +
+  if (normalized.startsWith('94') && normalized.length === 11) {
+    return '+' + normalized;
+  }
+  // If starts with 0, replace with +94
+  if (normalized.startsWith('0') && normalized.length === 10) {
+    return '+94' + normalized.substring(1);
+  }
+  // If 9 digits, assume it's without leading 0, add +94
+  if (normalized.length === 9) {
+    return '+94' + normalized;
+  }
+  return normalized;
+}
+
+// Unified helper function to check and update phone verification status
 async function checkPhoneVerificationStatus(userId, phoneNumber) {
   try {
-    // Check if user exists and get current phone status
+    if (!phoneNumber) {
+      return { phoneVerified: false, needsUpdate: false, requiresManualVerification: true };
+    }
+
+    const normalizedPhone = normalizePhoneNumber(phoneNumber);
+    console.log(`🔍 Checking phone verification for user ${userId}, phone: ${phoneNumber} → ${normalizedPhone}`);
+
+    // Get user's current information
     const userResult = await database.query(
       'SELECT phone, phone_verified FROM users WHERE id = $1',
       [userId]
     );
     
     if (userResult.rows.length === 0) {
+      console.log(`❌ User ${userId} not found`);
       return { phoneVerified: false, needsUpdate: false, requiresManualVerification: true };
     }
     
     const user = userResult.rows[0];
+    const normalizedUserPhone = normalizePhoneNumber(user.phone);
+
+    // 1. Check if phone exists in user_phone_numbers table as verified (professional phone)
+    const professionalPhoneResult = await database.query(
+      'SELECT verified, phone_type FROM user_phone_numbers WHERE user_id = $1 AND phone_number = $2',
+      [userId, normalizedPhone]
+    );
     
-    // If user phone is null but driver has phone number, update users table
-    if (!user.phone && phoneNumber) {
+    if (professionalPhoneResult.rows.length > 0 && professionalPhoneResult.rows[0].verified) {
+      console.log(`✅ Phone ${normalizedPhone} verified via user_phone_numbers (professional phone)`);
+      return { 
+        phoneVerified: true, 
+        needsUpdate: false, 
+        requiresManualVerification: false, 
+        verificationSource: 'user_phone_numbers',
+        phoneType: professionalPhoneResult.rows[0].phone_type
+      };
+    }
+
+    // 2. Check if phone matches user's main phone and is verified (personal phone)
+    if (normalizedUserPhone === normalizedPhone && user.phone_verified) {
+      console.log(`✅ Phone ${normalizedPhone} verified via users table (personal phone)`);
+      return { 
+        phoneVerified: true, 
+        needsUpdate: false, 
+        requiresManualVerification: false, 
+        verificationSource: 'users_table',
+        phoneType: 'personal'
+      };
+    }
+
+    // 3. If user has no phone number, update it
+    if (!user.phone && normalizedPhone) {
       await database.query(
         'UPDATE users SET phone = $1, updated_at = NOW() WHERE id = $2',
-        [phoneNumber, userId]
+        [normalizedPhone, userId]
       );
-      console.log(`📱 Updated user ${userId} phone to ${phoneNumber}`);
+      console.log(`📱 Updated user ${userId} phone to ${normalizedPhone}`);
       return { phoneVerified: false, needsUpdate: true, requiresManualVerification: true };
     }
-    
-    // If phone numbers match and user is verified, phone is verified
-    if (user.phone === phoneNumber && user.phone_verified) {
-      return { phoneVerified: true, needsUpdate: false, requiresManualVerification: false, verificationSource: 'registration' };
-    }
-    
-    // If phone numbers match but not verified, check OTP verification table
-    if (user.phone === phoneNumber) {
+
+    // 4. Check OTP verification table as fallback
+    if (normalizedUserPhone === normalizedPhone) {
       const otpResult = await database.query(
         'SELECT verified FROM phone_otp_verifications WHERE phone = $1 AND verified = true ORDER BY verified_at DESC LIMIT 1',
-        [phoneNumber]
+        [normalizedPhone]
       );
       
       if (otpResult.rows.length > 0) {
-        // Update user verification status
         await database.query(
           'UPDATE users SET phone_verified = true, updated_at = NOW() WHERE id = $1',
           [userId]
         );
-        console.log(`✅ Auto-verified phone for user ${userId}`);
-        return { phoneVerified: true, needsUpdate: true, requiresManualVerification: false, verificationSource: 'otp' };
+        console.log(`✅ Auto-verified phone for user ${userId} via OTP history`);
+        return { phoneVerified: true, needsUpdate: true, requiresManualVerification: false, verificationSource: 'otp_history' };
       }
     }
-    
+
+    console.log(`❌ Phone ${normalizedPhone} not verified for user ${userId}`);
     return { 
-      phoneVerified: user.phone_verified || false, 
+      phoneVerified: false, 
       needsUpdate: false, 
-      requiresManualVerification: !user.phone_verified,
-      verificationSource: user.phone_verified ? 'registration' : null
+      requiresManualVerification: true,
+      verificationSource: null
     };
   } catch (error) {
     console.error('Error checking phone verification:', error);
@@ -66,21 +123,40 @@ async function checkPhoneVerificationStatus(userId, phoneNumber) {
   }
 }
 
+// Unified helper function to check and update email verification status
 async function checkEmailVerificationStatus(userId, email) {
   try {
-    // Check if user exists and get current email status
+    if (!email) {
+      return { emailVerified: false, needsUpdate: false, requiresManualVerification: true };
+    }
+
+    console.log(`🔍 Checking email verification for user ${userId}, email: ${email}`);
+
+    // Get user's current information
     const userResult = await database.query(
       'SELECT email, email_verified FROM users WHERE id = $1',
       [userId]
     );
     
     if (userResult.rows.length === 0) {
+      console.log(`❌ User ${userId} not found`);
       return { emailVerified: false, needsUpdate: false, requiresManualVerification: true };
     }
     
     const user = userResult.rows[0];
-    
-    // If user email is null but driver has email, update users table
+
+    // 1. If email matches user's email and is verified
+    if (user.email === email && user.email_verified) {
+      console.log(`✅ Email ${email} verified via users table`);
+      return { 
+        emailVerified: true, 
+        needsUpdate: false, 
+        requiresManualVerification: false, 
+        verificationSource: 'users_table'
+      };
+    }
+
+    // 2. If user has no email, update it
     if (!user.email && email) {
       await database.query(
         'UPDATE users SET email = $1, updated_at = NOW() WHERE id = $2',
@@ -89,17 +165,13 @@ async function checkEmailVerificationStatus(userId, email) {
       console.log(`📧 Updated user ${userId} email to ${email}`);
       return { emailVerified: false, needsUpdate: true, requiresManualVerification: true };
     }
-    
-    // If emails match and user is verified, email is verified
-    if (user.email === email && user.email_verified) {
-      return { emailVerified: true, needsUpdate: false, requiresManualVerification: false, verificationSource: 'registration' };
-    }
-    
+
+    console.log(`❌ Email ${email} not verified for user ${userId}`);
     return { 
-      emailVerified: user.email_verified || false, 
+      emailVerified: false, 
       needsUpdate: false, 
-      requiresManualVerification: !user.email_verified,
-      verificationSource: user.email_verified ? 'registration' : null
+      requiresManualVerification: true,
+      verificationSource: null
     };
   } catch (error) {
     console.error('Error checking email verification:', error);
@@ -561,6 +633,14 @@ router.post('/', async (req, res) => {
       });
     }
 
+    // Check phone and email verification status using unified system
+    console.log('🔍 Checking verification status for driver verification...');
+    const phoneStatus = await checkPhoneVerificationStatus(userId, phoneNumber);
+    const emailStatus = await checkEmailVerificationStatus(userId, email);
+    
+    console.log('📱 Phone verification result:', phoneStatus);
+    console.log('📧 Email verification result:', emailStatus);
+
     const query = `
       INSERT INTO driver_verifications (
         user_id, first_name, last_name, full_name, date_of_birth, gender, nic_number,
@@ -571,11 +651,11 @@ router.post('/', async (req, res) => {
         driver_image_url, nic_front_url, nic_back_url, license_front_url, license_back_url,
         license_document_url, vehicle_registration_url, insurance_document_url, billing_proof_url,
         vehicle_image_urls, document_verification, vehicle_image_verification,
-        subscription_plan, notes
+        subscription_plan, notes, phone_verified, email_verified
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
         $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
-        $31, $32, $33, $34, $35, $36, $37, $38, $39
+        $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41
       ) RETURNING *
     `;
 
@@ -590,15 +670,34 @@ router.post('/', async (req, res) => {
       vehicleImageUrls ? JSON.stringify(vehicleImageUrls) : null,
       documentVerification ? JSON.stringify(documentVerification) : null,
       vehicleImageVerification ? JSON.stringify(vehicleImageVerification) : null,
-      subscriptionPlan, notes
+      subscriptionPlan, notes, phoneStatus.phoneVerified, emailStatus.emailVerified
     ];
 
     const result = await database.query(query, values);
 
+    // Add verification status to response
+    const responseData = {
+      ...result.rows[0],
+      phoneVerified: phoneStatus.phoneVerified,
+      phoneVerificationSource: phoneStatus.verificationSource,
+      phoneType: phoneStatus.phoneType,
+      requiresPhoneVerification: phoneStatus.requiresManualVerification,
+      emailVerified: emailStatus.emailVerified,
+      emailVerificationSource: emailStatus.verificationSource,
+      requiresEmailVerification: emailStatus.requiresManualVerification
+    };
+
+    console.log('✅ Driver verification submitted with verification status:', {
+      phoneVerified: phoneStatus.phoneVerified,
+      emailVerified: emailStatus.emailVerified,
+      phoneSource: phoneStatus.verificationSource,
+      emailSource: emailStatus.verificationSource
+    });
+
     res.status(201).json({
       success: true,
       message: 'Driver verification submitted successfully',
-      data: result.rows[0]
+      data: responseData
     });
   } catch (error) {
     console.error('Error creating driver verification:', error);
@@ -1088,6 +1187,114 @@ router.post('/signed-url', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to generate signed URL',
+      error: error.message
+    });
+  }
+});
+
+// Phone verification endpoints for driver verification
+router.post('/verify-phone/send-otp', async (req, res) => {
+  try {
+    const { phoneNumber, userId } = req.body;
+
+    if (!phoneNumber || !userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number and user ID are required'
+      });
+    }
+
+    const normalizedPhone = normalizePhoneNumber(phoneNumber);
+    console.log(`📱 Sending OTP for driver verification - Phone: ${phoneNumber} → ${normalizedPhone}, User: ${userId}`);
+
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Store OTP in database
+    await database.query(
+      `INSERT INTO phone_otp_verifications (phone, otp, user_id, expires_at, verification_type, created_at)
+       VALUES ($1, $2, $3, $4, 'driver_verification', NOW())
+       ON CONFLICT (phone) DO UPDATE SET
+       otp = $2, user_id = $3, expires_at = $4, verification_type = 'driver_verification', created_at = NOW(), verified = false`,
+      [normalizedPhone, otp, userId, expiresAt]
+    );
+
+    console.log(`✅ OTP stored for driver verification: ${normalizedPhone}`);
+
+    // Send SMS (you can implement SMS service here)
+    console.log(`📤 OTP for driver verification ${normalizedPhone}: ${otp}`);
+
+    res.json({
+      success: true,
+      message: 'OTP sent successfully for driver verification',
+      phoneNumber: normalizedPhone
+    });
+  } catch (error) {
+    console.error('Error sending OTP for driver verification:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send OTP',
+      error: error.message
+    });
+  }
+});
+
+router.post('/verify-phone/verify-otp', async (req, res) => {
+  try {
+    const { phoneNumber, otp, userId } = req.body;
+
+    if (!phoneNumber || !otp || !userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number, OTP, and user ID are required'
+      });
+    }
+
+    const normalizedPhone = normalizePhoneNumber(phoneNumber);
+    console.log(`🔍 Verifying OTP for driver verification - Phone: ${phoneNumber} → ${normalizedPhone}, OTP: ${otp}, User: ${userId}`);
+
+    // Check OTP
+    const result = await database.query(
+      'SELECT * FROM phone_otp_verifications WHERE phone = $1 AND otp = $2 AND user_id = $3 AND expires_at > NOW() AND verified = false',
+      [normalizedPhone, otp, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired OTP'
+      });
+    }
+
+    // Mark OTP as verified
+    await database.query(
+      'UPDATE phone_otp_verifications SET verified = true, verified_at = NOW() WHERE phone = $1 AND user_id = $2',
+      [normalizedPhone, userId]
+    );
+
+    // Add or update phone in user_phone_numbers table for professional use
+    await database.query(
+      `INSERT INTO user_phone_numbers (user_id, phone_number, phone_type, verified, verified_at, created_at)
+       VALUES ($1, $2, 'professional', true, NOW(), NOW())
+       ON CONFLICT (user_id, phone_number) DO UPDATE SET
+       verified = true, verified_at = NOW(), phone_type = 'professional'`,
+      [userId, normalizedPhone]
+    );
+
+    console.log(`✅ Phone verified for driver verification: ${normalizedPhone}, stored in user_phone_numbers`);
+
+    res.json({
+      success: true,
+      message: 'Phone verified successfully for driver verification',
+      phoneNumber: normalizedPhone,
+      verified: true
+    });
+  } catch (error) {
+    console.error('Error verifying OTP for driver verification:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to verify OTP',
       error: error.message
     });
   }
