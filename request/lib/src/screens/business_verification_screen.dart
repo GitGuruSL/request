@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/enhanced_user_service.dart';
 import '../services/contact_verification_service.dart';
+import '../services/api_client.dart';
 import '../theme/app_theme.dart';
 import 'src/utils/firebase_shim.dart'; // Added by migration script
 // REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
@@ -77,29 +78,34 @@ class _BusinessVerificationScreenState
       print(
           'DEBUG: Loading business verification for userId: ${currentUser.uid}');
 
-      // Get business data from new_business_verifications collection
-// FIRESTORE_TODO: replace with REST service. Original: final doc = await FirebaseFirestore.instance
-      final doc = await FirebaseFirestore.instance
-          .collection('new_business_verifications')
-          .doc(currentUser.uid)
-          .get();
-
-      print('DEBUG: Document exists: ${doc.exists}');
+      // Get business data from backend REST API
+      final response = await ApiClient.instance
+          .get('/api/business-verifications/user/${currentUser.uid}');
+      
+      print('DEBUG: API Response success: ${response.isSuccess}');
+      print('DEBUG: API Response data: ${response.data}');
 
       if (mounted) {
-        setState(() {
-          _businessData = doc.exists ? doc.data() : null;
-          _isLoading = false;
-        });
+        if (response.isSuccess && response.data != null) {
+          final responseWrapper = response.data as Map<String, dynamic>;
+          final businessData = responseWrapper['data'] as Map<String, dynamic>?;
+          
+          setState(() {
+            _businessData = businessData;
+            _isLoading = false;
+          });
 
-        if (doc.exists) {
-          final data = doc.data()!;
-          print('DEBUG: Raw Firebase data: $data');
-          // Pre-populate email field with business email
-          _prePopulateEmailField();
+          if (businessData != null) {
+            print('DEBUG: Business verification data loaded: ${businessData['business_name']}');
+            // Transform API data to match UI expectations
+            _transformApiData(businessData);
+          }
         } else {
-          print(
-              'DEBUG: No business verification document found for userId: ${currentUser.uid}');
+          setState(() {
+            _businessData = null;
+            _isLoading = false;
+          });
+          print('DEBUG: No business verification found via API');
         }
       }
     } catch (e) {

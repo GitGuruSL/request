@@ -328,11 +328,9 @@ router.get('/user/:userId', auth.authMiddleware(), async (req, res) => {
     
     const query = `
       SELECT bv.*, 
-             c.name as country_name,
-             ct.name as city_name
+             c.name as country_name
       FROM business_verifications bv
-      LEFT JOIN countries c ON bv.country_id = c.id
-      LEFT JOIN cities ct ON bv.city_id = ct.id
+      LEFT JOIN countries c ON bv.country = c.code
       WHERE bv.user_id = $1
     `;
     
