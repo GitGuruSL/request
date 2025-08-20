@@ -123,6 +123,16 @@ const DriverVerificationEnhanced = () => {
         if (typeof docVer === 'string') {
           try { docVer = JSON.parse(docVer); } catch { docVer = {}; }
         }
+        // Parse vehicle image verification
+        let vehImgVer = d.vehicleImageVerification || d.vehicle_image_verification;
+        if (typeof vehImgVer === 'string') {
+          try { vehImgVer = JSON.parse(vehImgVer); } catch { vehImgVer = {}; }
+        }
+        // Parse vehicle image urls if JSON string
+        let vehImgUrls = d.vehicleImageUrls || d.vehicle_image_urls;
+        if (typeof vehImgUrls === 'string' && vehImgUrls.trim().startsWith('[')) {
+          try { vehImgUrls = JSON.parse(vehImgUrls); } catch { /* ignore */ }
+        }
         // Inject camelCase status fallbacks from snake_case
         const withStatuses = { ...d };
         const statusPairs = [
@@ -138,7 +148,9 @@ const DriverVerificationEnhanced = () => {
         statusPairs.forEach(([snake, camel]) => {
           if (withStatuses[snake] && !withStatuses[camel]) withStatuses[camel] = withStatuses[snake];
         });
-        withStatuses.documentVerification = docVer || {};
+  withStatuses.documentVerification = docVer || {};
+  withStatuses.vehicleImageVerification = vehImgVer || {};
+  withStatuses.vehicleImageUrls = vehImgUrls;
         return withStatuses;
       });
       const sorted = [...normalized].sort((a,b)=> new Date(b.submittedAt || b.createdAt || 0) - new Date(a.submittedAt || a.createdAt || 0));
@@ -437,7 +449,23 @@ const DriverVerificationEnhanced = () => {
     }
 
   setActionLoading(true);
-  try { await api.put(`/driver-verifications/${driver.id}/vehicle-images/${imageIndex}`, { status: action }); await loadDrivers(); console.log(`✅ Vehicle image ${imageIndex} ${action}: ${driver.fullName}`);} catch (error){ console.error(`Error ${action} vehicle image`, error);} finally { setActionLoading(false);} 
+  try { 
+    await api.put(`/driver-verifications/${driver.id}/vehicle-images/${imageIndex}`, { status: action });
+    // Optimistic update of selected driver modal
+    setSelectedDriver(prev => prev && prev.id === driver.id ? {
+      ...prev,
+      vehicleImageVerification: {
+        ...(prev.vehicleImageVerification || {}),
+        [imageIndex]: {
+          ...((prev.vehicleImageVerification||{})[imageIndex]||{}),
+          status: action,
+          reviewedAt: new Date().toISOString()
+        }
+      }
+    } : prev);
+    await loadDrivers(); 
+    console.log(`✅ Vehicle image ${imageIndex} ${action}: ${driver.fullName}`);
+  } catch (error){ console.error(`Error ${action} vehicle image`, error);} finally { setActionLoading(false);} 
   };
 
   const handleRejection = async () => {
@@ -1984,7 +2012,7 @@ const DriverVerificationEnhanced = () => {
                                     <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
                                       Vehicle Photo {index + 1}
                                     </Typography>
-                                    <Box display="flex" gap={1}>
+                                    <Box display="flex" gap={1} flexWrap="wrap">
                                       <Button
                                         size="small"
                                         startIcon={<ViewIcon />}
@@ -2003,6 +2031,32 @@ const DriverVerificationEnhanced = () => {
                                       >
                                         Download
                                       </Button>
+                                      {displayStatus !== 'approved' && (
+                                        <Button
+                                          size="small"
+                                          color="success"
+                                          startIcon={<ApproveIcon />}
+                                          onClick={() => handleVehicleImageAction(selectedDriver, index, 'approved')}
+                                          variant="contained"
+                                          sx={{ fontSize: '0.7rem', py: 0.5 }}
+                                          disabled={actionLoading}
+                                        >
+                                          Approve
+                                        </Button>
+                                      )}
+                                      {displayStatus !== 'rejected' && (
+                                        <Button
+                                          size="small"
+                                          color="error"
+                                          startIcon={<RejectIcon />}
+                                          onClick={() => handleVehicleImageAction(selectedDriver, index, 'reject')}
+                                          variant="outlined"
+                                          sx={{ fontSize: '0.7rem', py: 0.5 }}
+                                          disabled={actionLoading}
+                                        >
+                                          Reject
+                                        </Button>
+                                      )}
                                     </Box>
                                   </CardContent>
                                 </Card>
@@ -2207,7 +2261,7 @@ const DriverVerificationEnhanced = () => {
       {/* Rejection Dialog */}
       <Dialog open={rejectionDialog.open} onClose={() => setRejectionDialog({ open: false, target: null, type: '' })}>
         <DialogTitle>
-          Reject {rejectionDialog.type === 'document' ? 'Document' : 'Driver'}
+          Reject {rejectionDialog.type === 'document' ? 'Document' : rejectionDialog.type === 'vehicleImage' ? 'Vehicle Image' : 'Driver'}
         </DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2 }}>

@@ -106,6 +106,16 @@ router.get('/', auth.authMiddleware(), auth.roleMiddleware(['super_admin', 'coun
     const transformedRows = await Promise.all(result.rows.map(async (row) => {
       // Check phone verification status for each driver
       const phoneStatus = await checkPhoneVerificationStatus(row.user_id, row.phone_number);
+      // Parse vehicle image verification JSON (may be array or object)
+      let vehicleImageVerification = row.vehicle_image_verification;
+      if (typeof vehicleImageVerification === 'string') {
+        try { vehicleImageVerification = JSON.parse(vehicleImageVerification); } catch { vehicleImageVerification = null; }
+      }
+      // Parse vehicle image urls if stored as JSON string
+      let vehicleImageUrls = row.vehicle_image_urls;
+      if (typeof vehicleImageUrls === 'string' && vehicleImageUrls.trim().startsWith('[')) {
+        try { vehicleImageUrls = JSON.parse(vehicleImageUrls); } catch { /* keep original */ }
+      }
       
       return {
         ...row,
@@ -140,7 +150,8 @@ router.get('/', auth.authMiddleware(), auth.roleMiddleware(['super_admin', 'coun
         vehicleRegistrationUrl: row.vehicle_registration_url,
         insuranceDocumentUrl: row.insurance_document_url,
         billingProofUrl: row.billing_proof_url,
-        vehicleImageUrls: row.vehicle_image_urls,
+  vehicleImageUrls,
+  vehicleImageVerification,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
         submissionDate: row.submission_date,
@@ -246,9 +257,24 @@ router.get('/:id', auth.authMiddleware(), auth.roleMiddleware(['super_admin', 'c
       });
     }
 
+    const row = result.rows[0];
+    // Parse document_verification & vehicle_image_verification for convenience
+    let documentVerification = row.document_verification;
+    if (typeof documentVerification === 'string') {
+      try { documentVerification = JSON.parse(documentVerification); } catch { documentVerification = null; }
+    }
+    let vehicleImageVerification = row.vehicle_image_verification;
+    if (typeof vehicleImageVerification === 'string') {
+      try { vehicleImageVerification = JSON.parse(vehicleImageVerification); } catch { vehicleImageVerification = null; }
+    }
+    let vehicleImageUrls = row.vehicle_image_urls;
+    if (typeof vehicleImageUrls === 'string' && vehicleImageUrls.trim().startsWith('[')) {
+      try { vehicleImageUrls = JSON.parse(vehicleImageUrls); } catch { /* ignore */ }
+    }
+
     res.json({
       success: true,
-      data: result.rows[0]
+      data: { ...row, document_verification: documentVerification, vehicle_image_verification: vehicleImageVerification, vehicle_image_urls: vehicleImageUrls }
     });
   } catch (error) {
     console.error('Error fetching driver verification:', error);
