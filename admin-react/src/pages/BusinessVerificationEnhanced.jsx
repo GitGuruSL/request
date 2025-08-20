@@ -349,10 +349,10 @@ const BusinessVerificationEnhanced = () => {
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <Typography variant="body2">
-                    Applied: {business.submittedAt?.toDate?.()?.toLocaleDateString() || 'Unknown'}
-                    {/* Firestore Timestamp compatibility removed; assuming ISO string */}
-                    {/* Fallback shows Unknown if date invalid */}
-                    {/* Consider normalizing date in backend response */}
+                    Applied: {business.submittedAt ? new Date(business.submittedAt).toLocaleDateString() : 
+                             business.submitted_at ? new Date(business.submitted_at).toLocaleDateString() :
+                             business.createdAt ? new Date(business.createdAt).toLocaleDateString() :
+                             business.created_at ? new Date(business.created_at).toLocaleDateString() : 'Unknown'}
                   </Typography>
                 </Grid>
               </Grid>

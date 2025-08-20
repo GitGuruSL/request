@@ -5,6 +5,127 @@ const auth = require('../services/auth');
 
 console.log('🏢 Simple business verification routes loaded');
 
+// Helper function to check and update phone verification status (unified with driver verification)
+async function checkPhoneVerificationStatus(userId, phoneNumber) {
+  try {
+    // Check if user exists and get current phone status
+    const userResult = await database.query(
+      'SELECT phone, phone_verified FROM users WHERE id = $1',
+      [userId]
+    );
+    
+    if (userResult.rows.length === 0) {
+      return { phoneVerified: false, needsUpdate: false, requiresManualVerification: true };
+    }
+    
+    const user = userResult.rows[0];
+    
+    // If user phone is null but business has phone number, update users table
+    if (!user.phone && phoneNumber) {
+      await database.query(
+        'UPDATE users SET phone = $1, updated_at = NOW() WHERE id = $2',
+        [phoneNumber, userId]
+      );
+      console.log(`📱 Updated user ${userId} phone to ${phoneNumber}`);
+      return { phoneVerified: false, needsUpdate: true, requiresManualVerification: true };
+    }
+    
+    // If phone numbers match and user is verified, phone is verified
+    if (user.phone === phoneNumber && user.phone_verified) {
+      return { phoneVerified: true, needsUpdate: false, requiresManualVerification: false, verificationSource: 'registration' };
+    }
+    
+    // If phone numbers match but not verified, check OTP verification table
+    if (user.phone === phoneNumber) {
+      const otpResult = await database.query(
+        'SELECT verified FROM phone_otp_verifications WHERE phone = $1 AND verified = true ORDER BY verified_at DESC LIMIT 1',
+        [phoneNumber]
+      );
+      
+      if (otpResult.rows.length > 0) {
+        // Update user verification status
+        await database.query(
+          'UPDATE users SET phone_verified = true, updated_at = NOW() WHERE id = $1',
+          [userId]
+        );
+        console.log(`✅ Auto-verified phone for user ${userId}`);
+        return { phoneVerified: true, needsUpdate: true, requiresManualVerification: false, verificationSource: 'otp' };
+      }
+    }
+    
+    return { 
+      phoneVerified: user.phone_verified || false, 
+      needsUpdate: false, 
+      requiresManualVerification: !user.phone_verified,
+      verificationSource: user.phone_verified ? 'registration' : null
+    };
+  } catch (error) {
+    console.error('Error checking phone verification:', error);
+    return { phoneVerified: false, needsUpdate: false, requiresManualVerification: true };
+  }
+}
+
+async function checkEmailVerificationStatus(userId, email) {
+  try {
+    // Check if user exists and get current email status
+    const userResult = await database.query(
+      'SELECT email, email_verified FROM users WHERE id = $1',
+      [userId]
+    );
+    
+    if (userResult.rows.length === 0) {
+      return { emailVerified: false, needsUpdate: false, requiresManualVerification: true };
+    }
+    
+    const user = userResult.rows[0];
+    
+    // If user email is null but business has email, update users table
+    if (!user.email && email) {
+      await database.query(
+        'UPDATE users SET email = $1, updated_at = NOW() WHERE id = $2',
+        [email, userId]
+      );
+      console.log(`📧 Updated user ${userId} email to ${email}`);
+      return { emailVerified: false, needsUpdate: true, requiresManualVerification: true };
+    }
+    
+    // If emails match and user is verified, email is verified
+    if (user.email === email && user.email_verified) {
+      return { emailVerified: true, needsUpdate: false, requiresManualVerification: false, verificationSource: 'registration' };
+    }
+    
+    // If emails match but not verified, check email verification table
+    if (user.email === email) {
+      const emailResult = await database.query(
+        'SELECT verified FROM email_verifications WHERE email = $1 AND verified = true ORDER BY verified_at DESC LIMIT 1',
+        [email]
+      );
+      
+      if (emailResult.rows.length > 0) {
+        // Update user verification status
+        await database.query(
+          'UPDATE users SET email_verified = true, updated_at = NOW() WHERE id = $1',
+          [userId]
+        );
+        console.log(`✅ Auto-verified email for user ${userId}`);
+        return { emailVerified: true, needsUpdate: true, requiresManualVerification: false, verificationSource: 'verification_table' };
+      }
+    }
+    
+    return { 
+      emailVerified: user.email_verified || false, 
+      needsUpdate: false, 
+      requiresManualVerification: !user.email_verified,
+      verificationSource: user.email_verified ? 'registration' : null
+    };
+  } catch (error) {
+    console.error('Error checking email verification:', error);
+    return { emailVerified: false, needsUpdate: false, requiresManualVerification: true };
+  }
+}
+
+console.log('🏢 Simple business verification routes loaded');
+
 // Test endpoint
 router.get('/test', (req, res) => {
   res.json({
@@ -42,6 +163,13 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       insurance_document_url,
       business_logo_url
     } = req.body;
+
+    // Use unified verification system (same as driver verification)
+    const phoneVerification = await checkPhoneVerificationStatus(userId, business_phone);
+    const emailVerification = await checkEmailVerificationStatus(userId, business_email);
+    
+    console.log(`📞 Phone verification for user ${userId}:`, phoneVerification);
+    console.log(`📧 Email verification for user ${userId}:`, emailVerification);
 
     // Handle country - accept either country_id or country_code
     let finalCountryValue = country_code; // Use country code as text
@@ -82,8 +210,9 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
             tax_id = $7, country = $8, description = $9,
             business_license_url = $10, tax_certificate_url = $11,
             insurance_document_url = $12, business_logo_url = $13,
+            phone_verified = $14, email_verified = $15,
             updated_at = CURRENT_TIMESTAMP
-        WHERE user_id = $14
+        WHERE user_id = $16
         RETURNING *
       `;
       
@@ -91,13 +220,17 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
         business_name, business_email, business_phone, business_address,
         business_type, registration_number, tax_number, finalCountryValue, 
         description, business_license_url, tax_certificate_url,
-        insurance_document_url, business_logo_url, userId
+        insurance_document_url, business_logo_url, phoneVerification.phoneVerified, emailVerification.emailVerified, userId
       ]);
 
       return res.json({
         success: true,
         message: 'Business verification updated successfully',
-        data: result.rows[0]
+        data: result.rows[0],
+        verification: {
+          phone: phoneVerification,
+          email: emailVerification
+        }
       });
     } else {
       // Create new record
@@ -106,8 +239,9 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
         (user_id, business_name, business_email, business_phone, business_address, 
          business_category, license_number, tax_id, country, 
          business_description, business_license_url, tax_certificate_url,
-         insurance_document_url, business_logo_url, status, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+         insurance_document_url, business_logo_url, phone_verified, email_verified, 
+         status, submitted_at, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         RETURNING *
       `;
       
@@ -115,13 +249,17 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
         userId, business_name, business_email, business_phone, business_address,
         business_type, registration_number, tax_number, finalCountryValue, 
         description, business_license_url, tax_certificate_url,
-        insurance_document_url, business_logo_url
+        insurance_document_url, business_logo_url, phoneVerification.phoneVerified, emailVerification.emailVerified
       ]);
 
       return res.json({
         success: true,
         message: 'Business verification submitted successfully',
-        data: result.rows[0]
+        data: result.rows[0],
+        verification: {
+          phone: phoneVerification,
+          email: emailVerification
+        }
       });
     }
 
