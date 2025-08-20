@@ -444,6 +444,11 @@ router.get('/:id', auth.authMiddleware(), auth.roleMiddleware(['super_admin', 'c
     }
 
     const row = result.rows[0];
+    
+    // Check phone and email verification status
+    const phoneStatus = await checkPhoneVerificationStatus(row.user_id, row.phone_number);
+    const emailStatus = await checkEmailVerificationStatus(row.user_id, row.email);
+    
     // Parse document_verification & vehicle_image_verification for convenience
     let documentVerification = row.document_verification;
     if (typeof documentVerification === 'string') {
@@ -458,9 +463,23 @@ router.get('/:id', auth.authMiddleware(), auth.roleMiddleware(['super_admin', 'c
       try { vehicleImageUrls = JSON.parse(vehicleImageUrls); } catch { /* ignore */ }
     }
 
+    // Add verification status to response
+    const enrichedData = {
+      ...row, 
+      document_verification: documentVerification, 
+      vehicle_image_verification: vehicleImageVerification, 
+      vehicle_image_urls: vehicleImageUrls,
+      phoneVerified: phoneStatus.phoneVerified,
+      phoneVerificationSource: phoneStatus.verificationSource,
+      requiresPhoneVerification: phoneStatus.requiresManualVerification,
+      emailVerified: emailStatus.emailVerified,
+      emailVerificationSource: emailStatus.verificationSource,
+      requiresEmailVerification: emailStatus.requiresManualVerification,
+    };
+
     res.json({
       success: true,
-      data: { ...row, document_verification: documentVerification, vehicle_image_verification: vehicleImageVerification, vehicle_image_urls: vehicleImageUrls }
+      data: enrichedData
     });
   } catch (error) {
     console.error('Error fetching driver verification:', error);

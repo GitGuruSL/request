@@ -2493,25 +2493,6 @@ const DriverVerificationEnhanced = () => {
 
         <DialogActions>
           <Button onClick={() => setDetailsOpen(false)}>Close</Button>
-          {selectedDriver.status === 'pending' && (
-            <>
-              <Button 
-                color="error"
-                onClick={() => handleDriverAction(selectedDriver, 'reject')}
-                disabled={actionLoading}
-              >
-                Reject Driver
-              </Button>
-              <Button 
-                color="success" 
-                variant="contained"
-                onClick={() => handleDriverAction(selectedDriver, 'approve')}
-                disabled={actionLoading}
-              >
-                Approve Driver
-              </Button>
-            </>
-          )}
           {selectedDriver.status === 'pending' && (() => {
             const requiredDocs = ['driverImage','licenseFront','licenseBack','nicFront','nicBack','vehicleRegistration','vehicleInsurance'];
             const allDocsApproved = requiredDocs.every(d => getDocumentStatus(selectedDriver, d) === 'approved');
@@ -2521,19 +2502,26 @@ const DriverVerificationEnhanced = () => {
               approvedVehiclePhotos = Object.values(selectedDriver.vehicleImageVerification).filter(v => v && v.status === 'approved').length;
             }
             const vehiclePhotoOk = approvedVehiclePhotos >= 4 || !selectedDriver.vehicleImageVerification;
-            if (allDocsApproved && vehiclePhotoOk) {
-              return (
+            
+            return (
+              <>
                 <Button 
-                  color="success"
-                  variant="outlined"
+                  color="error"
+                  onClick={() => handleDriverAction(selectedDriver, 'reject')}
+                  disabled={actionLoading}
+                >
+                  Reject Driver
+                </Button>
+                <Button 
+                  color="success" 
+                  variant={allDocsApproved && vehiclePhotoOk ? "contained" : "outlined"}
                   onClick={() => handleDriverAction(selectedDriver, 'approve')}
                   disabled={actionLoading}
                 >
-                  All docs approved – Approve Now
+                  {allDocsApproved && vehiclePhotoOk ? "All Docs Approved - Approve Now" : "Approve Driver"}
                 </Button>
-              );
-            }
-            return null;
+              </>
+            );
           })()}
         </DialogActions>
       </Dialog>
