@@ -526,8 +526,28 @@ const DriverVerificationEnhanced = () => {
         return;
       }
 
-      // Check contact verification (similar to business verification)
-  try { if (driver.userId){ const res = await api.get(`/users/${driver.userId}`); const u=res.data||{}; const creds=u.linkedCredentials||{}; const phoneVerified=creds.linkedPhoneVerified||u.phoneVerified; const emailVerified=creds.linkedEmailVerified||u.emailVerified; if (!phoneVerified || !emailVerified){ const missing=[]; if(!phoneVerified) missing.push('phone'); if(!emailVerified) missing.push('email'); alert(`Cannot approve driver. User must verify: ${missing.join(', ')}`); return; } } } catch(err){ console.warn('Proceeding without strict contact check', err);} 
+      // Check contact verification requirements
+      const phoneStatus = getPhoneVerificationStatus(driver);
+      const emailStatus = getEmailVerificationStatus(driver);
+      
+      const verificationIssues = [];
+      
+      if (!phoneStatus.hasPhoneNumber) {
+        verificationIssues.push('Phone number is required');
+      } else if (!phoneStatus.isVerified) {
+        verificationIssues.push('Phone number must be verified');
+      }
+      
+      if (!emailStatus.hasEmail) {
+        verificationIssues.push('Email address is required');
+      } else if (!emailStatus.isVerified) {
+        verificationIssues.push('Email address must be verified');
+      }
+      
+      if (verificationIssues.length > 0) {
+        alert(`Cannot approve driver. The following issues must be resolved:\n\n• ${verificationIssues.join('\n• ')}`);
+        return;
+      }
     }
 
   setActionLoading(true);
