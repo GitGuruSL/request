@@ -116,21 +116,36 @@ const DriverVerificationEnhanced = () => {
       
       console.log('🔍 Loading drivers with params:', params);
       const res = await api.get('/driver-verifications', { params });
-      console.log('📥 Driver API response:', res.data);
-      
       const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
-      console.log('📋 Processed driver list:', list);
-      console.log('🔍 First driver object keys:', list[0] ? Object.keys(list[0]) : 'No drivers');
-      console.log('🔍 First driver object:', list[0]);
-      
-      const sorted = [...list].sort((a,b)=> new Date(b.submittedAt || b.createdAt || 0) - new Date(a.submittedAt || a.createdAt || 0));
+      // Normalize each driver (parse document_verification JSON and build helper camelCase fields if missing)
+      const normalized = list.map(d => {
+        let docVer = d.documentVerification || d.document_verification;
+        if (typeof docVer === 'string') {
+          try { docVer = JSON.parse(docVer); } catch { docVer = {}; }
+        }
+        // Inject camelCase status fallbacks from snake_case
+        const withStatuses = { ...d };
+        const statusPairs = [
+          ['driver_image_status','driverImageStatus'],
+          ['nic_front_status','nicFrontStatus'],
+          ['nic_back_status','nicBackStatus'],
+          ['license_front_status','licenseFrontStatus'],
+            ['license_back_status','licenseBackStatus'],
+          ['vehicle_registration_status','vehicleRegistrationStatus'],
+          ['vehicle_insurance_status','vehicleInsuranceStatus'],
+          ['billing_proof_status','billingProofStatus']
+        ];
+        statusPairs.forEach(([snake, camel]) => {
+          if (withStatuses[snake] && !withStatuses[camel]) withStatuses[camel] = withStatuses[snake];
+        });
+        withStatuses.documentVerification = docVer || {};
+        return withStatuses;
+      });
+      const sorted = [...normalized].sort((a,b)=> new Date(b.submittedAt || b.createdAt || 0) - new Date(a.submittedAt || a.createdAt || 0));
       setDrivers(sorted);
     } catch (e) {
       console.error('❌ Error loading drivers:', e);
-      console.error('Full error details:', e.response?.data || e.message);
-    } finally { 
-      setLoading(false);
-    } 
+    } finally { setLoading(false); }
   };
 
   const loadCityNames = async () => {
@@ -324,28 +339,28 @@ const DriverVerificationEnhanced = () => {
     setActionLoading(true);
     try {
       const backendDocType = mapDocumentTypeToBackend(docType);
-      console.log('🚀 Document approval request:', {
-        driverId: driver.id,
-        frontendDocType: docType,
-        backendDocType: backendDocType,
-        action: action
-      });
-      
-      await api.put(`/driver-verifications/${driver.id}/document-status`, { 
-        documentType: backendDocType, 
-        status: action 
-      });
+      await api.put(`/driver-verifications/${driver.id}/document-status`, { documentType: backendDocType, status: action });
+      // Optimistic local update before full reload
+      setSelectedDriver(prev => prev && prev.id === driver.id ? {
+        ...prev,
+        documentVerification: {
+          ...(prev.documentVerification||{}),
+          [docType]: { ...(prev.documentVerification?.[docType]||{}), status: action }
+        },
+        [`${backendDocType.replace(/_.(.)/g,(m,g)=>g.toUpperCase())}Status`]: action
+      } : prev);
       await loadDrivers();
-      // Refresh selected driver
       const res = await api.get(`/driver-verifications/${driver.id}`);
-      if (res.data) setSelectedDriver(res.data);
-      console.log(`✅ Document ${docType} (${backendDocType}) ${action} for ${driver.fullName}`);
+      const raw = res.data?.data || res.data;
+      if (raw) {
+        let docVer = raw.documentVerification || raw.document_verification;
+        if (typeof docVer === 'string') { try { docVer = JSON.parse(docVer); } catch { docVer = {}; } }
+        const enriched = { ...raw, documentVerification: docVer };
+        setSelectedDriver(enriched);
+      }
     } catch (error) {
-      console.error(`Error updating document status:`, error);
-      console.error('Error details:', error.response?.data);
-    } finally {
-      setActionLoading(false);
-    }
+      console.error('Error updating document status:', error);
+    } finally { setActionLoading(false); }
   };
 
   const handleDocumentAction = async (driver, docType, action) => {
@@ -937,17 +952,6 @@ const DriverVerificationEnhanced = () => {
                 <CheckIcon color="success" fontSize="small" />
                 <Typography variant="caption" component="span" color="success.main" fontWeight="medium">
                   Document verified and approved
-                </Typography>
-              </Box>
-            </CardActions>
-          )}
-          
-          {displayStatus === 'rejected' && (
-            <CardActions sx={{ px: 2, py: 1.5 }}>
-              <Box display="flex" alignItems="center" gap={1} width="100%">
-                <ErrorIcon color="error" fontSize="small" />
-                <Typography variant="caption" component="span" color="error.main" fontWeight="medium">
-                  Document rejected - needs resubmission
                 </Typography>
               </Box>
             </CardActions>

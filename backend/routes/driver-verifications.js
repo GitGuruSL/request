@@ -514,11 +514,69 @@ router.put('/:id/document-status', auth.authMiddleware(), auth.roleMiddleware(['
       });
     }
 
-    res.json({
-      success: true,
-      message: 'Document status updated successfully',
-      data: result.rows[0]
-    });
+    // Also update the document_verification JSON field for frontend compatibility
+    const driver = result.rows[0];
+    let documentVerification = {};
+    
+    try {
+      documentVerification = typeof driver.document_verification === 'string' 
+        ? JSON.parse(driver.document_verification) 
+        : (driver.document_verification || {});
+    } catch (e) {
+      documentVerification = {};
+    }
+
+    // Map backend document types to frontend camelCase
+    const backendToFrontendMap = {
+      'driver_image': 'driverImage',
+      'nic_front': 'nicFront',
+      'nic_back': 'nicBack', 
+      'license_front': 'licenseFront',
+      'license_back': 'licenseBack',
+      'vehicle_registration': 'vehicleRegistration',
+      'vehicle_insurance': 'vehicleInsurance',
+      'billing_proof': 'billingProof'
+    };
+
+    const frontendDocType = backendToFrontendMap[documentType];
+    if (frontendDocType) {
+      // Update the JSON document verification status
+      if (!documentVerification[frontendDocType]) {
+        documentVerification[frontendDocType] = {};
+      }
+      documentVerification[frontendDocType].status = status;
+      documentVerification[frontendDocType].reviewedAt = new Date().toISOString();
+      
+      if (rejectionReason && status === 'rejected') {
+        documentVerification[frontendDocType].rejectionReason = rejectionReason;
+      }
+
+      // Update the database with the new JSON
+      await database.query(
+        'UPDATE driver_verifications SET document_verification = $1 WHERE id = $2',
+        [JSON.stringify(documentVerification), id]
+      );
+
+      console.log(`✅ Updated both ${documentType}_status and document_verification.${frontendDocType}.status to "${status}"`);
+      
+      // Fetch the updated data to return
+      const updatedResult = await database.query(
+        'SELECT * FROM driver_verifications WHERE id = $1',
+        [id]
+      );
+      
+      res.json({
+        success: true,
+        message: 'Document status updated successfully',
+        data: updatedResult.rows[0]
+      });
+    } else {
+      res.json({
+        success: true,
+        message: 'Document status updated successfully',
+        data: result.rows[0]
+      });
+    }
   } catch (error) {
     console.error('Error updating document status:', error);
     res.status(500).json({
