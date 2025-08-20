@@ -494,12 +494,22 @@ router.put('/:id/document-status', auth.authMiddleware(), auth.roleMiddleware(['
     const values = [status];
     let paramIndex = 2;
 
-    // Add rejection reason if provided
+    // Add rejection reason only if column exists (some columns not created for all docs)
     if (rejectionReason && status === 'rejected') {
       const rejectionField = `${documentType}_rejection_reason`;
-      query += `, ${rejectionField} = $${paramIndex}`;
-      values.push(rejectionReason);
-      paramIndex++;
+      // Known existing rejection reason columns (extend if you add more in schema)
+      const validRejectionColumns = new Set([
+        'license_front_rejection_reason',
+        'nic_back_rejection_reason',
+        'vehicle_insurance_rejection_reason'
+      ]);
+      if (validRejectionColumns.has(rejectionField)) {
+        query += `, ${rejectionField} = $${paramIndex}`;
+        values.push(rejectionReason);
+        paramIndex++;
+      } else {
+        console.log(`ℹ️ Skipping SQL column update for missing rejection column: ${rejectionField}; storing in JSON only`);
+      }
     }
 
     query += ` WHERE id = $${paramIndex} RETURNING *`;
@@ -546,9 +556,10 @@ router.put('/:id/document-status', auth.authMiddleware(), auth.roleMiddleware(['
       }
       documentVerification[frontendDocType].status = status;
       documentVerification[frontendDocType].reviewedAt = new Date().toISOString();
-      
       if (rejectionReason && status === 'rejected') {
         documentVerification[frontendDocType].rejectionReason = rejectionReason;
+      } else if (status !== 'rejected') {
+        delete documentVerification[frontendDocType].rejectionReason;
       }
 
       // Update the database with the new JSON
