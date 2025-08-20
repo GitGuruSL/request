@@ -5,7 +5,7 @@ const { uploadToS3, deleteFromS3 } = require('../services/s3Upload');
 console.log('🔧 S3 Upload route loaded');
 
 // Upload file to S3
-router.post('/s3', uploadToS3.single('file'), async (req, res) => {
+router.post('/upload', uploadToS3.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ 
@@ -35,7 +35,7 @@ router.post('/s3', uploadToS3.single('file'), async (req, res) => {
 });
 
 // Delete file from S3
-router.delete('/s3', async (req, res) => {
+router.delete('/delete', async (req, res) => {
   try {
     const { url } = req.body;
     
@@ -63,7 +63,7 @@ router.delete('/s3', async (req, res) => {
 });
 
 // Test S3 connection
-router.get('/s3/test', async (req, res) => {
+router.get('/test', async (req, res) => {
   try {
     const { s3 } = require('../services/s3Upload');
     
