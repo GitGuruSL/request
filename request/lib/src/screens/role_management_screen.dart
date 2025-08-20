@@ -54,35 +54,34 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
 
       // Driver verification via backend
       try {
+        print('🔍 FETCHING driver verification for user: ${user.uid}');
         final resp = await ApiClient.instance
             .get('/api/driver-verifications/user/${user.uid}');
-        if (kDebugMode)
-          print(
-              'Driver API response success: ${resp.isSuccess}, data: ${resp.data}');
+        print(
+            '🔍 API Response: success=${resp.isSuccess}, hasData=${resp.data != null}');
         if (resp.isSuccess && resp.data != null) {
           final data = resp.data as Map<String, dynamic>;
-          if (kDebugMode) print('Driver verification raw: $data');
+          print('🔍 Driver verification raw data: $data');
           final rawStatus =
               (data['status'] ?? 'pending').toString().trim().toLowerCase();
           final isVerifiedFlag =
               data['is_verified'] == true || data['isVerified'] == true;
-          if (kDebugMode)
-            print(
-                'Driver status analysis: rawStatus="$rawStatus", isVerifiedFlag=$isVerifiedFlag, userRoles=${user.roles}');
+          print(
+              '🔍 Status analysis: rawStatus="$rawStatus", isVerified=$isVerifiedFlag, userRoles=${user.roles}');
           var parsed = _parseVerificationStatus(rawStatus);
           if (rawStatus == 'approved' ||
               isVerifiedFlag ||
               user.roles.contains('driver')) {
             parsed = VerificationStatus.approved;
-            if (kDebugMode) print('Driver status set to APPROVED');
+            print('🎉 Driver status set to APPROVED!');
           } else {
-            if (kDebugMode) print('Driver status remains: $parsed');
+            print('⏳ Driver status remains: $parsed');
           }
           _verificationStatuses[UserRole.driver] = parsed;
+          print('🔍 Final verification status map: $_verificationStatuses');
         } else {
-          if (kDebugMode)
-            print(
-                'Driver API failed or no data: success=${resp.isSuccess}, data=${resp.data}');
+          print(
+              '❌ Driver API failed: success=${resp.isSuccess}, data=${resp.data}');
         }
       } catch (e) {
         if (kDebugMode) print('Driver status fetch error: $e');
