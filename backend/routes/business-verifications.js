@@ -1,16 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const database = require('../services/database');
-const { auth, requireAuth } = require('../middleware/auth');
+const auth = require('../services/auth');
+const { uploadToS3 } = require('../services/s3Upload');
 const multer = require('multer');
-const AWS = require('aws-sdk');
-
-// Configure AWS
-const s3 = new AWS.S3({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION || 'us-east-1'
-});
 
 // Configure multer for memory storage
 const upload = multer({
@@ -28,24 +21,10 @@ const upload = multer({
   }
 });
 
-// Helper function to upload file to S3
-async function uploadToS3(buffer, fileName, contentType, userId) {
-  const key = `business_documents/${userId}/${fileName}`;
-  
-  const params = {
-    Bucket: process.env.AWS_S3_BUCKET || 'requestappbucket',
-    Key: key,
-    Body: buffer,
-    ContentType: contentType,
-    ACL: 'public-read'
-  };
-
-  const result = await s3.upload(params).promise();
-  return result.Location;
-}
+console.log('🏢 Business verification routes loaded');
 
 // Get business verification by user ID
-router.get('/user/:userId', requireAuth, async (req, res) => {
+router.get('/user/:userId', auth.authMiddleware(), async (req, res) => {
   try {
     const { userId } = req.params;
     

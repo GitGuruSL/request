@@ -43,7 +43,7 @@ const countryBrandRoutes = require('./routes/country-brands');
 const countryVariableTypeRoutes = require('./routes/country-variable-types');
 const adminUserRoutes = require('./routes/admin-users');
 const driverVerificationRoutes = require('./routes/driver-verifications');
-const businessVerificationRoutes = require('./routes/business-verifications'); // NEW - Business verification routes
+const businessVerificationRoutes = require('./routes/business-verifications-simple'); // NEW - Business verification routes (starting simple)
 const adminSMSRoutes = require('./routes/admin-sms');
 
 const app = express();
