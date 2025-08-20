@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../models/enhanced_user_model.dart';
 // Import only the needed auth service (hide its UserModel to avoid symbol clash)
 import 'rest_auth_service.dart' show RestAuthService;
+import 'api_client.dart';
 
 /// Enhanced User Service for REST API
 /// Provides user management functionality using REST endpoints
@@ -117,8 +118,79 @@ class EnhancedUserService {
   // ---- Stubs to satisfy legacy verification / role management screens ----
 
   Future<void> submitDriverVerification(Map<String, dynamic> driverData) async {
-    if (kDebugMode) {
-      print('submitDriverVerification stub called with: ${driverData.keys}');
+    try {
+      if (kDebugMode) {
+        print('Submitting driver verification with: ${driverData.keys}');
+      }
+
+      // Transform the data to match our API structure
+      final apiData = {
+        'userId': driverData['userId'],
+        'firstName': driverData['firstName'],
+        'lastName': driverData['lastName'],
+        'fullName': driverData['fullName'],
+        'dateOfBirth': driverData['dateOfBirth']
+            ?.toIso8601String()
+            ?.split('T')[0], // Format as YYYY-MM-DD
+        'gender': driverData['gender'],
+        'nicNumber': driverData['nicNumber'],
+        'phoneNumber': driverData['phoneNumber'],
+        'secondaryMobile': driverData['secondaryMobile'],
+        'email': driverData['email'],
+        'cityId': driverData['city']?['id'],
+        'cityName': driverData['city']?['name'],
+        'country': driverData['country'] ?? 'LK',
+        'licenseNumber': driverData['licenseNumber'],
+        'licenseExpiry':
+            driverData['licenseExpiry']?.toIso8601String()?.split('T')[0],
+        'licenseHasNoExpiry': driverData['licenseHasNoExpiry'] ?? false,
+        'vehicleTypeId': driverData['vehicleType']?['id'],
+        'vehicleTypeName': driverData['vehicleType']?['name'],
+        'vehicleModel': driverData['vehicleModel'],
+        'vehicleYear': driverData['vehicleYear'],
+        'vehicleNumber': driverData['vehicleNumber'],
+        'vehicleColor': driverData['vehicleColor'],
+        'isVehicleOwner': driverData['isVehicleOwner'] ?? true,
+        'insuranceNumber': driverData['insuranceNumber'],
+        'insuranceExpiry':
+            driverData['insuranceExpiry']?.toIso8601String()?.split('T')[0],
+        'driverImageUrl': driverData['driverImageUrl'],
+        'nicFrontUrl': driverData['nicFrontUrl'],
+        'nicBackUrl': driverData['nicBackUrl'],
+        'licenseFrontUrl': driverData['licenseFrontUrl'],
+        'licenseBackUrl': driverData['licenseBackUrl'],
+        'licenseDocumentUrl': driverData['licenseDocumentUrl'],
+        'vehicleRegistrationUrl': driverData['vehicleRegistrationUrl'],
+        'insuranceDocumentUrl': driverData['insuranceDocumentUrl'],
+        'billingProofUrl': driverData['billingProofUrl'],
+        'vehicleImageUrls': driverData['vehicleImageUrls'],
+        'documentVerification': driverData['documentVerification'],
+        'vehicleImageVerification': driverData['vehicleImageVerification'],
+        'subscriptionPlan': driverData['subscriptionPlan'] ?? 'free',
+        'notes': null,
+      };
+
+      // Remove null values to avoid issues
+      apiData.removeWhere((key, value) => value == null);
+
+      final response = await ApiClient.instance.post(
+        '/api/driver-verifications',
+        data: apiData,
+      );
+
+      if (response.isSuccess) {
+        if (kDebugMode) {
+          print('Driver verification submitted successfully');
+        }
+      } else {
+        throw Exception(
+            'Failed to submit driver verification: ${response.error ?? response.message}');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error submitting driver verification: $e');
+      }
+      rethrow;
     }
   }
 

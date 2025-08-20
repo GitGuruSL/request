@@ -377,6 +377,36 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
     return phoneRegex.hasMatch(cleanPhone);
   }
 
+  // Get selected city data with both ID and name
+  Map<String, dynamic>? _getSelectedCityData() {
+    if (_selectedCity == null) return null;
+
+    // Find the city in available cities list
+    final city = _availableCities.firstWhere(
+        (city) => city['name'] == _selectedCity,
+        orElse: () => {'id': null, 'name': _selectedCity});
+
+    return {
+      'id': city['id'], // UUID from database
+      'name': city['name'] // City name
+    };
+  }
+
+  // Get selected vehicle type data with both ID and name
+  Map<String, dynamic>? _getSelectedVehicleTypeData() {
+    if (_selectedVehicleType == null) return null;
+
+    // Find the vehicle type in available vehicle types list
+    final vehicleType = _availableVehicleTypes.firstWhere(
+        (vt) => vt['id'] == _selectedVehicleType,
+        orElse: () => {'id': _selectedVehicleType, 'name': 'Unknown'});
+
+    return {
+      'id': vehicleType['id'], // UUID from database
+      'name': vehicleType['name'] // Vehicle type name
+    };
+  }
+
   // Check if phone number needs OTP verification
   bool _isPhoneVerifiedByFirebase() {
     final currentUser = RestAuthService.instance.currentUser;
@@ -2195,7 +2225,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
         'dateOfBirth': _dateOfBirth,
         'gender': _selectedGender,
         'nicNumber': _nicNumberController.text.trim(),
-        'city': _selectedCity,
+        'city': _getSelectedCityData(),
         'isVehicleOwner': _isVehicleOwner,
         'licenseNumber': _licenseNumberController.text.trim(),
         'licenseExpiry': _licenseHasNoExpiry ? null : _licenseExpiryDate,
@@ -2206,7 +2236,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
         'vehicleYear': int.parse(_vehicleYearController.text.trim()),
         'vehicleColor': _vehicleColorController.text.trim(),
         'vehicleNumber': _vehicleNumberController.text.trim(),
-        'vehicleType': _selectedVehicleType ?? 'car',
+        'vehicleType': _getSelectedVehicleTypeData(),
         'country': _userCountry,
         'status': 'pending',
         'isVerified': false,
