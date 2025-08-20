@@ -34,9 +34,8 @@ class FileUploadService {
     return await _uploadToBackend(file, type, userId: userId);
   }
 
-  Future<String> uploadVehicleImage(
-      String userId, File file, int index) async {
-    return await _uploadToBackend(file, 'vehicle_image', 
+  Future<String> uploadVehicleImage(String userId, File file, int index) async {
+    return await _uploadToBackend(file, 'vehicle_image',
         userId: userId, imageIndex: index);
   }
 
@@ -47,17 +46,16 @@ class FileUploadService {
     String? path,
     String? fileName,
   }) async {
-    return await FileUploadService().uploadImageFile(
-        imageFile ?? file ?? File('placeholder'),
-        path: path);
+    return await FileUploadService()
+        .uploadImageFile(imageFile ?? file ?? File('placeholder'), path: path);
   }
 
   // Real upload implementation using backend S3 service
-  Future<String> _uploadToBackend(File file, String uploadType, 
+  Future<String> _uploadToBackend(File file, String uploadType,
       {String? userId, String? path, int? imageIndex}) async {
     try {
       print('🚀 Uploading file to backend: $uploadType');
-      
+
       FormData formData = FormData.fromMap({
         'file': await MultipartFile.fromFile(
           file.path,
@@ -73,13 +71,14 @@ class FileUploadService {
         data: formData,
       );
 
-      if (response.data != null && 
-          response.data!['success'] == true && 
+      if (response.data != null &&
+          response.data!['success'] == true &&
           response.data!['url'] != null) {
         print('✅ File uploaded successfully: ${response.data!['url']}');
         return response.data!['url'];
       } else {
-        throw Exception('Upload failed: ${response.data?['error'] ?? 'Unknown error'}');
+        throw Exception(
+            'Upload failed: ${response.data?['error'] ?? 'Unknown error'}');
       }
     } catch (e) {
       print('❌ File upload error: $e');
@@ -91,7 +90,7 @@ class FileUploadService {
   // Fallback method generates demo URLs that trigger warning in UI
   String _generateFallbackUrl(String uploadType, String? userId) {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    
+
     switch (uploadType) {
       case 'driver_photo':
         return 'https://example.com/uploads/drivers/${userId ?? 'user'}/driver_photo_$timestamp.jpg';
