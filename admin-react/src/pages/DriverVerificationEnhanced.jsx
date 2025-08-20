@@ -453,7 +453,7 @@ const DriverVerificationEnhanced = () => {
                 <Grid item xs={12} sm={6}>
                   <Box display="flex" alignItems="center" gap={1}>
                     <LocationIcon fontSize="small" color="action" />
-                    <Typography variant="body2">{getCityName(driver.city)} • {driver.address || driver.fullAddress || 'No address'}</Typography>
+                    <Typography variant="body2">{getCityName(driver.cityId) || driver.cityName} • {driver.address || driver.fullAddress || 'No address'}</Typography>
                   </Box>
                 </Grid>
                 <Grid item xs={12} sm={6}>
@@ -471,16 +471,15 @@ const DriverVerificationEnhanced = () => {
                 <Grid item xs={12} sm={6}>
                   <Box display="flex" alignItems="center" gap={1}>
                     <CarIcon fontSize="small" color="action" />
-                    <Typography variant="body2">{getVehicleTypeName(driver.vehicleType) || 'No vehicle'}</Typography>
+                    <Typography variant="body2">{driver.vehicleTypeName || 'Unknown Vehicle Type'}</Typography>
                   </Box>
                 </Grid>
                 <Grid item xs={12}>
                   <Typography variant="body2">
                     Applied: {
-                      (driver.submittedAt?.toDate?.()?.toLocaleDateString()) ||
-                      (driver.createdAt?.toDate?.()?.toLocaleDateString()) ||
-                      (driver.appliedAt?.toDate?.()?.toLocaleDateString()) ||
-                      (driver.applicationDate?.toDate?.()?.toLocaleDateString()) ||
+                      (driver.submissionDate && new Date(driver.submissionDate).toLocaleDateString()) ||
+                      (driver.createdAt && new Date(driver.createdAt).toLocaleDateString()) ||
+                      (driver.submittedAt && new Date(driver.submittedAt).toLocaleDateString()) ||
                       'Unknown'
                     }
                   </Typography>
@@ -1075,7 +1074,9 @@ const DriverVerificationEnhanced = () => {
                 />
                 <Typography variant="body2" color="text.secondary">
                   Submitted: {selectedDriver.createdAt ? 
-                    new Date(selectedDriver.createdAt.toDate()).toLocaleDateString() : 
+                    new Date(selectedDriver.createdAt).toLocaleDateString() : 
+                    selectedDriver.submissionDate ? 
+                    new Date(selectedDriver.submissionDate).toLocaleDateString() :
                     'Unknown'
                   }
                 </Typography>
@@ -1167,7 +1168,7 @@ const DriverVerificationEnhanced = () => {
                             </Typography>
                             <Typography variant="body1">
                               {selectedDriver.dateOfBirth ? 
-                                new Date(selectedDriver.dateOfBirth.seconds * 1000).toLocaleDateString() : 
+                                new Date(selectedDriver.dateOfBirth).toLocaleDateString() : 
                                 'Not provided'}
                             </Typography>
                           </Box>
@@ -1190,7 +1191,7 @@ const DriverVerificationEnhanced = () => {
                               City
                             </Typography>
                             <Typography variant="body1">
-                              {getCityName(selectedDriver.city) || 'Not provided'}
+                              {getCityName(selectedDriver.cityId) || selectedDriver.cityName || 'Not provided'}
                             </Typography>
                           </Box>
                         </Grid>
@@ -1276,7 +1277,7 @@ const DriverVerificationEnhanced = () => {
                               {selectedDriver.licenseHasNoExpiry ? (
                                 <Chip label="No Expiry Date" color="success" size="small" />
                               ) : selectedDriver.licenseExpiry ? 
-                                new Date(selectedDriver.licenseExpiry.seconds * 1000).toLocaleDateString() : 
+                                new Date(selectedDriver.licenseExpiry).toLocaleDateString() : 
                                 'Not provided'}
                             </Typography>
                           </Box>
@@ -1331,7 +1332,9 @@ const DriverVerificationEnhanced = () => {
                             </Typography>
                             <Typography variant="body1">
                               {selectedDriver.createdAt ? 
-                                new Date(selectedDriver.createdAt.toDate()).toLocaleString() : 
+                                new Date(selectedDriver.createdAt).toLocaleString() : 
+                                selectedDriver.submissionDate ? 
+                                new Date(selectedDriver.submissionDate).toLocaleString() :
                                 'Not available'}
                             </Typography>
                           </Box>
@@ -1746,7 +1749,7 @@ const DriverVerificationEnhanced = () => {
                     <CardHeader
                       avatar={
                         <Avatar sx={{ bgcolor: 'primary.main', width: 48, height: 48 }}>
-                          {getVehicleIcon(getVehicleTypeName(selectedDriver.vehicleType))}
+                          {getVehicleIcon(selectedDriver.vehicleTypeName)}
                         </Avatar>
                       }
                       title="Vehicle Details"
@@ -1763,7 +1766,7 @@ const DriverVerificationEnhanced = () => {
                               {selectedDriver.vehicleType ? (
                                 <Box display="flex" alignItems="center" gap={1}>
                                   <Chip 
-                                    label={getVehicleTypeName(selectedDriver.vehicleType)} 
+                                    label={selectedDriver.vehicleTypeName || 'Unknown'} 
                                     color="primary" 
                                     size="small" 
                                     variant="outlined"
@@ -1840,7 +1843,7 @@ const DriverVerificationEnhanced = () => {
                               License Plate Number
                             </Typography>
                             <Typography variant="h6" fontFamily="monospace" color="primary">
-                              {selectedDriver.licensePlate || 'Not provided'}
+                              {selectedDriver.vehicleNumber || 'Not provided'}
                             </Typography>
                           </Box>
                         </Grid>
@@ -2005,7 +2008,9 @@ const DriverVerificationEnhanced = () => {
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
                           {selectedDriver.createdAt ? 
-                            new Date(selectedDriver.createdAt.toDate()).toLocaleString() : 
+                            new Date(selectedDriver.createdAt).toLocaleString() : 
+                            selectedDriver.submissionDate ? 
+                            new Date(selectedDriver.submissionDate).toLocaleString() :
                             'Unknown'
                           }
                         </Typography>
