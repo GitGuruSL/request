@@ -41,7 +41,63 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
       if (mounted) {
         setState(() {
           if (response.isSuccess && response.data != null) {
-            _driverData = response.data as Map<String, dynamic>;
+            // Extract the actual data from the API response
+            final apiResponse = response.data as Map<String, dynamic>;
+            final rawData = apiResponse['data'] as Map<String, dynamic>;
+
+            _driverData = {
+              // Basic info
+              'fullName': rawData['full_name'],
+              'firstName': rawData['first_name'],
+              'lastName': rawData['last_name'],
+              'email': rawData['email'],
+              'phoneNumber': rawData['phone_number'],
+              'secondaryMobile': rawData['secondary_mobile'],
+              'gender': rawData['gender'],
+              'dateOfBirth': rawData['date_of_birth'],
+              'nicNumber': rawData['nic_number'],
+              'city': rawData['city_name'] ?? rawData['city_id'],
+
+              // License info
+              'licenseNumber': rawData['license_number'],
+              'licenseExpiry': rawData['license_expiry'],
+              'licenseHasNoExpiry': rawData['license_has_no_expiry'],
+
+              // Insurance info
+              'insuranceNumber': rawData['insurance_number'],
+              'insuranceExpiry': rawData['insurance_expiry'],
+
+              // Vehicle info
+              'vehicleModel': rawData['vehicle_model'],
+              'vehicleYear': rawData['vehicle_year'],
+              'vehicleColor': rawData['vehicle_color'],
+              'vehicleNumber': rawData['vehicle_number'],
+              'vehicleType':
+                  rawData['vehicle_type_name'] ?? rawData['vehicle_type_id'],
+              'vehicleOwnership': rawData['is_vehicle_owner'],
+
+              // Document URLs
+              'driverImageUrl': rawData['driver_image_url'],
+              'licenseFrontUrl': rawData['license_front_url'],
+              'licenseBackUrl': rawData['license_back_url'],
+              'licenseDocumentUrl': rawData['license_document_url'],
+              'nicFrontUrl': rawData['nic_front_url'],
+              'nicBackUrl': rawData['nic_back_url'],
+              'billingProofUrl': rawData['billing_proof_url'],
+              'insuranceDocumentUrl': rawData['insurance_document_url'],
+              'vehicleRegistrationUrl': rawData['vehicle_registration_url'],
+              'vehicleImageUrls': rawData['vehicle_image_urls'] ?? [],
+
+              // Verification status
+              'status': rawData['status'],
+              'documentVerification': rawData['document_verification'] ?? {},
+              'vehicleImageVerification':
+                  rawData['vehicle_image_verification'] ?? [],
+
+              // Meta
+              'createdAt': rawData['created_at'],
+              'updatedAt': rawData['updated_at'],
+            };
           } else {
             _driverData = null;
           }
@@ -230,18 +286,16 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
               'License Number', _driverData!['licenseNumber'] ?? 'N/A'),
           _buildInfoRow(
               'License Expiry', _formatDate(_driverData!['licenseExpiry'])),
-          _buildInfoRow(
-              'Insurance Number', _driverData!['insuranceNumber'] ?? 'N/A'),
-          _buildInfoRow(
-              'Insurance Expiry', _formatDate(_driverData!['insuranceExpiry'])),
         ],
       ),
     );
   }
 
   Widget _buildDocumentsSection() {
-    final docVerification =
-        _driverData!['documentVerification'] as Map<String, dynamic>? ?? {};
+    final docVerificationRaw = _driverData!['documentVerification'];
+    final docVerification = docVerificationRaw != null
+        ? Map<String, dynamic>.from(docVerificationRaw as Map)
+        : <String, dynamic>{};
 
     return Container(
       width: double.infinity,
@@ -314,13 +368,6 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
             'Utility bill or bank statement for address verification (Optional)',
             Icons.receipt,
           ),
-          _buildDocumentItem(
-            'Vehicle Insurance Document',
-            docVerification['vehicleInsurance'],
-            _driverData!['insuranceDocumentUrl'],
-            'Vehicle insurance certificate (Expires: ${_formatDate(_driverData!['insuranceExpiry'])})',
-            Icons.security,
-          ),
           if (_driverData!['vehicleRegistrationUrl'] != null)
             _buildDocumentItem(
               'Vehicle Registration Document',
@@ -371,14 +418,31 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
                 (_driverData!['vehicleOwnership'] as bool? ?? true)
                     ? 'Owner'
                     : 'Not Owner'),
+          const SizedBox(height: 16),
+          // Insurance Information
+          const Text(
+            'Insurance Information',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _buildInfoRow(
+              'Insurance Number', _driverData!['insuranceNumber'] ?? 'N/A'),
+          _buildInfoRow(
+              'Insurance Expiry', _formatDate(_driverData!['insuranceExpiry'])),
         ],
       ),
     );
   }
 
   Widget _buildVehicleDocuments() {
-    final docVerification =
-        _driverData!['documentVerification'] as Map<String, dynamic>? ?? {};
+    final docVerificationRaw = _driverData!['documentVerification'];
+    final docVerification = docVerificationRaw != null
+        ? Map<String, dynamic>.from(docVerificationRaw as Map)
+        : <String, dynamic>{};
 
     return Container(
       width: double.infinity,
@@ -402,6 +466,13 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
             ],
           ),
           const SizedBox(height: 16),
+          _buildDocumentItem(
+            'Vehicle Insurance Document',
+            docVerification['vehicleInsurance'],
+            _driverData!['insuranceDocumentUrl'],
+            'Vehicle insurance certificate (Expires: ${_formatDate(_driverData!['insuranceExpiry'])})',
+            Icons.security,
+          ),
           _buildDocumentItem(
             'Vehicle Registration',
             docVerification['vehicleRegistration'],
@@ -661,9 +732,7 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: statusColor.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: statusColor.withOpacity(0.2)),
+        color: Colors.grey.withOpacity(0.05),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -809,9 +878,7 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: statusColor.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: statusColor.withOpacity(0.2)),
+        color: Colors.grey.withOpacity(0.05),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1132,8 +1199,6 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
 
   void _replaceDocument(String title) async {
     try {
-      final ImagePicker picker = ImagePicker();
-
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
