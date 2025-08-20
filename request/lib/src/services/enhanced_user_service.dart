@@ -195,42 +195,48 @@ class EnhancedUserService {
       // Remove null values to avoid issues
       apiData.removeWhere((key, value) => value == null);
 
-      // Convert any remaining DateTime objects to strings
-      final cleanedApiData = <String, dynamic>{};
-      for (final entry in apiData.entries) {
-        if (entry.value is DateTime) {
-          cleanedApiData[entry.key] = (entry.value as DateTime).toIso8601String().split('T')[0];
-        } else if (entry.value is Map<String, dynamic>) {
-          // Handle nested objects that might contain DateTime
-          final cleanedMap = <String, dynamic>{};
-          for (final nestedEntry in (entry.value as Map<String, dynamic>).entries) {
-            if (nestedEntry.value is DateTime) {
-              cleanedMap[nestedEntry.key] = (nestedEntry.value as DateTime).toIso8601String().split('T')[0];
-            } else {
-              cleanedMap[nestedEntry.key] = nestedEntry.value;
-            }
-          }
-          cleanedApiData[entry.key] = cleanedMap;
-        } else {
-          cleanedApiData[entry.key] = entry.value;
-        }
-      }
+      // Convert any remaining DateTime objects to strings recursively
+      final cleanedApiData = _cleanDateTimeObjects(apiData);
 
       if (kDebugMode) {
         print('📦 Final API data size: ${cleanedApiData.length} fields');
         print('📦 API data keys: ${cleanedApiData.keys.toList()}');
 
-        // Check for large data fields
+        // Check for large data fields and any remaining problematic objects
         cleanedApiData.forEach((key, value) {
           if (value is String && value.length > 100) {
             print(
                 '📦 Large field $key: ${value.length} characters (${value.substring(0, 50)}...)');
+          } else if (value is DateTime) {
+            print('⚠️ Found uncleaned DateTime in $key: $value');
+          } else if (value is List) {
+            print('📦 List field $key: ${value.length} items');
+            for (int i = 0; i < value.length; i++) {
+              if (value[i] is DateTime) {
+                print('⚠️ Found DateTime in list $key[$i]: ${value[i]}');
+              }
+            }
           }
         });
 
-        // Calculate approximate data size
-        final jsonString = jsonEncode(cleanedApiData);
-        print('📦 JSON payload size: ${jsonString.length} characters');
+        // Try to encode to JSON to catch any remaining issues
+        try {
+          final jsonString = jsonEncode(cleanedApiData);
+          print('📦 JSON payload size: ${jsonString.length} characters');
+        } catch (e) {
+          print('❌ JSON encoding failed: $e');
+          // Print each field to find the problematic one
+          cleanedApiData.forEach((key, value) {
+            try {
+              jsonEncode({key: value});
+            } catch (fieldError) {
+              print('❌ Field $key caused JSON error: $fieldError');
+              print('   Field type: ${value.runtimeType}');
+              print('   Field value: $value');
+            }
+          });
+          rethrow;
+        }
       }
 
       final response = await ApiClient.instance.post(
@@ -251,6 +257,23 @@ class EnhancedUserService {
         print('Error submitting driver verification: $e');
       }
       rethrow;
+    }
+  }
+
+  /// Recursively clean DateTime objects from data structure
+  dynamic _cleanDateTimeObjects(dynamic data) {
+    if (data is DateTime) {
+      return data.toIso8601String().split('T')[0];
+    } else if (data is Map<String, dynamic>) {
+      final cleaned = <String, dynamic>{};
+      for (final entry in data.entries) {
+        cleaned[entry.key] = _cleanDateTimeObjects(entry.value);
+      }
+      return cleaned;
+    } else if (data is List) {
+      return data.map((item) => _cleanDateTimeObjects(item)).toList();
+    } else {
+      return data;
     }
   }
 
