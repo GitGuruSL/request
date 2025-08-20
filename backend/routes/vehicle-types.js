@@ -3,17 +3,10 @@ const router = express.Router();
 const database = require('../services/database');
 const auth = require('../services/auth');
 
-// Get all vehicle types for a country
-router.get('/', auth.authMiddleware(), async (req, res) => {
+// Get all vehicle types for a country (public endpoint for admin panel)
+router.get('/', async (req, res) => {
   try {
-    // For country admins, force their country; for super admins, allow any country
-    let countryCode;
-    if (req.user.role === 'country_admin') {
-      countryCode = (req.user.country_code || req.user.country || 'LK').toUpperCase();
-    } else {
-      countryCode = (req.query.country || 'LK').toUpperCase();
-    }
-    
+    const countryCode = (req.query.country || 'LK').toUpperCase();
     const includeInactive = req.query.includeInactive === 'true';
 
     const result = await database.query(`

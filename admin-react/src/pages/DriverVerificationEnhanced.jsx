@@ -113,13 +113,25 @@ const DriverVerificationEnhanced = () => {
       const params = {};
       if (isCountryAdmin && adminData?.country) params.country = adminData.country;
       if (filterStatus !== 'all') params.status = filterStatus;
+      
+      console.log('🔍 Loading drivers with params:', params);
       const res = await api.get('/driver-verifications', { params });
+      console.log('📥 Driver API response:', res.data);
+      
       const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      console.log('📋 Processed driver list:', list);
+      console.log('🔍 First driver object keys:', list[0] ? Object.keys(list[0]) : 'No drivers');
+      console.log('🔍 First driver object:', list[0]);
+      
       const sorted = [...list].sort((a,b)=> new Date(b.submittedAt || b.createdAt || 0) - new Date(a.submittedAt || a.createdAt || 0));
       setDrivers(sorted);
     } catch (e) {
-      console.error('Error loading drivers', e);
-    } finally { setLoading(false);} };
+      console.error('❌ Error loading drivers:', e);
+      console.error('Full error details:', e.response?.data || e.message);
+    } finally { 
+      setLoading(false);
+    } 
+  };
 
   const loadCityNames = async () => {
     try { 
