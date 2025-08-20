@@ -19,17 +19,17 @@ class SMSService {
   }
 
   /**
-   * Get SMS configuration for a country
+   * Get SMS configuration for a country (only approved configurations)
    */
   async getSMSConfig(countryCode) {
     try {
       const result = await database.query(
-        'SELECT * FROM sms_configurations WHERE country_code = $1 AND is_active = true',
-        [countryCode]
+        'SELECT * FROM sms_configurations WHERE country_code = $1 AND is_active = true AND approval_status = $2',
+        [countryCode, 'approved']
       );
 
       if (result.rows.length === 0) {
-        throw new Error(`No SMS configuration found for country: ${countryCode}`);
+        throw new Error(`No approved SMS configuration found for country: ${countryCode}. Please contact your country admin to set up SMS services.`);
       }
 
       return result.rows[0];
