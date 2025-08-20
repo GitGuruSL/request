@@ -10,14 +10,16 @@ class BusinessRegistrationScreen extends StatefulWidget {
   const BusinessRegistrationScreen({Key? key}) : super(key: key);
 
   @override
-  State<BusinessRegistrationScreen> createState() => _BusinessRegistrationScreenState();
+  State<BusinessRegistrationScreen> createState() =>
+      _BusinessRegistrationScreenState();
 }
 
-class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen> {
+class _BusinessRegistrationScreenState
+    extends State<BusinessRegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
   final EnhancedUserService _userService = EnhancedUserService();
   final FileUploadService _fileUploadService = FileUploadService();
-  
+
   // Business Information Controllers
   final _businessNameController = TextEditingController();
   final _businessEmailController = TextEditingController();
@@ -26,7 +28,7 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
   final _businessDescriptionController = TextEditingController();
   final _licenseNumberController = TextEditingController();
   final _taxIdController = TextEditingController();
-  
+
   // Business Category
   String? _selectedCategory;
   final List<String> _businessCategories = [
@@ -41,18 +43,18 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
     'Services',
     'Other',
   ];
-  
+
   // Business Documents
   File? _businessLicenseFile;
   File? _taxCertificateFile;
   File? _insuranceDocumentFile;
   File? _businessLogoFile;
-  
+
   String? _businessLicenseUrl;
   String? _taxCertificateUrl;
   String? _insuranceDocumentUrl;
   String? _businessLogoUrl;
-  
+
   bool _isSubmitting = false;
 
   @override
@@ -165,7 +167,8 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
         children: [
           Row(
             children: [
-              Icon(Icons.business_center, color: AppTheme.primaryColor, size: 24),
+              Icon(Icons.business_center,
+                  color: AppTheme.primaryColor, size: 24),
               const SizedBox(width: 12),
               const Text(
                 'Business Information',
@@ -183,7 +186,8 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
             label: 'Business Name *',
             hint: 'Enter your business name',
             prefixIcon: Icons.business,
-            validator: (value) => value?.isEmpty ?? true ? 'Business name is required' : null,
+            validator: (value) =>
+                value?.isEmpty ?? true ? 'Business name is required' : null,
           ),
           _buildTextField(
             controller: _businessEmailController,
@@ -205,7 +209,8 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
             hint: 'Enter business phone number',
             prefixIcon: Icons.phone,
             keyboardType: TextInputType.phone,
-            validator: (value) => value?.isEmpty ?? true ? 'Business phone is required' : null,
+            validator: (value) =>
+                value?.isEmpty ?? true ? 'Business phone is required' : null,
           ),
           _buildTextField(
             controller: _businessAddressController,
@@ -213,7 +218,8 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
             hint: 'Enter complete business address',
             prefixIcon: Icons.location_on,
             maxLines: 3,
-            validator: (value) => value?.isEmpty ?? true ? 'Business address is required' : null,
+            validator: (value) =>
+                value?.isEmpty ?? true ? 'Business address is required' : null,
           ),
           _buildTextField(
             controller: _businessDescriptionController,
@@ -221,7 +227,9 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
             hint: 'Describe your business and services',
             prefixIcon: Icons.description,
             maxLines: 4,
-            validator: (value) => value?.isEmpty ?? true ? 'Business description is required' : null,
+            validator: (value) => value?.isEmpty ?? true
+                ? 'Business description is required'
+                : null,
           ),
           _buildDropdownField(),
           _buildTextField(
@@ -289,7 +297,8 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
           const SizedBox(height: 16),
           _buildDocumentUpload(
             title: 'Business License',
-            description: 'Official business registration/license document (optional)',
+            description:
+                'Official business registration/license document (optional)',
             file: _businessLicenseFile,
             url: _businessLicenseUrl,
             onTap: () => _pickDocument('business_license'),
@@ -383,10 +392,12 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
                 color: AppTheme.textSecondary.withOpacity(0.5),
                 fontSize: 14,
               ),
-              prefixIcon: Icon(prefixIcon, color: AppTheme.primaryColor, size: 20),
+              prefixIcon:
+                  Icon(prefixIcon, color: AppTheme.primaryColor, size: 20),
               filled: true,
               fillColor: Colors.white,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               enabledBorder: OutlineInputBorder(
                 borderSide: BorderSide.none,
                 borderRadius: BorderRadius.circular(8),
@@ -428,12 +439,15 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
           DropdownButtonFormField<String>(
             value: _selectedCategory,
             hint: const Text('Select business category'),
-            validator: (value) => value == null ? 'Business category is required' : null,
+            validator: (value) =>
+                value == null ? 'Business category is required' : null,
             decoration: InputDecoration(
-              prefixIcon: Icon(Icons.category, color: AppTheme.primaryColor, size: 20),
+              prefixIcon:
+                  Icon(Icons.category, color: AppTheme.primaryColor, size: 20),
               filled: true,
               fillColor: Colors.white,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               enabledBorder: OutlineInputBorder(
                 borderSide: BorderSide.none,
                 borderRadius: BorderRadius.circular(8),
@@ -502,7 +516,8 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
               ),
               if (isRequired)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.red.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
@@ -633,7 +648,8 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
                 _businessLogoFile != null ? Icons.refresh : Icons.camera_alt,
                 size: 16,
               ),
-              label: Text(_businessLogoFile != null ? 'Change Logo' : 'Choose Logo'),
+              label: Text(
+                  _businessLogoFile != null ? 'Change Logo' : 'Choose Logo'),
               style: OutlinedButton.styleFrom(
                 side: BorderSide.none,
                 backgroundColor: Colors.white,
@@ -656,10 +672,12 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
             ? const SizedBox(
                 width: 18,
                 height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white),
               )
             : const Icon(Icons.business_center),
-        label: Text(_isSubmitting ? 'Submitting...' : 'Submit for Verification'),
+        label:
+            Text(_isSubmitting ? 'Submitting...' : 'Submit for Verification'),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppTheme.primaryColor,
           foregroundColor: Colors.white,
@@ -727,12 +745,30 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
       final currentUser = await _userService.getCurrentUser();
       if (currentUser == null) throw Exception('User not authenticated');
 
-      // Get user's country information
-      final countryCode = CountryService.instance.countryCode;
-      final countryName = CountryService.instance.countryName;
-      
+      // Get user's country information - try to load if not available
+      await CountryService.instance.loadPersistedCountry();
+
+      String? countryCode = CountryService.instance.countryCode;
+      String? countryName = CountryService.instance.countryName;
+
       if (countryCode == null || countryName == null) {
-        throw Exception('Country information not available. Please restart the app and select your country.');
+        // Try to get default country if none is set
+        try {
+          final countries = await CountryService.instance.getAllCountries();
+          final defaultCountry = countries.firstWhere((c) => c.isEnabled,
+              orElse: () => countries.first);
+          await CountryService.instance.setCountryFromObject(defaultCountry);
+          print(
+              '✅ Set default country: ${defaultCountry.name} (${defaultCountry.code})');
+
+          // Get the values again after setting
+          countryCode = CountryService.instance.countryCode;
+          countryName = CountryService.instance.countryName;
+        } catch (e) {
+          print('❌ Failed to set default country: $e');
+          throw Exception(
+              'Country information not available. Please restart the app and select your country.');
+        }
       }
 
       // Upload documents if selected
@@ -776,8 +812,8 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
       // Prepare business registration data
       final businessData = {
         'userId': currentUser.uid,
-        'country': countryCode,  // Add country code (e.g., "LK")
-        'countryName': countryName,  // Add country name (e.g., "Sri Lanka")
+        'country': countryCode, // Add country code (e.g., "LK")
+        'countryName': countryName, // Add country name (e.g., "Sri Lanka")
         'businessName': _businessNameController.text.trim(),
         'businessEmail': _businessEmailController.text.trim(),
         'businessPhone': _businessPhoneController.text.trim(),
@@ -785,7 +821,9 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
         'businessDescription': _businessDescriptionController.text.trim(),
         'businessCategory': _selectedCategory,
         'licenseNumber': _licenseNumberController.text.trim(),
-        'taxId': _taxIdController.text.trim().isEmpty ? null : _taxIdController.text.trim(),
+        'taxId': _taxIdController.text.trim().isEmpty
+            ? null
+            : _taxIdController.text.trim(),
         'status': 'pending',
         'isVerified': false,
         'submittedAt': DateTime.now(),
@@ -798,7 +836,8 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
         // Document status tracking
         'businessLicenseStatus': 'pending',
         'taxCertificateStatus': taxCertificateUrl != null ? 'pending' : null,
-        'insuranceDocumentStatus': insuranceDocumentUrl != null ? 'pending' : null,
+        'insuranceDocumentStatus':
+            insuranceDocumentUrl != null ? 'pending' : null,
         'businessLogoStatus': businessLogoUrl != null ? 'pending' : null,
         // Document verification nested structure
         'documentVerification': {
@@ -830,7 +869,8 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Business registration submitted successfully! We\'ll review your information and get back to you within 2-5 business days.'),
+            content: Text(
+                'Business registration submitted successfully! We\'ll review your information and get back to you within 2-5 business days.'),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 4),
           ),

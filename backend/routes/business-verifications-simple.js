@@ -34,15 +34,27 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       registration_number,
       tax_number,
       country_id,
+      country_code, // Accept country code as alternative
       city_id,
       description
     } = req.body;
 
+    // Handle country - accept either country_id or country_code
+    let finalCountryId = country_id;
+    if (!finalCountryId && country_code) {
+      // Look up country ID by code
+      const countryQuery = 'SELECT id FROM countries WHERE code = $1';
+      const countryResult = await database.query(countryQuery, [country_code]);
+      if (countryResult.rows.length > 0) {
+        finalCountryId = countryResult.rows[0].id;
+      }
+    }
+
     // Validate required fields
-    if (!business_name || !business_email || !business_phone || !country_id) {
+    if (!business_name || !business_email || !business_phone || !finalCountryId) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: business_name, business_email, business_phone, country_id'
+        message: 'Missing required fields: business_name, business_email, business_phone, and country_id (or country_code)'
       });
     }
 
@@ -64,7 +76,7 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       
       const result = await database.query(updateQuery, [
         business_name, business_email, business_phone, business_address,
-        business_type, registration_number, tax_number, country_id, 
+        business_type, registration_number, tax_number, finalCountryId, 
         city_id, description, userId
       ]);
 
@@ -86,7 +98,7 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       
       const result = await database.query(insertQuery, [
         userId, business_name, business_email, business_phone, business_address,
-        business_type, registration_number, tax_number, country_id, 
+        business_type, registration_number, tax_number, finalCountryId, 
         city_id, description
       ]);
 

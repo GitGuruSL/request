@@ -280,8 +280,51 @@ class EnhancedUserService {
   Future<void> submitBusinessVerification(
       Map<String, dynamic> businessData) async {
     if (kDebugMode) {
-      print(
-          'submitBusinessVerification stub called with: ${businessData.keys}');
+      print('submitBusinessVerification called with: ${businessData.keys}');
+    }
+
+    try {
+      // Prepare data for backend API
+      final apiData = {
+        'business_name': businessData['businessName'],
+        'business_email': businessData['businessEmail'],
+        'business_phone': businessData['businessPhone'],
+        'business_address': businessData['businessAddress'],
+        'business_type': businessData['businessCategory'],
+        'registration_number': businessData['licenseNumber'],
+        'tax_number': businessData['taxId'],
+        'country_code': businessData[
+            'country'], // Send country code, backend will convert to ID
+        'description': businessData['businessDescription'],
+        // Add document URLs if available
+        'business_license_url': businessData['businessLicenseUrl'],
+        'tax_certificate_url': businessData['taxCertificateUrl'],
+        'insurance_document_url': businessData['insuranceDocumentUrl'],
+        'business_logo_url': businessData['businessLogoUrl'],
+      };
+
+      if (kDebugMode) {
+        print('🚀 Submitting business verification to API: $apiData');
+      }
+
+      // Call the backend API
+      final response = await ApiClient.instance.post(
+        '/api/business-verifications',
+        data: apiData,
+      );
+
+      if (response.isSuccess) {
+        if (kDebugMode) {
+          print('✅ Business verification submitted successfully');
+        }
+      } else {
+        throw Exception('API Error: ${response.error}');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error submitting business verification: $e');
+      }
+      rethrow;
     }
   }
 
