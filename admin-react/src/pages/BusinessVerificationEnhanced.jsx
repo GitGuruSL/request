@@ -121,7 +121,7 @@ const BusinessVerificationEnhanced = () => {
       if (filterStatus !== 'all') params.status = filterStatus;
       
       // Use new business verification API
-      const res = await api.get('/api/business-verifications', { params });
+      const res = await api.get('/business-verifications', { params });
       const responseData = res.data || {};
       const list = Array.isArray(responseData.data) ? responseData.data : [];
       
@@ -192,7 +192,7 @@ const BusinessVerificationEnhanced = () => {
       // For now, document-specific actions will be handled through the main status endpoint
       // TODO: Implement specific document approval endpoints
       console.log(`Document ${docType} ${action} for business ${business.id}`);
-      // await api.put(`/api/business-verifications/${business.id}/documents/${docType}`, { status: action });
+      // await api.put(`/business-verifications/${business.id}/documents/${docType}`, { status: action });
       await loadBusinesses();
       console.log(`✅ Document ${docType} ${action} for ${business.business_name || business.businessName}`);
     } catch (error) {
@@ -257,7 +257,7 @@ const BusinessVerificationEnhanced = () => {
         email_verified: business.email_verified || false
       };
       
-      await api.put(`/api/business-verifications/${business.id}/status`, payload);
+      await api.put(`/business-verifications/${business.id}/status`, payload);
       await loadBusinesses();
       console.log(`✅ Business ${action} for ${business.business_name || business.businessName}`);
     } catch (error) {
