@@ -260,34 +260,31 @@ const DriverVerificationEnhanced = () => {
   };
 
   const getDocumentStatus = (driver, docType) => {
-    // Debug: Log status fields for the requested document
-    if (docType === 'driverImage') {
-      console.log('🔍 Debug getDocumentStatus for driverImage:', {
-        driverImageStatus: driver.driverImageStatus,
-        driver_image_status: driver.driver_image_status,
-        docType,
-        documentVerification: driver.documentVerification?.driverImage
-      });
-    }
-    
-    const docVerification = driver.documentVerification?.[docType];
-    if (docVerification?.status) return docVerification.status;
-    
-    // Fallback to flat status fields
+    // Always use flat status fields for reliability - they are the source of truth
+    // The JSON documentVerification field can get out of sync
     switch (docType) {
       case 'licenseImage': return driver.licenseImageStatus || 'pending';
       case 'idImage': return driver.idImageStatus || 'pending';
       case 'vehicleRegistration': return driver.vehicleRegistrationStatus || 'pending';
       case 'profileImage': return driver.profileImageStatus || 'pending';
       // Support for new document types from mobile app
-      case 'driverImage': return driver.driverImageStatus || 'pending';
-      case 'licenseFront': return driver.licenseFrontStatus || 'pending';
-      case 'licenseBack': return driver.licenseBackStatus || 'pending';
+      case 'driverImage': 
+        const status = driver.driverImageStatus || driver.driver_image_status || 'pending';
+        if (docType === 'driverImage') {
+          console.log('🔍 Debug getDocumentStatus for driverImage:', {
+            driverImageStatus: driver.driverImageStatus,
+            driver_image_status: driver.driver_image_status,
+            finalStatus: status
+          });
+        }
+        return status;
+      case 'licenseFront': return driver.licenseFrontStatus || driver.license_front_status || 'pending';
+      case 'licenseBack': return driver.licenseBackStatus || driver.license_back_status || 'pending';
       case 'licenseDocument': return driver.licenseDocumentStatus || 'pending';
-      case 'nicFront': return driver.nicFrontStatus || 'pending';
-      case 'nicBack': return driver.nicBackStatus || 'pending';
-      case 'billingProof': return driver.billingProofStatus || 'pending';
-      case 'vehicleInsurance': return driver.vehicleInsuranceStatus || 'pending';
+      case 'nicFront': return driver.nicFrontStatus || driver.nic_front_status || 'pending';
+      case 'nicBack': return driver.nicBackStatus || driver.nic_back_status || 'pending';
+      case 'billingProof': return driver.billingProofStatus || driver.billing_proof_status || 'pending';
+      case 'vehicleInsurance': return driver.vehicleInsuranceStatus || driver.vehicle_insurance_status || 'pending';
       default: return 'pending';
     }
   };
