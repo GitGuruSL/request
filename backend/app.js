@@ -68,7 +68,7 @@ const contentPagesRoutes = require('./routes/content-pages');
 console.log('🔧 About to require driver-verifications route');
 const driverVerificationRoutes = require('./routes/driver-verifications'); // NEW
 console.log('🔧 About to require business-verifications route');
-const businessVerificationRoutes = require('./routes/business-verifications'); // NEW
+const businessVerificationRoutes = require('./routes/business-verifications-simple'); // NEW - TESTING SIMPLE VERSION
 console.log('🔧 About to register driver-verifications route');
 
 // Serve static files (uploaded images)
