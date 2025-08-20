@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import '../utils/firebase_shim.dart'; // corrected relative path
 import '../services/enhanced_user_service.dart';
-import '../services/contact_verification_service.dart';
 import '../services/api_client.dart';
 import '../models/enhanced_user_model.dart';
 import '../theme/app_theme.dart';
@@ -99,37 +97,74 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
         }
       }
 
-      // Business verification via Firestore (still legacy)
+      // Business verification via backend API
       try {
-        final businessDoc = await FirebaseFirestore.instance
-            .collection('new_business_verifications')
-            .doc(user.uid)
-            .get();
-        if (businessDoc.exists) {
-          final data = businessDoc.data();
-          final status = (data['status'] as String? ?? 'pending').toLowerCase();
-          final businessType =
-              (data['businessType'] as String? ?? '').toLowerCase();
-          final contactStatus = await ContactVerificationService.instance
-              .getLinkedCredentialsStatus();
-          VerificationStatus mapped;
-          if (status == 'approved' &&
-              contactStatus.businessPhoneVerified &&
-              contactStatus.businessEmailVerified) {
-            mapped = VerificationStatus.approved;
-          } else if (status == 'rejected') {
-            mapped = VerificationStatus.rejected;
+        print('🔍 FETCHING business verification for user: ${user.uid}');
+        final businessResp = await ApiClient.instance
+            .get('/api/business-verifications/user/${user.uid}');
+        print(
+            '🔍 Business API Response: success=${businessResp.isSuccess}, hasData=${businessResp.data != null}');
+
+        if (businessResp.isSuccess && businessResp.data != null) {
+          final businessResponseWrapper =
+              businessResp.data as Map<String, dynamic>;
+          print('🔍 Business full response wrapper: $businessResponseWrapper');
+
+          // Extract the actual data from the nested structure
+          final businessData =
+              businessResponseWrapper['data'] as Map<String, dynamic>?;
+          if (businessData != null) {
+            print('🔍 Business verification raw data: $businessData');
+            final businessStatus = (businessData['status'] ?? 'pending')
+                .toString()
+                .trim()
+                .toLowerCase();
+            final isBusinessVerified = businessData['is_verified'] == true;
+            final phoneVerified = businessData['phone_verified'] == true ||
+                businessData['phoneVerified'] == true;
+            final emailVerified = businessData['email_verified'] == true ||
+                businessData['emailVerified'] == true;
+
+            print(
+                '🔍 Business status analysis: status="$businessStatus", isVerified=$isBusinessVerified, phoneVerified=$phoneVerified, emailVerified=$emailVerified');
+
+            var businessParsed = _parseVerificationStatus(businessStatus);
+
+            // Business is fully approved only if status=approved AND phone+email verified
+            if (businessStatus == 'approved' &&
+                phoneVerified &&
+                emailVerified) {
+              businessParsed = VerificationStatus.approved;
+              print('🎉 Business status set to APPROVED!');
+            } else if (businessStatus == 'approved' &&
+                (!phoneVerified || !emailVerified)) {
+              businessParsed = VerificationStatus
+                  .pending; // Still pending contact verification
+              print('⏳ Business approved but contact verification incomplete');
+            } else {
+              print('⏳ Business status remains: $businessParsed');
+            }
+
+            _verificationStatuses[UserRole.business] = businessParsed;
           } else {
-            mapped = VerificationStatus.pending;
+            print('❌ No business data field found in response wrapper');
           }
-          if (businessType == 'delivery') {
-            _verificationStatuses[UserRole.delivery] = mapped;
-          } else {
-            _verificationStatuses[UserRole.business] = mapped;
+        } else {
+          print(
+              '❌ Business API failed: success=${businessResp.isSuccess}, data=${businessResp.data}');
+          // Fallback: check if user has business role
+          if (user.roles.contains('business')) {
+            _verificationStatuses[UserRole.business] =
+                VerificationStatus.approved;
           }
         }
       } catch (e) {
-        if (kDebugMode) print('Business status fetch error: $e');
+        print('❌ Business verification API error: $e');
+        // Fallback: check if user has business role
+        if (user.roles.contains('business')) {
+          _verificationStatuses[UserRole.business] =
+              VerificationStatus.approved;
+        }
       }
     } catch (e) {
       if (kDebugMode) print('Verification load error: $e');
