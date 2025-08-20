@@ -809,16 +809,41 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
-              if (documentUrl != null) ...[
-                TextButton.icon(
-                  onPressed: () => _viewDocument(documentUrl, title),
-                  icon: const Icon(Icons.visibility, size: 18),
-                  label: const Text('View Document'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.blue,
-                    padding: EdgeInsets.zero,
+              if (documentUrl != null && documentUrl.isNotEmpty) ...[
+                // Check if it's a placeholder URL
+                if (documentUrl.startsWith('https://example.com/')) ...[
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.warning, color: Colors.orange, size: 16),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Demo URL - File storage not configured',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.orange[700],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                ] else ...[
+                  TextButton.icon(
+                    onPressed: () => _viewDocument(documentUrl, title),
+                    icon: const Icon(Icons.visibility, size: 18),
+                    label: const Text('View Document'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.blue,
+                      padding: EdgeInsets.zero,
+                    ),
+                  ),
+                ],
                 if (status == 'rejected') ...[
                   const SizedBox(width: 16),
                   TextButton.icon(
@@ -993,9 +1018,40 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
                       ? Image.network(
                           imageUrl,
                           fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) {
+                              return child;
+                            }
+                            return const Center(
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            );
+                          },
                           errorBuilder: (context, error, stackTrace) {
-                            return const Icon(Icons.broken_image,
-                                color: Colors.grey);
+                            print(
+                                '🚨 Thumbnail load error for $imageUrl: $error');
+                            return Container(
+                              color: Colors.grey[200],
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.broken_image,
+                                      color: Colors.grey[600], size: 20),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Failed',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 8,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
                           },
                         )
                       : Icon(Icons.add_a_photo,
@@ -1007,15 +1063,41 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
                 child: Row(
                   children: [
                     if (imageUrl.isNotEmpty) ...[
-                      TextButton.icon(
-                        onPressed: () => _viewVehiclePhoto(imageUrl, title),
-                        icon: const Icon(Icons.visibility, size: 18),
-                        label: const Text('View Photo'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.blue,
-                          padding: EdgeInsets.zero,
+                      // Check if it's a placeholder URL
+                      if (imageUrl.startsWith('https://example.com/')) ...[
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.warning,
+                                  color: Colors.orange, size: 16),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Demo URL - File storage not configured',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.orange[700],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
+                      ] else ...[
+                        TextButton.icon(
+                          onPressed: () => _viewVehiclePhoto(imageUrl, title),
+                          icon: const Icon(Icons.visibility, size: 18),
+                          label: const Text('View Photo'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.blue,
+                            padding: EdgeInsets.zero,
+                          ),
+                        ),
+                      ],
                       if (status == 'rejected') ...[
                         const SizedBox(width: 12),
                         TextButton.icon(
@@ -1128,6 +1210,9 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
   }
 
   void _viewDocument(String documentUrl, String title) {
+    // Debug: Print the URL being accessed
+    print('🖼️ Attempting to load image: $documentUrl');
+
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -1139,7 +1224,27 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
                 child: Image.network(
                   documentUrl,
                   fit: BoxFit.contain,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) {
+                      return child;
+                    }
+                    return Container(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const CircularProgressIndicator(color: Colors.white),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Loading image...',
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                   errorBuilder: (context, error, stackTrace) {
+                    print('🚨 Image load error: $error');
                     return Container(
                       padding: const EdgeInsets.all(20),
                       child: Column(
@@ -1150,7 +1255,22 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
                           const SizedBox(height: 16),
                           Text(
                             'Failed to load document',
-                            style: const TextStyle(color: Colors.white),
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 18),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'URL: $documentUrl',
+                            style: const TextStyle(
+                                color: Colors.grey, fontSize: 12),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Error: ${error.toString()}',
+                            style: const TextStyle(
+                                color: Colors.grey, fontSize: 10),
+                            textAlign: TextAlign.center,
                           ),
                         ],
                       ),
