@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../models/enhanced_user_model.dart';
 // Import only the needed auth service (hide its UserModel to avoid symbol clash)
@@ -194,9 +195,47 @@ class EnhancedUserService {
       // Remove null values to avoid issues
       apiData.removeWhere((key, value) => value == null);
 
+      // Convert any remaining DateTime objects to strings
+      final cleanedApiData = <String, dynamic>{};
+      for (final entry in apiData.entries) {
+        if (entry.value is DateTime) {
+          cleanedApiData[entry.key] = (entry.value as DateTime).toIso8601String().split('T')[0];
+        } else if (entry.value is Map<String, dynamic>) {
+          // Handle nested objects that might contain DateTime
+          final cleanedMap = <String, dynamic>{};
+          for (final nestedEntry in (entry.value as Map<String, dynamic>).entries) {
+            if (nestedEntry.value is DateTime) {
+              cleanedMap[nestedEntry.key] = (nestedEntry.value as DateTime).toIso8601String().split('T')[0];
+            } else {
+              cleanedMap[nestedEntry.key] = nestedEntry.value;
+            }
+          }
+          cleanedApiData[entry.key] = cleanedMap;
+        } else {
+          cleanedApiData[entry.key] = entry.value;
+        }
+      }
+
+      if (kDebugMode) {
+        print('📦 Final API data size: ${cleanedApiData.length} fields');
+        print('📦 API data keys: ${cleanedApiData.keys.toList()}');
+
+        // Check for large data fields
+        cleanedApiData.forEach((key, value) {
+          if (value is String && value.length > 100) {
+            print(
+                '📦 Large field $key: ${value.length} characters (${value.substring(0, 50)}...)');
+          }
+        });
+
+        // Calculate approximate data size
+        final jsonString = jsonEncode(cleanedApiData);
+        print('📦 JSON payload size: ${jsonString.length} characters');
+      }
+
       final response = await ApiClient.instance.post(
         '/api/driver-verifications',
-        data: apiData,
+        data: cleanedApiData,
       );
 
       if (response.isSuccess) {
