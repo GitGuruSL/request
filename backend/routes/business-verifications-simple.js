@@ -38,6 +38,34 @@ async function checkPhoneVerificationStatus(userId, phoneNumber) {
     const normalizedUserPhone = normalizePhoneNumber(user.phone);
     const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber);
     
+    // First check user_phone_numbers table for verified phone numbers
+    console.log(`📱 Checking user_phone_numbers table for verified phones...`);
+    const phoneQuery = `
+      SELECT phone_number, is_verified, verified_at, purpose 
+      FROM user_phone_numbers 
+      WHERE user_id = $1 AND is_verified = true
+    `;
+    const phoneResult = await database.query(phoneQuery, [userId]);
+    
+    console.log(`📱 Found ${phoneResult.rows.length} verified phone numbers in user_phone_numbers table`);
+    
+    // Check against verified phone numbers in user_phone_numbers table
+    for (const phoneRecord of phoneResult.rows) {
+      const normalizedDbPhone = normalizePhoneNumber(phoneRecord.phone_number);
+      console.log(`📱 Comparing: ${normalizedPhoneNumber} === ${normalizedDbPhone} (Purpose: ${phoneRecord.purpose})`);
+      
+      if (normalizedPhoneNumber === normalizedDbPhone) {
+        console.log(`✅ Phone verification match found in user_phone_numbers table!`);
+        return { 
+          phoneVerified: true, 
+          needsUpdate: false, 
+          requiresManualVerification: false, 
+          verificationSource: 'user_phone_numbers',
+          verifiedAt: phoneRecord.verified_at
+        };
+      }
+    }
+    
     // If user phone is null but business has phone number, update users table
     if (!user.phone && phoneNumber) {
       await database.query(
