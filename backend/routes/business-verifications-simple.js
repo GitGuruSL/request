@@ -159,9 +159,48 @@ router.get('/user/:userId', auth.authMiddleware(), async (req, res) => {
       });
     }
 
+    // Transform data to match admin panel expectations (camelCase)
+    const row = result.rows[0];
+    const transformedData = {
+      ...row,
+      // Add camelCase aliases for admin panel
+      businessName: row.business_name,
+      businessEmail: row.business_email,
+      businessPhone: row.business_phone,
+      businessAddress: row.business_address,
+      businessCategory: row.business_category,
+      businessDescription: row.business_description,
+      licenseNumber: row.license_number,
+      taxId: row.tax_id,
+      countryName: row.country_name,
+      businessLogoUrl: row.business_logo_url,
+      businessLicenseUrl: row.business_license_url,
+      insuranceDocumentUrl: row.insurance_document_url,
+      taxCertificateUrl: row.tax_certificate_url,
+      businessLogoStatus: row.business_logo_status,
+      businessLicenseStatus: row.business_license_status,
+      insuranceDocumentStatus: row.insurance_document_status,
+      taxCertificateStatus: row.tax_certificate_status,
+      businessLogoRejectionReason: row.business_logo_rejection_reason,
+      businessLicenseRejectionReason: row.business_license_rejection_reason,
+      insuranceDocumentRejectionReason: row.insurance_document_rejection_reason,
+      taxCertificateRejectionReason: row.tax_certificate_rejection_reason,
+      documentVerification: row.document_verification,
+      isVerified: row.is_verified,
+      phoneVerified: row.phone_verified,
+      emailVerified: row.email_verified,
+      reviewedBy: row.reviewed_by,
+      reviewedDate: row.reviewed_date,
+      submittedAt: row.submitted_at,
+      approvedAt: row.approved_at,
+      lastUpdated: row.last_updated,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    };
+
     res.json({
       success: true,
-      data: result.rows[0]
+      data: transformedData
     });
 
   } catch (error) {
@@ -222,14 +261,129 @@ router.get('/', auth.authMiddleware(), async (req, res) => {
     
     const result = await database.query(query, params);
 
+    // Transform data to match admin panel expectations (camelCase)
+    const transformedData = result.rows.map(row => ({
+      ...row,
+      // Add camelCase aliases for admin panel
+      businessName: row.business_name,
+      businessEmail: row.business_email,
+      businessPhone: row.business_phone,
+      businessAddress: row.business_address,
+      businessCategory: row.business_category,
+      businessDescription: row.business_description,
+      licenseNumber: row.license_number,
+      taxId: row.tax_id,
+      countryName: row.country_name,
+      businessLogoUrl: row.business_logo_url,
+      businessLicenseUrl: row.business_license_url,
+      insuranceDocumentUrl: row.insurance_document_url,
+      taxCertificateUrl: row.tax_certificate_url,
+      businessLogoStatus: row.business_logo_status,
+      businessLicenseStatus: row.business_license_status,
+      insuranceDocumentStatus: row.insurance_document_status,
+      taxCertificateStatus: row.tax_certificate_status,
+      businessLogoRejectionReason: row.business_logo_rejection_reason,
+      businessLicenseRejectionReason: row.business_license_rejection_reason,
+      insuranceDocumentRejectionReason: row.insurance_document_rejection_reason,
+      taxCertificateRejectionReason: row.tax_certificate_rejection_reason,
+      documentVerification: row.document_verification,
+      isVerified: row.is_verified,
+      phoneVerified: row.phone_verified,
+      emailVerified: row.email_verified,
+      reviewedBy: row.reviewed_by,
+      reviewedDate: row.reviewed_date,
+      submittedAt: row.submitted_at,
+      approvedAt: row.approved_at,
+      lastUpdated: row.last_updated,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      userEmail: row.user_email,
+      firstName: row.first_name,
+      lastName: row.last_name
+    }));
+
     res.json({
       success: true,
-      data: result.rows,
-      count: result.rows.length
+      data: transformedData,
+      count: transformedData.length
     });
 
   } catch (error) {
     console.error('Error fetching business verifications:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+});
+
+// Update business verification status (for admin panel)
+router.put('/:id/status', auth.authMiddleware(), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, notes, phone_verified, email_verified } = req.body;
+    
+    const updateQuery = `
+      UPDATE business_verifications 
+      SET status = $1, notes = $2, phone_verified = $3, email_verified = $4, 
+          reviewed_date = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $5
+      RETURNING *
+    `;
+    
+    const result = await database.query(updateQuery, [
+      status, notes, phone_verified, email_verified, id
+    ]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Business verification not found'
+      });
+    }
+
+    // Transform data for response
+    const row = result.rows[0];
+    const transformedData = {
+      ...row,
+      businessName: row.business_name,
+      businessEmail: row.business_email,
+      businessPhone: row.business_phone,
+      businessAddress: row.business_address,
+      businessCategory: row.business_category,
+      businessDescription: row.business_description,
+      licenseNumber: row.license_number,
+      taxId: row.tax_id,
+      countryName: row.country_name,
+      businessLogoUrl: row.business_logo_url,
+      businessLicenseUrl: row.business_license_url,
+      insuranceDocumentUrl: row.insurance_document_url,
+      taxCertificateUrl: row.tax_certificate_url,
+      businessLogoStatus: row.business_logo_status,
+      businessLicenseStatus: row.business_license_status,
+      insuranceDocumentStatus: row.insurance_document_status,
+      taxCertificateStatus: row.tax_certificate_status,
+      isVerified: row.is_verified,
+      phoneVerified: row.phone_verified,
+      emailVerified: row.email_verified,
+      reviewedBy: row.reviewed_by,
+      reviewedDate: row.reviewed_date,
+      submittedAt: row.submitted_at,
+      approvedAt: row.approved_at,
+      lastUpdated: row.last_updated,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    };
+
+    res.json({
+      success: true,
+      message: 'Business verification status updated successfully',
+      data: transformedData
+    });
+
+  } catch (error) {
+    console.error('Error updating business verification status:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
