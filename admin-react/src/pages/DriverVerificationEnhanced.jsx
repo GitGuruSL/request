@@ -149,7 +149,7 @@ const DriverVerificationEnhanced = () => {
           ['billing_proof_status','billingProofStatus']
         ];
         statusPairs.forEach(([snake, camel]) => {
-          if (withStatuses[snake] && !withStatuses[camel]) withStatuses[camel] = withStatuses[snake];
+          if (withStatuses[snake]) withStatuses[camel] = withStatuses[snake];
         });
   withStatuses.documentVerification = docVer || {};
   withStatuses.vehicleImageVerification = vehImgVer || {};
@@ -427,7 +427,28 @@ const DriverVerificationEnhanced = () => {
         if (typeof docVer === 'string') { try { docVer = JSON.parse(docVer); } catch { docVer = {}; } }
         let vehImgVer = raw.vehicleImageVerification || raw.vehicle_image_verification;
         if (typeof vehImgVer === 'string') { try { vehImgVer = JSON.parse(vehImgVer); } catch { vehImgVer = {}; } }
-        const enriched = { ...raw, documentVerification: docVer, vehicleImageVerification: vehImgVer };
+        
+        // Apply the same normalization as loadDrivers
+        const withStatuses = { ...raw };
+        const statusPairs = [
+          ['driver_image_status','driverImageStatus'],
+          ['nic_front_status','nicFrontStatus'],
+          ['nic_back_status','nicBackStatus'],
+          ['license_front_status','licenseFrontStatus'],
+          ['license_back_status','licenseBackStatus'],
+          ['vehicle_registration_status','vehicleRegistrationStatus'],
+          ['vehicle_insurance_status','vehicleInsuranceStatus'],
+          ['billing_proof_status','billingProofStatus']
+        ];
+        statusPairs.forEach(([snake, camel]) => {
+          if (withStatuses[snake]) withStatuses[camel] = withStatuses[snake];
+        });
+        
+        const enriched = { 
+          ...withStatuses, 
+          documentVerification: docVer, 
+          vehicleImageVerification: vehImgVer 
+        };
         setSelectedDriver(enriched);
       }
     } catch(err){ 
@@ -515,7 +536,28 @@ const DriverVerificationEnhanced = () => {
       if (typeof docVer === 'string') { try { docVer = JSON.parse(docVer); } catch { docVer = {}; } }
       let vehImgVer = raw.vehicleImageVerification || raw.vehicle_image_verification;
       if (typeof vehImgVer === 'string') { try { vehImgVer = JSON.parse(vehImgVer); } catch { vehImgVer = {}; } }
-      const enriched = { ...raw, documentVerification: docVer, vehicleImageVerification: vehImgVer };
+      
+      // Apply the same normalization as loadDrivers
+      const withStatuses = { ...raw };
+      const statusPairs = [
+        ['driver_image_status','driverImageStatus'],
+        ['nic_front_status','nicFrontStatus'],
+        ['nic_back_status','nicBackStatus'],
+        ['license_front_status','licenseFrontStatus'],
+        ['license_back_status','licenseBackStatus'],
+        ['vehicle_registration_status','vehicleRegistrationStatus'],
+        ['vehicle_insurance_status','vehicleInsuranceStatus'],
+        ['billing_proof_status','billingProofStatus']
+      ];
+      statusPairs.forEach(([snake, camel]) => {
+        if (withStatuses[snake]) withStatuses[camel] = withStatuses[snake];
+      });
+      
+      const enriched = { 
+        ...withStatuses, 
+        documentVerification: docVer, 
+        vehicleImageVerification: vehImgVer 
+      };
       setSelectedDriver(enriched);
     }
     
