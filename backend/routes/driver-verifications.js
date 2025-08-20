@@ -183,6 +183,7 @@ router.get('/', auth.authMiddleware(), auth.roleMiddleware(['super_admin', 'coun
         cityId: row.city_id,
         cityName: row.city_name || row.city_display_name,
         vehicleTypeId: row.vehicle_type_id,
+        vehicleType: row.vehicle_type_id,  // Add this field for frontend compatibility
         vehicleTypeName: row.vehicle_type_name || row.vehicle_type_display_name,
         vehicleModel: row.vehicle_model,
         vehicleYear: row.vehicle_year,
