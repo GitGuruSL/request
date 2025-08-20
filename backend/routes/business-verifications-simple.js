@@ -114,6 +114,8 @@ async function checkPhoneVerificationStatus(userId, phoneNumber) {
 
 async function checkEmailVerificationStatus(userId, email) {
   try {
+    console.log(`📧 Checking email verification for user ${userId}, email: ${email}`);
+    
     // Check if user exists and get current email status
     const userResult = await database.query(
       'SELECT email, email_verified FROM users WHERE id = $1',
@@ -126,6 +128,34 @@ async function checkEmailVerificationStatus(userId, email) {
     
     const user = userResult.rows[0];
     
+    // First check user_email_addresses table for verified emails (professional emails)
+    console.log(`📧 Checking user_email_addresses table for verified emails...`);
+    const emailQuery = `
+      SELECT email_address, is_verified, verified_at, purpose, verification_method 
+      FROM user_email_addresses 
+      WHERE user_id = $1 AND is_verified = true
+    `;
+    const emailResult = await database.query(emailQuery, [userId]);
+    
+    console.log(`📧 Found ${emailResult.rows.length} verified emails in user_email_addresses table`);
+    
+    // Check against verified emails in user_email_addresses table
+    for (const emailRecord of emailResult.rows) {
+      console.log(`📧 Comparing: ${email} === ${emailRecord.email_address} (Purpose: ${emailRecord.purpose})`);
+      
+      if (email.toLowerCase() === emailRecord.email_address.toLowerCase()) {
+        console.log(`✅ Email verification match found in user_email_addresses table!`);
+        return { 
+          emailVerified: true, 
+          needsUpdate: false, 
+          requiresManualVerification: false, 
+          verificationSource: 'user_email_addresses',
+          verifiedAt: emailRecord.verified_at,
+          verificationMethod: emailRecord.verification_method
+        };
+      }
+    }
+    
     // If user email is null but business has email, update users table
     if (!user.email && email) {
       await database.query(
@@ -137,26 +167,26 @@ async function checkEmailVerificationStatus(userId, email) {
     }
     
     // If emails match and user is verified, email is verified
-    if (user.email === email && user.email_verified) {
+    if (user.email && user.email.toLowerCase() === email.toLowerCase() && user.email_verified) {
       console.log(`📧 Email auto-verified: ${user.email} === ${email}`);
       return { emailVerified: true, needsUpdate: false, requiresManualVerification: false, verificationSource: 'registration' };
     }
     
     // If emails match but not verified, check email verification table
-    if (user.email === email) {
-      const emailResult = await database.query(
-        'SELECT verified FROM email_verifications WHERE email = $1 AND verified = true ORDER BY verified_at DESC LIMIT 1',
+    if (user.email && user.email.toLowerCase() === email.toLowerCase()) {
+      const emailVerificationResult = await database.query(
+        'SELECT verified FROM email_otp_verifications WHERE email = $1 AND verified = true ORDER BY verified_at DESC LIMIT 1',
         [email]
       );
       
-      if (emailResult.rows.length > 0) {
+      if (emailVerificationResult.rows.length > 0) {
         // Update user verification status
         await database.query(
           'UPDATE users SET email_verified = true, updated_at = NOW() WHERE id = $1',
           [userId]
         );
         console.log(`✅ Auto-verified email for user ${userId}`);
-        return { emailVerified: true, needsUpdate: true, requiresManualVerification: false, verificationSource: 'verification_table' };
+        return { emailVerified: true, needsUpdate: true, requiresManualVerification: false, verificationSource: 'otp' };
       }
     }
     
