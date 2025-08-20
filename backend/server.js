@@ -41,6 +41,7 @@ const countrySubcategoryRoutes = require('./routes/country-subcategories');
 const countryBrandRoutes = require('./routes/country-brands');
 const countryVariableTypeRoutes = require('./routes/country-variable-types');
 const adminUserRoutes = require('./routes/admin-users');
+const driverVerificationRoutes = require('./routes/driver-verifications');
 
 const app = express();
 
@@ -56,6 +57,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://127.0.0.1:3000',
   'http://127.0.0.1:3001',
+  'http://10.0.2.2:3001', // Android emulator
   'https://admin.requestmarketplace.com',
   'https://requestmarketplace.com'
 ];
@@ -169,6 +171,7 @@ app.use('/api/country-subcategories', countrySubcategoryRoutes);
 app.use('/api/country-brands', countryBrandRoutes);
 app.use('/api/country-variable-types', countryVariableTypeRoutes);
 app.use('/api/admin-users', adminUserRoutes);
+app.use('/api/driver-verifications', driverVerificationRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {

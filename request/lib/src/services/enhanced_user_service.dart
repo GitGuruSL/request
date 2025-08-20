@@ -123,6 +123,27 @@ class EnhancedUserService {
         print('Submitting driver verification with: ${driverData.keys}');
       }
 
+      // First test connectivity with simple endpoint
+      if (kDebugMode) {
+        print('Testing connectivity to server...');
+      }
+
+      try {
+        final testResponse =
+            await ApiClient.instance.get('/api/driver-verifications/test');
+        if (kDebugMode) {
+          print('✅ Connectivity test successful: ${testResponse.success}');
+          if (testResponse.data != null) {
+            print('Test response: ${testResponse.data}');
+          }
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('❌ Connectivity test failed: $e');
+        }
+        throw Exception('Network connectivity test failed: $e');
+      }
+
       // Transform the data to match our API structure
       final apiData = {
         'userId': driverData['userId'],

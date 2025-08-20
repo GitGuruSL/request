@@ -1,10 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const database = require('../services/database');
-const { auth } = require('../middleware/auth');
+const auth = require('../services/auth');
+
+console.log('🔧 Driver verifications route loaded');
+
+// Simple test endpoint for Flutter connectivity
+router.get('/test', async (req, res) => {
+  console.log('📨 Driver verification TEST request received from:', req.headers.origin || 'unknown');
+  res.json({
+    success: true,
+    message: 'Driver verification test endpoint working',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Get all driver verifications (for admin panel)
-router.get('/', auth, async (req, res) => {
+router.get('/', auth.authMiddleware(), auth.roleMiddleware(['super_admin', 'country_admin']), async (req, res) => {
   try {
     const { country = 'LK', status, page = 1, limit = 50 } = req.query;
     const offset = (page - 1) * limit;
@@ -66,7 +78,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // Get single driver verification by ID
-router.get('/:id', auth, async (req, res) => {
+router.get('/:id', auth.authMiddleware(), auth.roleMiddleware(['super_admin', 'country_admin']), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -107,6 +119,11 @@ router.get('/:id', auth, async (req, res) => {
 // Create new driver verification (from mobile app)
 router.post('/', async (req, res) => {
   try {
+    console.log('📨 Driver verification POST request received');
+    console.log('📤 Request body:', JSON.stringify(req.body, null, 2));
+    console.log('📤 Request headers authorization:', req.headers.authorization);
+    console.log('📤 Request origin:', req.headers.origin);
+    
     const {
       userId,
       fullName,
@@ -207,7 +224,7 @@ router.post('/', async (req, res) => {
 });
 
 // Update driver verification status (admin only)
-router.put('/:id/status', auth, async (req, res) => {
+router.put('/:id/status', auth.authMiddleware(), auth.roleMiddleware(['super_admin', 'country_admin']), async (req, res) => {
   try {
     const { id } = req.params;
     const { status, notes, reviewedBy } = req.body;
@@ -252,7 +269,7 @@ router.put('/:id/status', auth, async (req, res) => {
 });
 
 // Update document status (admin only)
-router.put('/:id/document-status', auth, async (req, res) => {
+router.put('/:id/document-status', auth.authMiddleware(), auth.roleMiddleware(['super_admin', 'country_admin']), async (req, res) => {
   try {
     const { id } = req.params;
     const { documentType, status, rejectionReason } = req.body;
@@ -316,7 +333,7 @@ router.put('/:id/document-status', auth, async (req, res) => {
 });
 
 // Delete driver verification (admin only)
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', auth.authMiddleware(), auth.roleMiddleware(['super_admin', 'country_admin']), async (req, res) => {
   try {
     const { id } = req.params;
 
