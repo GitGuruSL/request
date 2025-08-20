@@ -107,8 +107,8 @@ const uploadToS3 = async (file, uploadType, userId, imageIndex) => {
     Bucket: BUCKET_NAME,
     Key: keyPath,
     Body: file.buffer,
-    ContentType: file.mimetype,
-    ACL: 'public-read'
+    ContentType: file.mimetype
+    // Removed ACL: 'public-read' because bucket doesn't allow ACLs
   };
 
   try {

@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../services/enhanced_user_service.dart';
 import '../services/api_client.dart';
-import '../models/enhanced_user_model.dart';
 import '../theme/app_theme.dart';
 import 'src/utils/firebase_shim.dart'; // Added by migration script
 // REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import '../services/file_upload_service.dart';
 // Removed direct firebase_storage dependency; using FileUploadService / stub.
 
 class DriverDocumentsViewScreen extends StatefulWidget {
@@ -35,71 +33,96 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
       final currentUser = await _userService.getCurrentUser();
       if (currentUser == null) throw Exception('User not authenticated');
 
+      print('🔍 Loading driver data for user: ${currentUser.uid}');
+
       // Get driver verification data from REST API
       final response = await ApiClient.instance
           .get('/api/driver-verifications/user/${currentUser.uid}');
+
+      print('📡 API Response: ${response.isSuccess}');
+      print('📡 API Data: ${response.data}');
+      print('📡 API Error: ${response.error}');
 
       if (mounted) {
         setState(() {
           if (response.isSuccess && response.data != null) {
             // Extract the actual data from the API response
             final apiResponse = response.data as Map<String, dynamic>;
-            final rawData = apiResponse['data'] as Map<String, dynamic>;
+            print('📊 Raw API Response: $apiResponse');
 
-            _driverData = {
-              // Basic info
-              'fullName': rawData['full_name'],
-              'firstName': rawData['first_name'],
-              'lastName': rawData['last_name'],
-              'email': rawData['email'],
-              'phoneNumber': rawData['phone_number'],
-              'secondaryMobile': rawData['secondary_mobile'],
-              'gender': rawData['gender'],
-              'dateOfBirth': rawData['date_of_birth'],
-              'nicNumber': rawData['nic_number'],
-              'city': rawData['city_name'] ?? rawData['city_id'],
+            // Handle different response formats
+            Map<String, dynamic>? rawData;
+            if (apiResponse['data'] != null) {
+              rawData = apiResponse['data'] as Map<String, dynamic>;
+              print('✅ Driver verification data found in apiResponse.data!');
+            } else if (apiResponse.containsKey('user_id')) {
+              // Direct data format (not wrapped in 'data' key)
+              rawData = apiResponse;
+              print('✅ Driver verification data found in direct format!');
+            } else {
+              print('❌ No driver verification data found in API response');
+            }
 
-              // License info
-              'licenseNumber': rawData['license_number'],
-              'licenseExpiry': rawData['license_expiry'],
-              'licenseHasNoExpiry': rawData['license_has_no_expiry'],
+            if (rawData != null) {
+              _driverData = {
+                // Basic info
+                'fullName': rawData['full_name'],
+                'firstName': rawData['first_name'],
+                'lastName': rawData['last_name'],
+                'email': rawData['email'],
+                'phoneNumber': rawData['phone_number'],
+                'secondaryMobile': rawData['secondary_mobile'],
+                'gender': rawData['gender'],
+                'dateOfBirth': rawData['date_of_birth'],
+                'nicNumber': rawData['nic_number'],
+                'city': rawData['city_name'] ?? rawData['city_id'],
 
-              // Insurance info
-              'insuranceNumber': rawData['insurance_number'],
-              'insuranceExpiry': rawData['insurance_expiry'],
+                // License info
+                'licenseNumber': rawData['license_number'],
+                'licenseExpiry': rawData['license_expiry'],
+                'licenseHasNoExpiry': rawData['license_has_no_expiry'],
 
-              // Vehicle info
-              'vehicleModel': rawData['vehicle_model'],
-              'vehicleYear': rawData['vehicle_year'],
-              'vehicleColor': rawData['vehicle_color'],
-              'vehicleNumber': rawData['vehicle_number'],
-              'vehicleType':
-                  rawData['vehicle_type_name'] ?? rawData['vehicle_type_id'],
-              'vehicleOwnership': rawData['is_vehicle_owner'],
+                // Insurance info
+                'insuranceNumber': rawData['insurance_number'],
+                'insuranceExpiry': rawData['insurance_expiry'],
 
-              // Document URLs
-              'driverImageUrl': rawData['driver_image_url'],
-              'licenseFrontUrl': rawData['license_front_url'],
-              'licenseBackUrl': rawData['license_back_url'],
-              'licenseDocumentUrl': rawData['license_document_url'],
-              'nicFrontUrl': rawData['nic_front_url'],
-              'nicBackUrl': rawData['nic_back_url'],
-              'billingProofUrl': rawData['billing_proof_url'],
-              'insuranceDocumentUrl': rawData['insurance_document_url'],
-              'vehicleRegistrationUrl': rawData['vehicle_registration_url'],
-              'vehicleImageUrls': rawData['vehicle_image_urls'] ?? [],
+                // Vehicle info
+                'vehicleModel': rawData['vehicle_model'],
+                'vehicleYear': rawData['vehicle_year'],
+                'vehicleColor': rawData['vehicle_color'],
+                'vehicleNumber': rawData['vehicle_number'],
+                'vehicleType':
+                    rawData['vehicle_type_name'] ?? rawData['vehicle_type_id'],
+                'vehicleOwnership': rawData['is_vehicle_owner'],
 
-              // Verification status
-              'status': rawData['status'],
-              'documentVerification': rawData['document_verification'] ?? {},
-              'vehicleImageVerification':
-                  rawData['vehicle_image_verification'] ?? [],
+                // Document URLs
+                'driverImageUrl': rawData['driver_image_url'],
+                'licenseFrontUrl': rawData['license_front_url'],
+                'licenseBackUrl': rawData['license_back_url'],
+                'licenseDocumentUrl': rawData['license_document_url'],
+                'nicFrontUrl': rawData['nic_front_url'],
+                'nicBackUrl': rawData['nic_back_url'],
+                'billingProofUrl': rawData['billing_proof_url'],
+                'insuranceDocumentUrl': rawData['insurance_document_url'],
+                'vehicleRegistrationUrl': rawData['vehicle_registration_url'],
+                'vehicleImageUrls': rawData['vehicle_image_urls'] ?? [],
 
-              // Meta
-              'createdAt': rawData['created_at'],
-              'updatedAt': rawData['updated_at'],
-            };
+                // Verification status
+                'status': rawData['status'],
+                'documentVerification': rawData['document_verification'] ?? {},
+                'vehicleImageVerification':
+                    rawData['vehicle_image_verification'] ?? [],
+
+                // Meta
+                'createdAt': rawData['created_at'],
+                'updatedAt': rawData['updated_at'],
+              };
+            } else {
+              print('❌ No driver verification data found in API response');
+              _driverData = null;
+            }
           } else {
+            print('❌ API request failed or returned null data');
             _driverData = null;
           }
           _isLoading = false;
@@ -813,38 +836,30 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
               if (documentUrl != null && documentUrl.isNotEmpty) ...[
                 // Check if it's a placeholder URL
                 if (documentUrl.startsWith('https://example.com/')) ...[
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.warning, color: Colors.orange, size: 16),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            'Demo URL - Storage not setup',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.orange[700],
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.warning, color: Colors.orange, size: 16),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              'Demo URL - Storage not setup',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.orange[700],
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton.icon(
-                    onPressed: () => _uploadRealFile(title),
-                    icon: const Icon(Icons.cloud_upload, size: 18),
-                    label: const Text('Upload Real File'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.green,
-                      padding: EdgeInsets.zero,
+                        ],
+                      ),
                     ),
                   ),
                 ] else ...[
@@ -1079,39 +1094,31 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
                     if (imageUrl.isNotEmpty) ...[
                       // Check if it's a placeholder URL
                       if (imageUrl.startsWith('https://example.com/')) ...[
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.warning,
-                                  color: Colors.orange, size: 16),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: Text(
-                                  'Demo URL - Storage not setup',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.orange[700],
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.warning,
+                                    color: Colors.orange, size: 16),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    'Demo URL - Storage not setup',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.orange[700],
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        TextButton.icon(
-                          onPressed: () => _uploadRealVehicleImage(title),
-                          icon: const Icon(Icons.cloud_upload, size: 18),
-                          label: const Text('Upload Real'),
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.green,
-                            padding: EdgeInsets.zero,
+                              ],
+                            ),
                           ),
                         ),
                       ] else ...[
@@ -1699,332 +1706,6 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
         SnackBar(
           content: Text('Failed to upload replacement: ${e.toString()}'),
           backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  // New methods for uploading real files to replace demo URLs
-  void _uploadRealFile(String title) async {
-    try {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text('Upload Real File for $title'),
-          content: const Text(
-              'This will replace the demo URL with a real S3 upload. Choose how to upload:'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _pickAndUploadRealFile(title, ImageSource.camera);
-              },
-              child: const Text('Take Photo'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _pickAndUploadRealFile(title, ImageSource.gallery);
-              },
-              child: const Text('Choose from Gallery'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-          ],
-        ),
-      );
-    } catch (e) {
-      print('Error showing upload dialog: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
-    }
-  }
-
-  void _uploadRealVehicleImage(String title) async {
-    try {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text('Upload Real Vehicle Image'),
-          content: Text(
-              'This will replace the demo URL for "$title" with a real S3 upload. Choose how to upload:'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _pickAndUploadRealVehicleFile(title, ImageSource.camera);
-              },
-              child: const Text('Take Photo'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _pickAndUploadRealVehicleFile(title, ImageSource.gallery);
-              },
-              child: const Text('Choose from Gallery'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-          ],
-        ),
-      );
-    } catch (e) {
-      print('Error showing vehicle upload dialog: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
-    }
-  }
-
-  Future<void> _pickAndUploadRealFile(String title, ImageSource source) async {
-    try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(
-        source: source,
-        maxWidth: 1920,
-        maxHeight: 1920,
-        imageQuality: 85,
-      );
-
-      if (image != null) {
-        await _uploadRealFileToS3(title, File(image.path));
-      }
-    } catch (e) {
-      print('Error picking image for real upload: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error picking image: ${e.toString()}')),
-      );
-    }
-  }
-
-  Future<void> _pickAndUploadRealVehicleFile(
-      String title, ImageSource source) async {
-    try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(
-        source: source,
-        maxWidth: 1920,
-        maxHeight: 1920,
-        imageQuality: 85,
-      );
-
-      if (image != null) {
-        await _uploadRealVehicleFileToS3(title, File(image.path));
-      }
-    } catch (e) {
-      print('Error picking vehicle image for real upload: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error picking image: ${e.toString()}')),
-      );
-    }
-  }
-
-  Future<void> _uploadRealFileToS3(String title, File imageFile) async {
-    try {
-      // Show loading indicator
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Uploading real file to S3...'),
-              SizedBox(height: 8),
-              Text('Testing S3 integration',
-                  style: TextStyle(fontSize: 12, color: Colors.grey)),
-            ],
-          ),
-        ),
-      );
-
-      final currentUser = await _userService.getCurrentUser();
-      if (currentUser == null) throw Exception('User not authenticated');
-
-      // Determine upload type based on title
-      String uploadType;
-      switch (title.toLowerCase()) {
-        case 'driver photo':
-          uploadType = 'driver_photo';
-          break;
-        case 'nic front':
-          uploadType = 'nic_front';
-          break;
-        case 'nic back':
-          uploadType = 'nic_back';
-          break;
-        case 'license front':
-          uploadType = 'license_front';
-          break;
-        case 'license back':
-          uploadType = 'license_back';
-          break;
-        case 'vehicle registration':
-          uploadType = 'vehicle_registration';
-          break;
-        case 'vehicle insurance':
-          uploadType = 'insurance_document';
-          break;
-        case 'billing proof':
-          uploadType = 'billing_proof';
-          break;
-        default:
-          uploadType = 'driver_document';
-      }
-
-      // Upload using the FileUploadService
-      final fileUploadService = FileUploadService();
-      final uploadedUrl = await fileUploadService.uploadDriverDocument(
-        currentUser.uid,
-        imageFile,
-        uploadType,
-      );
-
-      print('✅ Real file uploaded successfully: $uploadedUrl');
-
-      // Close loading dialog
-      Navigator.pop(context);
-
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('✅ Real file uploaded successfully!'),
-              SizedBox(height: 4),
-              Text('URL: $uploadedUrl', style: TextStyle(fontSize: 11)),
-              SizedBox(height: 4),
-              Text('This proves S3 integration is working!',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 5),
-        ),
-      );
-
-      // Refresh data to see if the demo URL was replaced
-      await _loadDriverData();
-    } catch (e) {
-      // Close loading dialog
-      Navigator.pop(context);
-
-      print('❌ Error uploading real file: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('❌ Upload failed - but that\'s OK!'),
-              SizedBox(height: 4),
-              Text('This means S3 needs configuration.'),
-              SizedBox(height: 4),
-              Text('Fallback to demo URL is working perfectly!'),
-            ],
-          ),
-          backgroundColor: Colors.orange,
-          duration: Duration(seconds: 4),
-        ),
-      );
-    }
-  }
-
-  Future<void> _uploadRealVehicleFileToS3(String title, File imageFile) async {
-    try {
-      // Show loading indicator
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Uploading vehicle image to S3...'),
-              SizedBox(height: 8),
-              Text('Testing S3 integration',
-                  style: TextStyle(fontSize: 12, color: Colors.grey)),
-            ],
-          ),
-        ),
-      );
-
-      final currentUser = await _userService.getCurrentUser();
-      if (currentUser == null) throw Exception('User not authenticated');
-
-      // Extract image index from title (e.g., "1. Front View" -> index 0)
-      final match = RegExp(r'(\d+)\.').firstMatch(title);
-      int imageIndex = 0;
-      if (match != null) {
-        imageIndex = int.parse(match.group(1)!) - 1; // Convert to 0-based index
-      }
-
-      // Upload using the FileUploadService
-      final fileUploadService = FileUploadService();
-      final uploadedUrl = await fileUploadService.uploadVehicleImage(
-        currentUser.uid,
-        imageFile,
-        imageIndex,
-      );
-
-      print('✅ Real vehicle image uploaded successfully: $uploadedUrl');
-
-      // Close loading dialog
-      Navigator.pop(context);
-
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('✅ Vehicle image uploaded successfully!'),
-              SizedBox(height: 4),
-              Text('URL: $uploadedUrl', style: TextStyle(fontSize: 11)),
-              SizedBox(height: 4),
-              Text('S3 integration test complete!',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 5),
-        ),
-      );
-
-      // Refresh data to see if the demo URL was replaced
-      await _loadDriverData();
-    } catch (e) {
-      // Close loading dialog
-      Navigator.pop(context);
-
-      print('❌ Error uploading vehicle image: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('❌ Upload failed - fallback working!'),
-              SizedBox(height: 4),
-              Text('S3 needs configuration, demo URLs are used.'),
-              SizedBox(height: 4),
-              Text('This proves the fallback system works!'),
-            ],
-          ),
-          backgroundColor: Colors.orange,
-          duration: Duration(seconds: 4),
         ),
       );
     }
