@@ -392,4 +392,156 @@ router.post('/dev/seed-admin', async (req, res) => {
     }
 });
 
+/**
+ * @route POST /api/auth/profile/send-phone-otp
+ * @desc Send OTP to verify phone number for profile update
+ */
+router.post('/profile/send-phone-otp', authService.authMiddleware(), async (req, res) => {
+    try {
+        const { phoneNumber, countryCode } = req.body;
+        const userId = req.user.id;
+
+        if (!phoneNumber) {
+            return res.status(400).json({ 
+                success: false,
+                error: 'Phone number is required' 
+            });
+        }
+
+        // Normalize phone number
+        function normalizePhoneNumber(phone) {
+            if (!phone) return null;
+            let normalized = phone.replace(/[^\d+]/g, '');
+            if (normalized.startsWith('+94')) return normalized;
+            if (normalized.startsWith('94') && normalized.length === 11) return '+' + normalized;
+            if (normalized.startsWith('0') && normalized.length === 10) return '+94' + normalized.substring(1);
+            if (normalized.length === 9) return '+94' + normalized;
+            return normalized;
+        }
+
+        const normalizedPhone = normalizePhoneNumber(phoneNumber);
+        console.log(`📱 Profile: Sending OTP for phone update - Phone: ${phoneNumber} → ${normalizedPhone}, User: ${userId}`);
+
+        // Use country-specific SMS service
+        const SMSService = require('../services/smsService');
+        const smsService = new SMSService();
+        
+        // Auto-detect country if not provided
+        const detectedCountry = countryCode || smsService.detectCountry(normalizedPhone);
+        console.log(`🌍 Profile: Using country: ${detectedCountry} for SMS delivery`);
+
+        // Send OTP using country-specific SMS provider
+        const result = await smsService.sendOTP(normalizedPhone, detectedCountry);
+
+        // Store additional metadata for profile phone verification
+        await dbService.query(
+            `UPDATE phone_otp_verifications 
+             SET user_id = $1, verification_type = 'profile_phone_update'
+             WHERE phone = $2 AND otp_id = $3`,
+            [userId, normalizedPhone, result.otpId]
+        );
+
+        console.log(`✅ OTP sent via ${result.provider} for profile phone update: ${normalizedPhone}`);
+
+        res.json({
+            success: true,
+            message: 'OTP sent successfully for phone verification',
+            phoneNumber: normalizedPhone,
+            otpId: result.otpId,
+            provider: result.provider,
+            countryCode: detectedCountry,
+            expiresIn: result.expiresIn
+        });
+    } catch (error) {
+        console.error('Error sending profile phone OTP:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+/**
+ * @route POST /api/auth/profile/verify-phone-otp
+ * @desc Verify OTP and update user's phone number
+ */
+router.post('/profile/verify-phone-otp', authService.authMiddleware(), async (req, res) => {
+    try {
+        const { phoneNumber, otp, otpId } = req.body;
+        const userId = req.user.id;
+
+        if (!phoneNumber || !otp) {
+            return res.status(400).json({
+                success: false,
+                error: 'Phone number and OTP are required'
+            });
+        }
+
+        // Normalize phone number
+        function normalizePhoneNumber(phone) {
+            if (!phone) return null;
+            let normalized = phone.replace(/[^\d+]/g, '');
+            if (normalized.startsWith('+94')) return normalized;
+            if (normalized.startsWith('94') && normalized.length === 11) return '+' + normalized;
+            if (normalized.startsWith('0') && normalized.length === 10) return '+94' + normalized.substring(1);
+            if (normalized.length === 9) return '+94' + normalized;
+            return normalized;
+        }
+
+        const normalizedPhone = normalizePhoneNumber(phoneNumber);
+        console.log(`🔍 Profile: Verifying OTP for phone update - Phone: ${phoneNumber} → ${normalizedPhone}, OTP: ${otp}, User: ${userId}`);
+
+        // Use country-specific SMS service for verification
+        const SMSService = require('../services/smsService');
+        const smsService = new SMSService();
+        
+        const verificationResult = await smsService.verifyOTP(normalizedPhone, otp, otpId);
+
+        if (verificationResult.verified) {
+            // Update user's phone number and mark as verified
+            await dbService.query(
+                `UPDATE users 
+                 SET phone = $1, phone_verified = true, updated_at = NOW() 
+                 WHERE id = $2`,
+                [normalizedPhone, userId]
+            );
+
+            // Add or update phone in user_phone_numbers table for professional use
+            await dbService.query(
+                `INSERT INTO user_phone_numbers (user_id, phone_number, phone_type, verified, verified_at, purpose, created_at)
+                 VALUES ($1, $2, 'personal', true, NOW(), 'profile_update', NOW())
+                 ON CONFLICT (user_id, phone_number) DO UPDATE SET
+                 verified = true, verified_at = NOW(), phone_type = 'personal', purpose = 'profile_update'`,
+                [userId, normalizedPhone]
+            );
+
+            // Get updated user data
+            const updatedUserResult = await dbService.query('SELECT * FROM users WHERE id = $1', [userId]);
+            const updatedUser = updatedUserResult.rows[0];
+
+            console.log(`✅ Phone verified and updated for user profile: ${normalizedPhone}`);
+
+            res.json({
+                success: true,
+                message: 'Phone number verified and updated successfully',
+                phoneNumber: normalizedPhone,
+                verified: true,
+                provider: verificationResult.provider,
+                user: authService.sanitizeUser(updatedUser)
+            });
+        } else {
+            res.status(400).json({
+                success: false,
+                error: verificationResult.message || 'Invalid or expired OTP'
+            });
+        }
+    } catch (error) {
+        console.error('Error verifying profile phone OTP:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 module.exports = router;

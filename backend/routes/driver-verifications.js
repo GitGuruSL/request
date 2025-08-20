@@ -1195,7 +1195,7 @@ router.post('/signed-url', async (req, res) => {
 // Phone verification endpoints for driver verification
 router.post('/verify-phone/send-otp', async (req, res) => {
   try {
-    const { phoneNumber, userId } = req.body;
+    const { phoneNumber, userId, countryCode } = req.body;
 
     if (!phoneNumber || !userId) {
       return res.status(400).json({
@@ -1207,28 +1207,35 @@ router.post('/verify-phone/send-otp', async (req, res) => {
     const normalizedPhone = normalizePhoneNumber(phoneNumber);
     console.log(`📱 Sending OTP for driver verification - Phone: ${phoneNumber} → ${normalizedPhone}, User: ${userId}`);
 
-    // Generate OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    // Use country-specific SMS service
+    const SMSService = require('../services/smsService');
+    const smsService = new SMSService();
+    
+    // Auto-detect country if not provided
+    const detectedCountry = countryCode || smsService.detectCountry(normalizedPhone);
+    console.log(`🌍 Using country: ${detectedCountry} for SMS delivery`);
 
-    // Store OTP in database
+    // Send OTP using country-specific SMS provider
+    const result = await smsService.sendOTP(normalizedPhone, detectedCountry);
+
+    // Store additional metadata for driver verification
     await database.query(
-      `INSERT INTO phone_otp_verifications (phone, otp, user_id, expires_at, verification_type, created_at)
-       VALUES ($1, $2, $3, $4, 'driver_verification', NOW())
-       ON CONFLICT (phone) DO UPDATE SET
-       otp = $2, user_id = $3, expires_at = $4, verification_type = 'driver_verification', created_at = NOW(), verified = false`,
-      [normalizedPhone, otp, userId, expiresAt]
+      `UPDATE phone_otp_verifications 
+       SET user_id = $1, verification_type = 'driver_verification'
+       WHERE phone = $2 AND otp_id = $3`,
+      [userId, normalizedPhone, result.otpId]
     );
 
-    console.log(`✅ OTP stored for driver verification: ${normalizedPhone}`);
-
-    // Send SMS (you can implement SMS service here)
-    console.log(`📤 OTP for driver verification ${normalizedPhone}: ${otp}`);
+    console.log(`✅ OTP sent via ${result.provider} for driver verification: ${normalizedPhone}`);
 
     res.json({
       success: true,
       message: 'OTP sent successfully for driver verification',
-      phoneNumber: normalizedPhone
+      phoneNumber: normalizedPhone,
+      otpId: result.otpId,
+      provider: result.provider,
+      countryCode: detectedCountry,
+      expiresIn: result.expiresIn
     });
   } catch (error) {
     console.error('Error sending OTP for driver verification:', error);
@@ -1242,7 +1249,7 @@ router.post('/verify-phone/send-otp', async (req, res) => {
 
 router.post('/verify-phone/verify-otp', async (req, res) => {
   try {
-    const { phoneNumber, otp, userId } = req.body;
+    const { phoneNumber, otp, otpId, userId } = req.body;
 
     if (!phoneNumber || !otp || !userId) {
       return res.status(400).json({
@@ -1254,42 +1261,38 @@ router.post('/verify-phone/verify-otp', async (req, res) => {
     const normalizedPhone = normalizePhoneNumber(phoneNumber);
     console.log(`🔍 Verifying OTP for driver verification - Phone: ${phoneNumber} → ${normalizedPhone}, OTP: ${otp}, User: ${userId}`);
 
-    // Check OTP
-    const result = await database.query(
-      'SELECT * FROM phone_otp_verifications WHERE phone = $1 AND otp = $2 AND user_id = $3 AND expires_at > NOW() AND verified = false',
-      [normalizedPhone, otp, userId]
-    );
+    // Use country-specific SMS service for verification
+    const SMSService = require('../services/smsService');
+    const smsService = new SMSService();
+    
+    const verificationResult = await smsService.verifyOTP(normalizedPhone, otp, otpId);
 
-    if (result.rows.length === 0) {
-      return res.status(400).json({
+    if (verificationResult.verified) {
+      // Add or update phone in user_phone_numbers table for professional use
+      await database.query(
+        `INSERT INTO user_phone_numbers (user_id, phone_number, phone_type, verified, verified_at, purpose, created_at)
+         VALUES ($1, $2, 'professional', true, NOW(), 'driver_verification', NOW())
+         ON CONFLICT (user_id, phone_number) DO UPDATE SET
+         verified = true, verified_at = NOW(), phone_type = 'professional', purpose = 'driver_verification'`,
+        [userId, normalizedPhone]
+      );
+
+      console.log(`✅ Phone verified for driver verification: ${normalizedPhone}, stored in user_phone_numbers`);
+
+      res.json({
+        success: true,
+        message: 'Phone verified successfully for driver verification',
+        phoneNumber: normalizedPhone,
+        verified: true,
+        provider: verificationResult.provider,
+        verificationSource: 'user_phone_numbers'
+      });
+    } else {
+      res.status(400).json({
         success: false,
-        message: 'Invalid or expired OTP'
+        message: verificationResult.message || 'Invalid or expired OTP'
       });
     }
-
-    // Mark OTP as verified
-    await database.query(
-      'UPDATE phone_otp_verifications SET verified = true, verified_at = NOW() WHERE phone = $1 AND user_id = $2',
-      [normalizedPhone, userId]
-    );
-
-    // Add or update phone in user_phone_numbers table for professional use
-    await database.query(
-      `INSERT INTO user_phone_numbers (user_id, phone_number, phone_type, verified, verified_at, created_at)
-       VALUES ($1, $2, 'professional', true, NOW(), NOW())
-       ON CONFLICT (user_id, phone_number) DO UPDATE SET
-       verified = true, verified_at = NOW(), phone_type = 'professional'`,
-      [userId, normalizedPhone]
-    );
-
-    console.log(`✅ Phone verified for driver verification: ${normalizedPhone}, stored in user_phone_numbers`);
-
-    res.json({
-      success: true,
-      message: 'Phone verified successfully for driver verification',
-      phoneNumber: normalizedPhone,
-      verified: true
-    });
   } catch (error) {
     console.error('Error verifying OTP for driver verification:', error);
     res.status(500).json({

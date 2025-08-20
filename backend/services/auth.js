@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const dbService = require('./database');
 const emailService = require('./email');
-const smsService = require('./sms');
+const SMSService = require('./smsService'); // Use country-specific SMS service
 
 class AuthService {
     constructor() {
@@ -267,46 +267,39 @@ class AuthService {
     /**
      * Send OTP for phone verification
      */
-    async sendPhoneOTP(phone, countryCode = 'LK') {
-        const otp = this.generateOTP();
-        const expiresAt = new Date(Date.now() + this.otpExpiry);
+    async sendPhoneOTP(phone, countryCode = null) {
+        console.log(`📱 Auth: Sending OTP to ${phone}, country: ${countryCode}`);
+        
+        // Initialize country-specific SMS service
+        const smsService = new SMSService();
+        
+        // Auto-detect country if not provided
+        const detectedCountry = countryCode || smsService.detectCountry(phone);
+        console.log(`🌍 Auth: Using country: ${detectedCountry} for SMS delivery`);
 
-        await dbService.query(`CREATE TABLE IF NOT EXISTS phone_otp_verifications (
-                    phone VARCHAR(32) PRIMARY KEY,
-                    otp VARCHAR(6) NOT NULL,
-                    expires_at TIMESTAMPTZ NOT NULL,
-                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                    attempts INT NOT NULL DEFAULT 0,
-                    verified BOOLEAN NOT NULL DEFAULT FALSE,
-                    verified_at TIMESTAMPTZ
-                )`);
-        await dbService.query(`ALTER TABLE phone_otp_verifications ADD COLUMN IF NOT EXISTS verified BOOLEAN NOT NULL DEFAULT FALSE`);
-        await dbService.query(`ALTER TABLE phone_otp_verifications ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ`);
-
-        await dbService.query(`
-                    WITH updated AS (
-                        UPDATE phone_otp_verifications
-                            SET otp = $2, expires_at = $3, created_at = $4, attempts = 0, verified = FALSE
-                            WHERE phone = $1
-                            RETURNING phone
-                    )
-                    INSERT INTO phone_otp_verifications (phone, otp, expires_at, created_at)
-                    SELECT $1, $2, $3, $4
-                    WHERE NOT EXISTS (SELECT 1 FROM updated);
-                `, [phone, otp, expiresAt, new Date()]);
-
-        if (!countryCode) {
-            if (phone.startsWith('+94')) countryCode = 'LK';
-        }
-        let smsMeta;
         try {
-            smsMeta = await smsService.sendOTP({ phone, otp, countryCode });
-        } catch (e) {
-            console.warn('[SMS] send failed, fallback dev log:', e.message);
-            console.log(`[SMS][FALLBACK-ERROR] OTP for ${phone}: ${otp}`);
-            smsMeta = { success: false, error: e.message, provider: 'dev', fallback: true };
+            // Use country-specific SMS service to send OTP
+            const result = await smsService.sendOTP(phone, detectedCountry);
+            
+            console.log(`✅ Auth: OTP sent via ${result.provider} for login: ${phone}`);
+            
+            return { 
+                message: 'OTP sent to phone', 
+                otpSent: true, 
+                channel: 'sms',
+                provider: result.provider,
+                countryCode: detectedCountry,
+                expiresIn: result.expiresIn,
+                sms: { 
+                    success: true, 
+                    provider: result.provider,
+                    otpId: result.otpId
+                }
+            };
+        } catch (error) {
+            console.error('Auth SMS service error:', error);
+            throw new Error(`Failed to send OTP: ${error.message}`);
         }
-        return { message: 'OTP sent to phone', otpSent: true, channel: 'sms', sms: smsMeta };
     }
 
     /**
@@ -357,44 +350,52 @@ class AuthService {
      * Verify phone OTP
      */
     async verifyPhoneOTP(phone, otp) {
-        const result = await dbService.query(`
-            SELECT * FROM phone_otp_verifications 
-            WHERE phone = $1 AND otp = $2 AND expires_at > NOW() AND verified = false
-        `, [phone, otp]);
-
-        if (result.rows.length === 0) {
-            // Increment attempts
-            await dbService.query(`
-                UPDATE phone_otp_verifications 
-                SET attempts = attempts + 1 
-                WHERE phone = $1
-            `, [phone]);
+        console.log(`🔍 Auth: Verifying OTP for ${phone}, OTP: ${otp}`);
+        
+        // Initialize country-specific SMS service
+        const smsService = new SMSService();
+        
+        try {
+            // Use country-specific SMS service to verify OTP
+            const verificationResult = await smsService.verifyOTP(phone, otp);
             
-            throw new Error('Invalid or expired OTP');
+            if (verificationResult.verified) {
+                // Update user phone verification status
+                await dbService.query(`
+                    UPDATE users 
+                    SET phone_verified = true, updated_at = NOW() 
+                    WHERE phone = $1
+                `, [phone]);
+                
+                // Fetch updated user
+                const userRows = await dbService.findMany('users', { phone });
+                const user = userRows[0];
+                
+                let token = null; 
+                let refreshToken = null;
+                
+                if (user) {
+                    token = this.generateToken(user);
+                    refreshToken = await this.generateAndStoreRefreshToken(user.id);
+                    
+                    console.log(`✅ Auth: Phone verified successfully for user ${user.id}: ${phone}`);
+                }
+                
+                return { 
+                    message: 'Phone verified successfully', 
+                    verified: true, 
+                    user: this.sanitizeUser(user), 
+                    token, 
+                    refreshToken,
+                    provider: verificationResult.provider
+                };
+            } else {
+                throw new Error(verificationResult.message || 'Invalid or expired OTP');
+            }
+        } catch (error) {
+            console.error('Auth OTP verification error:', error);
+            throw new Error(`Failed to verify OTP: ${error.message}`);
         }
-
-        // Mark OTP as verified
-        await dbService.query(`
-            UPDATE phone_otp_verifications 
-            SET verified = true, verified_at = NOW() 
-            WHERE phone = $1
-        `, [phone]);
-
-        // Update user phone verification status
-        await dbService.query(`
-            UPDATE users 
-            SET phone_verified = true, updated_at = NOW() 
-            WHERE phone = $1
-        `, [phone]);
-        // Fetch updated user
-        const userRows = await dbService.findMany('users', { phone });
-        const user = userRows[0];
-        let token = null; let refreshToken = null;
-        if (user) {
-            token = this.generateToken(user);
-            refreshToken = await this.generateAndStoreRefreshToken(user.id);
-        }
-        return { message: 'Phone verified successfully', verified: true, user: this.sanitizeUser(user), token, refreshToken };
     }
 
     /**

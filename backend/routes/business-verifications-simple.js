@@ -612,20 +612,41 @@ router.post('/verify-phone/send-otp', auth.authMiddleware(), async (req, res) =>
       });
     }
 
-    // Send OTP using existing SMS service
-    const smsService = require('../services/sms');
-    const result = await smsService.sendOTP(phoneNumber, countryCode);
+    // Send OTP using country-specific SMS service
+    const SMSService = require('../services/smsService');
+    const smsService = new SMSService();
+    
+    // Auto-detect country if not provided
+    const detectedCountry = countryCode || smsService.detectCountry(normalizedPhone);
+    console.log(`🌍 Using country: ${detectedCountry} for SMS delivery`);
 
-    if (result.success) {
+    try {
+      const result = await smsService.sendOTP(normalizedPhone, detectedCountry);
+
+      // Store additional metadata for business verification
+      await database.query(
+        `UPDATE phone_otp_verifications 
+         SET user_id = $1, verification_type = 'business_verification'
+         WHERE phone = $2 AND otp_id = $3`,
+        [userId, normalizedPhone, result.otpId]
+      );
+
+      console.log(`✅ OTP sent via ${result.provider} for business verification: ${normalizedPhone}`);
+
       return res.json({
         success: true,
         message: 'OTP sent successfully',
-        otp_id: result.otp_id || result.id
+        phoneNumber: normalizedPhone,
+        otpId: result.otpId,
+        provider: result.provider,
+        countryCode: detectedCountry,
+        expiresIn: result.expiresIn
       });
-    } else {
+    } catch (error) {
+      console.error('SMS service error:', error);
       return res.status(500).json({
         success: false,
-        message: result.message || 'Failed to send OTP'
+        message: error.message || 'Failed to send OTP'
       });
     }
 
@@ -657,27 +678,49 @@ router.post('/verify-phone/verify-otp', auth.authMiddleware(), async (req, res) 
       });
     }
 
-    // Verify OTP using existing SMS service
-    const smsService = require('../services/sms');
-    const result = await smsService.verifyOTP(phoneNumber, otp, otpId);
+    // Verify OTP using country-specific SMS service
+    const SMSService = require('../services/smsService');
+    const smsService = new SMSService();
+    
+    const normalizedPhone = normalizePhoneNumber(phoneNumber);
+    console.log(`🔍 Verifying OTP for business verification - Phone: ${phoneNumber} → ${normalizedPhone}, OTP: ${otp}, User: ${userId}`);
 
-    if (result.success) {
-      // Add verified phone to user_phone_numbers table
-      await database.query(`
-        INSERT INTO user_phone_numbers (user_id, phone_number, country_code, is_verified, label, purpose, verified_at)
-        VALUES ($1, $2, $3, true, 'business', 'business_verification', NOW())
-        ON CONFLICT (user_id, phone_number) 
-        DO UPDATE SET is_verified = true, verified_at = NOW(), purpose = 'business_verification'
-      `, [userId, phoneNumber, smsService.detectCountry(phoneNumber)]);
+    try {
+      const verificationResult = await smsService.verifyOTP(normalizedPhone, otp, otpId);
 
-      return res.json({
-        success: true,
-        message: 'Phone number verified successfully'
-      });
-    } else {
-      return res.status(400).json({
+      if (verificationResult.verified) {
+        // Auto-detect country for phone number
+        const detectedCountry = smsService.detectCountry(normalizedPhone);
+        
+        // Add verified phone to user_phone_numbers table
+        await database.query(`
+          INSERT INTO user_phone_numbers (user_id, phone_number, country_code, is_verified, phone_type, purpose, verified_at, created_at)
+          VALUES ($1, $2, $3, true, 'professional', 'business_verification', NOW(), NOW())
+          ON CONFLICT (user_id, phone_number) 
+          DO UPDATE SET is_verified = true, verified_at = NOW(), purpose = 'business_verification', phone_type = 'professional'
+        `, [userId, normalizedPhone, detectedCountry]);
+
+        console.log(`✅ Phone verified for business verification: ${normalizedPhone}, stored in user_phone_numbers`);
+
+        return res.json({
+          success: true,
+          message: 'Phone number verified successfully',
+          phoneNumber: normalizedPhone,
+          verified: true,
+          provider: verificationResult.provider,
+          verificationSource: 'user_phone_numbers'
+        });
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: verificationResult.message || 'Invalid or expired OTP'
+        });
+      }
+    } catch (error) {
+      console.error('SMS verification error:', error);
+      return res.status(500).json({
         success: false,
-        message: result.message || 'Invalid OTP'
+        message: error.message || 'Failed to verify OTP'
       });
     }
 
