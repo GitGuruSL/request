@@ -672,7 +672,8 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
   String _getVerificationStatusText(VerificationStatus? status) {
     switch (status) {
       case VerificationStatus.approved:
-        return 'Verified';
+        // Show explicit 'Approved' to match backend status wording
+        return 'Approved';
       case VerificationStatus.pending:
         return 'Pending';
       case VerificationStatus.rejected:

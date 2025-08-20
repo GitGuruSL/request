@@ -315,15 +315,14 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
             label: 'Phone',
             value: _driverData!['phoneNumber'] ?? 'N/A',
             verified: _driverData!['phoneVerified'] == true,
-            requiredFlag: _driverData!['requiresPhoneVerification'] !=
-                false, // default required
+            requiredFlag: _driverData!['requiresPhoneVerification'] == true,
             source: _driverData!['phoneVerificationSource'],
           ),
           _buildContactInfoRow(
             label: 'Email',
             value: _driverData!['email'] ?? 'N/A',
             verified: _driverData!['emailVerified'] == true,
-            requiredFlag: _driverData!['requiresEmailVerification'] != false,
+            requiredFlag: _driverData!['requiresEmailVerification'] == true,
             source: _driverData!['emailVerificationSource'],
           ),
           if ((_driverData!['secondaryMobile'] ?? '').isNotEmpty)
@@ -740,27 +739,57 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
 
   Widget _buildOverallStatusChip() {
     final status = _driverData!['status'] as String? ?? 'pending';
+    final phoneVerified = _driverData!['phoneVerified'] == true;
+    final emailVerified = _driverData!['emailVerified'] == true;
+
     Color color;
     String text;
 
-    switch (status) {
-      case 'approved':
-        color = Colors.green;
-        text = 'Approved';
+    // Check if all documents are approved (for complete verification)
+    final docVerification =
+        _driverData!['documentVerification'] as Map<String, dynamic>? ?? {};
+    final vehicleImageVerification =
+        _driverData!['vehicleImageVerification'] as List<dynamic>? ?? [];
+
+    bool allDocumentsApproved = true;
+
+    // Check document verification statuses
+    for (var docStatus in docVerification.values) {
+      if (docStatus is Map<String, dynamic> &&
+          docStatus['status'] != 'approved') {
+        allDocumentsApproved = false;
         break;
-      case 'rejected':
-        color = Colors.red;
-        text = 'Rejected';
+      }
+    }
+
+    // Check vehicle image verification statuses
+    for (var imgStatus in vehicleImageVerification) {
+      if (imgStatus is Map<String, dynamic> &&
+          imgStatus['status'] != 'approved') {
+        allDocumentsApproved = false;
         break;
-      default:
-        color = Colors.orange;
-        text = 'Pending Review';
+      }
+    }
+
+    if (status == 'approved' && allDocumentsApproved) {
+      color = Colors.green;
+      text = 'Fully Approved';
+    } else if (status == 'rejected') {
+      color = Colors.red;
+      text = 'Rejected';
+    } else if (phoneVerified && emailVerified) {
+      color = Colors.blue;
+      text = 'Contact Verified';
+    } else {
+      color = Colors.orange;
+      text = 'Pending Review';
     }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
         color: color,
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         text,
@@ -1260,7 +1289,7 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
                     ),
                   ),
                 ),
-                if (requiredFlag)
+                if (verified || requiredFlag)
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1289,7 +1318,7 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
                       ],
                     ),
                   ),
-                if (!requiredFlag)
+                if (!verified && !requiredFlag)
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

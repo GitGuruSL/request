@@ -134,7 +134,7 @@ class DatabaseService {
      * Get a single row by ID
      */
     async findById(table, id, columns = '*') {
-        const query = `SELECT ${columns} FROM ${table} WHERE id = $1`;
+        const query = `SELECT ${columns} FROM ${table} WHERE id = $1::uuid`;
         const result = await this.query(query, [id]);
         return result.rows[0] || null;
     }

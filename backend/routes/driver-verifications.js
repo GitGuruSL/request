@@ -623,15 +623,25 @@ router.put('/:id/status', auth.authMiddleware(), auth.roleMiddleware(['super_adm
       });
     }
 
+    // Normalize parameter types to avoid 42P08 (ambiguous inferred types)
+    const normalizedStatus = String(status).toLowerCase();
+    const normalizedNotes = notes == null ? null : String(notes);
+    // reviewedBy may be admin user id (uuid) or null
+    const reviewer = reviewedBy && reviewedBy !== 'null' ? reviewedBy : null;
+    const numericId = parseInt(id, 10);
+    if (Number.isNaN(numericId)) {
+      return res.status(400).json({ success:false, message:'Invalid driver verification id'});
+    }
+
     const query = `
       UPDATE driver_verifications 
-      SET status = $1, notes = $2, reviewed_by = $3, reviewed_date = CURRENT_TIMESTAMP,
-          is_verified = CASE WHEN $1 = 'approved' THEN true ELSE false END
-      WHERE id = $4
+      SET status = $1::text, notes = $2::text, reviewed_by = $3::uuid, reviewed_date = CURRENT_TIMESTAMP,
+          is_verified = CASE WHEN $1::text = 'approved' THEN true ELSE false END
+      WHERE id = $4::int
       RETURNING *
     `;
 
-    const result = await database.query(query, [status, notes, reviewedBy, id]);
+    const result = await database.query(query, [normalizedStatus, normalizedNotes, reviewer, numericId]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -645,8 +655,8 @@ router.put('/:id/status', auth.authMiddleware(), auth.roleMiddleware(['super_adm
     // If status is approved, update user's role to include driver
     if (status === 'approved' && updatedVerification.user_id) {
       try {
-        // Get current user data
-        const userQuery = `SELECT * FROM users WHERE id = $1`;
+        // Get current user data - cast user_id to UUID to ensure type consistency
+        const userQuery = `SELECT * FROM users WHERE id = $1::uuid`;
         const userResult = await database.query(userQuery, [updatedVerification.user_id]);
         
         if (userResult.rows.length > 0) {
@@ -666,11 +676,11 @@ router.put('/:id/status', auth.authMiddleware(), auth.roleMiddleware(['super_adm
           if (!userRoles.includes('driver')) {
             userRoles.push('driver');
             
-            // Update user roles
+            // Update user roles - cast user_id to UUID to ensure type consistency
             const updateUserQuery = `
               UPDATE users 
               SET roles = $1, updated_at = CURRENT_TIMESTAMP 
-              WHERE id = $2
+              WHERE id = $2::uuid
             `;
             await database.query(updateUserQuery, [JSON.stringify(userRoles), updatedVerification.user_id]);
             
