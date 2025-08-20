@@ -407,15 +407,34 @@ const DriverVerificationEnhanced = () => {
     try {
       const backendDocType = mapDocumentTypeToBackend(docType);
       await api.put(`/driver-verifications/${driver.id}/document-status`, { documentType: backendDocType, status: action });
-      // local optimistic update
+      
+      // Optimistic local update before full reload
       setSelectedDriver(prev => prev && prev.id === driver.id ? {
         ...prev,
         documentVerification: {
           ...(prev.documentVerification||{}),
           [docType]: { ...(prev.documentVerification?.[docType]||{}), status: action }
-        }
+        },
+        [`${backendDocType.replace(/_.(.)/g,(m,g)=>g.toUpperCase())}Status`]: action
       } : prev);
-    } catch(err){ console.error('Error updating document status', err);} finally { setActionLoading(false);} 
+      
+      // Reload drivers list and refresh selected driver data
+      await loadDrivers();
+      const res = await api.get(`/driver-verifications/${driver.id}`);
+      const raw = res.data?.data || res.data;
+      if (raw) {
+        let docVer = raw.documentVerification || raw.document_verification;
+        if (typeof docVer === 'string') { try { docVer = JSON.parse(docVer); } catch { docVer = {}; } }
+        let vehImgVer = raw.vehicleImageVerification || raw.vehicle_image_verification;
+        if (typeof vehImgVer === 'string') { try { vehImgVer = JSON.parse(vehImgVer); } catch { vehImgVer = {}; } }
+        const enriched = { ...raw, documentVerification: docVer, vehicleImageVerification: vehImgVer };
+        setSelectedDriver(enriched);
+      }
+    } catch(err){ 
+      console.error('Error updating document status', err);
+    } finally { 
+      setActionLoading(false);
+    } 
   };
 
   const handleDriverAction = async (driver, action) => {
@@ -473,6 +492,7 @@ const DriverVerificationEnhanced = () => {
   setActionLoading(true);
   try { 
     await api.put(`/driver-verifications/${driver.id}/vehicle-images/${imageIndex}`, { status: action });
+    
     // Optimistic update of selected driver modal
     setSelectedDriver(prev => prev && prev.id === driver.id ? {
       ...prev,
@@ -485,7 +505,20 @@ const DriverVerificationEnhanced = () => {
         }
       }
     } : prev);
+    
+    // Reload drivers list and refresh selected driver data
     await loadDrivers(); 
+    const res = await api.get(`/driver-verifications/${driver.id}`);
+    const raw = res.data?.data || res.data;
+    if (raw) {
+      let docVer = raw.documentVerification || raw.document_verification;
+      if (typeof docVer === 'string') { try { docVer = JSON.parse(docVer); } catch { docVer = {}; } }
+      let vehImgVer = raw.vehicleImageVerification || raw.vehicle_image_verification;
+      if (typeof vehImgVer === 'string') { try { vehImgVer = JSON.parse(vehImgVer); } catch { vehImgVer = {}; } }
+      const enriched = { ...raw, documentVerification: docVer, vehicleImageVerification: vehImgVer };
+      setSelectedDriver(enriched);
+    }
+    
     console.log(`✅ Vehicle image ${imageIndex} ${action}: ${driver.fullName}`);
   } catch (error){ console.error(`Error ${action} vehicle image`, error);} finally { setActionLoading(false);} 
   };
