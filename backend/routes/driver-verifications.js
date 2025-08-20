@@ -719,7 +719,7 @@ router.put('/:id/replace-document', auth.authMiddleware(), async (req, res) => {
       updateSql += `, ${rejectionColumn} = NULL`;
     }
     updateSql += ' WHERE id = $2 RETURNING *';
-    const result = await database.query(updateSql, values);
+  const result = await database.query(updateSql, values);
     if (result.rows.length === 0) return res.status(404).json({ success: false, message: 'Driver verification not found' });
 
     // Update JSON document_verification
@@ -732,7 +732,7 @@ router.put('/:id/replace-document', auth.authMiddleware(), async (req, res) => {
       'vehicle_insurance': 'vehicleInsurance', 'billing_proof': 'billingProof', 'license_document': 'licenseDocument'
     };
     const frontendKey = backendToFrontendMap[documentType];
-    if (frontendKey) {
+  if (frontendKey) {
       if (!documentVerification || typeof documentVerification !== 'object') documentVerification = {};
       documentVerification[frontendKey] = {
         ...(documentVerification[frontendKey] || {}),
@@ -743,6 +743,8 @@ router.put('/:id/replace-document', auth.authMiddleware(), async (req, res) => {
       };
       await database.query('UPDATE driver_verifications SET document_verification = $1 WHERE id = $2', [JSON.stringify(documentVerification), id]);
     }
+  // Audit log
+  await database.query('INSERT INTO driver_document_audit (driver_verification_id, user_id, document_type, action, old_url, new_url, metadata) VALUES ($1,$2,$3,$4,$5,$6,$7)', [id, driver.user_id || null, documentType, 'replace_document', driver[urlColumn] || null, fileUrl, JSON.stringify({ via: 'replace-document-endpoint' })]);
     const refreshed = await database.query('SELECT * FROM driver_verifications WHERE id = $1', [id]);
     res.json({ success: true, message: 'Document replaced and reset to pending', data: refreshed.rows[0] });
   } catch (error) {
@@ -771,12 +773,35 @@ router.put('/:id/vehicle-images/:index/replace', auth.authMiddleware(), async (r
     if (typeof ver === 'string') { try { ver = JSON.parse(ver); } catch { ver = {}; } }
     if (!ver || typeof ver !== 'object') ver = {};
     ver[imageIndex] = { ...(ver[imageIndex] || {}), status: 'pending', rejectionReason: undefined, replacedAt: new Date().toISOString(), submittedAt: new Date().toISOString() };
-    await database.query('UPDATE driver_verifications SET vehicle_image_urls = $1, vehicle_image_verification = $2, updated_at = NOW() WHERE id = $3', [JSON.stringify(urls), JSON.stringify(ver), id]);
+  const oldUrl = rowRes.rows[0].vehicle_image_urls;
+  await database.query('UPDATE driver_verifications SET vehicle_image_urls = $1, vehicle_image_verification = $2, updated_at = NOW() WHERE id = $3', [JSON.stringify(urls), JSON.stringify(ver), id]);
+  await database.query('INSERT INTO driver_document_audit (driver_verification_id, user_id, document_type, action, old_url, new_url, metadata) VALUES ($1,$2,$3,$4,$5,$6,$7)', [id, null, `vehicle_image_${imageIndex}`, 'replace_vehicle_image', Array.isArray(oldUrl)? oldUrl[imageIndex]: null, fileUrl, JSON.stringify({ index: imageIndex })]);
     const updated = await database.query('SELECT * FROM driver_verifications WHERE id = $1', [id]);
     res.json({ success: true, message: 'Vehicle image replaced and reset to pending', data: updated.rows[0] });
   } catch (error) {
     console.error('Error replacing vehicle image:', error);
     res.status(500).json({ success: false, message: 'Failed to replace vehicle image', error: error.message });
+  }
+});
+
+// Get audit logs for a driver verification (admin only)
+router.get('/:id/audit-logs', auth.authMiddleware(), auth.roleMiddleware(['super_admin','country_admin']), async (req,res) => {
+  try {
+    const { id } = req.params;
+    const { documentType, limit = 100 } = req.query;
+    const params = [id];
+    let sql = `SELECT * FROM driver_document_audit WHERE driver_verification_id = $1`;
+    if (documentType) {
+      params.push(documentType);
+      sql += ` AND document_type = $${params.length}`;
+    }
+    params.push(limit);
+    sql += ` ORDER BY created_at DESC LIMIT $${params.length}`;
+    const result = await database.query(sql, params);
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    console.error('Error fetching audit logs:', error);
+    res.status(500).json({ success:false, message:'Failed to fetch audit logs', error: error.message });
   }
 });
 

@@ -96,6 +96,9 @@ const DriverVerificationEnhanced = () => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState({ open: false, url: '', title: '' });
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditError, setAuditError] = useState(null);
   
   // City and Vehicle Type mapping
   const [cityNames, setCityNames] = useState({});
@@ -155,9 +158,28 @@ const DriverVerificationEnhanced = () => {
       });
       const sorted = [...normalized].sort((a,b)=> new Date(b.submittedAt || b.createdAt || 0) - new Date(a.submittedAt || a.createdAt || 0));
       setDrivers(sorted);
+      // Auto-refresh selected driver object with latest data
+      if (selectedDriver) {
+        const updated = sorted.find(d => d.id === selectedDriver.id);
+        if (updated) setSelectedDriver(updated);
+      }
     } catch (e) {
       console.error('❌ Error loading drivers:', e);
     } finally { setLoading(false); }
+  };
+
+  const loadAuditLogs = async (driverId) => {
+    if (!driverId) return;
+    try {
+      setAuditLoading(true);
+      setAuditError(null);
+      const resp = await api.get(`/driver-verifications/${driverId}/audit-logs`, { params: { limit: 200 } });
+      const list = resp.data?.data || [];
+      setAuditLogs(list);
+    } catch (e) {
+      console.error('Error loading audit logs', e);
+      setAuditError(e.message || 'Failed to load');
+    } finally { setAuditLoading(false); }
   };
 
   const loadCityNames = async () => {
@@ -1205,12 +1227,13 @@ const DriverVerificationEnhanced = () => {
         </DialogTitle>
         
         <DialogContent>
-          <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)}>
+          <Tabs value={tabValue} onChange={(e, v) => { setTabValue(v); if (v === 5) loadAuditLogs(selectedDriver.id); }}>
             <Tab label="Driver Info" />
             <Tab label="Documents" />
             <Tab label="Contact Info" />
             <Tab label="Vehicle Info" />
             <Tab label="Verification History" />
+            <Tab label="Audit Logs" />
           </Tabs>
 
           {tabValue === 0 && (
@@ -2192,6 +2215,49 @@ const DriverVerificationEnhanced = () => {
               </Card>
             </Box>
           )}
+          {tabValue === 5 && (
+            <Box sx={{ mt:2 }}>
+              <Card variant="outlined">
+                <CardHeader title="Audit Logs" subheader="Document & image replacement history" />
+                <CardContent>
+                  {auditLoading && <Typography variant="body2">Loading logs...</Typography>}
+                  {auditError && <Alert severity="error">{auditError}</Alert>}
+                  {!auditLoading && !auditError && auditLogs.length === 0 && (
+                    <Alert severity="info">No audit events recorded.</Alert>
+                  )}
+                  {!auditLoading && auditLogs.length > 0 && (
+                    <Box sx={{ maxHeight: 300, overflowY: 'auto' }}>
+                      <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
+                        <thead>
+                          <tr style={{ textAlign:'left', background:'#f5f5f5' }}>
+                            <th style={{ padding:4 }}>Time</th>
+                            <th style={{ padding:4 }}>Type</th>
+                            <th style={{ padding:4 }}>Action</th>
+                            <th style={{ padding:4 }}>Old URL</th>
+                            <th style={{ padding:4 }}>New URL</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {auditLogs.map(log => (
+                            <tr key={log.id} style={{ borderBottom:'1px solid #eee' }}>
+                              <td style={{ padding:4 }}>{new Date(log.created_at).toLocaleString()}</td>
+                              <td style={{ padding:4 }}>{log.document_type}</td>
+                              <td style={{ padding:4 }}>{log.action}</td>
+                              <td style={{ padding:4, maxWidth:140, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }} title={log.old_url}>{log.old_url || '-'}</td>
+                              <td style={{ padding:4, maxWidth:140, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }} title={log.new_url}>{log.new_url || '-'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </Box>
+                  )}
+                  <Box mt={2}>
+                    <Button size="small" onClick={()=>loadAuditLogs(selectedDriver.id)}>Refresh Logs</Button>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Box>
+          )}
         </DialogContent>
 
         <DialogActions>
@@ -2215,6 +2281,29 @@ const DriverVerificationEnhanced = () => {
               </Button>
             </>
           )}
+          {selectedDriver.status === 'pending' && (() => {
+            const requiredDocs = ['driverImage','licenseFront','licenseBack','nicFront','nicBack','vehicleRegistration','vehicleInsurance'];
+            const allDocsApproved = requiredDocs.every(d => getDocumentStatus(selectedDriver, d) === 'approved');
+            // vehicle photos requirement: at least 4 approved or pending if none required
+            let approvedVehiclePhotos = 0;
+            if (selectedDriver.vehicleImageVerification && typeof selectedDriver.vehicleImageVerification === 'object') {
+              approvedVehiclePhotos = Object.values(selectedDriver.vehicleImageVerification).filter(v => v && v.status === 'approved').length;
+            }
+            const vehiclePhotoOk = approvedVehiclePhotos >= 4 || !selectedDriver.vehicleImageVerification;
+            if (allDocsApproved && vehiclePhotoOk) {
+              return (
+                <Button 
+                  color="success"
+                  variant="outlined"
+                  onClick={() => handleDriverAction(selectedDriver, 'approve')}
+                  disabled={actionLoading}
+                >
+                  All docs approved – Approve Now
+                </Button>
+              );
+            }
+            return null;
+          })()}
         </DialogActions>
       </Dialog>
     );
