@@ -5,6 +5,20 @@ const auth = require('../services/auth');
 
 console.log('🏢 Simple business verification routes loaded');
 
+// Phone number normalization function
+function normalizePhoneNumber(phone) {
+  if (!phone) return null;
+  // Remove all non-digit characters
+  const digitsOnly = phone.replace(/\D/g, '');
+  
+  // If it starts with country code 94 (Sri Lanka), remove it for comparison
+  if (digitsOnly.startsWith('94') && digitsOnly.length > 9) {
+    return digitsOnly.substring(2); // Remove '94' prefix
+  }
+  
+  return digitsOnly;
+}
+
 // Helper function to check and update phone verification status (unified with driver verification)
 async function checkPhoneVerificationStatus(userId, phoneNumber) {
   try {
@@ -20,6 +34,10 @@ async function checkPhoneVerificationStatus(userId, phoneNumber) {
     
     const user = userResult.rows[0];
     
+    // Normalize phone numbers for comparison
+    const normalizedUserPhone = normalizePhoneNumber(user.phone);
+    const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber);
+    
     // If user phone is null but business has phone number, update users table
     if (!user.phone && phoneNumber) {
       await database.query(
@@ -31,12 +49,13 @@ async function checkPhoneVerificationStatus(userId, phoneNumber) {
     }
     
     // If phone numbers match and user is verified, phone is verified
-    if (user.phone === phoneNumber && user.phone_verified) {
+    if (normalizedUserPhone === normalizedPhoneNumber && user.phone_verified) {
+      console.log(`📱 Phone auto-verified: ${normalizedUserPhone} === ${normalizedPhoneNumber}`);
       return { phoneVerified: true, needsUpdate: false, requiresManualVerification: false, verificationSource: 'registration' };
     }
     
     // If phone numbers match but not verified, check OTP verification table
-    if (user.phone === phoneNumber) {
+    if (normalizedUserPhone === normalizedPhoneNumber) {
       const otpResult = await database.query(
         'SELECT verified FROM phone_otp_verifications WHERE phone = $1 AND verified = true ORDER BY verified_at DESC LIMIT 1',
         [phoneNumber]
@@ -91,6 +110,7 @@ async function checkEmailVerificationStatus(userId, email) {
     
     // If emails match and user is verified, email is verified
     if (user.email === email && user.email_verified) {
+      console.log(`📧 Email auto-verified: ${user.email} === ${email}`);
       return { emailVerified: true, needsUpdate: false, requiresManualVerification: false, verificationSource: 'registration' };
     }
     
