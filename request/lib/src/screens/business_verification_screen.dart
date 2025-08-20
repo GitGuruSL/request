@@ -473,7 +473,8 @@ class _BusinessVerificationScreenState
 
   Widget _buildEmailVerificationCard() {
     final businessEmail = _businessData?['businessEmail'] ?? '';
-    final isVerified = _credentialsStatus?.businessEmailVerified ?? false;
+    final isVerified = (_businessData?['emailVerified'] ?? false) ||
+        (_credentialsStatus?.businessEmailVerified ?? false);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -702,8 +703,10 @@ class _BusinessVerificationScreenState
 
     // Check what's still pending
     final isContactVerificationComplete =
-        (_credentialsStatus?.businessPhoneVerified ?? false) &&
-            (_credentialsStatus?.businessEmailVerified ?? false);
+        ((_businessData?['phoneVerified'] ?? false) ||
+                (_credentialsStatus?.businessPhoneVerified ?? false)) &&
+            ((_businessData?['emailVerified'] ?? false) ||
+                (_credentialsStatus?.businessEmailVerified ?? false));
 
     final businessLicenseStatus = _getDocumentStatus('businessLicense');
     final taxCertificateStatus = _getDocumentStatus('taxCertificate');
@@ -947,8 +950,10 @@ class _BusinessVerificationScreenState
 
     // Check if contact verification is complete
     final isContactVerificationComplete =
-        (_credentialsStatus?.businessPhoneVerified ?? false) &&
-            (_credentialsStatus?.businessEmailVerified ?? false);
+        ((_businessData?['phoneVerified'] ?? false) ||
+                (_credentialsStatus?.businessPhoneVerified ?? false)) &&
+            ((_businessData?['emailVerified'] ?? false) ||
+                (_credentialsStatus?.businessEmailVerified ?? false));
 
     // If any document is rejected, overall status is rejected
     if ([
