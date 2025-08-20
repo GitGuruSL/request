@@ -66,6 +66,10 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
 
             if (rawData != null) {
               _driverData = {
+                // ID - CRITICAL for document replacement
+                'id': rawData['id'],
+                'userId': rawData['user_id'],
+
                 // Basic info
                 'fullName': rawData['full_name'],
                 'firstName': rawData['first_name'],
