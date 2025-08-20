@@ -364,30 +364,24 @@ const DriverVerificationEnhanced = () => {
   };
 
   const handleDocumentAction = async (driver, docType, action) => {
+    setDetailsOpen(true); // ensure dialog stays open
     if (action === 'reject') {
-      setRejectionDialog({ 
-        open: true, 
-        target: driver,
-        type: 'document',
-        docType: docType
-      });
+      setRejectionDialog({ open: true, target: driver, type: 'document', docType });
       return;
     }
-
-  setActionLoading(true);
-  try { 
-    const backendDocType = mapDocumentTypeToBackend(docType);
-    await api.put(`/driver-verifications/${driver.id}/document-status`, { 
-      documentType: backendDocType, 
-      status: action 
-    }); 
-    await loadDrivers(); 
-    console.log(`✅ Document ${docType} (${backendDocType}) ${action} for ${driver.fullName}`);
-  } catch (error){ 
-    console.error('Error updating document status', error);
-  } finally { 
-    setActionLoading(false);
-  } 
+    setActionLoading(true);
+    try {
+      const backendDocType = mapDocumentTypeToBackend(docType);
+      await api.put(`/driver-verifications/${driver.id}/document-status`, { documentType: backendDocType, status: action });
+      // local optimistic update
+      setSelectedDriver(prev => prev && prev.id === driver.id ? {
+        ...prev,
+        documentVerification: {
+          ...(prev.documentVerification||{}),
+          [docType]: { ...(prev.documentVerification?.[docType]||{}), status: action }
+        }
+      } : prev);
+    } catch(err){ console.error('Error updating document status', err);} finally { setActionLoading(false);} 
   };
 
   const handleDriverAction = async (driver, action) => {
@@ -925,10 +919,11 @@ const DriverVerificationEnhanced = () => {
                 size="small"
                 color="success"
                 startIcon={<CheckIcon />}
-                onClick={() => handleDocumentAction(selectedDriver, docType, 'approved')}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDocumentAction(selectedDriver, docType, 'approved'); }}
                 disabled={actionLoading}
                 variant="contained"
                 sx={{ minWidth: 100 }}
+                type="button"
               >
                 Approve
               </Button>
@@ -936,10 +931,11 @@ const DriverVerificationEnhanced = () => {
                 size="small"
                 color="error"
                 startIcon={<ErrorIcon />}
-                onClick={() => handleDocumentAction(selectedDriver, docType, 'reject')}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDocumentAction(selectedDriver, docType, 'reject'); }}
                 disabled={actionLoading}
                 variant="outlined"
                 sx={{ minWidth: 100 }}
+                type="button"
               >
                 Reject
               </Button>
