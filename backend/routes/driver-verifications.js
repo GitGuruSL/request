@@ -47,6 +47,47 @@ router.get('/', auth.authMiddleware(), auth.roleMiddleware(['super_admin', 'coun
 
     const result = await database.query(query, queryParams);
 
+    // Transform snake_case to camelCase for frontend compatibility
+    const transformedRows = result.rows.map(row => ({
+      ...row,
+      fullName: row.full_name,
+      firstName: row.first_name,
+      lastName: row.last_name,
+      phoneNumber: row.phone_number,
+      secondaryMobile: row.secondary_mobile,
+      nicNumber: row.nic_number,
+      dateOfBirth: row.date_of_birth,
+      cityId: row.city_id,
+      cityName: row.city_name || row.city_display_name,
+      vehicleTypeId: row.vehicle_type_id,
+      vehicleTypeName: row.vehicle_type_name || row.vehicle_type_display_name,
+      vehicleModel: row.vehicle_model,
+      vehicleYear: row.vehicle_year,
+      vehicleNumber: row.vehicle_number,
+      vehicleColor: row.vehicle_color,
+      isVehicleOwner: row.is_vehicle_owner,
+      licenseNumber: row.license_number,
+      licenseExpiry: row.license_expiry,
+      licenseHasNoExpiry: row.license_has_no_expiry,
+      insuranceNumber: row.insurance_number,
+      insuranceExpiry: row.insurance_expiry,
+      driverImageUrl: row.driver_image_url,
+      nicFrontUrl: row.nic_front_url,
+      nicBackUrl: row.nic_back_url,
+      licenseFrontUrl: row.license_front_url,
+      licenseBackUrl: row.license_back_url,
+      licenseDocumentUrl: row.license_document_url,
+      vehicleRegistrationUrl: row.vehicle_registration_url,
+      insuranceDocumentUrl: row.insurance_document_url,
+      billingProofUrl: row.billing_proof_url,
+      vehicleImageUrls: row.vehicle_image_urls,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      submissionDate: row.submission_date,
+      reviewedDate: row.reviewed_date,
+      reviewedBy: row.reviewed_by
+    }));
+
     // Get total count for pagination
     let countQuery = `SELECT COUNT(*) FROM driver_verifications WHERE country = $1`;
     const countParams = [country];
@@ -60,7 +101,7 @@ router.get('/', auth.authMiddleware(), auth.roleMiddleware(['super_admin', 'coun
 
     res.json({
       success: true,
-      data: result.rows,
+      data: transformedRows,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
