@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../services/enhanced_user_service.dart';
 import '../services/api_client.dart';
+import '../services/image_upload_service.dart';
 import '../theme/app_theme.dart';
 import 'src/utils/firebase_shim.dart'; // Added by migration script
 // REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
@@ -1473,76 +1474,69 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
       final currentUser = await _userService.getCurrentUser();
       if (currentUser == null) throw Exception('User not authenticated');
 
-      // Determine document type based on title
-      String documentType;
-      String urlField;
-
+      // Map title to backend document type
+      String backendDocumentType;
       switch (title) {
         case 'Driver Photo':
-          documentType = 'driverImage';
-          urlField = 'driverImageUrl';
+          backendDocumentType = 'driver_image';
           break;
         case 'License Front Photo':
-          documentType = 'licenseFront';
-          urlField = 'licenseFrontUrl';
+          backendDocumentType = 'license_front';
           break;
         case 'License Back Photo':
-          documentType = 'licenseBack';
-          urlField = 'licenseBackUrl';
+          backendDocumentType = 'license_back';
           break;
         case 'NIC (Front)':
-          documentType = 'nicFront';
-          urlField = 'nicFrontUrl';
+          backendDocumentType = 'nic_front';
           break;
         case 'NIC (Back)':
-          documentType = 'nicBack';
-          urlField = 'nicBackUrl';
+          backendDocumentType = 'nic_back';
           break;
         case 'Billing Proof':
-          documentType = 'billingProof';
-          urlField = 'billingProofUrl';
+          backendDocumentType = 'billing_proof';
           break;
         case 'Vehicle Insurance Document':
-          documentType = 'vehicleInsurance';
-          urlField = 'insuranceDocumentUrl';
+          backendDocumentType = 'vehicle_insurance';
           break;
         case 'Vehicle Registration Document':
-          documentType = 'vehicleRegistration';
-          urlField = 'vehicleRegistrationUrl';
+          backendDocumentType = 'vehicle_registration';
           break;
         case 'Additional License Document':
-          documentType = 'licenseDocument';
-          urlField = 'licenseDocumentUrl';
+          backendDocumentType = 'license_document';
           break;
         default:
           throw Exception('Unknown document type: $title');
       }
 
-      // Upload image to Firebase Storage
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('driver_verifications')
-          .child(currentUser.uid)
-          .child('$documentType.jpg');
+      // Upload image to S3 via image upload service
+      final uploadService = ImageUploadService();
+      final downloadUrl = await uploadService.uploadImage(
+        XFile(imageFile.path),
+        'drivers/${currentUser.uid}/${backendDocumentType}_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
 
-      final uploadTask = await storageRef.putFile(imageFile);
-      final downloadUrl = await uploadTask.ref.getDownloadURL();
+      if (downloadUrl == null) {
+        throw Exception('Failed to upload image');
+      }
 
-      // Update Firestore with new document URL and reset status to pending
-// FIRESTORE_TODO: replace with REST service. Original: final driverRef = FirebaseFirestore.instance
-      final driverRef = FirebaseFirestore.instance
-          .collection('new_driver_verifications')
-          .doc(currentUser.uid);
+      // Get driver verification ID from current data
+      final driverVerificationId = _driverData?['id'];
+      if (driverVerificationId == null) {
+        throw Exception('Driver verification ID not found');
+      }
 
-      await driverRef.update({
-        urlField: downloadUrl,
-        'documentVerification.$documentType.status': 'pending',
-        'documentVerification.$documentType.rejectionReason':
-            FieldValue.delete(),
-        'documentVerification.$documentType.uploadedAt':
-            FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+      // Call replace document API using ApiClient
+      final response = await ApiClient.instance.put(
+        '/api/driver-verifications/$driverVerificationId/replace-document',
+        data: {
+          'documentType': backendDocumentType,
+          'fileUrl': downloadUrl,
+        },
+      );
+
+      if (!response.isSuccess) {
+        throw Exception(response.error ?? 'Failed to replace document');
+      }
 
       // Close loading dialog
       Navigator.pop(context);
@@ -1659,71 +1653,34 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
       final imageIndex =
           int.parse(match.group(1)!) - 1; // Convert to 0-based index
 
-      // Upload image to Firebase Storage
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('driver_verifications')
-          .child(currentUser.uid)
-          .child('vehicle_images')
-          .child('vehicle_$imageIndex.jpg');
+      // Upload image via ImageUploadService
+      final uploadService = ImageUploadService();
+      final downloadUrl = await uploadService.uploadImage(
+        XFile(imageFile.path),
+        'vehicles/${currentUser.uid}/vehicle_${imageIndex}_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
 
-      final uploadTask = await storageRef.putFile(imageFile);
-      final downloadUrl = await uploadTask.ref.getDownloadURL();
-
-      // Update Firestore with new image URL and reset status to pending
-// FIRESTORE_TODO: replace with REST service. Original: final driverRef = FirebaseFirestore.instance
-      final driverRef = FirebaseFirestore.instance
-          .collection('new_driver_verifications')
-          .doc(currentUser.uid);
-
-      // First, get the current document to preserve the structure
-      final doc = await driverRef.get();
-      final data = doc.data() as Map<String, dynamic>? ?? {};
-
-      // Get current vehicleImageUrls and vehicleImageVerification with proper type handling
-      Map<String, dynamic> currentUrls = {};
-      Map<String, dynamic> currentVerifications = {};
-
-      // Handle vehicleImageUrls - could be List or Map
-      final urlsData = data['vehicleImageUrls'];
-      if (urlsData is Map) {
-        currentUrls = Map<String, dynamic>.from(urlsData);
-      } else if (urlsData is List) {
-        // Convert List to Map with string keys
-        for (int i = 0; i < urlsData.length; i++) {
-          if (urlsData[i] != null) {
-            currentUrls[i.toString()] = urlsData[i];
-          }
-        }
+      if (downloadUrl == null) {
+        throw Exception('Failed to upload image');
       }
 
-      // Handle vehicleImageVerification - could be List or Map
-      final verificationsData = data['vehicleImageVerification'];
-      if (verificationsData is Map) {
-        currentVerifications = Map<String, dynamic>.from(verificationsData);
-      } else if (verificationsData is List) {
-        // Convert List to Map with string keys
-        for (int i = 0; i < verificationsData.length; i++) {
-          if (verificationsData[i] != null) {
-            currentVerifications[i.toString()] = verificationsData[i];
-          }
-        }
+      // Get driver verification ID from current data
+      final driverVerificationId = _driverData?['id'];
+      if (driverVerificationId == null) {
+        throw Exception('Driver verification ID not found');
       }
 
-      // Update the specific index - store as string key to match Firebase structure
-      currentUrls[imageIndex.toString()] = downloadUrl;
+      // Call replace vehicle image API
+      final response = await ApiClient.instance.put(
+        '/api/driver-verifications/$driverVerificationId/vehicle-images/$imageIndex/replace',
+        data: {
+          'fileUrl': downloadUrl,
+        },
+      );
 
-      // Update verification status for this image
-      currentVerifications[imageIndex.toString()] = {
-        'status': 'pending',
-        'uploadedAt': FieldValue.serverTimestamp(),
-      };
-
-      await driverRef.update({
-        'vehicleImageUrls': currentUrls,
-        'vehicleImageVerification': currentVerifications,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+      if (!response.isSuccess) {
+        throw Exception(response.error ?? 'Failed to replace vehicle image');
+      }
 
       // Close loading dialog
       Navigator.pop(context);
