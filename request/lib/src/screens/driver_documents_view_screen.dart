@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../services/enhanced_user_service.dart';
+import '../services/api_client.dart';
 import '../models/enhanced_user_model.dart';
 import '../theme/app_theme.dart';
 import 'src/utils/firebase_shim.dart'; // Added by migration script
@@ -32,18 +34,29 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
       final currentUser = await _userService.getCurrentUser();
       if (currentUser == null) throw Exception('User not authenticated');
 
-      // Get driver data from new_driver_verifications collection
-// FIRESTORE_TODO: replace with REST service. Original: final doc = await FirebaseFirestore.instance
-      final doc = await FirebaseFirestore.instance
-          .collection('new_driver_verifications')
-          .doc(currentUser.uid)
-          .get();
+      // Get driver verification data from REST API
+      final response = await ApiClient.instance
+          .get('/api/driver-verifications/user/${currentUser.uid}');
 
       if (mounted) {
         setState(() {
-          _driverData = doc.exists ? doc.data() : null;
+          if (response.isSuccess && response.data != null) {
+            _driverData = response.data as Map<String, dynamic>;
+          } else {
+            _driverData = null;
+          }
           _isLoading = false;
         });
+      }
+
+      if (kDebugMode) {
+        print(
+            'Driver verification data loaded: ${_driverData != null ? 'Found' : 'Not found'}');
+        if (_driverData != null) {
+          print('Driver data keys: ${_driverData!.keys.toList()}');
+          print(
+              'Driver data sample: ${_driverData.toString().substring(0, _driverData.toString().length > 500 ? 500 : _driverData.toString().length)}...');
+        }
       }
     } catch (e) {
       print('Error loading driver data: $e');
@@ -88,6 +101,16 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
         backgroundColor: AppTheme.backgroundColor,
         foregroundColor: AppTheme.textPrimary,
         elevation: 0,
+        actions: [
+          if (_driverData != null)
+            IconButton(
+              onPressed: () {
+                Navigator.pushNamed(context, '/driver-verification');
+              },
+              icon: const Icon(Icons.edit),
+              tooltip: 'Update Verification',
+            ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -263,38 +286,34 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
             'Back side of driving license',
             Icons.flip_to_back,
           ),
-          if (_driverData!['licenseDocumentUrl'] != null)
-            _buildDocumentItem(
-              'Additional License Document',
-              docVerification['licenseDocument'],
-              _driverData!['licenseDocumentUrl'],
-              'Additional license document',
-              Icons.badge,
-            ),
-          if (_driverData!['nicFrontUrl'] != null)
-            _buildDocumentItem(
-              'NIC (Front)',
-              docVerification['nicFront'],
-              _driverData!['nicFrontUrl'],
-              'Front side of National Identity Card',
-              Icons.badge,
-            ),
-          if (_driverData!['nicBackUrl'] != null)
-            _buildDocumentItem(
-              'NIC (Back)',
-              docVerification['nicBack'],
-              _driverData!['nicBackUrl'],
-              'Back side of National Identity Card',
-              Icons.flip_to_back,
-            ),
-          if (_driverData!['billingProofUrl'] != null)
-            _buildDocumentItem(
-              'Billing Proof',
-              docVerification['billingProof'],
-              _driverData!['billingProofUrl'],
-              'Utility bill or bank statement for address verification',
-              Icons.receipt,
-            ),
+          _buildDocumentItem(
+            'Additional License Document',
+            docVerification['licenseDocument'],
+            _driverData!['licenseDocumentUrl'],
+            'Additional license document (Optional)',
+            Icons.badge,
+          ),
+          _buildDocumentItem(
+            'NIC (Front)',
+            docVerification['nicFront'],
+            _driverData!['nicFrontUrl'],
+            'Front side of National Identity Card',
+            Icons.badge,
+          ),
+          _buildDocumentItem(
+            'NIC (Back)',
+            docVerification['nicBack'],
+            _driverData!['nicBackUrl'],
+            'Back side of National Identity Card',
+            Icons.flip_to_back,
+          ),
+          _buildDocumentItem(
+            'Billing Proof',
+            docVerification['billingProof'],
+            _driverData!['billingProofUrl'],
+            'Utility bill or bank statement for address verification (Optional)',
+            Icons.receipt,
+          ),
           _buildDocumentItem(
             'Vehicle Insurance Document',
             docVerification['vehicleInsurance'],
@@ -631,7 +650,8 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
 
   Widget _buildDocumentItem(String title, Map<String, dynamic>? verification,
       String? documentUrl, String description, IconData icon) {
-    final status = verification?['status'] as String? ?? 'pending';
+    final status = verification?['status'] as String? ??
+        (documentUrl != null ? 'pending' : 'not_uploaded');
     final rejectionReason = verification?['rejectionReason'] as String?;
 
     Color statusColor = _getStatusColor(status);
@@ -642,6 +662,8 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: statusColor.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: statusColor.withOpacity(0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -669,6 +691,7 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
                   color: statusColor,
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   statusText,
@@ -695,127 +718,7 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.red.withOpacity(0.1),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.warning, color: Colors.red, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Rejection reason: $rejectionReason',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.red,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          if (documentUrl != null) ...[
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                TextButton.icon(
-                  onPressed: () => _viewDocument(documentUrl, title),
-                  icon: const Icon(Icons.visibility, size: 18),
-                  label: const Text('View Document'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.blue,
-                    padding: EdgeInsets.zero,
-                  ),
-                ),
-                if (status == 'rejected') ...[
-                  const SizedBox(width: 16),
-                  TextButton.icon(
-                    onPressed: () => _replaceDocument(title),
-                    icon: const Icon(Icons.refresh, size: 18),
-                    label: const Text('Replace'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.orange,
-                      padding: EdgeInsets.zero,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVehicleImageItem(
-      String title,
-      Map<String, dynamic>? verification,
-      String imageUrl,
-      String description,
-      bool isRequired) {
-    final status = verification?['status'] as String? ?? 'pending';
-    final rejectionReason = verification?['rejectionReason'] as String?;
-
-    Color statusColor = _getStatusColor(status);
-    String statusText = _getStatusText(status);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: statusColor.withOpacity(0.05),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                _getStatusIcon(status),
-                color: statusColor,
-                size: 20,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: statusColor,
-                ),
-                child: Text(
-                  statusText,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            description,
-            style: const TextStyle(
-              fontSize: 14,
-              color: AppTheme.textSecondary,
-            ),
-          ),
-          if (rejectionReason != null) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 children: [
@@ -837,45 +740,240 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
+              if (documentUrl != null) ...[
+                TextButton.icon(
+                  onPressed: () => _viewDocument(documentUrl, title),
+                  icon: const Icon(Icons.visibility, size: 18),
+                  label: const Text('View Document'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.blue,
+                    padding: EdgeInsets.zero,
+                  ),
+                ),
+                if (status == 'rejected') ...[
+                  const SizedBox(width: 16),
+                  TextButton.icon(
+                    onPressed: () => _replaceDocument(title),
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: const Text('Replace'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.orange,
+                      padding: EdgeInsets.zero,
+                    ),
+                  ),
+                ],
+              ] else ...[
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.upload_file, color: Colors.grey, size: 16),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Not uploaded',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVehicleImageItem(
+      String title,
+      Map<String, dynamic>? verification,
+      String imageUrl,
+      String description,
+      bool isRequired) {
+    final status = verification?['status'] as String? ??
+        (imageUrl.isNotEmpty ? 'pending' : 'not_uploaded');
+    final rejectionReason = verification?['rejectionReason'] as String?;
+
+    Color statusColor = _getStatusColor(status);
+    String statusText = _getStatusText(status);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: statusColor.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: statusColor.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                _getStatusIcon(status),
+                color: statusColor,
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    if (isRequired)
+                      Text(
+                        'Required',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.red[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      )
+                    else
+                      Text(
+                        'Optional',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  statusText,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            description,
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppTheme.textSecondary,
+            ),
+          ),
+          if (rejectionReason != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.warning, color: Colors.red, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Rejection reason: $rejectionReason',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.red,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              // Thumbnail
               Container(
                 height: 60,
                 width: 60,
                 decoration: BoxDecoration(
                   color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[300]!),
                 ),
                 child: ClipRRect(
-                  child: Image.network(
-                    imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.image_not_supported,
-                          color: Colors.grey);
-                    },
-                  ),
+                  borderRadius: BorderRadius.circular(7),
+                  child: imageUrl.isNotEmpty
+                      ? Image.network(
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(Icons.broken_image,
+                                color: Colors.grey);
+                          },
+                        )
+                      : Icon(Icons.add_a_photo,
+                          color: Colors.grey[400], size: 24),
                 ),
               ),
               const SizedBox(width: 12),
-              TextButton.icon(
-                onPressed: () => _viewVehiclePhoto(imageUrl, title),
-                icon: const Icon(Icons.visibility, size: 18),
-                label: const Text('View'),
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.blue,
-                  padding: EdgeInsets.zero,
+              Expanded(
+                child: Row(
+                  children: [
+                    if (imageUrl.isNotEmpty) ...[
+                      TextButton.icon(
+                        onPressed: () => _viewVehiclePhoto(imageUrl, title),
+                        icon: const Icon(Icons.visibility, size: 18),
+                        label: const Text('View Photo'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.blue,
+                          padding: EdgeInsets.zero,
+                        ),
+                      ),
+                      if (status == 'rejected') ...[
+                        const SizedBox(width: 12),
+                        TextButton.icon(
+                          onPressed: () => _replaceVehiclePhoto(title),
+                          icon: const Icon(Icons.refresh, size: 18),
+                          label: const Text('Replace'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.orange,
+                            padding: EdgeInsets.zero,
+                          ),
+                        ),
+                      ],
+                    ] else ...[
+                      Text(
+                        'Not uploaded',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-              if (status == 'rejected') ...[
-                const SizedBox(width: 12),
-                TextButton.icon(
-                  onPressed: () => _replaceVehiclePhoto(title),
-                  icon: const Icon(Icons.refresh, size: 18),
-                  label: const Text('Replace'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.orange,
-                    padding: EdgeInsets.zero,
-                  ),
-                ),
-              ],
             ],
           ),
         ],
@@ -920,6 +1018,8 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
         return Colors.green;
       case 'rejected':
         return Colors.red;
+      case 'not_uploaded':
+        return Colors.grey;
       default:
         return Colors.orange;
     }
@@ -931,6 +1031,8 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
         return 'Approved';
       case 'rejected':
         return 'Rejected';
+      case 'not_uploaded':
+        return 'Not Uploaded';
       default:
         return 'Pending';
     }
@@ -942,6 +1044,8 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
         return Icons.check_circle;
       case 'rejected':
         return Icons.error;
+      case 'not_uploaded':
+        return Icons.upload_file;
       default:
         return Icons.schedule;
     }

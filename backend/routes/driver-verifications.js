@@ -77,6 +77,47 @@ router.get('/', auth.authMiddleware(), auth.roleMiddleware(['super_admin', 'coun
   }
 });
 
+// Get driver verification by user ID (for mobile app to check status)
+router.get('/user/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const query = `
+      SELECT 
+        dv.*,
+        c.name as city_display_name,
+        vt.name as vehicle_type_display_name
+      FROM driver_verifications dv
+      LEFT JOIN cities c ON dv.city_id = c.id
+      LEFT JOIN vehicle_types vt ON dv.vehicle_type_id = vt.id
+      WHERE dv.user_id = $1
+      ORDER BY dv.created_at DESC
+      LIMIT 1
+    `;
+
+    const result = await database.query(query, [userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No driver verification found for this user'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error fetching driver verification by user ID:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch driver verification',
+      error: error.message
+    });
+  }
+});
+
 // Get single driver verification by ID
 router.get('/:id', auth.authMiddleware(), auth.roleMiddleware(['super_admin', 'country_admin']), async (req, res) => {
   try {
@@ -253,10 +294,53 @@ router.put('/:id/status', auth.authMiddleware(), auth.roleMiddleware(['super_adm
       });
     }
 
+    const updatedVerification = result.rows[0];
+
+    // If status is approved, update user's role to include driver
+    if (status === 'approved' && updatedVerification.user_id) {
+      try {
+        // Get current user data
+        const userQuery = `SELECT * FROM users WHERE id = $1`;
+        const userResult = await database.query(userQuery, [updatedVerification.user_id]);
+        
+        if (userResult.rows.length > 0) {
+          const user = userResult.rows[0];
+          let userRoles = [];
+          
+          // Parse existing roles
+          if (user.roles) {
+            try {
+              userRoles = Array.isArray(user.roles) ? user.roles : JSON.parse(user.roles);
+            } catch (e) {
+              userRoles = typeof user.roles === 'string' ? [user.roles] : [];
+            }
+          }
+          
+          // Add driver role if not already present
+          if (!userRoles.includes('driver')) {
+            userRoles.push('driver');
+            
+            // Update user roles
+            const updateUserQuery = `
+              UPDATE users 
+              SET roles = $1, updated_at = CURRENT_TIMESTAMP 
+              WHERE id = $2
+            `;
+            await database.query(updateUserQuery, [JSON.stringify(userRoles), updatedVerification.user_id]);
+            
+            console.log(`✅ Added driver role to user ${updatedVerification.user_id}`);
+          }
+        }
+      } catch (roleUpdateError) {
+        console.error('Error updating user role:', roleUpdateError);
+        // Don't fail the verification update if role update fails
+      }
+    }
+
     res.json({
       success: true,
       message: 'Driver verification status updated successfully',
-      data: result.rows[0]
+      data: updatedVerification
     });
   } catch (error) {
     console.error('Error updating driver verification status:', error);
