@@ -45,6 +45,8 @@ const adminUserRoutes = require('./routes/admin-users');
 const driverVerificationRoutes = require('./routes/driver-verifications');
 const businessVerificationRoutes = require('./routes/business-verifications-simple'); // NEW - Business verification routes (starting simple)
 const adminSMSRoutes = require('./routes/admin-sms');
+const emailVerificationRoutes = require('./routes/email-verification');
+const adminEmailManagementRoutes = require('./routes/admin-email-management');
 
 const app = express();
 
@@ -177,12 +179,14 @@ app.use('/api/country-variable-types', countryVariableTypeRoutes);
 app.use('/api/admin-users', adminUserRoutes);
 app.use('/api/driver-verifications', driverVerificationRoutes);
 app.use('/api/business-verifications', businessVerificationRoutes); // NEW - Business verification routes
+app.use('/api/email-verification', emailVerificationRoutes); // Email OTP verification routes
 
 // Mount SMS admin routes
 try {
   console.log('📱 Mounting SMS admin routes...');
   const adminSMSRoutesModule = require('./routes/admin-sms');
   app.use('/api/admin', adminSMSRoutesModule);
+  app.use('/api/admin/email-management', adminEmailManagementRoutes);
   console.log('✅ SMS admin routes mounted successfully');
 } catch (error) {
   console.error('❌ Error mounting SMS admin routes:', error);
