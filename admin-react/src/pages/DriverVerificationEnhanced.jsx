@@ -473,7 +473,7 @@ const DriverVerificationEnhanced = () => {
       alert('Please provide a reason for rejection');
       return;
     }
-    const { target, type, docType } = rejectionDialog;
+    const { target, type, docType, imageIndex } = rejectionDialog;
     setActionLoading(true);
     try {
       if (type === 'document') {
@@ -488,8 +488,20 @@ const DriverVerificationEnhanced = () => {
           }
         } : prev);
       } else if (type === 'vehicleImage') {
-        const { imageIndex } = rejectionDialog;
         await api.put(`/driver-verifications/${target.id}/vehicle-images/${imageIndex}`, { status: 'rejected', rejectionReason });
+        // optimistic update for vehicle image status
+        setSelectedDriver(prev => prev && prev.id === target.id ? {
+          ...prev,
+          vehicleImageVerification: {
+            ...(prev.vehicleImageVerification || {}),
+            [imageIndex]: {
+              ...((prev.vehicleImageVerification||{})[imageIndex]||{}),
+              status: 'rejected',
+              rejectionReason,
+              reviewedAt: new Date().toISOString()
+            }
+          }
+        } : prev);
       } else {
         await api.put(`/driver-verifications/${target.id}/status`, { status: 'rejected', rejectionReason });
       }
