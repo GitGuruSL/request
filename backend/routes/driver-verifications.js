@@ -6,6 +6,61 @@ const { getSignedUrl } = require('../services/s3Upload');
 
 console.log('🔧 Driver verifications route loaded');
 
+// Helper function to check and update phone verification status
+async function checkPhoneVerificationStatus(userId, phoneNumber) {
+  try {
+    // Check if user exists and get current phone status
+    const userResult = await database.query(
+      'SELECT phone, phone_verified FROM users WHERE id = $1',
+      [userId]
+    );
+    
+    if (userResult.rows.length === 0) {
+      return { phoneVerified: false, needsUpdate: false };
+    }
+    
+    const user = userResult.rows[0];
+    
+    // If user phone is null but driver has phone number, update users table
+    if (!user.phone && phoneNumber) {
+      await database.query(
+        'UPDATE users SET phone = $1, updated_at = NOW() WHERE id = $2',
+        [phoneNumber, userId]
+      );
+      console.log(`📱 Updated user ${userId} phone to ${phoneNumber}`);
+      return { phoneVerified: false, needsUpdate: true };
+    }
+    
+    // If phone numbers match and user is verified, phone is verified
+    if (user.phone === phoneNumber && user.phone_verified) {
+      return { phoneVerified: true, needsUpdate: false };
+    }
+    
+    // If phone numbers match but not verified, check OTP verification table
+    if (user.phone === phoneNumber) {
+      const otpResult = await database.query(
+        'SELECT verified FROM phone_otp_verifications WHERE phone = $1 AND verified = true ORDER BY verified_at DESC LIMIT 1',
+        [phoneNumber]
+      );
+      
+      if (otpResult.rows.length > 0) {
+        // Update user verification status
+        await database.query(
+          'UPDATE users SET phone_verified = true, updated_at = NOW() WHERE id = $1',
+          [userId]
+        );
+        console.log(`✅ Auto-verified phone for user ${userId}`);
+        return { phoneVerified: true, needsUpdate: true };
+      }
+    }
+    
+    return { phoneVerified: user.phone_verified || false, needsUpdate: false };
+  } catch (error) {
+    console.error('Error checking phone verification:', error);
+    return { phoneVerified: false, needsUpdate: false };
+  }
+}
+
 // Simple test endpoint for Flutter connectivity
 router.get('/test', async (req, res) => {
   console.log('📨 Driver verification TEST request received from:', req.headers.origin || 'unknown');
@@ -48,44 +103,50 @@ router.get('/', auth.authMiddleware(), auth.roleMiddleware(['super_admin', 'coun
     const result = await database.query(query, queryParams);
 
     // Transform snake_case to camelCase for frontend compatibility
-    const transformedRows = result.rows.map(row => ({
-      ...row,
-      fullName: row.full_name,
-      firstName: row.first_name,
-      lastName: row.last_name,
-      phoneNumber: row.phone_number,
-      secondaryMobile: row.secondary_mobile,
-      nicNumber: row.nic_number,
-      dateOfBirth: row.date_of_birth,
-      cityId: row.city_id,
-      cityName: row.city_name || row.city_display_name,
-      vehicleTypeId: row.vehicle_type_id,
-      vehicleTypeName: row.vehicle_type_name || row.vehicle_type_display_name,
-      vehicleModel: row.vehicle_model,
-      vehicleYear: row.vehicle_year,
-      vehicleNumber: row.vehicle_number,
-      vehicleColor: row.vehicle_color,
-      isVehicleOwner: row.is_vehicle_owner,
-      licenseNumber: row.license_number,
-      licenseExpiry: row.license_expiry,
-      licenseHasNoExpiry: row.license_has_no_expiry,
-      insuranceNumber: row.insurance_number,
-      insuranceExpiry: row.insurance_expiry,
-      driverImageUrl: row.driver_image_url,
-      nicFrontUrl: row.nic_front_url,
-      nicBackUrl: row.nic_back_url,
-      licenseFrontUrl: row.license_front_url,
-      licenseBackUrl: row.license_back_url,
-      licenseDocumentUrl: row.license_document_url,
-      vehicleRegistrationUrl: row.vehicle_registration_url,
-      insuranceDocumentUrl: row.insurance_document_url,
-      billingProofUrl: row.billing_proof_url,
-      vehicleImageUrls: row.vehicle_image_urls,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-      submissionDate: row.submission_date,
-      reviewedDate: row.reviewed_date,
-      reviewedBy: row.reviewed_by
+    const transformedRows = await Promise.all(result.rows.map(async (row) => {
+      // Check phone verification status for each driver
+      const phoneStatus = await checkPhoneVerificationStatus(row.user_id, row.phone_number);
+      
+      return {
+        ...row,
+        fullName: row.full_name,
+        firstName: row.first_name,
+        lastName: row.last_name,
+        phoneNumber: row.phone_number,
+        phoneVerified: phoneStatus.phoneVerified, // Add phone verification status
+        secondaryMobile: row.secondary_mobile,
+        nicNumber: row.nic_number,
+        dateOfBirth: row.date_of_birth,
+        cityId: row.city_id,
+        cityName: row.city_name || row.city_display_name,
+        vehicleTypeId: row.vehicle_type_id,
+        vehicleTypeName: row.vehicle_type_name || row.vehicle_type_display_name,
+        vehicleModel: row.vehicle_model,
+        vehicleYear: row.vehicle_year,
+        vehicleNumber: row.vehicle_number,
+        vehicleColor: row.vehicle_color,
+        isVehicleOwner: row.is_vehicle_owner,
+        licenseNumber: row.license_number,
+        licenseExpiry: row.license_expiry,
+        licenseHasNoExpiry: row.license_has_no_expiry,
+        insuranceNumber: row.insurance_number,
+        insuranceExpiry: row.insurance_expiry,
+        driverImageUrl: row.driver_image_url,
+        nicFrontUrl: row.nic_front_url,
+        nicBackUrl: row.nic_back_url,
+        licenseFrontUrl: row.license_front_url,
+        licenseBackUrl: row.license_back_url,
+        licenseDocumentUrl: row.license_document_url,
+        vehicleRegistrationUrl: row.vehicle_registration_url,
+        insuranceDocumentUrl: row.insurance_document_url,
+        billingProofUrl: row.billing_proof_url,
+        vehicleImageUrls: row.vehicle_image_urls,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        submissionDate: row.submission_date,
+        reviewedDate: row.reviewed_date,
+        reviewedBy: row.reviewed_by
+      };
     }));
 
     // Get total count for pagination
