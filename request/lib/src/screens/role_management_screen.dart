@@ -156,6 +156,9 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
           if (user.roles.contains('business')) {
             _verificationStatuses[UserRole.business] =
                 VerificationStatus.approved;
+          } else {
+            // If API failed and no business role, remove from verification statuses
+            _verificationStatuses.remove(UserRole.business);
           }
         }
       } catch (e) {
