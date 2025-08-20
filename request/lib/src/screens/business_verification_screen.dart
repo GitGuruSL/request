@@ -81,7 +81,7 @@ class _BusinessVerificationScreenState
       // Get business data from backend REST API
       final response = await ApiClient.instance
           .get('/api/business-verifications/user/${currentUser.uid}');
-      
+
       print('DEBUG: API Response success: ${response.isSuccess}');
       print('DEBUG: API Response data: ${response.data}');
 
@@ -89,14 +89,15 @@ class _BusinessVerificationScreenState
         if (response.isSuccess && response.data != null) {
           final responseWrapper = response.data as Map<String, dynamic>;
           final businessData = responseWrapper['data'] as Map<String, dynamic>?;
-          
+
           setState(() {
             _businessData = businessData;
             _isLoading = false;
           });
 
           if (businessData != null) {
-            print('DEBUG: Business verification data loaded: ${businessData['business_name']}');
+            print(
+                'DEBUG: Business verification data loaded: ${businessData['business_name']}');
             // Transform API data to match UI expectations
             _transformApiData(businessData);
           }
@@ -114,6 +115,41 @@ class _BusinessVerificationScreenState
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  /// Transform backend API data to match UI expectations
+  void _transformApiData(Map<String, dynamic> apiData) {
+    // Convert snake_case API fields to camelCase for UI compatibility
+    final transformedData = <String, dynamic>{
+      'businessName': apiData['business_name'],
+      'businessEmail': apiData['business_email'],
+      'businessPhone': apiData['business_phone'],
+      'businessAddress': apiData['business_address'],
+      'businessCategory': apiData['business_category'],
+      'businessDescription': apiData['business_description'],
+      'licenseNumber': apiData['license_number'],
+      'taxId': apiData['tax_id'],
+      'country': apiData['country'],
+      'status': apiData['status'],
+      'phoneVerified': apiData['phone_verified'],
+      'emailVerified': apiData['email_verified'],
+      'businessLicenseUrl': apiData['business_license_url'],
+      'businessLicenseStatus': apiData['business_license_status'] ?? 'pending',
+      'taxCertificateUrl': apiData['tax_certificate_url'],
+      'taxCertificateStatus': apiData['tax_certificate_status'] ?? 'pending',
+      'insuranceDocumentUrl': apiData['insurance_document_url'],
+      'insuranceDocumentStatus':
+          apiData['insurance_document_status'] ?? 'pending',
+      'businessLogoUrl': apiData['business_logo_url'],
+      'businessLogoStatus': apiData['business_logo_status'] ?? 'pending',
+      'isVerified': apiData['is_verified'],
+      'createdAt': apiData['created_at'],
+      'updatedAt': apiData['updated_at'],
+    };
+
+    setState(() {
+      _businessData = transformedData;
+    });
   }
 
   @override
@@ -328,7 +364,6 @@ class _BusinessVerificationScreenState
 
     // Enhanced phone verification logic
     bool isVerified = _credentialsStatus?.businessPhoneVerified ?? false;
-    String verificationSource = 'manual';
 
     // Check if business phone matches Firebase Auth phone (auto-verify)
     if (!isVerified && businessPhone.isNotEmpty) {
