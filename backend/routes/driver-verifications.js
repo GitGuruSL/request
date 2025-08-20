@@ -475,7 +475,18 @@ router.get('/:id', auth.authMiddleware(), auth.roleMiddleware(['super_admin', 'c
       emailVerified: emailStatus.emailVerified,
       emailVerificationSource: emailStatus.verificationSource,
       requiresEmailVerification: emailStatus.requiresManualVerification,
+      // Map vehicle type fields for frontend compatibility
+      vehicleType: row.vehicle_type_id,
+      vehicleTypeName: row.vehicle_type_display_name || row.vehicle_type_name,
+      cityName: row.city_display_name || row.city_name,
     };
+
+    console.log(`🚗 Vehicle Type Debug for driver ${id}:`, {
+      vehicle_type_id: row.vehicle_type_id,
+      vehicle_type_display_name: row.vehicle_type_display_name,
+      vehicleType: enrichedData.vehicleType,
+      vehicleTypeName: enrichedData.vehicleTypeName
+    });
 
     res.json({
       success: true,
