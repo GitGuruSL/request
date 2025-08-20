@@ -43,6 +43,7 @@ const countryBrandRoutes = require('./routes/country-brands');
 const countryVariableTypeRoutes = require('./routes/country-variable-types');
 const adminUserRoutes = require('./routes/admin-users');
 const driverVerificationRoutes = require('./routes/driver-verifications');
+const adminSMSRoutes = require('./routes/admin-sms');
 
 const app = express();
 
@@ -173,6 +174,7 @@ app.use('/api/country-subcategories', countrySubcategoryRoutes);
 app.use('/api/country-brands', countryBrandRoutes);
 app.use('/api/country-variable-types', countryVariableTypeRoutes);
 app.use('/api/admin-users', adminUserRoutes);
+app.use('/api/admin', adminSMSRoutes);
 app.use('/api/driver-verifications', driverVerificationRoutes);
 
 // Global error handler
