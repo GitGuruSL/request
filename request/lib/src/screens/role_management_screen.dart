@@ -60,24 +60,33 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
         print(
             '🔍 API Response: success=${resp.isSuccess}, hasData=${resp.data != null}');
         if (resp.isSuccess && resp.data != null) {
-          final data = resp.data as Map<String, dynamic>;
-          print('🔍 Driver verification raw data: $data');
-          final rawStatus =
-              (data['status'] ?? 'pending').toString().trim().toLowerCase();
-          final isVerifiedFlag =
-              data['is_verified'] == true || data['isVerified'] == true;
-          print(
-              '🔍 Status analysis: rawStatus="$rawStatus", isVerified=$isVerifiedFlag, userRoles=${user.roles}');
-          var parsed = _parseVerificationStatus(rawStatus);
-          if (rawStatus == 'approved' ||
-              isVerifiedFlag ||
-              user.roles.contains('driver')) {
-            parsed = VerificationStatus.approved;
-            print('🎉 Driver status set to APPROVED!');
+          final responseWrapper = resp.data as Map<String, dynamic>;
+          print('🔍 Full response wrapper: $responseWrapper');
+
+          // Extract the actual data from the nested structure
+          final data = responseWrapper['data'] as Map<String, dynamic>?;
+          if (data != null) {
+            print('🔍 Driver verification raw data: $data');
+            final rawStatus =
+                (data['status'] ?? 'pending').toString().trim().toLowerCase();
+            final isVerifiedFlag =
+                data['is_verified'] == true || data['isVerified'] == true;
+            print(
+                '🔍 Status analysis: rawStatus="$rawStatus", isVerified=$isVerifiedFlag, userRoles=${user.roles}');
+            var parsed = _parseVerificationStatus(rawStatus);
+            if (rawStatus == 'approved' ||
+                isVerifiedFlag ||
+                user.roles.contains('driver')) {
+              parsed = VerificationStatus.approved;
+              print('🎉 Driver status set to APPROVED!');
+            } else {
+              print('⏳ Driver status remains: $parsed');
+            }
+            _verificationStatuses[UserRole.driver] = parsed;
+            print('🔍 Final verification status map: $_verificationStatuses');
           } else {
-            print('⏳ Driver status remains: $parsed');
+            print('❌ No data field found in response wrapper');
           }
-          _verificationStatuses[UserRole.driver] = parsed;
           print('🔍 Final verification status map: $_verificationStatuses');
         } else {
           print(
