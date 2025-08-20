@@ -100,6 +100,11 @@ const DriverVerificationEnhanced = () => {
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditError, setAuditError] = useState(null);
   
+  // Phone verification states
+  const [phoneVerificationDialog, setPhoneVerificationDialog] = useState({ open: false, driver: null, step: 'send' });
+  const [otpCode, setOtpCode] = useState('');
+  const [verificationLoading, setVerificationLoading] = useState(false);
+  
   // City and Vehicle Type mapping
   const [cityNames, setCityNames] = useState({});
   const [vehicleTypeNames, setVehicleTypeNames] = useState({});
@@ -214,22 +219,23 @@ const DriverVerificationEnhanced = () => {
 
   // Phone verification helper function
   const getPhoneVerificationStatus = (driverData) => {
-    // If phoneVerified is explicitly set, use that
+    // Use backend-provided verification status if available
     if (typeof driverData.phoneVerified === 'boolean') {
       return {
         isVerified: driverData.phoneVerified,
-        source: driverData.phoneVerified ? 'firebase_auth' : 'pending_verification',
-        needsManualVerification: !driverData.phoneVerified
+        source: driverData.phoneVerificationSource || 'unknown',
+        needsManualVerification: driverData.requiresPhoneVerification || false,
+        hasPhoneNumber: !!driverData.phoneNumber
       };
     }
 
-    // Auto-verify if phone matches user's auth phone (assuming they registered with this number)
-    // This logic assumes if they have a userId, their phone was verified during registration
+    // Fallback logic for older data
     if (driverData.userId && driverData.phoneNumber) {
       return {
         isVerified: true,
         source: 'firebase_auth_registration',
-        needsManualVerification: false
+        needsManualVerification: false,
+        hasPhoneNumber: true
       };
     }
 
@@ -237,7 +243,39 @@ const DriverVerificationEnhanced = () => {
     return {
       isVerified: false,
       source: 'not_verified',
-      needsManualVerification: true
+      needsManualVerification: true,
+      hasPhoneNumber: !!driverData.phoneNumber
+    };
+  };
+
+  // Email verification helper function
+  const getEmailVerificationStatus = (driverData) => {
+    // Use backend-provided verification status if available
+    if (typeof driverData.emailVerified === 'boolean') {
+      return {
+        isVerified: driverData.emailVerified,
+        source: driverData.emailVerificationSource || 'unknown',
+        needsManualVerification: driverData.requiresEmailVerification || false,
+        hasEmail: !!driverData.email
+      };
+    }
+
+    // Fallback logic for older data
+    if (driverData.userId && driverData.email) {
+      return {
+        isVerified: true,
+        source: 'firebase_auth_registration',
+        needsManualVerification: false,
+        hasEmail: true
+      };
+    }
+
+    // Default to not verified
+    return {
+      isVerified: false,
+      source: 'not_verified',
+      needsManualVerification: true,
+      hasEmail: !!driverData.email
     };
   };
 
@@ -606,6 +644,67 @@ const DriverVerificationEnhanced = () => {
       console.error('Reject failed', error.response?.data || error.message);
       alert('Reject failed: ' + (error.response?.data?.message || error.message));
     } finally { setActionLoading(false); }
+  };
+
+  // Phone verification functions
+  const handleTriggerPhoneVerification = async (driver) => {
+    setPhoneVerificationDialog({ open: true, driver, step: 'send' });
+  };
+
+  const sendPhoneVerificationOTP = async () => {
+    setVerificationLoading(true);
+    try {
+      const response = await api.post(`/driver-verifications/${phoneVerificationDialog.driver.id}/verify-phone`);
+      if (response.isSuccess) {
+        setPhoneVerificationDialog(prev => ({ ...prev, step: 'verify' }));
+      } else {
+        alert('Failed to send OTP: ' + (response.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error sending OTP:', error);
+      alert('Failed to send OTP: ' + error.message);
+    } finally {
+      setVerificationLoading(false);
+    }
+  };
+
+  const verifyPhoneOTP = async () => {
+    if (!otpCode.trim()) {
+      alert('Please enter the OTP code');
+      return;
+    }
+    
+    setVerificationLoading(true);
+    try {
+      const response = await api.post(`/driver-verifications/${phoneVerificationDialog.driver.id}/verify-otp`, {
+        otp: otpCode
+      });
+      
+      if (response.isSuccess) {
+        // Close dialog
+        setPhoneVerificationDialog({ open: false, driver: null, step: 'send' });
+        setOtpCode('');
+        
+        // Refresh driver data
+        await loadDrivers();
+        if (selectedDriver && selectedDriver.id === phoneVerificationDialog.driver.id) {
+          const res = await api.get(`/driver-verifications/${selectedDriver.id}`);
+          if (res.isSuccess) {
+            const raw = res.data?.data || res.data;
+            setSelectedDriver(raw);
+          }
+        }
+        
+        alert('Phone number verified successfully!');
+      } else {
+        alert('OTP verification failed: ' + (response.error || 'Invalid OTP'));
+      }
+    } catch (error) {
+      console.error('Error verifying OTP:', error);
+      alert('OTP verification failed: ' + error.message);
+    } finally {
+      setVerificationLoading(false);
+    }
   };
 
   const viewDocument = (url, title = 'Document') => {
@@ -1835,15 +1934,26 @@ const DriverVerificationEnhanced = () => {
                       </Box>
                       {(() => {
                         const phoneStatus = getPhoneVerificationStatus(selectedDriver);
-                        if (phoneStatus.isVerified) {
+                        if (!phoneStatus.hasPhoneNumber) {
+                          return (
+                            <Box mb={1}>
+                              <Alert severity="error" sx={{ mb: 2 }}>
+                                <Typography variant="body2">
+                                  <strong>Phone number is required for driver verification.</strong> Driver must provide a phone number to proceed.
+                                </Typography>
+                              </Alert>
+                            </Box>
+                          );
+                        } else if (phoneStatus.isVerified) {
                           return (
                             <Box mb={1}>
                               <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                                 Verified Via
                               </Typography>
                               <Typography variant="body2">
-                                {phoneStatus.source === 'firebase_auth' ? 'Firebase Authentication' : 
-                                 phoneStatus.source === 'firebase_auth_registration' ? 'Firebase Auth (Registration)' : 
+                                {phoneStatus.source === 'registration' ? 'Verified during registration' :
+                                 phoneStatus.source === 'otp' ? 'Verified via OTP' :
+                                 phoneStatus.source === 'firebase_auth_registration' ? 'Firebase Auth (Registration)' :
                                  'Manual Verification'}
                               </Typography>
                             </Box>
@@ -1853,20 +1963,18 @@ const DriverVerificationEnhanced = () => {
                             <Box mb={1}>
                               <Alert severity="warning" sx={{ mb: 2 }}>
                                 <Typography variant="body2">
-                                  Phone number needs verification. Driver should verify this number in the mobile app.
+                                  Phone number needs verification. Use the button below to send an OTP to the driver's phone.
                                 </Typography>
                               </Alert>
                               <Button
-                                variant="outlined"
+                                variant="contained"
                                 color="primary"
                                 startIcon={<PhoneIcon />}
                                 size="small"
-                                onClick={() => {
-                                  // TODO: Implement manual verification trigger
-                                  alert('Manual verification will be implemented for different phone numbers');
-                                }}
+                                onClick={() => handleTriggerPhoneVerification(selectedDriver)}
+                                disabled={verificationLoading}
                               >
-                                Trigger Manual Verification
+                                Send Verification OTP
                               </Button>
                             </Box>
                           );
@@ -1881,7 +1989,10 @@ const DriverVerificationEnhanced = () => {
                   <Card variant="outlined">
                     <CardHeader
                       avatar={
-                        <Avatar sx={{ bgcolor: selectedDriver.emailVerified ? 'success.main' : 'grey.400' }}>
+                        <Avatar sx={{ bgcolor: (() => {
+                          const emailStatus = getEmailVerificationStatus(selectedDriver);
+                          return emailStatus.isVerified ? 'success.main' : 'grey.400';
+                        })() }}>
                           <EmailIcon />
                         </Avatar>
                       }
@@ -1901,22 +2012,50 @@ const DriverVerificationEnhanced = () => {
                         <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                           Verification Status
                         </Typography>
-                        <Chip 
-                          label={selectedDriver.emailVerified ? 'Verified' : 'Not Verified'}
-                          color={selectedDriver.emailVerified ? 'success' : 'default'}
-                          icon={selectedDriver.emailVerified ? <CheckIcon /> : <ErrorIcon />}
-                        />
+                        {(() => {
+                          const emailStatus = getEmailVerificationStatus(selectedDriver);
+                          return (
+                            <Chip 
+                              label={emailStatus.isVerified ? 'Verified' : 'Not Verified'}
+                              color={emailStatus.isVerified ? 'success' : 'default'}
+                              icon={emailStatus.isVerified ? <CheckIcon /> : <ErrorIcon />}
+                            />
+                          );
+                        })()}
                       </Box>
-                      {selectedDriver.emailVerified && (
-                        <Box mb={1}>
-                          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                            Verified On
-                          </Typography>
-                          <Typography variant="body2">
-                            Verified via mobile app registration
-                          </Typography>
-                        </Box>
-                      )}
+                      {(() => {
+                        const emailStatus = getEmailVerificationStatus(selectedDriver);
+                        if (!emailStatus.hasEmail) {
+                          return (
+                            <Alert severity="error" sx={{ mb: 1 }}>
+                              <Typography variant="body2">
+                                <strong>Email address is required for driver verification.</strong> Driver must provide an email address.
+                              </Typography>
+                            </Alert>
+                          );
+                        } else if (emailStatus.isVerified) {
+                          return (
+                            <Box mb={1}>
+                              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                                Verified Via
+                              </Typography>
+                              <Typography variant="body2">
+                                {emailStatus.source === 'registration' ? 'Verified during registration' :
+                                 emailStatus.source === 'firebase_auth_registration' ? 'Firebase Auth (Registration)' :
+                                 'Manual Verification'}
+                              </Typography>
+                            </Box>
+                          );
+                        } else {
+                          return (
+                            <Alert severity="warning" sx={{ mb: 1 }}>
+                              <Typography variant="body2">
+                                Email address needs verification. Driver should verify this email in their account settings.
+                              </Typography>
+                            </Alert>
+                          );
+                        }
+                      })()}
                     </CardContent>
                   </Card>
                 </Grid>
@@ -2509,6 +2648,85 @@ const DriverVerificationEnhanced = () => {
           >
             Close
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Phone Verification Dialog */}
+      <Dialog 
+        open={phoneVerificationDialog.open} 
+        onClose={() => {
+          setPhoneVerificationDialog({ open: false, driver: null, step: 'send' });
+          setOtpCode('');
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box display="flex" alignItems="center" gap={1}>
+            <PhoneIcon color="primary" />
+            <Typography variant="h6">Phone Verification</Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {phoneVerificationDialog.step === 'send' ? (
+            <Box>
+              <Typography variant="body1" gutterBottom>
+                Send an OTP verification code to the driver's phone number:
+              </Typography>
+              <Typography variant="h6" color="primary" sx={{ mb: 2 }}>
+                {phoneVerificationDialog.driver?.phoneNumber}
+              </Typography>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                The driver will receive a 6-digit OTP code that expires in 10 minutes.
+              </Alert>
+            </Box>
+          ) : (
+            <Box>
+              <Typography variant="body1" gutterBottom>
+                OTP has been sent to: <strong>{phoneVerificationDialog.driver?.phoneNumber}</strong>
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Please ask the driver for the 6-digit code they received.
+              </Typography>
+              <TextField
+                label="Enter OTP Code"
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value)}
+                fullWidth
+                inputProps={{ maxLength: 6 }}
+                placeholder="123456"
+              />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => {
+              setPhoneVerificationDialog({ open: false, driver: null, step: 'send' });
+              setOtpCode('');
+            }}
+          >
+            Cancel
+          </Button>
+          {phoneVerificationDialog.step === 'send' ? (
+            <Button 
+              variant="contained"
+              onClick={sendPhoneVerificationOTP}
+              disabled={verificationLoading}
+              startIcon={verificationLoading ? <CircularProgress size={20} /> : <PhoneIcon />}
+            >
+              Send OTP
+            </Button>
+          ) : (
+            <Button 
+              variant="contained"
+              onClick={verifyPhoneOTP}
+              disabled={verificationLoading || !otpCode.trim()}
+              startIcon={verificationLoading ? <CircularProgress size={20} /> : <CheckIcon />}
+            >
+              Verify OTP
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Container>

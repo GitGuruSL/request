@@ -16,7 +16,7 @@ async function checkPhoneVerificationStatus(userId, phoneNumber) {
     );
     
     if (userResult.rows.length === 0) {
-      return { phoneVerified: false, needsUpdate: false };
+      return { phoneVerified: false, needsUpdate: false, requiresManualVerification: true };
     }
     
     const user = userResult.rows[0];
@@ -28,12 +28,12 @@ async function checkPhoneVerificationStatus(userId, phoneNumber) {
         [phoneNumber, userId]
       );
       console.log(`📱 Updated user ${userId} phone to ${phoneNumber}`);
-      return { phoneVerified: false, needsUpdate: true };
+      return { phoneVerified: false, needsUpdate: true, requiresManualVerification: true };
     }
     
     // If phone numbers match and user is verified, phone is verified
     if (user.phone === phoneNumber && user.phone_verified) {
-      return { phoneVerified: true, needsUpdate: false };
+      return { phoneVerified: true, needsUpdate: false, requiresManualVerification: false, verificationSource: 'registration' };
     }
     
     // If phone numbers match but not verified, check OTP verification table
@@ -50,14 +50,60 @@ async function checkPhoneVerificationStatus(userId, phoneNumber) {
           [userId]
         );
         console.log(`✅ Auto-verified phone for user ${userId}`);
-        return { phoneVerified: true, needsUpdate: true };
+        return { phoneVerified: true, needsUpdate: true, requiresManualVerification: false, verificationSource: 'otp' };
       }
     }
     
-    return { phoneVerified: user.phone_verified || false, needsUpdate: false };
+    return { 
+      phoneVerified: user.phone_verified || false, 
+      needsUpdate: false, 
+      requiresManualVerification: !user.phone_verified,
+      verificationSource: user.phone_verified ? 'registration' : null
+    };
   } catch (error) {
     console.error('Error checking phone verification:', error);
-    return { phoneVerified: false, needsUpdate: false };
+    return { phoneVerified: false, needsUpdate: false, requiresManualVerification: true };
+  }
+}
+
+async function checkEmailVerificationStatus(userId, email) {
+  try {
+    // Check if user exists and get current email status
+    const userResult = await database.query(
+      'SELECT email, email_verified FROM users WHERE id = $1',
+      [userId]
+    );
+    
+    if (userResult.rows.length === 0) {
+      return { emailVerified: false, needsUpdate: false, requiresManualVerification: true };
+    }
+    
+    const user = userResult.rows[0];
+    
+    // If user email is null but driver has email, update users table
+    if (!user.email && email) {
+      await database.query(
+        'UPDATE users SET email = $1, updated_at = NOW() WHERE id = $2',
+        [email, userId]
+      );
+      console.log(`📧 Updated user ${userId} email to ${email}`);
+      return { emailVerified: false, needsUpdate: true, requiresManualVerification: true };
+    }
+    
+    // If emails match and user is verified, email is verified
+    if (user.email === email && user.email_verified) {
+      return { emailVerified: true, needsUpdate: false, requiresManualVerification: false, verificationSource: 'registration' };
+    }
+    
+    return { 
+      emailVerified: user.email_verified || false, 
+      needsUpdate: false, 
+      requiresManualVerification: !user.email_verified,
+      verificationSource: user.email_verified ? 'registration' : null
+    };
+  } catch (error) {
+    console.error('Error checking email verification:', error);
+    return { emailVerified: false, needsUpdate: false, requiresManualVerification: true };
   }
 }
 
@@ -104,8 +150,10 @@ router.get('/', auth.authMiddleware(), auth.roleMiddleware(['super_admin', 'coun
 
     // Transform snake_case to camelCase for frontend compatibility
     const transformedRows = await Promise.all(result.rows.map(async (row) => {
-      // Check phone verification status for each driver
+      // Check phone and email verification status for each driver
       const phoneStatus = await checkPhoneVerificationStatus(row.user_id, row.phone_number);
+      const emailStatus = await checkEmailVerificationStatus(row.user_id, row.email);
+      
       // Parse vehicle image verification JSON (may be array or object)
       let vehicleImageVerification = row.vehicle_image_verification;
       if (typeof vehicleImageVerification === 'string') {
@@ -123,7 +171,12 @@ router.get('/', auth.authMiddleware(), auth.roleMiddleware(['super_admin', 'coun
         firstName: row.first_name,
         lastName: row.last_name,
         phoneNumber: row.phone_number,
-        phoneVerified: phoneStatus.phoneVerified, // Add phone verification status
+        phoneVerified: phoneStatus.phoneVerified,
+        phoneVerificationSource: phoneStatus.verificationSource,
+        requiresPhoneVerification: phoneStatus.requiresManualVerification,
+        emailVerified: emailStatus.emailVerified,
+        emailVerificationSource: emailStatus.verificationSource,
+        requiresEmailVerification: emailStatus.requiresManualVerification,
         secondaryMobile: row.secondary_mobile,
         nicNumber: row.nic_number,
         dateOfBirth: row.date_of_birth,
@@ -218,15 +271,148 @@ router.get('/user/:userId', async (req, res) => {
       });
     }
 
+    const row = result.rows[0];
+    
+    // Check phone and email verification status
+    const phoneStatus = await checkPhoneVerificationStatus(row.user_id, row.phone_number);
+    const emailStatus = await checkEmailVerificationStatus(row.user_id, row.email);
+
+    // Add verification status to response
+    const enrichedData = {
+      ...row,
+      phoneVerified: phoneStatus.phoneVerified,
+      phoneVerificationSource: phoneStatus.verificationSource,
+      requiresPhoneVerification: phoneStatus.requiresManualVerification,
+      emailVerified: emailStatus.emailVerified,
+      emailVerificationSource: emailStatus.verificationSource,
+      requiresEmailVerification: emailStatus.requiresManualVerification,
+    };
+
     res.json({
       success: true,
-      data: result.rows[0]
+      data: enrichedData
     });
   } catch (error) {
     console.error('Error fetching driver verification by user ID:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch driver verification',
+      error: error.message
+    });
+  }
+});
+
+// Trigger manual phone verification for a driver
+router.post('/:id/verify-phone', auth.authMiddleware(), auth.roleMiddleware(['super_admin', 'country_admin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Get driver verification record
+    const driverResult = await database.query('SELECT * FROM driver_verifications WHERE id = $1', [id]);
+    if (driverResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Driver verification not found' });
+    }
+    
+    const driver = driverResult.rows[0];
+    if (!driver.phone_number) {
+      return res.status(400).json({ success: false, message: 'Driver has no phone number to verify' });
+    }
+    
+    // Import SMS service
+    const SMSManager = require('../services/SMSManager');
+    const smsManager = new SMSManager();
+    
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Store OTP in database
+    await database.query(`
+      INSERT INTO phone_otp_verifications (phone, otp, created_at, expires_at, verification_type) 
+      VALUES ($1, $2, NOW(), NOW() + INTERVAL '10 minutes', 'driver_verification')
+      ON CONFLICT (phone) DO UPDATE SET 
+        otp = $2, created_at = NOW(), expires_at = NOW() + INTERVAL '10 minutes', attempts = 0, verified = false
+    `, [driver.phone_number, otp]);
+    
+    // Send SMS
+    const smsResult = await smsManager.sendSMS(driver.phone_number, `Your driver verification OTP is: ${otp}. Valid for 10 minutes.`);
+    
+    if (smsResult.success) {
+      res.json({
+        success: true,
+        message: 'OTP sent successfully',
+        phone: driver.phone_number
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to send OTP',
+        error: smsResult.error
+      });
+    }
+  } catch (error) {
+    console.error('Error triggering phone verification:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to trigger phone verification',
+      error: error.message
+    });
+  }
+});
+
+// Verify OTP for phone verification
+router.post('/:id/verify-otp', auth.authMiddleware(), auth.roleMiddleware(['super_admin', 'country_admin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { otp } = req.body;
+    
+    if (!otp) {
+      return res.status(400).json({ success: false, message: 'OTP is required' });
+    }
+    
+    // Get driver verification record
+    const driverResult = await database.query('SELECT * FROM driver_verifications WHERE id = $1', [id]);
+    if (driverResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Driver verification not found' });
+    }
+    
+    const driver = driverResult.rows[0];
+    
+    // Verify OTP
+    const otpResult = await database.query(`
+      SELECT * FROM phone_otp_verifications 
+      WHERE phone = $1 AND otp = $2 AND expires_at > NOW() AND verified = false
+    `, [driver.phone_number, otp]);
+    
+    if (otpResult.rows.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid or expired OTP' 
+      });
+    }
+    
+    // Mark OTP as verified
+    await database.query(`
+      UPDATE phone_otp_verifications 
+      SET verified = true, verified_at = NOW() 
+      WHERE phone = $1 AND otp = $2
+    `, [driver.phone_number, otp]);
+    
+    // Update user verification status
+    await database.query(`
+      UPDATE users 
+      SET phone_verified = true, updated_at = NOW() 
+      WHERE id = $1
+    `, [driver.user_id]);
+    
+    res.json({
+      success: true,
+      message: 'Phone number verified successfully'
+    });
+  } catch (error) {
+    console.error('Error verifying OTP:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to verify OTP',
       error: error.message
     });
   }
