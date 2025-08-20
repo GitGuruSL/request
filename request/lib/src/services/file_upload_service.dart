@@ -67,7 +67,7 @@ class FileUploadService {
       });
 
       final response = await _apiClient.post<Map<String, dynamic>>(
-        '/s3/upload',
+        '/api/s3/upload',
         data: formData,
       );
 

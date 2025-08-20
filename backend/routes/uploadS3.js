@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { uploadToS3, deleteFromS3 } = require('../services/s3Upload');
+const { uploadToMemory, uploadToS3, deleteFromS3 } = require('../services/s3Upload');
 
 console.log('🔧 S3 Upload route loaded');
 
 // Upload file to S3
-router.post('/upload', uploadToS3.single('file'), async (req, res) => {
+router.post('/upload', uploadToMemory.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ 
@@ -14,15 +14,18 @@ router.post('/upload', uploadToS3.single('file'), async (req, res) => {
       });
     }
 
-    console.log('✅ File uploaded to S3:', req.file.location);
+    const { uploadType, userId, imageIndex } = req.body;
+    
+    // Upload to S3
+    const s3Url = await uploadToS3(req.file, uploadType, userId, imageIndex);
     
     res.json({
       success: true,
-      url: req.file.location,
-      key: req.file.key,
-      bucket: req.file.bucket,
+      url: s3Url,
+      key: s3Url.split('/').slice(-2).join('/'), // Extract key from URL
       size: req.file.size,
-      etag: req.file.etag
+      uploadType,
+      userId
     });
   } catch (error) {
     console.error('❌ Error uploading to S3:', error);
