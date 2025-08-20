@@ -22,6 +22,7 @@ const cityRoutes = require('./routes/cities');
 const requestRoutes = require('./routes/requests');
 const vehicleTypeRoutes = require('./routes/vehicle-types');
 const uploadRoutes = require('./routes/upload'); // Image upload routes
+const uploadS3Routes = require('./routes/uploadS3'); // S3 upload routes
 const chatRoutes = require('./routes/chat'); // Chat routes
 const brandRoutes = require('./routes/brands');
 const masterProductRoutes = require('./routes/master-products');
@@ -150,6 +151,7 @@ app.use('/api/cities', cityRoutes);
 app.use('/api/requests', requestRoutes);
 app.use('/api/vehicle-types', vehicleTypeRoutes);
 app.use('/api/upload', uploadRoutes); // Image upload endpoint
+app.use('/api/upload', uploadS3Routes); // S3 upload endpoints
 app.use('/api/chat', chatRoutes); // Chat endpoints
 app.use('/api/country-modules', countryModuleRoutes);
 app.use('/api/countries', countriesRoutes);

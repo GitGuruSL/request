@@ -823,11 +823,14 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
                       children: [
                         Icon(Icons.warning, color: Colors.orange, size: 16),
                         const SizedBox(width: 4),
-                        Text(
-                          'Demo URL - File storage not configured',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.orange[700],
+                        Flexible(
+                          child: Text(
+                            'Demo URL - Storage not setup',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.orange[700],
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
@@ -1077,11 +1080,14 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
                               Icon(Icons.warning,
                                   color: Colors.orange, size: 16),
                               const SizedBox(width: 4),
-                              Text(
-                                'Demo URL - File storage not configured',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.orange[700],
+                              Flexible(
+                                child: Text(
+                                  'Demo URL - Storage not setup',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.orange[700],
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
