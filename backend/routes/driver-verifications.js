@@ -691,6 +691,95 @@ router.put('/:id/vehicle-images/:index', auth.authMiddleware(), auth.roleMiddlew
   }
 });
 
+// Replace a single document file (driver resubmission) and reset its status to pending
+router.put('/:id/replace-document', auth.authMiddleware(), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { documentType, fileUrl } = req.body;
+    if (!documentType || !fileUrl) {
+      return res.status(400).json({ success: false, message: 'documentType and fileUrl required' });
+    }
+    const validDocuments = [
+      'driver_image', 'nic_front', 'nic_back', 'license_front', 'license_back',
+      'vehicle_registration', 'vehicle_insurance', 'billing_proof', 'license_document'
+    ];
+    if (!validDocuments.includes(documentType)) {
+      return res.status(400).json({ success: false, message: 'Invalid documentType' });
+    }
+    const urlColumn = `${documentType}_url`;
+    const statusColumn = `${documentType}_status`;
+    const rejectionColumn = `${documentType}_rejection_reason`;
+
+    // Build dynamic update; some rejection columns don't exist so guard
+    let updateSql = `UPDATE driver_verifications SET ${urlColumn} = $1, ${statusColumn} = 'pending', updated_at = NOW()`;
+    const values = [fileUrl, id];
+    const existingColsRes = await database.query("SELECT column_name FROM information_schema.columns WHERE table_name = 'driver_verifications'");
+    const colSet = new Set(existingColsRes.rows.map(r => r.column_name));
+    if (colSet.has(rejectionColumn)) {
+      updateSql += `, ${rejectionColumn} = NULL`;
+    }
+    updateSql += ' WHERE id = $2 RETURNING *';
+    const result = await database.query(updateSql, values);
+    if (result.rows.length === 0) return res.status(404).json({ success: false, message: 'Driver verification not found' });
+
+    // Update JSON document_verification
+    const driver = result.rows[0];
+    let documentVerification = driver.document_verification;
+    if (typeof documentVerification === 'string') { try { documentVerification = JSON.parse(documentVerification); } catch { documentVerification = {}; } }
+    const backendToFrontendMap = {
+      'driver_image': 'driverImage', 'nic_front': 'nicFront', 'nic_back': 'nicBack',
+      'license_front': 'licenseFront', 'license_back': 'licenseBack', 'vehicle_registration': 'vehicleRegistration',
+      'vehicle_insurance': 'vehicleInsurance', 'billing_proof': 'billingProof', 'license_document': 'licenseDocument'
+    };
+    const frontendKey = backendToFrontendMap[documentType];
+    if (frontendKey) {
+      if (!documentVerification || typeof documentVerification !== 'object') documentVerification = {};
+      documentVerification[frontendKey] = {
+        ...(documentVerification[frontendKey] || {}),
+        status: 'pending',
+        rejectionReason: undefined,
+        replacedAt: new Date().toISOString(),
+        submittedAt: new Date().toISOString()
+      };
+      await database.query('UPDATE driver_verifications SET document_verification = $1 WHERE id = $2', [JSON.stringify(documentVerification), id]);
+    }
+    const refreshed = await database.query('SELECT * FROM driver_verifications WHERE id = $1', [id]);
+    res.json({ success: true, message: 'Document replaced and reset to pending', data: refreshed.rows[0] });
+  } catch (error) {
+    console.error('Error replacing document:', error);
+    res.status(500).json({ success: false, message: 'Failed to replace document', error: error.message });
+  }
+});
+
+// Replace a vehicle image by index and reset its status
+router.put('/:id/vehicle-images/:index/replace', auth.authMiddleware(), async (req, res) => {
+  try {
+    const { id, index } = req.params;
+    const { fileUrl } = req.body;
+    const imageIndex = parseInt(index, 10);
+    if (!fileUrl) return res.status(400).json({ success: false, message: 'fileUrl required' });
+    if (isNaN(imageIndex) || imageIndex < 0) return res.status(400).json({ success: false, message: 'Invalid index' });
+    const rowRes = await database.query('SELECT vehicle_image_urls, vehicle_image_verification FROM driver_verifications WHERE id = $1', [id]);
+    if (rowRes.rows.length === 0) return res.status(404).json({ success: false, message: 'Driver verification not found' });
+    let urls = rowRes.rows[0].vehicle_image_urls;
+    if (typeof urls === 'string') { try { urls = JSON.parse(urls); } catch { urls = []; } }
+    if (!Array.isArray(urls)) urls = [];
+    // Ensure array large enough
+    while (urls.length <= imageIndex) urls.push(null);
+    urls[imageIndex] = fileUrl;
+    let ver = rowRes.rows[0].vehicle_image_verification;
+    if (typeof ver === 'string') { try { ver = JSON.parse(ver); } catch { ver = {}; } }
+    if (!ver || typeof ver !== 'object') ver = {};
+    ver[imageIndex] = { ...(ver[imageIndex] || {}), status: 'pending', rejectionReason: undefined, replacedAt: new Date().toISOString(), submittedAt: new Date().toISOString() };
+    await database.query('UPDATE driver_verifications SET vehicle_image_urls = $1, vehicle_image_verification = $2, updated_at = NOW() WHERE id = $3', [JSON.stringify(urls), JSON.stringify(ver), id]);
+    const updated = await database.query('SELECT * FROM driver_verifications WHERE id = $1', [id]);
+    res.json({ success: true, message: 'Vehicle image replaced and reset to pending', data: updated.rows[0] });
+  } catch (error) {
+    console.error('Error replacing vehicle image:', error);
+    res.status(500).json({ success: false, message: 'Failed to replace vehicle image', error: error.message });
+  }
+});
+
 // Delete driver verification (admin only)
 router.delete('/:id', auth.authMiddleware(), auth.roleMiddleware(['super_admin', 'country_admin']), async (req, res) => {
   try {
