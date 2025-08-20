@@ -122,9 +122,34 @@ const DriverVerificationEnhanced = () => {
     } finally { setLoading(false);} };
 
   const loadCityNames = async () => {
-    try { const res = await api.get('/cities'); const map={}; (res.data||[]).forEach(c=> { map[c.id]= c.name || c.cityName || c.displayName || c.id; }); setCityNames(map);} catch(e){ console.error('Error loading city names', e);} };
+    try { 
+      const res = await api.get('/cities'); 
+      const map = {}; 
+      // Handle nested data structure: res.data.data or res.data
+      const cities = res.data?.data || res.data || [];
+      cities.forEach(c => { 
+        map[c.id] = c.name || c.cityName || c.displayName || c.id; 
+      }); 
+      setCityNames(map);
+    } catch(e) { 
+      console.error('Error loading city names', e);
+    } 
+  };
 
-  const loadVehicleTypeNames = async () => { try { const res = await api.get('/vehicle-types'); const map={}; (res.data||[]).forEach(v=> { map[v.id]= v.name || v.typeName || v.displayName || v.id; }); setVehicleTypeNames(map);} catch(e){ console.error('Error loading vehicle types', e);} };
+  const loadVehicleTypeNames = async () => { 
+    try { 
+      const res = await api.get('/vehicle-types'); 
+      const map = {}; 
+      // Handle nested data structure: res.data.data or res.data
+      const vehicleTypes = res.data?.data || res.data || [];
+      vehicleTypes.forEach(v => { 
+        map[v.id] = v.name || v.typeName || v.displayName || v.id; 
+      }); 
+      setVehicleTypeNames(map);
+    } catch(e) { 
+      console.error('Error loading vehicle types', e);
+    } 
+  };
 
   // Phone verification helper function
   const getPhoneVerificationStatus = (driverData) => {

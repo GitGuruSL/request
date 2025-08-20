@@ -346,6 +346,30 @@ class ApiClient {
     );
   }
 
+  /// Get signed URL for document viewing
+  Future<String?> getSignedUrl(String fileUrl) async {
+    try {
+      print('🔗 Requesting signed URL for: $fileUrl');
+
+      final response = await post<Map<String, dynamic>>(
+        '/api/driver-verifications/signed-url',
+        data: {'fileUrl': fileUrl},
+      );
+
+      if (response.success && response.data != null) {
+        final signedUrl = response.data!['signedUrl'] as String?;
+        print('✅ Received signed URL: $signedUrl');
+        return signedUrl;
+      } else {
+        print('❌ Failed to get signed URL: ${response.error}');
+        return null;
+      }
+    } catch (e) {
+      print('❌ Error getting signed URL: $e');
+      return null;
+    }
+  }
+
   /// Handle error responses
   ApiResponse<T> _handleError<T>(DioException error) {
     String errorMessage = 'An error occurred';

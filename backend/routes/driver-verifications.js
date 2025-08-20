@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const database = require('../services/database');
 const auth = require('../services/auth');
+const { getSignedUrl } = require('../services/s3Upload');
 
 console.log('🔧 Driver verifications route loaded');
 
@@ -442,6 +443,36 @@ router.delete('/:id', auth.authMiddleware(), auth.roleMiddleware(['super_admin',
     res.status(500).json({
       success: false,
       message: 'Failed to delete driver verification',
+      error: error.message
+    });
+  }
+});
+
+// Get signed URL for document viewing
+router.post('/signed-url', async (req, res) => {
+  try {
+    const { fileUrl } = req.body;
+    
+    if (!fileUrl) {
+      return res.status(400).json({
+        success: false,
+        message: 'File URL is required'
+      });
+    }
+
+    console.log('🔗 Generating signed URL for:', fileUrl);
+    
+    const signedUrl = await getSignedUrl(fileUrl, 3600); // 1 hour expiry
+    
+    res.json({
+      success: true,
+      signedUrl: signedUrl
+    });
+  } catch (error) {
+    console.error('❌ Error generating signed URL:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate signed URL',
       error: error.message
     });
   }

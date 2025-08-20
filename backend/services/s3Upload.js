@@ -143,9 +143,32 @@ const deleteFromS3 = async (fileUrl) => {
   }
 };
 
+// Helper function to generate pre-signed URL for viewing
+const getSignedUrl = async (fileUrl, expiresIn = 3600) => {
+  try {
+    // Extract key from URL
+    const urlParts = fileUrl.split('/');
+    const key = urlParts.slice(3).join('/'); // Remove protocol and domain
+    
+    const params = {
+      Bucket: BUCKET_NAME,
+      Key: key,
+      Expires: expiresIn // URL expires in 1 hour by default
+    };
+    
+    const signedUrl = await s3.getSignedUrlPromise('getObject', params);
+    console.log('✅ Generated signed URL for:', key);
+    return signedUrl;
+  } catch (error) {
+    console.error('❌ Error generating signed URL:', error);
+    throw error;
+  }
+};
+
 module.exports = {
   uploadToMemory,
   uploadToS3,
   deleteFromS3,
+  getSignedUrl,
   s3
 };

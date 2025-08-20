@@ -1032,7 +1032,7 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
-              // Thumbnail
+              // Document icon instead of thumbnail
               Container(
                 height: 60,
                 width: 60,
@@ -1041,50 +1041,11 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.grey[300]!),
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(7),
-                  child: imageUrl.isNotEmpty
-                      ? Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) {
-                              return child;
-                            }
-                            return const Center(
-                              child: SizedBox(
-                                width: 20,
-                                height: 20,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
-                              ),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) {
-                            print(
-                                '🚨 Thumbnail load error for $imageUrl: $error');
-                            return Container(
-                              color: Colors.grey[200],
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.broken_image,
-                                      color: Colors.grey[600], size: 20),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'Failed',
-                                    style: TextStyle(
-                                      color: Colors.grey[600],
-                                      fontSize: 8,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        )
-                      : Icon(Icons.add_a_photo,
-                          color: Colors.grey[400], size: 24),
+                child: Icon(
+                  imageUrl.isNotEmpty ? Icons.photo : Icons.add_a_photo,
+                  color:
+                      imageUrl.isNotEmpty ? Colors.blue[600] : Colors.grey[400],
+                  size: 24,
                 ),
               ),
               const SizedBox(width: 12),
@@ -1243,108 +1204,188 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
     return date.toString();
   }
 
-  void _viewDocument(String documentUrl, String title) {
+  void _viewDocument(String documentUrl, String title) async {
     // Debug: Print the URL being accessed
     print('🖼️ Attempting to load image: $documentUrl');
 
+    // Show loading dialog first
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => Dialog(
         backgroundColor: Colors.black,
-        child: Stack(
-          children: [
-            Center(
-              child: InteractiveViewer(
-                child: Image.network(
-                  documentUrl,
-                  fit: BoxFit.contain,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) {
-                      return child;
-                    }
-                    return Container(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const CircularProgressIndicator(color: Colors.white),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Loading image...',
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) {
-                    print('🚨 Image load error: $error');
-                    return Container(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.error,
-                              size: 64, color: Colors.white),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Failed to load document',
-                            style: const TextStyle(
-                                color: Colors.white, fontSize: 18),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'URL: $documentUrl',
-                            style: const TextStyle(
-                                color: Colors.grey, fontSize: 12),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Error: ${error.toString()}',
-                            style: const TextStyle(
-                                color: Colors.grey, fontSize: 10),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(color: Colors.white),
+              const SizedBox(height: 16),
+              const Text(
+                'Getting secure document link...',
+                style: TextStyle(color: Colors.white),
               ),
-            ),
-            Positioned(
-              top: 40,
-              left: 20,
-              right: 20,
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
-                ),
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
-            Positioned(
-              top: 40,
-              right: 20,
-              child: IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close, color: Colors.white, size: 30),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
+
+    try {
+      // Get signed URL from backend
+      final signedUrl = await ApiClient.instance.getSignedUrl(documentUrl);
+
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+
+      if (signedUrl == null) {
+        // Show error dialog
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Error'),
+              content: const Text('Unable to load document. Please try again.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
+
+      // Show image dialog with signed URL
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => Dialog(
+            backgroundColor: Colors.black,
+            child: Stack(
+              children: [
+                Center(
+                  child: InteractiveViewer(
+                    child: Image.network(
+                      signedUrl,
+                      fit: BoxFit.contain,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) {
+                          return child;
+                        }
+                        return Container(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const CircularProgressIndicator(
+                                  color: Colors.white),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Loading image...',
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        print('🚨 Image load error: $error');
+                        return Container(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.error,
+                                  size: 64, color: Colors.white),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Failed to load document',
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 18),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'URL: $signedUrl',
+                                style: const TextStyle(
+                                    color: Colors.grey, fontSize: 12),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Error: ${error.toString()}',
+                                style: const TextStyle(
+                                    color: Colors.grey, fontSize: 10),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 40,
+                  left: 20,
+                  right: 20,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 40,
+                  right: 20,
+                  child: IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon:
+                        const Icon(Icons.close, color: Colors.white, size: 30),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      // Close loading dialog if still open
+      if (mounted) Navigator.pop(context);
+
+      print('❌ Error getting signed URL: $e');
+
+      // Show error dialog
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Error'),
+            content: Text('Failed to load document: $e'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
   }
 
   void _viewVehiclePhoto(String imageUrl, String title) {
