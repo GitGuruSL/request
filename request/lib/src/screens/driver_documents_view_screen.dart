@@ -118,6 +118,16 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
                 'vehicleImageVerification':
                     rawData['vehicle_image_verification'] ?? [],
 
+                // Contact verification flags
+                'phoneVerified': rawData['phoneVerified'],
+                'emailVerified': rawData['emailVerified'],
+                'requiresPhoneVerification':
+                    rawData['requiresPhoneVerification'],
+                'requiresEmailVerification':
+                    rawData['requiresEmailVerification'],
+                'phoneVerificationSource': rawData['phoneVerificationSource'],
+                'emailVerificationSource': rawData['emailVerificationSource'],
+
                 // Meta
                 'createdAt': rawData['created_at'],
                 'updatedAt': rawData['updated_at'],
@@ -167,8 +177,10 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
           .doc(cityValue)
           .get();
 
-      if (cityDoc.exists && cityDoc.data() != null) {
-        return cityDoc.data()!['name'] ?? cityValue;
+      // firebase_shim returns a non-null data map or empty map; simplify checks
+      if (cityDoc.exists) {
+        final data = cityDoc.data();
+        return data['name'] ?? cityValue;
       }
     } catch (e) {
       print('Error resolving city name: $e');
@@ -299,8 +311,21 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
                           (_driverData!['lastName'] ?? '').isNotEmpty
                       ? '${_driverData!['firstName']} ${_driverData!['lastName']}'
                       : 'N/A')),
-          _buildInfoRow('Email', _driverData!['email'] ?? 'N/A'),
-          _buildInfoRow('Phone', _driverData!['phoneNumber'] ?? 'N/A'),
+          _buildContactInfoRow(
+            label: 'Phone',
+            value: _driverData!['phoneNumber'] ?? 'N/A',
+            verified: _driverData!['phoneVerified'] == true,
+            requiredFlag: _driverData!['requiresPhoneVerification'] !=
+                false, // default required
+            source: _driverData!['phoneVerificationSource'],
+          ),
+          _buildContactInfoRow(
+            label: 'Email',
+            value: _driverData!['email'] ?? 'N/A',
+            verified: _driverData!['emailVerified'] == true,
+            requiredFlag: _driverData!['requiresEmailVerification'] != false,
+            source: _driverData!['emailVerificationSource'],
+          ),
           if ((_driverData!['secondaryMobile'] ?? '').isNotEmpty)
             _buildInfoRow('Secondary Mobile', _driverData!['secondaryMobile']),
           if ((_driverData!['gender'] ?? '').isNotEmpty)
@@ -1198,6 +1223,96 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
       default:
         return Icons.schedule;
     }
+  }
+
+  Widget _buildContactInfoRow({
+    required String label,
+    required String value,
+    required bool verified,
+    required bool requiredFlag,
+    String? source,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                ),
+                if (requiredFlag)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    margin: const EdgeInsets.only(left: 8),
+                    decoration: BoxDecoration(
+                      color: verified ? Colors.green : Colors.orange,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          verified ? Icons.check_circle : Icons.schedule,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          verified ? 'Verified' : 'Pending',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (!requiredFlag)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    margin: const EdgeInsets.only(left: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[400],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      'Optional',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   String _formatDate(dynamic date) {
