@@ -174,8 +174,17 @@ app.use('/api/country-subcategories', countrySubcategoryRoutes);
 app.use('/api/country-brands', countryBrandRoutes);
 app.use('/api/country-variable-types', countryVariableTypeRoutes);
 app.use('/api/admin-users', adminUserRoutes);
-app.use('/api/admin', adminSMSRoutes);
 app.use('/api/driver-verifications', driverVerificationRoutes);
+
+// Mount SMS admin routes
+try {
+  console.log('📱 Mounting SMS admin routes...');
+  const adminSMSRoutesModule = require('./routes/admin-sms');
+  app.use('/api/admin', adminSMSRoutesModule);
+  console.log('✅ SMS admin routes mounted successfully');
+} catch (error) {
+  console.error('❌ Error mounting SMS admin routes:', error);
+}
 
 // Global error handler
 app.use((err, req, res, next) => {

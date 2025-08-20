@@ -294,7 +294,10 @@ const DriverVerificationEnhanced = () => {
   const handleDocumentApprovalWithClose = async (driver, docType, action) => {
     setActionLoading(true);
     try {
-      await api.put(`/driver-verifications/${driver.id}/documents/${docType}`, { status: action });
+      await api.put(`/driver-verifications/${driver.id}/document-status`, { 
+        documentType: docType, 
+        status: action 
+      });
       await loadDrivers();
       // Refresh selected driver
       const res = await api.get(`/driver-verifications/${driver.id}`);
@@ -319,7 +322,18 @@ const DriverVerificationEnhanced = () => {
     }
 
   setActionLoading(true);
-  try { await api.put(`/driver-verifications/${driver.id}/documents/${docType}`, { status: action }); await loadDrivers(); console.log(`✅ Document ${docType} ${action} for ${driver.fullName}`);} catch (error){ console.error('Error updating document status', error);} finally { setActionLoading(false);} 
+  try { 
+    await api.put(`/driver-verifications/${driver.id}/document-status`, { 
+      documentType: docType, 
+      status: action 
+    }); 
+    await loadDrivers(); 
+    console.log(`✅ Document ${docType} ${action} for ${driver.fullName}`);
+  } catch (error){ 
+    console.error('Error updating document status', error);
+  } finally { 
+    setActionLoading(false);
+  } 
   };
 
   const handleDriverAction = async (driver, action) => {
@@ -389,7 +403,11 @@ const DriverVerificationEnhanced = () => {
 
     try {
       if (type === 'document') {
-        await api.put(`/driver-verifications/${target.id}/documents/${docType}`, { status: 'rejected', rejectionReason });
+        await api.put(`/driver-verifications/${target.id}/document-status`, { 
+          documentType: docType, 
+          status: 'rejected', 
+          rejectionReason 
+        });
       } else if (type === 'vehicleImage') {
         const { imageIndex } = rejectionDialog;
         await api.put(`/driver-verifications/${target.id}/vehicle-images/${imageIndex}`, { status: 'rejected', rejectionReason });
