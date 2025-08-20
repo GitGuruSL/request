@@ -445,18 +445,20 @@ const DriverVerificationEnhanced = () => {
       alert('Please provide a reason for rejection');
       return;
     }
-
     const { target, type, docType } = rejectionDialog;
     setActionLoading(true);
-
     try {
       if (type === 'document') {
         const backendDocType = mapDocumentTypeToBackend(docType);
-        await api.put(`/driver-verifications/${target.id}/document-status`, { 
-          documentType: backendDocType, 
-          status: 'rejected', 
-          rejectionReason 
-        });
+        const resp = await api.put(`/driver-verifications/${target.id}/document-status`, { documentType: backendDocType, status: 'rejected', rejectionReason });
+        // optimistic update
+        setSelectedDriver(prev => prev && prev.id === target.id ? {
+          ...prev,
+          documentVerification: {
+            ...(prev.documentVerification||{}),
+            [docType]: { ...(prev.documentVerification?.[docType]||{}), status: 'rejected', rejectionReason }
+          }
+        } : prev);
       } else if (type === 'vehicleImage') {
         const { imageIndex } = rejectionDialog;
         await api.put(`/driver-verifications/${target.id}/vehicle-images/${imageIndex}`, { status: 'rejected', rejectionReason });
@@ -464,23 +466,12 @@ const DriverVerificationEnhanced = () => {
         await api.put(`/driver-verifications/${target.id}/status`, { status: 'rejected', rejectionReason });
       }
       await loadDrivers();
-      
-      // Update selected driver data to show new status immediately
-      if (selectedDriver && selectedDriver.id === target.id) {
-        if (type === 'document') {
-          const updatedDriver = { ...selectedDriver, documentVerification: { ...selectedDriver.documentVerification, [docType]: { ...selectedDriver.documentVerification?.[docType], status: 'rejected', rejectionReason } } };
-          setSelectedDriver(updatedDriver);
-        }
-      }
-      
       setRejectionDialog({ open: false, target: null, type: '' });
       setRejectionReason('');
-      console.log(`✅ ${type} rejected: ${target.fullName}`);
     } catch (error) {
-      console.error(`Error rejecting ${type}:`, error);
-    } finally {
-      setActionLoading(false);
-    }
+      console.error('Reject failed', error.response?.data || error.message);
+      alert('Reject failed: ' + (error.response?.data?.message || error.message));
+    } finally { setActionLoading(false); }
   };
 
   const viewDocument = (url, title = 'Document') => {
@@ -2034,6 +2025,7 @@ const DriverVerificationEnhanced = () => {
                             <ImageIcon sx={{ fontSize: 48, opacity: 0.3, color: 'text.secondary' }} />
                             <Typography variant="body2" color="text.secondary" mt={1}>
                               No vehicle photos submitted
+
                             </Typography>
                           </Box>
                         </Box>
