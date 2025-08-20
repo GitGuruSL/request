@@ -211,6 +211,16 @@ const DriverVerificationEnhanced = () => {
   };
 
   const getDocumentStatus = (driver, docType) => {
+    // Debug: Log status fields for the requested document
+    if (docType === 'driverImage') {
+      console.log('🔍 Debug getDocumentStatus for driverImage:', {
+        driverImageStatus: driver.driverImageStatus,
+        driver_image_status: driver.driver_image_status,
+        docType,
+        documentVerification: driver.documentVerification?.driverImage
+      });
+    }
+    
     const docVerification = driver.documentVerification?.[docType];
     if (docVerification?.status) return docVerification.status;
     
@@ -314,6 +324,13 @@ const DriverVerificationEnhanced = () => {
     setActionLoading(true);
     try {
       const backendDocType = mapDocumentTypeToBackend(docType);
+      console.log('🚀 Document approval request:', {
+        driverId: driver.id,
+        frontendDocType: docType,
+        backendDocType: backendDocType,
+        action: action
+      });
+      
       await api.put(`/driver-verifications/${driver.id}/document-status`, { 
         documentType: backendDocType, 
         status: action 
@@ -325,6 +342,7 @@ const DriverVerificationEnhanced = () => {
       console.log(`✅ Document ${docType} (${backendDocType}) ${action} for ${driver.fullName}`);
     } catch (error) {
       console.error(`Error updating document status:`, error);
+      console.error('Error details:', error.response?.data);
     } finally {
       setActionLoading(false);
     }

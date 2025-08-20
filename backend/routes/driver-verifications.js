@@ -461,7 +461,16 @@ router.put('/:id/document-status', auth.authMiddleware(), auth.roleMiddleware(['
     const { id } = req.params;
     const { documentType, status, rejectionReason } = req.body;
 
+    console.log('🔍 Document status update request:', {
+      driverId: id,
+      documentType,
+      status,
+      rejectionReason,
+      body: req.body
+    });
+
     if (!documentType || !status) {
+      console.log('❌ Missing required fields:', { documentType, status });
       return res.status(400).json({
         success: false,
         message: 'Document type and status are required'
@@ -474,9 +483,10 @@ router.put('/:id/document-status', auth.authMiddleware(), auth.roleMiddleware(['
     ];
 
     if (!validDocuments.includes(documentType)) {
+      console.log('❌ Invalid document type:', documentType, 'Valid types:', validDocuments);
       return res.status(400).json({
         success: false,
-        message: 'Invalid document type'
+        message: `Invalid document type: ${documentType}. Valid types: ${validDocuments.join(', ')}`
       });
     }
 
