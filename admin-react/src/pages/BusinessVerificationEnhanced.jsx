@@ -390,29 +390,42 @@ const BusinessVerificationEnhanced = () => {
         }
       }
 
-      // Optional: Contact verification check via backend user endpoint (assumes backend provides flags)
+      // Mandatory: Contact verification check - businesses cannot be approved without phone verification
+      console.log('🔍 Checking user verification status...');
+      if (!business.userId) {
+        alert('Cannot approve business. No user ID found.');
+        return;
+      }
+
+      let phoneVerified = false;
+      let emailVerified = false;
+
       try {
-        console.log('🔍 Checking user verification status...');
-        if (business.userId) {
-          const res = await api.get(`/users/${business.userId}`);
-          const userData = res.data || {};
-          const linkedCredentials = userData.linkedCredentials || {};
-            const phoneVerified = linkedCredentials.linkedPhoneVerified || userData.phoneVerified || false;
-            const emailVerified = linkedCredentials.linkedEmailVerified || userData.emailVerified || false;
-            
-            console.log('📞 Verification status:', { phoneVerified, emailVerified });
-            
-            if (!phoneVerified || !emailVerified) {
-              const missing = [];
-              if (!phoneVerified) missing.push('phone');
-              if (!emailVerified) missing.push('email');
-              console.log('❌ Missing verifications:', missing);
-              alert(`Cannot approve business. User must verify: ${missing.join(', ')}`);
-              return;
-            }
-        }
+        const res = await api.get(`/users/${business.userId}`);
+        const userData = res.data || {};
+        const linkedCredentials = userData.linkedCredentials || {};
+        phoneVerified = linkedCredentials.linkedPhoneVerified || userData.phoneVerified || false;
+        emailVerified = linkedCredentials.linkedEmailVerified || userData.emailVerified || false;
+        
+        console.log('📞 Verification status:', { phoneVerified, emailVerified });
       } catch (error) {
-        console.warn('⚠️ Proceeding without strict contact verification (user endpoint not available):', error);
+        console.error('❌ Failed to check verification status:', error);
+        alert('Cannot approve business. Unable to verify phone/email verification status. Please try again.');
+        return;
+      }
+
+      // Both phone and email verification are mandatory
+      const verificationIssues = [];
+      if (!phoneVerified) {
+        verificationIssues.push('Phone number must be verified');
+      }
+      if (!emailVerified) {
+        verificationIssues.push('Email address must be verified');
+      }
+
+      if (verificationIssues.length > 0) {
+        alert(`Cannot approve business. The following issues must be resolved:\n\n• ${verificationIssues.join('\n• ')}\n\nPlease ensure the business owner verifies their contact information before approval.`);
+        return;
       }
     }
 
