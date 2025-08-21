@@ -11,6 +11,8 @@ import '../services/file_upload_service.dart';
 import '../services/api_client.dart';
 import '../widgets/simple_phone_field.dart';
 import '../theme/app_theme.dart';
+import '../services/feature_gate_service.dart';
+import '../widgets/coming_soon_widget.dart';
 
 class DriverRegistrationScreen extends StatefulWidget {
   const DriverRegistrationScreen({Key? key}) : super(key: key);
@@ -333,37 +335,63 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
-      appBar: AppBar(
-        title: const Text('Driver Verification'),
-        backgroundColor: AppTheme.backgroundColor,
-        foregroundColor: AppTheme.textPrimary,
-        elevation: 0,
-      ),
-      body: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildDriverInformation(),
-              const SizedBox(height: 24),
-              _buildDocumentsSection(),
-              const SizedBox(height: 24),
-              _buildVehicleInformation(),
-              const SizedBox(height: 24),
-              _buildVehicleDocuments(),
-              const SizedBox(height: 24),
-              _buildVehicleImages(),
-              const SizedBox(height: 32),
-              _buildSubmitButton(),
-              const SizedBox(height: 24),
-            ],
+    return FutureBuilder<bool>(
+      future: FeatureGateService.instance.isDriverRegistrationEnabled(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Driver Registration'),
+              backgroundColor: AppTheme.backgroundColor,
+              foregroundColor: AppTheme.textPrimary,
+              elevation: 0,
+            ),
+            body: const Center(child: CircularProgressIndicator()),
+          );
+        }
+        
+        if (snapshot.data == false) {
+          return ComingSoonWidget(
+            title: 'Driver Registration',
+            description: 'Driver registration is not available in your country yet. We\'re working to bring ride sharing services to your region soon!',
+            icon: Icons.drive_eta,
+          );
+        }
+        
+        // Original driver registration form
+        return Scaffold(
+          backgroundColor: AppTheme.backgroundColor,
+          appBar: AppBar(
+            title: const Text('Driver Verification'),
+            backgroundColor: AppTheme.backgroundColor,
+            foregroundColor: AppTheme.textPrimary,
+            elevation: 0,
           ),
-        ),
-      ),
+          body: Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildDriverInformation(),
+                  const SizedBox(height: 24),
+                  _buildDocumentsSection(),
+                  const SizedBox(height: 24),
+                  _buildVehicleInformation(),
+                  const SizedBox(height: 24),
+                  _buildVehicleDocuments(),
+                  const SizedBox(height: 24),
+                  _buildVehicleImages(),
+                  const SizedBox(height: 32),
+                  _buildSubmitButton(),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

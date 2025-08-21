@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/file_upload_service.dart';
 import '../widgets/simple_phone_field.dart';
+import '../services/feature_gate_service.dart';
 import 'dart:io';
 
 class BusinessRegistrationScreen extends StatefulWidget {
