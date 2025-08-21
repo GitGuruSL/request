@@ -41,9 +41,10 @@ async function checkPhoneVerificationStatus(userId, phoneNumber) {
     console.log(`🔍 Checking phone verification for user ${userId}, phone: ${phoneNumber} → ${normalizedPhone}`);
 
     // 1. Check if phone is verified in driver_verifications table
+    // Try both normalized and original phone formats for backward compatibility
     const driverResult = await database.query(
-      'SELECT phone_verified FROM driver_verifications WHERE user_id = $1 AND phone_number = $2 AND phone_verified = true',
-      [userId, normalizedPhone]
+      'SELECT phone_verified FROM driver_verifications WHERE user_id = $1 AND (phone_number = $2 OR phone_number = $3) AND phone_verified = true',
+      [userId, normalizedPhone, phoneNumber]
     );
     
     if (driverResult.rows.length > 0) {
@@ -220,6 +221,53 @@ async function checkEmailVerificationStatus(userId, email) {
     return { emailVerified: false, needsUpdate: false, requiresManualVerification: true };
   }
 }
+
+// Debug endpoint to check verification status
+router.get('/debug-verification/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { phone } = req.query;
+    
+    if (!phone) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone parameter required'
+      });
+    }
+
+    const normalizedPhone = normalizePhoneNumber(phone);
+    console.log(`🔍 Debug verification status for user ${userId}, phone: ${phone} → ${normalizedPhone}`);
+
+    // Check what's in the driver_verifications table
+    const driverQuery = 'SELECT id, user_id, phone_number, phone_verified, created_at FROM driver_verifications WHERE user_id = $1';
+    const driverResult = await database.query(driverQuery, [userId]);
+    
+    // Check specific query that checkPhoneVerificationStatus uses
+    const specificQuery = 'SELECT phone_verified FROM driver_verifications WHERE user_id = $1 AND phone_number = $2 AND phone_verified = true';
+    const specificResult = await database.query(specificQuery, [userId, normalizedPhone]);
+    
+    // Check what checkPhoneVerificationStatus returns
+    const phoneStatus = await checkPhoneVerificationStatus(userId, phone);
+
+    res.json({
+      success: true,
+      debug: {
+        originalPhone: phone,
+        normalizedPhone: normalizedPhone,
+        userId: userId,
+        allDriverRecords: driverResult.rows,
+        specificQueryResult: specificResult.rows,
+        phoneStatusResult: phoneStatus
+      }
+    });
+  } catch (error) {
+    console.error('Debug error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
 
 // Simple test endpoint for Flutter connectivity
 router.get('/test', async (req, res) => {
@@ -540,13 +588,19 @@ router.post('/verify-phone/verify-otp', auth.authMiddleware(), async (req, res) 
     const verificationResult = await smsService.verifyOTP(normalizedPhone, otp, otpId);
 
     if (verificationResult.verified) {
-      // Update driver verification phone verification status
-      await database.query(
-        'UPDATE driver_verifications SET phone_verified = true WHERE user_id = $1',
-        [userId]
+      // Update driver verification phone verification status for the specific phone number
+      // Try to update both normalized and original phone formats for backward compatibility
+      const updateResult = await database.query(
+        'UPDATE driver_verifications SET phone_verified = true WHERE user_id = $1 AND (phone_number = $2 OR phone_number = $3) RETURNING id, phone_number, phone_verified',
+        [userId, normalizedPhone, phoneNumber]
       );
 
       console.log(`✅ Phone verified for driver verification: ${normalizedPhone}, updated driver_verifications table`);
+      console.log(`📝 Database update result:`, updateResult.rows);
+
+      // Get fresh verification status after update
+      const freshStatus = await checkPhoneVerificationStatus(userId, normalizedPhone);
+      console.log(`🔍 Fresh verification status:`, freshStatus);
 
       res.json({
         success: true,
@@ -554,7 +608,9 @@ router.post('/verify-phone/verify-otp', auth.authMiddleware(), async (req, res) 
         phoneNumber: normalizedPhone,
         verified: true,
         provider: verificationResult.provider,
-        verificationSource: 'user_phone_numbers'
+        verificationSource: 'driver_verification',
+        freshStatus: freshStatus,
+        updatedRecords: updateResult.rows.length
       });
     } else {
       res.status(400).json({
@@ -832,9 +888,13 @@ router.post('/', async (req, res) => {
       });
     }
 
+    // Normalize phone number for consistent storage and verification
+    const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber);
+    console.log(`📱 Phone normalization: ${phoneNumber} → ${normalizedPhoneNumber}`);
+
     // Check phone and email verification status using unified system
     console.log('🔍 Checking verification status for driver verification...');
-    const phoneStatus = await checkPhoneVerificationStatus(userId, phoneNumber);
+    const phoneStatus = await checkPhoneVerificationStatus(userId, normalizedPhoneNumber);
     const emailStatus = await checkEmailVerificationStatus(userId, email);
     
     console.log('📱 Phone verification result:', phoneStatus);
@@ -860,7 +920,7 @@ router.post('/', async (req, res) => {
 
     const values = [
       userId, firstName, lastName, fullName, dateOfBirth, gender, nicNumber,
-      phoneNumber, secondaryMobile, email, cityId, cityName, country,
+      normalizedPhoneNumber, secondaryMobile, email, cityId, cityName, country,
       licenseNumber, licenseExpiry, licenseHasNoExpiry,
       vehicleTypeId, vehicleTypeName, vehicleModel, vehicleYear, vehicleNumber, vehicleColor,
       isVehicleOwner, insuranceNumber, insuranceExpiry,
