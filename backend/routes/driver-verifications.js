@@ -471,6 +471,31 @@ router.post('/verify-phone/send-otp', auth.authMiddleware(), async (req, res) =>
       });
     } catch (smsError) {
       console.error('❌ SMS Service Error for driver verification:', smsError);
+      // Development fallback: auto-generate OTP when no SMS config
+      if (process.env.NODE_ENV !== 'production') {
+        try {
+          const otp = '123456';
+          const otpId = `dev_${Date.now()}`;
+          await database.query(`
+            INSERT INTO phone_otp_verifications 
+            (otp_id, phone, otp, country_code, expires_at, attempts, max_attempts, created_at, provider_used)
+            VALUES ($1,$2,$3,$4, NOW() + interval '5 minute', 0, 3, NOW(), 'dev_fallback')
+          `, [otpId, normalizedPhone, otp, detectedCountry]);
+          console.log('🛠 Dev fallback OTP generated (driver): 123456');
+          return res.json({
+            success: true,
+            message: 'DEV MODE: OTP generated (use 123456)',
+            phoneNumber: normalizedPhone,
+            otpId,
+            provider: 'dev_fallback',
+            countryCode: detectedCountry,
+            devOtp: otp,
+            expiresIn: 300
+          });
+        } catch (e2) {
+          console.error('❌ Dev fallback failed:', e2);
+        }
+      }
       res.status(500).json({
         success: false,
         message: 'Failed to send OTP. Please try again.',
