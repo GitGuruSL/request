@@ -6,6 +6,8 @@ import '../../screens/requests/ride/create_ride_request_screen.dart';
 import '../../screens/requests/create_price_request_screen.dart';
 import '../../services/rest_support_services.dart'
     show CountryService, ModuleService, CountryModules; // Module gating
+import '../../services/module_management_service.dart';
+import '../../widgets/coming_soon_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -206,8 +208,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _handleTap(_RequestType it) {
     if (!_moduleEnabled(it.type)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${it.title} - Coming Soon in your country')),
+      // Show coming soon screen instead of just a snackbar
+      Navigator.of(context).pop(); // Close the modal first
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => ComingSoonWidget(
+            title: it.title,
+            description:
+                'This feature is not available in your country yet. We\'re working to bring ${it.title.toLowerCase()} to your region soon!',
+            icon: it.icon,
+          ),
+        ),
       );
       return;
     }

@@ -11,10 +11,10 @@ const COUNTRY_MODULE_CONFIG = {
       'service_request', 
       'rental_request',
       'delivery_request',
-      'ride_sharing',
+      'ride_sharing', // Re-enabled for full demo
       'price_request'
     ],
-    disabled_modules: []
+    disabled_modules: [] // All modules enabled for demonstration
   },
   'US': { // United States
     enabled_modules: [

@@ -41,6 +41,10 @@ class ModuleManagementService {
 
   static ModuleManagementService get instance => _instance;
 
+  // Getter for module configurations
+  static Map<BusinessModule, ModuleConfiguration> get moduleConfigurations =>
+      _moduleConfigurations;
+
   // Cache for enabled modules
   Set<BusinessModule>? _enabledModules;
   DateTime? _lastFetchTime;
