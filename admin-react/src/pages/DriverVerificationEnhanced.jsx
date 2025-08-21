@@ -556,24 +556,24 @@ const DriverVerificationEnhanced = () => {
   try { 
     await api.put(`/driver-verifications/${driver.id}/status`, { status: action === 'approve' ? 'approved' : action }); 
     
-    // If we approved a driver and the filter would hide it, close the modal or change filter
-    if (action === 'approve' && filterStatus !== 'all' && filterStatus !== 'approved') {
-      setDetailsOpen(false);
-      setSelectedDriver(null);
-      setNotification({
-        open: true,
-        message: `✅ Driver ${driver.fullName || driver.full_name} has been approved successfully!`,
-        severity: 'success'
-      });
-    } else if (action === 'approve') {
-      setNotification({
-        open: true,
-        message: `✅ Driver ${driver.fullName || driver.full_name} has been approved successfully!`,
-        severity: 'success'
-      });
+    // Always show success notification and keep modal open
+    setNotification({
+      open: true,
+      message: `✅ Driver ${driver.fullName || driver.full_name} has been ${action === 'approve' ? 'approved' : action} successfully!`,
+      severity: 'success'
+    });
+
+    // Reload drivers to get updated data
+    await loadDrivers(); 
+    
+    // Update the selected driver with new status to reflect changes in the modal
+    if (selectedDriver && selectedDriver.id === driver.id) {
+      setSelectedDriver(prev => ({
+        ...prev,
+        status: action === 'approve' ? 'approved' : action
+      }));
     }
     
-    await loadDrivers(); 
     console.log(`✅ Driver ${action}: ${driver.fullName}`);
   } catch (error){ 
     console.error(`Error ${action} driver`, error);

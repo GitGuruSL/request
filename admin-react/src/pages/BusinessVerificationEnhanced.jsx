@@ -469,21 +469,29 @@ const BusinessVerificationEnhanced = () => {
       
       // Refresh the businesses list
       console.log('🔄 Refreshing business list...');
-  await loadBusinesses();
-  // Update selectedBusiness directly so modal reflects new status without reopen
-  setSelectedBusiness(prev => prev && prev.id === business.id ? { ...prev, status: payload.status, phone_verified: true, email_verified: true, isVerified: true } : prev);
+      await loadBusinesses();
       
-      // Close the details modal if open
-      if (detailsOpen) {
-        console.log('📝 Closing details modal...');
-        setDetailsOpen(false);
-        setSelectedBusiness(null);
+      // Update selectedBusiness directly so modal reflects new status without closing
+      if (selectedBusiness && selectedBusiness.id === business.id) {
+        const updatedBusiness = {
+          ...selectedBusiness,
+          status: payload.status,
+          phone_verified: true,
+          email_verified: true,
+          phoneVerified: true,  // For unified verification
+          emailVerified: true,  // For unified verification
+          isVerified: true,
+          reviewed_date: new Date().toISOString(),
+          approved_at: action === 'approve' ? new Date().toISOString() : null
+        };
+        setSelectedBusiness(updatedBusiness);
+        console.log('📝 Updated selected business status in modal');
       }
       
       console.log(`✅ Business ${action}d successfully for ${business.businessName || business.business_name}`);
       
-      // Show success message
-      alert(`Business verification ${action}d successfully!`);
+      // Show success message but keep modal open
+      alert(`✅ Business verification ${action}d successfully!\n\nThe business verification status has been updated. You can continue reviewing or close this dialog.`);
       
     } catch (error) {
       console.error(`❌ Error ${action}ing business:`, error);
