@@ -534,29 +534,63 @@ router.get('/', auth.authMiddleware(), async (req, res) => {
 });
 
 // Update business verification status (for admin panel)
+// Update business verification status (authenticated endpoint)
 router.put('/:id/status', auth.authMiddleware(), async (req, res) => {
   try {
     const { id } = req.params;
     const { status, notes, phone_verified, email_verified } = req.body;
+    const reviewedBy = req.user?.id; // Get admin user ID
     
-    const updateQuery = `
-      UPDATE business_verifications 
-      SET status = $1, notes = $2, phone_verified = $3, email_verified = $4, 
-          reviewed_date = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $5
-      RETURNING *
-    `;
+    console.log(`🔄 AUTHENTICATED: Updating business verification ${id} status to: ${status}`);
+    console.log(`👤 Admin user:`, {
+      id: req.user?.id,
+      email: req.user?.email,
+      role: req.user?.role
+    });
+    console.log(`📥 Request body:`, req.body);
     
-    const result = await database.query(updateQuery, [
-      status, notes, phone_verified, email_verified, id
-    ]);
+    // Prepare update query based on status
+    let updateQuery, queryParams;
+    
+    if (status === 'approved') {
+      updateQuery = `
+        UPDATE business_verifications 
+        SET status = $1, notes = $2, phone_verified = $3, email_verified = $4, 
+            reviewed_by = $5, reviewed_date = CURRENT_TIMESTAMP, 
+            approved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP,
+            is_verified = true
+        WHERE id = $6
+        RETURNING *
+      `;
+      queryParams = [status, notes, phone_verified, email_verified, reviewedBy, id];
+    } else {
+      updateQuery = `
+        UPDATE business_verifications 
+        SET status = $1, notes = $2, phone_verified = $3, email_verified = $4, 
+            reviewed_by = $5, reviewed_date = CURRENT_TIMESTAMP, 
+            updated_at = CURRENT_TIMESTAMP,
+            is_verified = false
+        WHERE id = $6
+        RETURNING *
+      `;
+      queryParams = [status, notes, phone_verified, email_verified, reviewedBy, id];
+    }
+    
+    console.log(`📝 SQL Query:`, updateQuery);
+    console.log(`📊 Query params:`, queryParams);
+    
+    const result = await database.query(updateQuery, queryParams);
 
     if (result.rows.length === 0) {
+      console.log(`❌ No business verification found with ID: ${id}`);
       return res.status(404).json({
         success: false,
         message: 'Business verification not found'
       });
     }
+
+    console.log(`✅ Business verification ${id} updated successfully to status: ${status}`);
+    console.log(`📋 Updated record:`, result.rows[0]);
 
     // Transform data for response
     const row = result.rows[0];

@@ -222,18 +222,33 @@ const BusinessVerificationEnhanced = () => {
   const loadBusinesses = async () => {
     try {
       setLoading(true);
+      console.log('🔄 Loading businesses...');
+      
       const params = {};
       if (isCountryAdmin && adminData?.country) params.country = adminData.country;
       if (filterStatus !== 'all') params.status = filterStatus;
       
+      console.log('📤 Request params:', params);
+      console.log('🔑 Auth check:', {
+        hasAdminData: !!adminData,
+        isCountryAdmin,
+        isSuperAdmin,
+        accessToken: !!localStorage.getItem('accessToken')
+      });
+      
       // Use new business verification API
       const res = await api.get('/business-verifications', { params });
+      console.log('✅ API Response:', res.data);
+      
       const responseData = res.data || {};
       const list = Array.isArray(responseData.data) ? responseData.data : [];
       
+      console.log(`📊 Loaded ${list.length} businesses`);
+      
       setBusinesses(list.sort((a,b)=> new Date(b.submitted_at||b.created_at||0)- new Date(a.submitted_at||a.created_at||0)));
     } catch (e) { 
-      console.error('Error loading businesses', e);
+      console.error('❌ Error loading businesses:', e);
+      console.error('Error details:', e.response?.data);
       setBusinesses([]);
     } finally { 
       setLoading(false);
@@ -309,6 +324,13 @@ const BusinessVerificationEnhanced = () => {
   };
 
   const handleBusinessAction = async (business, action) => {
+    console.log(`🚀 handleBusinessAction called with:`, {
+      businessId: business.id,
+      businessName: business.businessName || business.business_name,
+      action: action,
+      currentStatus: business.status
+    });
+
     if (action === 'reject') {
       setRejectionDialog({ 
         open: true, 
@@ -319,58 +341,127 @@ const BusinessVerificationEnhanced = () => {
     }
 
     if (action === 'approve') {
+      console.log('🔍 Checking document approval status...');
+      
       // Check if all documents are approved
       const docTypes = ['businessLicense', 'taxCertificate', 'insuranceDocument', 'businessLogo'];
       const allDocsApproved = docTypes.every(docType => {
         const status = getDocumentStatus(business, docType);
         const url = getDocumentUrl(business, docType);
+        console.log(`📄 Document ${docType}:`, { url: !!url, status });
         return !url || status === 'approved'; // Skip missing documents
       });
 
+      console.log('📋 All documents approved:', allDocsApproved);
+
       if (!allDocsApproved) {
+        console.log('❌ Not all documents are approved');
         alert('All submitted documents must be approved before approving the business.');
         return;
       }
 
       // Optional: Contact verification check via backend user endpoint (assumes backend provides flags)
       try {
+        console.log('🔍 Checking user verification status...');
         if (business.userId) {
           const res = await api.get(`/users/${business.userId}`);
           const userData = res.data || {};
           const linkedCredentials = userData.linkedCredentials || {};
             const phoneVerified = linkedCredentials.linkedPhoneVerified || userData.phoneVerified || false;
             const emailVerified = linkedCredentials.linkedEmailVerified || userData.emailVerified || false;
+            
+            console.log('📞 Verification status:', { phoneVerified, emailVerified });
+            
             if (!phoneVerified || !emailVerified) {
               const missing = [];
               if (!phoneVerified) missing.push('phone');
               if (!emailVerified) missing.push('email');
+              console.log('❌ Missing verifications:', missing);
               alert(`Cannot approve business. User must verify: ${missing.join(', ')}`);
               return;
             }
         }
       } catch (error) {
-        console.warn('Proceeding without strict contact verification (user endpoint not available):', error);
+        console.warn('⚠️ Proceeding without strict contact verification (user endpoint not available):', error);
       }
     }
 
+    console.log('✅ Pre-checks passed, proceeding with API call...');
+
     setActionLoading(true);
     try {
+      console.log(`🔄 ${action}ing business verification for:`, business.businessName || business.business_name);
+      
+      console.log('✅ Pre-checks passed, proceeding with API call...');
+      
+      // Log API request details
+      const apiPath = `/business-verifications/${business.id}/status`;
+      console.log('🌐 About to make API request:', {
+        method: 'PUT',
+        url: apiPath,
+        businessId: business.id,
+        authToken: !!localStorage.getItem('authToken'),
+        headers: api.defaults.headers,
+        baseURL: api.defaults.baseURL
+      });
+
       // Use new business verification API
       const payload = {
-        status: action,
+        status: action === 'approve' ? 'approved' : action,
         notes: verificationNotes || null,
-        phone_verified: business.phone_verified || false,
-        email_verified: business.email_verified || false
+        phone_verified: business.phone_verified || business.phoneVerified || false,
+        email_verified: business.email_verified || business.emailVerified || false
       };
       
-      await api.put(`/business-verifications/${business.id}/status`, payload);
+      console.log('📤 Sending payload:', payload);
+      
+      const response = await api.put(`/business-verifications/${business.id}/status`, payload);
+      
+      console.log('✅ Status update response:', {
+        status: response.status,
+        statusText: response.statusText,
+        data: response.data
+      });
+      
+      // Refresh the businesses list
+      console.log('🔄 Refreshing business list...');
       await loadBusinesses();
-      console.log(`✅ Business ${action} for ${business.business_name || business.businessName}`);
+      
+      // Close the details modal if open
+      if (detailsOpen) {
+        console.log('📝 Closing details modal...');
+        setDetailsOpen(false);
+        setSelectedBusiness(null);
+      }
+      
+      console.log(`✅ Business ${action}d successfully for ${business.businessName || business.business_name}`);
+      
+      // Show success message
+      alert(`Business verification ${action}d successfully!`);
+      
     } catch (error) {
-      console.error(`Error updating business status:`, error);
+      console.error(`❌ Error ${action}ing business:`, error);
+      console.error('🔍 Detailed error analysis:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        responseData: error.response?.data,
+        requestConfig: {
+          url: error.config?.url,
+          method: error.config?.method,
+          data: error.config?.data,
+          headers: error.config?.headers
+        },
+        stack: error.stack
+      });
+      
+      // Show error message to user
+      const errorMessage = error.response?.data?.message || `Failed to ${action} business verification`;
+      alert(`Error: ${errorMessage}`);
     } finally {
       setActionLoading(false);
       setVerificationNotes('');
+      console.log('🏁 handleBusinessAction finally block completed, actionLoading set to false');
     }
   };
 
@@ -484,7 +575,16 @@ const BusinessVerificationEnhanced = () => {
                   <Button
                     startIcon={<ApproveIcon />}
                     color="success"
-                    onClick={() => handleBusinessAction(business, 'approve')}
+                    onClick={(e) => {
+                      console.log('🎯 Approve button clicked!', { 
+                        event: e,
+                        businessId: business.id,
+                        actionLoading 
+                      });
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleBusinessAction(business, 'approve');
+                    }}
                     disabled={actionLoading}
                     size="small"
                   >
@@ -1423,7 +1523,16 @@ const BusinessVerificationEnhanced = () => {
                 color="success" 
                 variant="contained"
                 startIcon={<ApproveIcon />}
-                onClick={() => handleBusinessAction(selectedBusiness, 'approve')}
+                onClick={(e) => {
+                  console.log('🎯 Modal Approve button clicked!', { 
+                    event: e,
+                    businessId: selectedBusiness?.id,
+                    actionLoading 
+                  });
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleBusinessAction(selectedBusiness, 'approve');
+                }}
                 disabled={actionLoading}
                 size="large"
               >
