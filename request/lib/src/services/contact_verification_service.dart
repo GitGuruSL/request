@@ -253,7 +253,7 @@ class ContactVerificationService {
     String? email,
   }) async {
     try {
-      final user = await EnhancedUserService.instance.getCurrentUser();
+      final user = await EnhancedUserService.instance.getCurrentUserModel();
       if (user == null) {
         return {
           'success': false,
@@ -266,66 +266,95 @@ class ContactVerificationService {
       bool phoneVerified = false;
       bool emailVerified = false;
 
-      // Check business verification status
-      try {
-        final businessResp = await ApiClient.instance
-            .get('/api/business-verifications/user/${user.id}');
-        if (businessResp.isSuccess && businessResp.data != null) {
-          final wrapper = businessResp.data as Map<String, dynamic>;
-          final businessData = wrapper['data'] as Map<String, dynamic>?;
-          if (businessData != null) {
-            // Check if phone matches and is verified
-            if (phoneNumber != null) {
-              final businessPhone = businessData['businessPhone'] as String?;
-              if (_arePhoneNumbersEqual(businessPhone, phoneNumber) &&
-                  (businessData['phoneVerified'] == true ||
-                      businessData['phone_verified'] == true)) {
-                phoneVerified = true;
-              }
-            }
-            // Check if email matches and is verified
-            if (email != null) {
-              final businessEmail = businessData['businessEmail'] as String?;
-              if (businessEmail == email &&
-                  (businessData['emailVerified'] == true ||
-                      businessData['email_verified'] == true)) {
-                emailVerified = true;
-              }
-            }
-          }
-        }
-      } catch (e) {
-        print('Error checking business verification: $e');
+      // First check the main users table verification status
+      if (phoneNumber != null &&
+          _arePhoneNumbersEqual(user.phoneNumber, phoneNumber)) {
+        phoneVerified = user.isPhoneVerified;
+        print('📱 Phone verified from users table: $phoneVerified');
       }
 
-      // Check driver verification status
-      try {
-        final driverResp = await ApiClient.instance
-            .get('/api/driver-verifications/user/${user.id}');
-        if (driverResp.isSuccess && driverResp.data != null) {
-          final wrapper = driverResp.data as Map<String, dynamic>;
-          final driverData = wrapper['data'] as Map<String, dynamic>?;
-          if (driverData != null) {
-            // Check if phone matches and is verified
-            if (phoneNumber != null && !phoneVerified) {
-              final driverPhone = driverData['phoneNumber'] as String?;
-              if (_arePhoneNumbersEqual(driverPhone, phoneNumber) &&
-                  driverData['phoneVerified'] == true) {
-                phoneVerified = true;
+      if (email != null && user.email == email) {
+        emailVerified = user.isEmailVerified;
+        print('📧 Email verified from users table: $emailVerified');
+      }
+
+      // Check business verification status (only if not already verified)
+      if (!phoneVerified || !emailVerified) {
+        try {
+          final businessResp = await ApiClient.instance
+              .get('/api/business-verifications/user/${user.id}');
+          if (businessResp.isSuccess && businessResp.data != null) {
+            final wrapper = businessResp.data as Map<String, dynamic>;
+            final businessData = wrapper['data'] as Map<String, dynamic>?;
+            if (businessData != null) {
+              // Check if phone matches and is verified
+              if (phoneNumber != null && !phoneVerified) {
+                final businessPhone = businessData['businessPhone'] as String?;
+                if (_arePhoneNumbersEqual(businessPhone, phoneNumber) &&
+                    (businessData['phoneVerified'] == true ||
+                        businessData['phone_verified'] == true)) {
+                  phoneVerified = true;
+                  print(
+                      '📱 Phone verified from business verification: $phoneVerified');
+                }
               }
-            }
-            // Check if email matches and is verified
-            if (email != null && !emailVerified) {
-              final driverEmail = driverData['email'] as String?;
-              if (driverEmail == email && driverData['emailVerified'] == true) {
-                emailVerified = true;
+              // Check if email matches and is verified
+              if (email != null && !emailVerified) {
+                final businessEmail = businessData['businessEmail'] as String?;
+                if (businessEmail == email &&
+                    (businessData['emailVerified'] == true ||
+                        businessData['email_verified'] == true)) {
+                  emailVerified = true;
+                  print(
+                      '📧 Email verified from business verification: $emailVerified');
+                }
               }
             }
           }
+        } catch (e) {
+          print('Error checking business verification: $e');
         }
-      } catch (e) {
-        print('Error checking driver verification: $e');
       }
+
+      // Check driver verification status (only if not already verified)
+      if (!phoneVerified || !emailVerified) {
+        try {
+          final driverResp = await ApiClient.instance
+              .get('/api/driver-verifications/user/${user.id}');
+          if (driverResp.isSuccess && driverResp.data != null) {
+            final wrapper = driverResp.data as Map<String, dynamic>;
+            final driverData = wrapper['data'] as Map<String, dynamic>?;
+            if (driverData != null) {
+              // Check if phone matches and is verified
+              if (phoneNumber != null && !phoneVerified) {
+                final driverPhone = driverData['phoneNumber'] as String?;
+                if (_arePhoneNumbersEqual(driverPhone, phoneNumber) &&
+                    driverData['phoneVerified'] == true) {
+                  phoneVerified = true;
+                  print(
+                      '📱 Phone verified from driver verification: $phoneVerified');
+                }
+              }
+              // Check if email matches and is verified
+              if (email != null && !emailVerified) {
+                final driverEmail = driverData['email'] as String?;
+                if (driverEmail == email &&
+                    driverData['emailVerified'] == true) {
+                  emailVerified = true;
+                  print(
+                      '📧 Email verified from driver verification: $emailVerified');
+                }
+              }
+            }
+          }
+        } catch (e) {
+          print('Error checking driver verification: $e');
+        }
+      }
+
+      print('🔍 Final unified verification status:');
+      print('  Phone ($phoneNumber): $phoneVerified');
+      print('  Email ($email): $emailVerified');
 
       return {
         'success': true,
