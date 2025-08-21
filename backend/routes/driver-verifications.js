@@ -417,8 +417,22 @@ router.post('/verify-phone/verify-otp', auth.authMiddleware(), async (req, res) 
         [userId, normalizedPhone, phoneNumber]
       );
 
+      // Also update the users table to save the verified phone number
+      const userUpdateResult = await database.query(`
+        UPDATE users 
+        SET phone_verified = true, 
+            phone = CASE 
+              WHEN phone IS NULL OR phone = '' THEN $2 
+              ELSE phone 
+            END,
+            updated_at = NOW()
+        WHERE id = $1
+        RETURNING phone, phone_verified
+      `, [userId, normalizedPhone]);
+
       console.log(`✅ Phone verified for driver verification: ${normalizedPhone}, updated driver_verifications table`);
       console.log(`📝 Database update result:`, updateResult.rows);
+      console.log(`📱 User phone updated:`, userUpdateResult.rows[0]);
 
       // Get fresh verification status after update
       const freshStatus = await checkPhoneVerificationStatus(userId, normalizedPhone);

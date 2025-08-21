@@ -785,11 +785,20 @@ router.post('/verify-phone/verify-otp', auth.authMiddleware(), async (req, res) 
           WHERE user_id = $1
         `, [userId]);
 
-        // 2. Mark user record phone_verified (only if not already) WITHOUT overwriting existing phone value unless empty
-        await database.query(`
-          UPDATE users SET phone_verified = true, updated_at = NOW()
-          WHERE id = $1 AND phone_verified = false
-        `, [userId]);
+        // 2. Mark user record phone_verified AND save the phone number if not already set
+        const userUpdateResult = await database.query(`
+          UPDATE users 
+          SET phone_verified = true, 
+              phone = CASE 
+                WHEN phone IS NULL OR phone = '' THEN $2 
+                ELSE phone 
+              END,
+              updated_at = NOW()
+          WHERE id = $1
+          RETURNING phone, phone_verified
+        `, [userId, normalizedPhone]);
+
+        console.log(`📱 User phone updated:`, userUpdateResult.rows[0]);
 
         // 3. Update any associated business_verifications row(s)
         const businessVerificationUpdate = await database.query(`

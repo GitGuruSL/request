@@ -15,6 +15,44 @@ class ContactVerificationService {
   // Cache last phone + otp id so verify call doesn't need phone again
   String? _lastPhoneNumber;
 
+  /// Normalize phone number to a consistent format for comparison
+  String _normalizePhoneNumber(String phoneNumber) {
+    // Remove all non-digit characters
+    String digits = phoneNumber.replaceAll(RegExp(r'\D'), '');
+
+    // If starts with 94 (Sri Lanka code), ensure it has + prefix
+    if (digits.startsWith('94') && digits.length >= 11) {
+      return '+$digits';
+    }
+
+    // If it's a local number (9 digits), add Sri Lanka code
+    if (digits.length == 9) {
+      return '+94$digits';
+    }
+
+    // If it's 10 digits starting with 0, replace 0 with country code
+    if (digits.length == 10 && digits.startsWith('0')) {
+      return '+94${digits.substring(1)}';
+    }
+
+    // Return with + prefix if not already there
+    return digits.startsWith('94') ? '+$digits' : '+94$digits';
+  }
+
+  /// Check if two phone numbers are equivalent (normalized comparison)
+  bool _arePhoneNumbersEqual(String? phone1, String? phone2) {
+    if (phone1 == null || phone2 == null) return false;
+
+    try {
+      final normalized1 = _normalizePhoneNumber(phone1);
+      final normalized2 = _normalizePhoneNumber(phone2);
+      return normalized1 == normalized2;
+    } catch (e) {
+      // Fallback to exact string comparison
+      return phone1 == phone2;
+    }
+  }
+
   // Generic (legacy) helpers retained for compatibility
   Future<bool> sendPhoneOtp(String phone) async => true;
   Future<bool> verifyPhoneOtp(String phone, String code) async => true;
@@ -239,7 +277,7 @@ class ContactVerificationService {
             // Check if phone matches and is verified
             if (phoneNumber != null) {
               final businessPhone = businessData['businessPhone'] as String?;
-              if (businessPhone == phoneNumber &&
+              if (_arePhoneNumbersEqual(businessPhone, phoneNumber) &&
                   (businessData['phoneVerified'] == true ||
                       businessData['phone_verified'] == true)) {
                 phoneVerified = true;
@@ -271,7 +309,7 @@ class ContactVerificationService {
             // Check if phone matches and is verified
             if (phoneNumber != null && !phoneVerified) {
               final driverPhone = driverData['phoneNumber'] as String?;
-              if (driverPhone == phoneNumber &&
+              if (_arePhoneNumbersEqual(driverPhone, phoneNumber) &&
                   driverData['phoneVerified'] == true) {
                 phoneVerified = true;
               }
