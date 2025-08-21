@@ -1501,7 +1501,10 @@ const BusinessVerificationEnhanced = () => {
 
         <DialogActions sx={{ px: 3, py: 2, borderTop: 1, borderColor: 'divider' }}>
           <Button 
-            onClick={() => setDetailsOpen(false)}
+            onClick={() => {
+              console.log('🚪 Close button clicked!');
+              setDetailsOpen(false);
+            }}
             size="large"
           >
             Close
@@ -1513,7 +1516,16 @@ const BusinessVerificationEnhanced = () => {
                 color="error"
                 variant="outlined"
                 startIcon={<RejectIcon />}
-                onClick={() => handleBusinessAction(selectedBusiness, 'reject')}
+                onClick={(e) => {
+                  console.log('🎯 Modal REJECT button clicked!', { 
+                    event: e,
+                    businessId: selectedBusiness?.id,
+                    actionLoading 
+                  });
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleBusinessAction(selectedBusiness, 'reject');
+                }}
                 disabled={actionLoading}
                 size="large"
               >
@@ -1527,7 +1539,9 @@ const BusinessVerificationEnhanced = () => {
                   console.log('🎯 Modal Approve button clicked!', { 
                     event: e,
                     businessId: selectedBusiness?.id,
-                    actionLoading 
+                    actionLoading,
+                    status: selectedBusiness?.status,
+                    currentTime: new Date().toISOString()
                   });
                   e.preventDefault();
                   e.stopPropagation();
