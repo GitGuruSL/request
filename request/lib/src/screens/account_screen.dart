@@ -5,12 +5,35 @@ import '../models/enhanced_user_model.dart';
 import 'settings_privacy_screen.dart' as settings;
 import 'help_support_screen.dart';
 import 'account/edit_profile_screen.dart';
+import 'account/user_profile_screen.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
 
   @override
-  State<AccountScreen> createState() => _AccountScreenState();
+  State<AccountScreen> createState() => _AccountS          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/login',
+            (route) => false,
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error signing out: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  void _navigateToUserProfile() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const UserProfileScreen(),
+      ),
+    ).then((_) => _loadUserData()); // Refresh data when coming back
+  }
 }
 
 class _AccountScreenState extends State<AccountScreen> {
@@ -137,53 +160,67 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 
   Widget _buildUserHeader() {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Colors.blue[600]!, Colors.blue[800]!],
+    return GestureDetector(
+      onTap: () => _navigateToUserProfile(),
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Colors.blue[600]!, Colors.blue[800]!],
+          ),
         ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            CircleAvatar(
-              radius: 50,
-              backgroundColor: Colors.white,
-              child: Text(
-                _currentUser!.name.isNotEmpty
-                    ? _currentUser!.name[0].toUpperCase()
-                    : 'U',
-                style: TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blue[600],
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              CircleAvatar(
+                radius: 50,
+                backgroundColor: Colors.white,
+                child: Text(
+                  _currentUser!.name.isNotEmpty
+                      ? _currentUser!.name[0].toUpperCase()
+                      : 'U',
+                  style: TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue[600],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _currentUser!.name.isNotEmpty
-                  ? _currentUser!.name
-                  : 'User',
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    _currentUser!.name.isNotEmpty
+                        ? _currentUser!.name
+                        : 'User',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.arrow_forward_ios,
+                    color: Colors.white70,
+                    size: 16,
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _currentUser!.email,
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.white70,
+              const SizedBox(height: 8),
+              Text(
+                _currentUser!.email,
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Colors.white70,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
