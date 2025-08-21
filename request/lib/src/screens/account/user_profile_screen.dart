@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/enhanced_user_service.dart';
 import '../../services/rest_auth_service.dart' hide UserModel;
+import '../../services/contact_verification_service.dart';
 import '../../models/enhanced_user_model.dart';
 import 'edit_profile_screen.dart';
 
@@ -13,9 +14,15 @@ class UserProfileScreen extends StatefulWidget {
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
   final EnhancedUserService _userService = EnhancedUserService();
+  final ContactVerificationService _contactService =
+      ContactVerificationService.instance;
   UserModel? _currentUser;
   bool _isLoading = true;
   String _primaryContact = 'email'; // 'email' or 'phone'
+
+  // Unified verification status
+  bool _unifiedPhoneVerified = false;
+  bool _unifiedEmailVerified = false;
 
   @override
   void initState() {
@@ -31,6 +38,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           _currentUser = user;
           _isLoading = false;
         });
+        // Load unified verification status
+        await _loadUnifiedVerificationStatus();
       }
     } catch (e) {
       print('Error loading user data: $e');
@@ -39,6 +48,32 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _loadUnifiedVerificationStatus() async {
+    if (_currentUser == null) return;
+
+    try {
+      // Check unified verification status for both phone and email
+      final phoneStatus = await _contactService.checkVerificationStatus(
+        phoneNumber: _currentUser!.phoneNumber,
+        endpoint: '/api/business-verifications/check-verification-status',
+      );
+
+      final emailStatus = await _contactService.checkVerificationStatus(
+        email: _currentUser!.email,
+        endpoint: '/api/business-verifications/check-verification-status',
+      );
+
+      if (mounted) {
+        setState(() {
+          _unifiedPhoneVerified = phoneStatus['phoneVerified'] == true;
+          _unifiedEmailVerified = emailStatus['emailVerified'] == true;
+        });
+      }
+    } catch (e) {
+      print('Error loading unified verification status: $e');
     }
   }
 
@@ -87,8 +122,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                   ? _currentUser!.phoneNumber!
                                   : '+94 ${_currentUser!.phoneNumber}')
                               : '+94 Not provided',
-                          isVerified: _currentUser!.isPhoneVerified,
-                          verificationStatus: _currentUser!.isPhoneVerified
+                          isVerified: _unifiedPhoneVerified,
+                          verificationStatus: _unifiedPhoneVerified
                               ? 'Verified'
                               : 'Not verified',
                           isPrimary: _primaryContact == 'phone',
@@ -101,8 +136,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           icon: Icons.email_outlined,
                           title: 'E-mail',
                           value: _currentUser!.email,
-                          isVerified: _currentUser!.isEmailVerified,
-                          verificationStatus: _currentUser!.isEmailVerified
+                          isVerified: _unifiedEmailVerified,
+                          verificationStatus: _unifiedEmailVerified
                               ? 'Verified'
                               : 'Not verified',
                           isPrimary: _primaryContact == 'email',
@@ -1037,36 +1072,200 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
-  void _startPhoneVerification(String phoneNumber) {
+  void _startPhoneVerification(String phoneNumber) async {
+    // First check if phone is already verified through unified system
+    try {
+      final status = await _contactService.checkVerificationStatus(
+        phoneNumber: phoneNumber,
+        endpoint: '/api/business-verifications/check-verification-status',
+      );
+
+      if (status['phoneVerified'] == true) {
+        // Phone is already verified in the system
+        setState(() {
+          _unifiedPhoneVerified = true;
+        });
+
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Phone Already Verified'),
+            content: Text('$phoneNumber is already verified in your account.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+    } catch (e) {
+      print('Error checking phone verification status: $e');
+    }
+
+    // Phone not verified, start verification process using unified system
+    try {
+      final result = await _contactService.startBusinessPhoneVerification(
+        phoneNumber: phoneNumber,
+        onCodeSent: (verificationId) {
+          _showPhoneOtpDialog(phoneNumber, verificationId);
+        },
+        onError: (error) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $error')),
+          );
+        },
+      );
+
+      if (!result['success']) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send verification code')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error sending verification code: $e')),
+      );
+    }
+  }
+
+  void _showPhoneOtpDialog(String phoneNumber, String verificationId) {
+    final TextEditingController otpController = TextEditingController();
+
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('Phone Verification'),
-        content: Text('A verification code has been sent to $phoneNumber'),
+        title: const Text('Enter Verification Code'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Enter the verification code sent to $phoneNumber'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: otpController,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              decoration: const InputDecoration(
+                labelText: 'Verification Code',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => _verifyPhoneOtp(
+                verificationId, otpController.text, phoneNumber),
+            child: const Text('Verify'),
           ),
         ],
       ),
     );
   }
 
-  void _startEmailVerification(String email) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Email Verification'),
-        content: Text('A verification link has been sent to $email'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+  void _verifyPhoneOtp(
+      String verificationId, String otp, String phoneNumber) async {
+    if (otp.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter the verification code')),
+      );
+      return;
+    }
+
+    try {
+      final result = await _contactService.verifyBusinessPhoneOTP(
+        verificationId: verificationId,
+        otp: otp.trim(),
+      );
+
+      Navigator.pop(context); // Close OTP dialog
+
+      if (result['success'] == true) {
+        // Update unified verification status
+        setState(() {
+          _unifiedPhoneVerified = true;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Phone number verified successfully!')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  'Verification failed: ${result['error'] ?? 'Unknown error'}')),
+        );
+      }
+    } catch (e) {
+      Navigator.pop(context); // Close OTP dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error verifying code: $e')),
+      );
+    }
+  }
+
+  void _startEmailVerification(String email) async {
+    // First check if email is already verified through unified system
+    try {
+      final status = await _contactService.checkVerificationStatus(
+        email: email,
+        endpoint: '/api/business-verifications/check-verification-status',
+      );
+      
+      if (status['emailVerified'] == true) {
+        // Email is already verified in the system
+        setState(() {
+          _unifiedEmailVerified = true;
+        });
+        
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Email Already Verified'),
+            content: Text('$email is already verified in your account.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
+        );
+        return;
+      }
+    } catch (e) {
+      print('Error checking email verification status: $e');
+    }
+    
+    // Email not verified, start verification process
+    try {
+      final result = await _contactService.sendBusinessEmailVerification(email: email);
+      
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Email Verification'),
+          content: Text('A verification link has been sent to $email. Please check your email and click the verification link.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error sending verification email: $e')),
+      );
+    }
   }
 
   void _showEditBirthdayBottomSheet() {
