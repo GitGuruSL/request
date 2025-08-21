@@ -812,12 +812,6 @@ router.post('/verify-phone/send-otp', auth.authMiddleware(), async (req, res) =>
             (otp_id, phone, otp, country_code, expires_at, attempts, max_attempts, created_at, provider_used)
             VALUES ($1,$2,$3,$4, NOW() + interval '5 minute', 0, 3, NOW(), 'dev_fallback')
           `, [otpId, normalizedPhone, otp, detectedCountry]);
-          await database.query(
-            `UPDATE phone_otp_verifications 
-             SET user_id = $1, verification_type = 'business_verification'
-             WHERE phone = $2 AND otp_id = $3`,
-            [userId, normalizedPhone, otpId]
-          );
           console.log('🛠 Dev fallback OTP generated (business): 123456');
           return res.json({
             success: true,
