@@ -409,13 +409,6 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
             Icons.flip_to_back,
           ),
           _buildDocumentItem(
-            'Additional License Document',
-            docVerification['licenseDocument'],
-            _driverData!['licenseDocumentUrl'],
-            'Additional license document (Optional)',
-            Icons.badge,
-          ),
-          _buildDocumentItem(
             'NIC (Front)',
             docVerification['nicFront'],
             _driverData!['nicFrontUrl'],
@@ -1779,9 +1772,6 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
           break;
         case 'Vehicle Registration Document':
           backendDocumentType = 'vehicle_registration';
-          break;
-        case 'Additional License Document':
-          backendDocumentType = 'license_document';
           break;
         default:
           throw Exception('Unknown document type: $title');

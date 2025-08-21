@@ -63,7 +63,6 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
   File? _driverImage; // Driver's photo (Profile Photo)
   File? _licenseFrontPhoto; // License front photo
   File? _licenseBackPhoto; // License back photo
-  File? _licenseDocument; // Additional license document (optional)
   File? _nicFrontPhoto; // NIC Front photo
   File? _nicBackPhoto; // NIC Back photo
   File? _billingProofDocument; // Billing Proof (optional)
@@ -1629,9 +1628,6 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
           case 'license_back':
             _licenseBackPhoto = File(image.path);
             break;
-          case 'license_document':
-            _licenseDocument = File(image.path);
-            break;
           case 'nic_front':
             _nicFrontPhoto = File(image.path);
             break;
@@ -1720,7 +1716,6 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
       String? driverImageUrl,
           licenseFrontUrl,
           licenseBackUrl,
-          licenseDocumentUrl,
           nicFrontUrl,
           nicBackUrl,
           billingProofUrl,
@@ -1744,12 +1739,6 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
       if (_licenseBackPhoto != null) {
         licenseBackUrl = await _fileUploadService.uploadDriverDocument(
             currentUser.uid, _licenseBackPhoto!, 'license_back');
-      }
-
-      // Upload additional license document (optional)
-      if (_licenseDocument != null) {
-        licenseDocumentUrl = await _fileUploadService.uploadDriverDocument(
-            currentUser.uid, _licenseDocument!, 'license_document');
       }
 
       // Upload NIC front photo (optional)
@@ -1780,12 +1769,6 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
       if (_licenseBackPhoto != null) {
         licenseBackUrl = await _fileUploadService.uploadDriverDocument(
             currentUser.uid, _licenseBackPhoto!, 'license_back');
-      }
-
-      // Upload additional license document (optional)
-      if (_licenseDocument != null) {
-        licenseDocumentUrl = await _fileUploadService.uploadDriverDocument(
-            currentUser.uid, _licenseDocument!, 'license_document');
       }
 
       // Upload vehicle insurance document (required)
@@ -1854,8 +1837,6 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
         'driverImageUrl': driverImageUrl, // Driver photo (profile photo)
         'licenseFrontUrl': licenseFrontUrl, // License front photo
         'licenseBackUrl': licenseBackUrl, // License back photo
-        'licenseDocumentUrl':
-            licenseDocumentUrl, // Additional license document (optional)
         'nicFrontUrl': nicFrontUrl, // NIC front photo (optional)
         'nicBackUrl': nicBackUrl, // NIC back photo (optional)
         'billingProofUrl': billingProofUrl, // Billing proof (optional)
