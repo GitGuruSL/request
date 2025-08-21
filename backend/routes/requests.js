@@ -15,6 +15,7 @@ router.get('/', async (req, res) => {
       status,
       user_id,
       has_accepted,
+      request_type, // Filter by request type: item, service, ride, rent, delivery
       page = 1,
       limit = 20,
       sort_by = 'created_at',
@@ -47,6 +48,10 @@ router.get('/', async (req, res) => {
     if (city_id) {
       conditions.push(`r.location_city_id = $${paramCounter++}`);
       values.push(city_id);
+    }
+    if (request_type) {
+      conditions.push(`r.request_type = $${paramCounter++}`);
+      values.push(request_type);
     }
   if (country_code) { // only filter when explicitly provided
       conditions.push(`r.country_code = $${paramCounter++}`);
