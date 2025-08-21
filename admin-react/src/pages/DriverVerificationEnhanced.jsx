@@ -117,7 +117,7 @@ const DriverVerificationEnhanced = () => {
     loadDrivers();
     loadCityNames();
     loadVehicleTypeNames();
-  }, [filterStatus]);
+  }, [filterStatus, isCountryAdmin, adminData?.country]);
 
   const loadDrivers = async () => {
     try {
@@ -125,8 +125,6 @@ const DriverVerificationEnhanced = () => {
       const params = {};
       if (isCountryAdmin && adminData?.country) params.country = adminData.country;
       if (filterStatus !== 'all') params.status = filterStatus;
-      
-      console.log('🔍 Loading drivers with params:', params);
       const res = await api.get('/driver-verifications', { params });
       const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
       // Normalize each driver (parse document_verification JSON and build helper camelCase fields if missing)
@@ -319,13 +317,6 @@ const DriverVerificationEnhanced = () => {
       // Support for new document types from mobile app
       case 'driverImage': 
         const status = driver.driverImageStatus || driver.driver_image_status || 'pending';
-        if (docType === 'driverImage') {
-          console.log('🔍 Debug getDocumentStatus for driverImage:', {
-            driverImageStatus: driver.driverImageStatus,
-            driver_image_status: driver.driver_image_status,
-            finalStatus: status
-          });
-        }
         return status;
       case 'licenseFront': return driver.licenseFrontStatus || driver.license_front_status || 'pending';
       case 'licenseBack': return driver.licenseBackStatus || driver.license_back_status || 'pending';
@@ -1783,16 +1774,6 @@ const DriverVerificationEnhanced = () => {
                       </TableHead>
                       <TableBody>
                         {(() => {
-                          // Debug: Log the available vehicle fields
-                          console.log('Vehicle Photo Debug:', {
-                            hasVehicleImageUrls: Array.isArray(selectedDriver.vehicleImageUrls),
-                            vehicleImageUrlsCount: selectedDriver.vehicleImageUrls?.length,
-                            hasVehicleImages: Array.isArray(selectedDriver.vehicleImages),
-                            vehicleImagesCount: selectedDriver.vehicleImages?.length,
-                            vehicleImageVerification: selectedDriver.vehicleImageVerification,
-                            allKeys: Object.keys(selectedDriver)
-                          });
-                          
                           // Handle vehicleImageUrls which can be either array or object
                           let vehiclePhotos = [];
                           
