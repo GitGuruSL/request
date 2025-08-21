@@ -27,14 +27,10 @@ class _BusinessVerificationScreenState
   LinkedCredentialsStatus? _credentialsStatus;
   bool _isLoading = true;
   bool _isVerifyingPhone = false;
-  bool _isVerifyingEmail = false;
 
   // Phone verification state
   String? _phoneVerificationId;
   TextEditingController _phoneOtpController = TextEditingController();
-
-  // Email verification state
-  TextEditingController _emailController = TextEditingController();
 
   @override
   void initState() {
@@ -43,17 +39,9 @@ class _BusinessVerificationScreenState
     _loadCredentialsStatus();
   }
 
-  void _prePopulateEmailField() {
-    final businessEmail = _businessData?['businessEmail'] ?? '';
-    if (businessEmail.isNotEmpty && _emailController.text.isEmpty) {
-      _emailController.text = businessEmail;
-    }
-  }
-
   @override
   void dispose() {
     _phoneOtpController.dispose();
-    _emailController.dispose();
     super.dispose();
   }
 
@@ -176,8 +164,6 @@ class _BusinessVerificationScreenState
                       children: [
                         _buildBusinessInformation(),
                         const SizedBox(height: 24),
-                        _buildContactVerificationSection(),
-                        const SizedBox(height: 24),
                         _buildDocumentsSection(),
                         const SizedBox(height: 24),
                         _buildBusinessLogo(),
@@ -230,6 +216,12 @@ class _BusinessVerificationScreenState
   }
 
   Widget _buildBusinessInformation() {
+    final businessPhone = _businessData?['businessPhone'] ?? '';
+    final businessEmail = _businessData?['businessEmail'] ?? '';
+    final isPhoneVerified = _credentialsStatus?.businessPhoneVerified ?? false;
+    final isEmailVerified = (_businessData?['emailVerified'] ?? false) ||
+        (_credentialsStatus?.businessEmailVerified ?? false);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -256,8 +248,10 @@ class _BusinessVerificationScreenState
           const SizedBox(height: 16),
           _buildInfoRow(
               'Business Name', _businessData!['businessName'] ?? 'N/A'),
-          _buildInfoRow('Email', _businessData!['businessEmail'] ?? 'N/A'),
-          _buildInfoRow('Phone', _businessData!['businessPhone'] ?? 'N/A'),
+          _buildInfoRowWithVerification(
+              'Email', businessEmail, isEmailVerified),
+          _buildInfoRowWithVerification(
+              'Phone', businessPhone, isPhoneVerified),
           _buildInfoRow('Address', _businessData!['businessAddress'] ?? 'N/A'),
           _buildInfoRow(
               'License Number', _businessData!['licenseNumber'] ?? 'N/A'),
@@ -265,357 +259,13 @@ class _BusinessVerificationScreenState
           if (_businessData!['businessDescription'] != null &&
               _businessData!['businessDescription'].toString().isNotEmpty)
             _buildInfoRow('Description', _businessData!['businessDescription']),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildContactVerificationSection() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.verified_user, color: AppTheme.primaryColor, size: 24),
-              const SizedBox(width: 12),
-              const Text(
-                'Contact Verification',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-              const Spacer(),
-              _buildContactVerificationStatus(),
-            ],
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Verify your business contact details to complete your profile approval.',
-            style: TextStyle(
-              color: AppTheme.textSecondary,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 20),
-          _buildPhoneVerificationCard(),
-          const SizedBox(height: 16),
-          _buildEmailVerificationCard(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildContactVerificationStatus() {
-    if (_credentialsStatus == null) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.grey[300],
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Text(
-          'Loading',
-          style: TextStyle(
-            color: Colors.grey,
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      );
-    }
-
-    final bool isComplete = _credentialsStatus!.isAllVerified;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: isComplete ? Colors.green[100] : Colors.orange[100],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        isComplete ? 'Verified' : 'Pending',
-        style: TextStyle(
-          color: isComplete ? Colors.green[700] : Colors.orange[700],
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPhoneVerificationCard() {
-    final businessPhone = _businessData?['businessPhone'] ?? '';
-
-    // Enhanced phone verification logic
-    bool isVerified = _credentialsStatus?.businessPhoneVerified ?? false;
-
-    // Check if business phone matches Firebase Auth phone (auto-verify)
-    if (!isVerified && businessPhone.isNotEmpty) {
-      // TODO: Compare with Firebase Auth user's phone number
-      // For now, we'll rely on the existing manual verification
-      // This can be enhanced later to auto-verify matching numbers
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isVerified
-            ? Colors.green.withOpacity(0.1)
-            : Colors.orange.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                isVerified ? Icons.check_circle : Icons.phone,
-                color: isVerified ? Colors.green : Colors.orange,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                isVerified ? 'Business Phone' : 'Phone Verification Required',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-              const Spacer(),
-              if (isVerified) _buildVerificationStatusChip(isVerified),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            businessPhone.isNotEmpty
-                ? 'Phone: $businessPhone'
-                : 'No phone number provided',
-            style: TextStyle(
-              color: AppTheme.textPrimary,
-              fontSize: 14,
-            ),
-          ),
-          if (!isVerified) ...[
-            const SizedBox(height: 12),
-            const Text(
-              'Verify your phone number to complete your business profile.',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppTheme.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (_phoneVerificationId == null)
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _isVerifyingPhone || businessPhone.isEmpty
-                      ? null
-                      : () => _startPhoneVerification(businessPhone),
-                  icon: _isVerifyingPhone
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.sms),
-                  label: Text(_isVerifyingPhone
-                      ? 'Sending...'
-                      : 'Send Verification Code'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              )
-            else ...[
-              TextField(
-                controller: _phoneOtpController,
-                decoration: const InputDecoration(
-                  labelText: 'Enter OTP',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.pin),
-                ),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _verifyPhoneOTP,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text('Verify'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton(
-                    onPressed: () => _startPhoneVerification(businessPhone),
-                    child: const Text('Resend'),
-                  ),
-                ],
-              ),
-            ],
+          // Phone verification section integrated into business info
+          if (businessPhone.isNotEmpty && !isPhoneVerified) ...[
+            const SizedBox(height: 16),
+            _buildPhoneVerificationSection(businessPhone),
           ],
         ],
-      ),
-    );
-  }
-
-  Widget _buildEmailVerificationCard() {
-    final businessEmail = _businessData?['businessEmail'] ?? '';
-    final isVerified = (_businessData?['emailVerified'] ?? false) ||
-        (_credentialsStatus?.businessEmailVerified ?? false);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                isVerified ? Icons.check_circle : Icons.email,
-                color: isVerified ? Colors.green : AppTheme.primaryColor,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                'Business Email',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const Spacer(),
-              _buildVerificationStatusChip(isVerified),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            businessEmail.isNotEmpty ? businessEmail : 'No email provided',
-            style: TextStyle(
-              color: AppTheme.textSecondary,
-              fontSize: 14,
-            ),
-          ),
-          if (!isVerified) ...[
-            const SizedBox(height: 12),
-            // Only show input field if no business email is available
-            if (businessEmail.isEmpty) ...[
-              TextField(
-                controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Business Email',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.email),
-                  hintText: 'Enter business email',
-                ),
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 12),
-            ] else ...[
-              // Show confirmation text when using existing business email
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue[200]!),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Verification email will be sent to: $businessEmail',
-                        style: TextStyle(
-                          color: Colors.blue[700],
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed:
-                    _isVerifyingEmail ? null : () => _sendEmailVerification(),
-                icon: _isVerifyingEmail
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.email_outlined),
-                label: Text(_isVerifyingEmail
-                    ? 'Sending...'
-                    : 'Send Verification Email'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ),
-          ] else ...[
-            const Text(
-              'Email linked successfully. Check your inbox for verification email.',
-              style: TextStyle(
-                color: Colors.green,
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVerificationStatusChip(bool isVerified) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: isVerified ? Colors.green[100] : Colors.orange[100],
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        isVerified ? 'Verified' : 'Pending',
-        style: TextStyle(
-          color: isVerified ? Colors.green[700] : Colors.orange[700],
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
       ),
     );
   }
@@ -807,6 +457,164 @@ class _BusinessVerificationScreenState
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRowWithVerification(
+      String label, String? value, bool isVerified) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    value ?? 'N/A',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.textPrimary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (isVerified)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      'Verified',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPhoneVerificationSection(String phoneNumber) {
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.orange.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.phone, color: Colors.orange, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Phone Verification Required',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Phone: $phoneNumber',
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (_phoneVerificationId == null) ...[
+            const Text(
+              'Verify your phone number to complete your business profile.',
+              style: TextStyle(
+                fontSize: 14,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _isVerifyingPhone || phoneNumber.isEmpty
+                    ? null
+                    : () => _startPhoneVerification(phoneNumber),
+                icon: _isVerifyingPhone
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.sms),
+                label: Text(_isVerifyingPhone
+                    ? 'Sending...'
+                    : 'Send Verification Code'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+          ] else ...[
+            TextField(
+              controller: _phoneOtpController,
+              decoration: const InputDecoration(
+                labelText: 'Enter OTP',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.pin),
+              ),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _verifyPhoneOTP,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Verify'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () => _startPhoneVerification(phoneNumber),
+                  child: const Text('Resend'),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -1357,60 +1165,6 @@ class _BusinessVerificationScreenState
       if (mounted) {
         setState(() {
           _isVerifyingPhone = false;
-        });
-        _showSnackBar('Error: $e', isError: true);
-      }
-    }
-  }
-
-  Future<void> _sendEmailVerification() async {
-    // Use business email if available, otherwise use the input field
-    final businessEmail = _businessData?['businessEmail'] ?? '';
-    final email =
-        businessEmail.isNotEmpty ? businessEmail : _emailController.text.trim();
-
-    if (email.isEmpty) {
-      _showSnackBar('Please enter business email address', isError: true);
-      return;
-    }
-
-    // Basic email validation
-    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
-      _showSnackBar('Please enter a valid email address', isError: true);
-      return;
-    }
-
-    setState(() {
-      _isVerifyingEmail = true;
-    });
-
-    try {
-      final result = await _contactService.sendBusinessEmailVerification(
-        email: email,
-      );
-
-      if (mounted) {
-        setState(() {
-          _isVerifyingEmail = false;
-        });
-
-        if (result.success) {
-          _showSnackBar('Verification email sent to $email!', isError: false);
-          // Only clear controller if we're not using business email
-          final businessEmail = _businessData?['businessEmail'] ?? '';
-          if (businessEmail.isEmpty) {
-            _emailController.clear();
-          }
-          await _loadCredentialsStatus();
-        } else {
-          _showSnackBar(result.error ?? 'Failed to send verification email',
-              isError: true);
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isVerifyingEmail = false;
         });
         _showSnackBar('Error: $e', isError: true);
       }
