@@ -176,7 +176,7 @@ class PaginationInfo {
 class CreateRequestData {
   final String title;
   final String description;
-  final String categoryId;
+  final String? categoryId; // Made optional for ride requests
   final String? subcategoryId;
   final String? locationCityId;
   final String? locationAddress;
@@ -192,7 +192,7 @@ class CreateRequestData {
   CreateRequestData({
     required this.title,
     required this.description,
-    required this.categoryId,
+    this.categoryId, // Made optional
     this.subcategoryId,
     this.locationCityId,
     this.locationAddress,
@@ -210,7 +210,7 @@ class CreateRequestData {
     return {
       'title': title,
       'description': description,
-      'category_id': categoryId,
+      if (categoryId != null) 'category_id': categoryId,
       if (subcategoryId != null) 'subcategory_id': subcategoryId,
       // Backend expects 'city_id' (error message: Title, description, category_id, and city_id are required)
       if (locationCityId != null) 'city_id': locationCityId,

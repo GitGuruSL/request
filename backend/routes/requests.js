@@ -335,10 +335,24 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
     });
 
     // Validate required fields
-    if (!title || !description || !category_id || !city_id) {
+    // For ride requests (identified by metadata containing pickup/destination), category_id is optional
+    const isRideRequest = metadata && 
+                          metadata.request_type === 'ride' && 
+                          metadata.pickup && 
+                          metadata.destination;
+    
+    if (!title || !description || !city_id) {
       return res.status(400).json({
         success: false,
-        message: 'Title, description, category_id, and city_id are required'
+        message: 'Title, description, and city_id are required'
+      });
+    }
+    
+    // Only require category_id for non-ride requests
+    if (!isRideRequest && !category_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Category is required for non-ride requests'
       });
     }
 
