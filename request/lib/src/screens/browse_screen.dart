@@ -66,15 +66,39 @@ class _BrowseScreenState extends State<BrowseScreen> {
 
     List<RequestType> enabledTypes = [];
     _countryModules!.modules.forEach((moduleId, isEnabled) {
-      if (isEnabled && allowedTypes.contains(moduleId)) {
-        RequestType? type = _getRequestTypeFromModuleId(moduleId);
-        if (type != null) {
-          enabledTypes.add(type);
+      if (isEnabled) {
+        // Map module ID to request type string for comparison
+        String requestTypeString = _getRequestTypeStringFromModuleId(moduleId);
+        if (allowedTypes.contains(requestTypeString)) {
+          RequestType? type = _getRequestTypeFromModuleId(moduleId);
+          if (type != null) {
+            enabledTypes.add(type);
+          }
         }
       }
     });
 
     return enabledTypes;
+  }
+
+  /// Map module ID to request type string used in backend
+  String _getRequestTypeStringFromModuleId(String moduleId) {
+    switch (moduleId) {
+      case 'item':
+        return 'item';
+      case 'service':
+        return 'service';
+      case 'rent':
+        return 'rent'; // Module uses 'rent', backend uses 'rent'
+      case 'delivery':
+        return 'delivery';
+      case 'ride':
+        return 'ride';
+      case 'price':
+        return 'price';
+      default:
+        return moduleId;
+    }
   }
 
   RequestType? _getRequestTypeFromModuleId(String moduleId) {
