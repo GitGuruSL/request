@@ -67,23 +67,14 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
       );
       if (response != null) {
         if (reset) _requests.clear();
-        // Convert REST requests to models
-        final modelRequests = response.requests.map((restRequest) {
-          return RequestModel(
-            id: restRequest.id,
-            title: restRequest.title ?? '',
-            description: restRequest.description ?? '',
-            categoryName: restRequest.categoryName ?? '',
-            budgetMin: restRequest.budgetMin,
-            budgetMax: restRequest.budgetMax,
-            location: restRequest.location ?? '',
-            status: restRequest.status ?? '',
-            userId: restRequest.userId ?? '',
-            createdAt: restRequest.createdAt,
-            updatedAt: restRequest.updatedAt,
-          );
-        }).toList();
-        _requests.addAll(modelRequests);
+
+        // Use the stream to get properly converted RequestModel objects
+        await for (final modelRequests in CountryFilteredDataService.instance
+            .getCountryRequestsStream(limit: 20)) {
+          _requests.addAll(modelRequests);
+          break; // Only take the first emission since we're not subscribing
+        }
+
         _hasMore = _page < response.pagination.totalPages;
         _page += 1;
       }
@@ -106,19 +97,13 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     }
   }
 
-  List<RequestModel> get _filteredRequests {
+  List<models.RequestModel> get _filteredRequests {
     if (_selectedCategory == 'All') return _requests;
     return _requests.where((r) {
       String requestType =
-          _getRequestTypeFromCategory(r.categoryName, r.title, r.description);
+          _getRequestTypeFromCategory(r.type.name, r.title, r.description);
       return requestType == _selectedCategory;
     }).toList();
-  }
-
-  String _formatBudget(RequestModel r) {
-    if (r.budget == null) return 'No budget';
-    final cur = r.currency ?? '';
-    return '$cur${r.budget!.toStringAsFixed(0)}';
   }
 
   String _relativeTime(DateTime dt) {
@@ -367,10 +352,10 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     );
   }
 
-  Widget _buildRequestCard(RequestModel request) {
+  Widget _buildRequestCard(models.RequestModel request) {
     // Map request types to colors based on content
     String requestType = _getRequestTypeFromCategory(
-        request.categoryName, request.title, request.description);
+        request.type.name, request.title, request.description);
 
     // Request TYPE colors
     final typeColors = {
@@ -417,7 +402,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      '${request.categoryName ?? 'General'}${request.subcategoryName != null ? ' • ${request.subcategoryName}' : ''}',
+                      '${request.type.name.replaceFirst(request.type.name[0], request.type.name[0].toUpperCase())} Request',
                       style: TextStyle(
                         color: tagColor,
                         fontSize: 12,
@@ -487,7 +472,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                   ),
                   const Spacer(),
                   // Right side - location
-                  if (request.cityName != null)
+                  if (request.location?.city != null)
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -498,7 +483,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          request.cityName!,
+                          request.location!.city!,
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey[500],
@@ -566,7 +551,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     return 'Items';
   }
 
-  void _showRequestDetails(RequestModel request) {
+  void _showRequestDetails(models.RequestModel request) {
     Navigator.push(
       context,
       MaterialPageRoute(

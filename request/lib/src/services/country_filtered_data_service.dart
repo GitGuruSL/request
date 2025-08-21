@@ -2,7 +2,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/request_model.dart' as models;
 import '../models/enhanced_user_model.dart' as enhanced;
-import 'rest_request_service.dart' show RestRequestService, RequestModel;
+import 'rest_request_service.dart'
+    show RestRequestService, RequestModel, RequestsResponse;
 import 'country_service.dart';
 
 /// Provides country-scoped data streams for all app content
@@ -16,6 +17,49 @@ class CountryFilteredDataService {
 
   /// Get the current user's country filter
   String? get currentCountry => CountryService.instance.countryCode;
+
+  /// Get country-filtered requests with pagination (direct method for compatibility)
+  Future<RequestsResponse?> getRequests({
+    int page = 1,
+    int limit = 20,
+    String? categoryId,
+    String? status,
+  }) async {
+    if (currentCountry == null) {
+      if (kDebugMode) print('⚠️ No country selected, returning empty requests');
+      return null;
+    }
+
+    try {
+      final result = await _requests.getRequests(
+        page: page,
+        limit: limit,
+        categoryId: categoryId,
+        hasAccepted: false,
+        // country: currentCountry, // Add when backend implements this
+      );
+
+      if (result == null) return null;
+
+      // Client-side filtering by country until backend implements it
+      final countryFiltered = result.requests
+          .where((r) =>
+                  r.countryCode == currentCountry ||
+                  (r.countryCode == null &&
+                      currentCountry == 'LK') // Default to LK for legacy data
+              )
+          .toList();
+
+      // Return modified response with filtered data
+      return RequestsResponse(
+        requests: countryFiltered,
+        pagination: result.pagination,
+      );
+    } catch (e) {
+      if (kDebugMode) print('❌ Error loading country requests: $e');
+      return null;
+    }
+  }
 
   /// Get country-filtered requests stream
   Stream<List<models.RequestModel>> getCountryRequestsStream({
@@ -55,14 +99,10 @@ class CountryFilteredDataService {
 
         // Apply additional filters
         var filtered = countryFiltered;
-        if (type != null) {
-          filtered = filtered
-              .where((r) => r.type?.toLowerCase() == type.toLowerCase())
-              .toList();
-        }
+        // Note: type filtering removed because REST RequestModel doesn't have type property
         if (status != null) {
           filtered = filtered
-              .where((r) => r.status?.toLowerCase() == status.toLowerCase())
+              .where((r) => r.status.toLowerCase() == status.toLowerCase())
               .toList();
         }
         if (searchQuery != null && searchQuery.isNotEmpty) {
