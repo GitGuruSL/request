@@ -132,7 +132,15 @@ class CentralizedRequestService {
       // ignore: avoid_print
       print('CentralizedRequestService -> typeSpecific data: $typeSpecific');
 
-      if (createData.categoryId.isEmpty) {
+      // Check if this is a ride request (identified by metadata)
+      final isRideRequest = createData.metadata != null &&
+          createData.metadata!['request_type'] == 'ride' &&
+          createData.metadata!['pickup'] != null &&
+          createData.metadata!['destination'] != null;
+
+      // Only require category for non-ride requests
+      if (!isRideRequest &&
+          (createData.categoryId == null || createData.categoryId!.isEmpty)) {
         throw Exception(
             'Please select a real category before creating the request');
       }
