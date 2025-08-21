@@ -429,14 +429,6 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
             'Utility bill or bank statement for address verification (Optional)',
             Icons.receipt,
           ),
-          if (_driverData!['vehicleRegistrationUrl'] != null)
-            _buildDocumentItem(
-              'Vehicle Registration Document',
-              docVerification['vehicleRegistration'],
-              _driverData!['vehicleRegistrationUrl'],
-              'Official vehicle registration document',
-              Icons.assignment,
-            ),
         ],
       ),
     );
