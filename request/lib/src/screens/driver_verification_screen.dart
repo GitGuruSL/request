@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:image_picker/image_picker.dart';
-// Removed firebase_shim after REST migration
-// REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
-// REMOVED_FB_IMPORT: import 'package:firebase_auth/firebase_auth.dart';
-import 'dart:io';
-import 'dart:async';
 import '../services/enhanced_user_service.dart';
-import '../services/file_upload_service.dart';
 import '../services/api_client.dart';
-import '../widgets/simple_phone_field.dart';
+import '../services/image_upload_service.dart';
+import '../services/contact_verification_service.dart';
 import '../theme/app_theme.dart';
+import 'src/utils/firebase_shim.dart'; // Added by migration script
+// REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+// Removed direct firebase_storage dependency; using FileUploadService / stub.
 
 class DriverVerificationScreen extends StatefulWidget {
   const DriverVerificationScreen({Key? key}) : super(key: key);
@@ -22,314 +21,187 @@ class DriverVerificationScreen extends StatefulWidget {
 
 class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
   final EnhancedUserService _userService = EnhancedUserService();
-  final FileUploadService _fileUploadService = FileUploadService();
-  final _formKey = GlobalKey<FormState>();
+  final ContactVerificationService _contactService =
+      ContactVerificationService.instance;
+  Map<String, dynamic>? _driverData;
+  bool _isLoading = true;
 
-  // Form controllers
-  final _fullNameController = TextEditingController();
-  final _firstNameController = TextEditingController();
-  final _lastNameController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _secondaryMobileController = TextEditingController();
-  final _nicNumberController = TextEditingController();
-  final _licenseNumberController = TextEditingController();
-  final _insuranceNumberController = TextEditingController();
-  final _vehicleModelController = TextEditingController();
-  final _vehicleYearController = TextEditingController();
-  final _vehicleNumberController = TextEditingController();
-  final _vehicleColorController = TextEditingController();
-
-  // New fields from mobile app
-  DateTime? _dateOfBirth;
-  String? _selectedGender;
-  String? _selectedCity;
-  bool _isVehicleOwner = true;
-  bool _licenseHasNoExpiry = false;
-
-  DateTime? _licenseExpiryDate;
-  DateTime? _insuranceExpiryDate;
-
-  // Vehicle type selection
-  String? _selectedVehicleType;
-  List<Map<String, dynamic>> _availableVehicleTypes = [];
-  String? _userCountry;
-
-  // Cities selection
-  List<Map<String, dynamic>> _availableCities = [];
-  bool _loadingCities = false;
-  bool _loadingVehicleTypes = false;
-
-  // Document files
-  File? _driverImage; // Driver's photo (Profile Photo)
-  File? _licenseFrontPhoto; // License front photo
-  File? _licenseBackPhoto; // License back photo
-  File? _licenseDocument; // Additional license document (optional)
-  File? _nicFrontPhoto; // NIC Front photo
-  File? _nicBackPhoto; // NIC Back photo
-  File? _billingProofDocument; // Billing Proof (optional)
-  File? _insuranceDocument; // Vehicle insurance document
-  File? _vehicleRegistrationDocument; // Vehicle registration document
-  List<File> _vehicleImages = []; // Vehicle photos (4 images)
-
-  bool _isLoading = false;
+  // Phone verification state
+  bool _isVerifyingPhone = false;
+  bool _isPhoneOtpSent = false;
+  String? _phoneVerificationId;
+  final TextEditingController _phoneOtpController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _loadUserData();
-  }
-
-  Future<void> _loadUserData() async {
-    try {
-      final user = await _userService.getCurrentUserModel();
-      if (user != null && mounted) {
-        setState(() {
-          _fullNameController.text = user.name;
-
-          // Auto-populate first name and last name from user data
-          // If not available, try to split the display name
-          if (user.firstName != null && user.firstName!.isNotEmpty) {
-            _firstNameController.text = user.firstName!;
-          } else if (user.name.isNotEmpty) {
-            // Try to split display name into first and last names
-            final nameParts = user.name.split(' ');
-            _firstNameController.text = nameParts.first;
-          }
-
-          if (user.lastName != null && user.lastName!.isNotEmpty) {
-            _lastNameController.text = user.lastName!;
-          } else if (user.name.split(' ').length > 1) {
-            // Use remaining parts as last name
-            final nameParts = user.name.split(' ');
-            _lastNameController.text = nameParts.skip(1).join(' ');
-          }
-
-          // Phone field starts empty - user enters their phone number
-          _userCountry =
-              user.countryCode ?? 'LK'; // Default to Sri Lanka if not set
-        });
-
-        // Load available vehicle types for user's country
-        await _loadAvailableVehicleTypes();
-
-        // Load available cities for user's country
-        await _loadAvailableCities();
-      }
-    } catch (e) {
-      print('Error loading user data: $e');
-    }
-  }
-
-  Future<void> _loadAvailableVehicleTypes() async {
-    try {
-      setState(() {
-        _loadingVehicleTypes = true;
-      });
-
-      final countryCode = _userCountry ?? 'LK';
-      if (kDebugMode)
-        debugPrint('🔄 Loading vehicle types for country: $countryCode');
-      final response = await ApiClient.instance.get(
-        '/api/vehicle-types/public/$countryCode',
-      );
-      if (response.data['success'] == true) {
-        final vehicleTypes = (response.data['data'] as List)
-            .map((vt) => {
-                  'id': vt['id'] as String,
-                  'name': vt['name'] as String,
-                  'icon': vt['icon'] ?? 'DirectionsCar',
-                  'displayOrder': vt['displayOrder'] ?? 0,
-                  'passengerCapacity': vt['passengerCapacity'] ?? 1,
-                })
-            .toList();
-
-        if (mounted) {
-          setState(() {
-            _availableVehicleTypes = vehicleTypes.isNotEmpty
-                ? vehicleTypes
-                : [
-                    {
-                      'id': 'no_vehicles',
-                      'name': 'No vehicle types enabled for your country',
-                      'icon': 'DirectionsCar',
-                      'displayOrder': 0,
-                      'passengerCapacity': 1
-                    }
-                  ];
-
-            // Auto-select first available vehicle type
-            if (_selectedVehicleType == null &&
-                _availableVehicleTypes.isNotEmpty &&
-                _availableVehicleTypes.first['id'] != 'no_vehicles') {
-              _selectedVehicleType = _availableVehicleTypes.first['id'];
-            }
-            _loadingVehicleTypes = false;
-          });
-          if (kDebugMode)
-            debugPrint(
-                '✅ Loaded ${vehicleTypes.length} vehicle types for $countryCode: ${vehicleTypes.map((v) => v['name']).join(', ')}');
-        }
-      } else {
-        throw Exception('API returned success: false');
-      }
-    } catch (e) {
-      if (kDebugMode) debugPrint('Error loading vehicle types: $e');
-      if (mounted) {
-        setState(() {
-          _availableVehicleTypes = [
-            {
-              'id': 'error',
-              'name': 'Network error - contact support',
-              'icon': 'DirectionsCar',
-              'displayOrder': 0,
-              'passengerCapacity': 1
-            }
-          ];
-          _loadingVehicleTypes = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _loadAvailableCities() async {
-    try {
-      setState(() {
-        _loadingCities = true;
-      });
-
-      final countryCode = _userCountry ?? 'LK';
-      if (kDebugMode) debugPrint('🔄 Loading cities for country: $countryCode');
-      final response = await ApiClient.instance.get(
-        '/api/cities',
-        queryParameters: {'country': countryCode},
-      );
-
-      if (response.data['success'] == true) {
-        final cities = (response.data['data'] as List)
-            .map((city) => {
-                  'id': city['id']?.toString() ?? city['name'],
-                  'name': city['name'] as String,
-                  'countryCode': city['countryCode'] ?? countryCode,
-                })
-            .where((city) => city['name']?.isNotEmpty == true)
-            .toList();
-
-        if (mounted) {
-          setState(() {
-            _availableCities = cities.isNotEmpty
-                ? cities
-                : [
-                    {
-                      'id': 'no_cities',
-                      'name': 'No cities available',
-                      'countryCode': countryCode
-                    }
-                  ];
-            _loadingCities = false;
-          });
-          if (kDebugMode)
-            debugPrint(
-                '✅ Loaded ${cities.length} cities for $countryCode: ${cities.map((c) => c['name']).join(', ')}');
-        }
-      } else {
-        throw Exception('API returned success: false');
-      }
-    } catch (e) {
-      if (kDebugMode) debugPrint('Error loading cities: $e');
-      if (mounted) {
-        setState(() {
-          _availableCities = [
-            {
-              'id': 'error',
-              'name': 'Network error - try again',
-              'countryCode': _userCountry ?? 'LK'
-            }
-          ];
-          _loadingCities = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _selectDateOfBirth() async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime(now.year - 25, now.month, now.day),
-      firstDate: DateTime(1900, 1, 1),
-      lastDate: DateTime(now.year - 18, now.month, now.day),
-    );
-    if (picked != null && mounted) {
-      setState(() => _dateOfBirth = picked);
-    }
-  }
-
-  void _showDocumentRequirementsDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Required Documents'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Text('• National Identity Card'),
-            Text('• No Objection Certificate (if not vehicle owner)'),
-            Text('• Vehicle Owner\'s National Identity Card (if applicable)'),
-            Text('• Billing Proof (Utility bill or bank statement)'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
+    _loadDriverData();
   }
 
   @override
   void dispose() {
-    _fullNameController.dispose();
-    _phoneController.dispose();
-    _licenseNumberController.dispose();
-    _insuranceNumberController.dispose();
-    _vehicleModelController.dispose();
-    _vehicleYearController.dispose();
-    _vehicleNumberController.dispose();
-    _vehicleColorController.dispose();
+    _phoneOtpController.dispose();
     super.dispose();
   }
 
-  // Get selected city data with both ID and name
-  Map<String, dynamic>? _getSelectedCityData() {
-    if (_selectedCity == null) return null;
+  Future<void> _loadDriverData() async {
+    try {
+      final currentUser = await _userService.getCurrentUser();
+      if (currentUser == null) throw Exception('User not authenticated');
 
-    // Find the city in available cities list
-    final city = _availableCities.firstWhere(
-        (city) => city['name'] == _selectedCity,
-        orElse: () => {'id': null, 'name': _selectedCity});
+      print('🔍 Loading driver data for user: ${currentUser.uid}');
 
-    return {
-      'id': city['id'], // UUID from database
-      'name': city['name'] // City name
-    };
+      // Get driver verification data from REST API
+      final response = await ApiClient.instance
+          .get('/api/driver-verifications/user/${currentUser.uid}');
+
+      print('📡 API Response: ${response.isSuccess}');
+      print('📡 API Data: ${response.data}');
+      print('📡 API Error: ${response.error}');
+
+      if (mounted) {
+        setState(() {
+          if (response.isSuccess && response.data != null) {
+            // Extract the actual data from the API response
+            final apiResponse = response.data as Map<String, dynamic>;
+            print('📊 Raw API Response: $apiResponse');
+
+            // Handle different response formats
+            Map<String, dynamic>? rawData;
+            if (apiResponse['data'] != null) {
+              rawData = apiResponse['data'] as Map<String, dynamic>;
+              print('✅ Driver verification data found in apiResponse.data!');
+            } else if (apiResponse.containsKey('user_id')) {
+              // Direct data format (not wrapped in 'data' key)
+              rawData = apiResponse;
+              print('✅ Driver verification data found in direct format!');
+            } else {
+              print('❌ No driver verification data found in API response');
+            }
+
+            if (rawData != null) {
+              _driverData = {
+                // ID - CRITICAL for document replacement
+                'id': rawData['id'],
+                'userId': rawData['user_id'],
+
+                // Basic info
+                'fullName': rawData['full_name'],
+                'firstName': rawData['first_name'],
+                'lastName': rawData['last_name'],
+                'email': rawData['email'],
+                'phoneNumber': rawData['phone_number'],
+                'secondaryMobile': rawData['secondary_mobile'],
+                'gender': rawData['gender'],
+                'dateOfBirth': rawData['date_of_birth'],
+                'nicNumber': rawData['nic_number'],
+                'city': rawData['city_name'] ?? rawData['city_id'],
+
+                // License info
+                'licenseNumber': rawData['license_number'],
+                'licenseExpiry': rawData['license_expiry'],
+                'licenseHasNoExpiry': rawData['license_has_no_expiry'],
+
+                // Insurance info
+                'insuranceNumber': rawData['insurance_number'],
+                'insuranceExpiry': rawData['insurance_expiry'],
+
+                // Vehicle info
+                'vehicleModel': rawData['vehicle_model'],
+                'vehicleYear': rawData['vehicle_year'],
+                'vehicleColor': rawData['vehicle_color'],
+                'vehicleNumber': rawData['vehicle_number'],
+                'vehicleType':
+                    rawData['vehicle_type_name'] ?? rawData['vehicle_type_id'],
+                'vehicleOwnership': rawData['is_vehicle_owner'],
+
+                // Document URLs
+                'driverImageUrl': rawData['driver_image_url'],
+                'licenseFrontUrl': rawData['license_front_url'],
+                'licenseBackUrl': rawData['license_back_url'],
+                'licenseDocumentUrl': rawData['license_document_url'],
+                'nicFrontUrl': rawData['nic_front_url'],
+                'nicBackUrl': rawData['nic_back_url'],
+                'billingProofUrl': rawData['billing_proof_url'],
+                'insuranceDocumentUrl': rawData['insurance_document_url'],
+                'vehicleRegistrationUrl': rawData['vehicle_registration_url'],
+                'vehicleImageUrls': rawData['vehicle_image_urls'] ?? [],
+
+                // Verification status
+                'status': rawData['status'],
+                'documentVerification': rawData['document_verification'] ?? {},
+                'vehicleImageVerification':
+                    rawData['vehicle_image_verification'] ?? [],
+
+                // Contact verification flags
+                'phoneVerified': rawData['phoneVerified'],
+                'emailVerified': rawData['emailVerified'],
+                'requiresPhoneVerification':
+                    rawData['requiresPhoneVerification'],
+                'requiresEmailVerification':
+                    rawData['requiresEmailVerification'],
+                'phoneVerificationSource': rawData['phoneVerificationSource'],
+                'emailVerificationSource': rawData['emailVerificationSource'],
+
+                // Meta
+                'createdAt': rawData['created_at'],
+                'updatedAt': rawData['updated_at'],
+              };
+            } else {
+              print('❌ No driver verification data found in API response');
+              _driverData = null;
+            }
+          } else {
+            print('❌ API request failed or returned null data');
+            _driverData = null;
+          }
+          _isLoading = false;
+        });
+      }
+
+      if (kDebugMode) {
+        print(
+            'Driver verification data loaded: ${_driverData != null ? 'Found' : 'Not found'}');
+        if (_driverData != null) {
+          print('Driver data keys: ${_driverData!.keys.toList()}');
+          print(
+              'Driver data sample: ${_driverData.toString().substring(0, _driverData.toString().length > 500 ? 500 : _driverData.toString().length)}...');
+        }
+      }
+    } catch (e) {
+      print('Error loading driver data: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
-  // Get selected vehicle type data with both ID and name
-  Map<String, dynamic>? _getSelectedVehicleTypeData() {
-    if (_selectedVehicleType == null) return null;
+  Future<String> _resolveCityName(String? cityValue) async {
+    if (cityValue == null || cityValue.isEmpty) return 'N/A';
 
-    // Find the vehicle type in available vehicle types list
-    final vehicleType = _availableVehicleTypes.firstWhere(
-        (vt) => vt['id'] == _selectedVehicleType,
-        orElse: () => {'id': _selectedVehicleType, 'name': 'Unknown'});
+    // If it's already a readable city name (not a Firebase ID), return it
+    if (!cityValue.contains('_') && cityValue.length < 20) {
+      return cityValue;
+    }
 
-    return {
-      'id': vehicleType['id'], // UUID from database
-      'name': vehicleType['name'] // Vehicle type name
-    };
+    // If it looks like a Firebase document ID, try to resolve it
+    try {
+// FIRESTORE_TODO: replace with REST service. Original: final cityDoc = await FirebaseFirestore.instance
+      final cityDoc = await FirebaseFirestore.instance
+          .collection('cities')
+          .doc(cityValue)
+          .get();
+
+      // firebase_shim returns a non-null data map or empty map; simplify checks
+      if (cityDoc.exists) {
+        final data = cityDoc.data();
+        return data['name'] ?? cityValue;
+      }
+    } catch (e) {
+      print('Error resolving city name: $e');
+    }
+
+    return cityValue; // Return original value if resolution fails
   }
 
   @override
@@ -337,75 +209,95 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
-        title: const Text('Driver Verification'),
+        title: const Text('Driver Profile & Documents'),
         backgroundColor: AppTheme.backgroundColor,
         foregroundColor: AppTheme.textPrimary,
         elevation: 0,
+        actions: [
+          if (_driverData != null)
+            IconButton(
+              onPressed: () {
+                Navigator.pushNamed(context, '/driver-verification');
+              },
+              icon: const Icon(Icons.edit),
+              tooltip: 'Update Verification',
+            ),
+        ],
       ),
-      body: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildDriverInformation(),
-              const SizedBox(height: 24),
-              _buildDocumentsSection(),
-              const SizedBox(height: 24),
-              _buildVehicleInformation(),
-              const SizedBox(height: 24),
-              _buildVehicleDocuments(),
-              const SizedBox(height: 24),
-              _buildVehicleImages(),
-              const SizedBox(height: 32),
-              _buildSubmitButton(),
-              const SizedBox(height: 24),
-            ],
-          ),
-        ),
-      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _driverData == null
+              ? _buildNoDataView()
+              : RefreshIndicator(
+                  onRefresh: _loadDriverData,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildDriverInformation(),
+                        const SizedBox(height: 24),
+                        _buildDocumentsSection(),
+                        const SizedBox(height: 24),
+                        _buildVehicleInformation(),
+                        const SizedBox(height: 24),
+                        _buildVehicleDocuments(),
+                        const SizedBox(height: 24),
+                        _buildVehicleImages(),
+                        const SizedBox(height: 100),
+                      ],
+                    ),
+                  ),
+                ),
     );
   }
 
-  // Helper method to get vehicle icon based on icon name
-  Widget _getVehicleIcon(String iconName) {
-    IconData iconData;
-    switch (iconName) {
-      case 'DirectionsCar':
-        iconData = Icons.directions_car;
-        break;
-      case 'TwoWheeler':
-        iconData = Icons.two_wheeler;
-        break;
-      case 'LocalShipping':
-        iconData = Icons.local_shipping;
-        break;
-      case 'DirectionsBus':
-        iconData = Icons.directions_bus;
-        break;
-      case 'Motorcycle':
-        iconData = Icons.motorcycle;
-        break;
-      case 'LocalTaxi':
-        iconData = Icons.local_taxi;
-        break;
-      case 'AirportShuttle':
-        iconData = Icons.airport_shuttle;
-        break;
-      default:
-        iconData = Icons.directions_car;
-    }
-    return Icon(iconData, size: 20);
+  Widget _buildNoDataView() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.description_outlined,
+            size: 80,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'No Driver Verification Found',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Please complete the driver verification process first.',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppTheme.textSecondary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () =>
+                Navigator.pushNamed(context, '/driver-verification'),
+            style: AppTheme.primaryButtonStyle,
+            child: const Text('Start Verification'),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildDriverInformation() {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(
-        color: AppTheme.backgroundColor,
-      ),
+      decoration: const BoxDecoration(color: AppTheme.backgroundColor),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -414,382 +306,69 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
               Icon(Icons.person, color: AppTheme.primaryColor, size: 24),
               const SizedBox(width: 12),
               const Text(
-                'About You',
+                'Driver Information',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: AppTheme.textPrimary,
                 ),
               ),
+              const Spacer(),
+              _buildOverallStatusChip(),
             ],
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _firstNameController,
-                  readOnly: false, // Allow editing for ID card accuracy
-                  decoration: const InputDecoration(
-                    labelText: 'First Name * (as on ID card)',
-                    helperText: 'Edit if different from your ID card',
-                    prefixIcon: Icon(Icons.person_outline),
-                    border: InputBorder.none,
-                    filled: true,
-                    fillColor:
-                        Color(0xFFF9F9F9), // Lighter fill to show it's editable
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'First name is required (as shown on ID card)';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: TextFormField(
-                  controller: _lastNameController,
-                  readOnly: false, // Allow editing for ID card accuracy
-                  decoration: const InputDecoration(
-                    labelText: 'Last Name * (as on ID card)',
-                    helperText: 'Edit if different from your ID card',
-                    prefixIcon: Icon(Icons.person_outline),
-                    border: InputBorder.none,
-                    filled: true,
-                    fillColor:
-                        Color(0xFFF9F9F9), // Lighter fill to show it's editable
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Last name is required (as shown on ID card)';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-            ],
+          _buildInfoRow(
+              'Full Name',
+              _driverData!['fullName'] ??
+                  _driverData!['name'] ??
+                  ((_driverData!['firstName'] ?? '').isNotEmpty &&
+                          (_driverData!['lastName'] ?? '').isNotEmpty
+                      ? '${_driverData!['firstName']} ${_driverData!['lastName']}'
+                      : 'N/A')),
+          _buildContactInfoRow(
+            label: 'Phone',
+            value: _driverData!['phoneNumber'] ?? 'N/A',
+            verified: _driverData!['phoneVerified'] == true,
+            requiredFlag: _driverData!['requiresPhoneVerification'] == true,
+            source: _driverData!['phoneVerificationSource'],
           ),
-          const SizedBox(height: 16),
-          GestureDetector(
-            onTap: _selectDateOfBirth,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.calendar_today),
-                  const SizedBox(width: 12),
-                  Text(
-                    _dateOfBirth == null
-                        ? 'Date of Birth *'
-                        : 'Date of Birth: ${_dateOfBirth!.day}/${_dateOfBirth!.month}/${_dateOfBirth!.year}',
-                    style: TextStyle(
-                      color: _dateOfBirth == null
-                          ? Colors.grey[600]
-                          : Colors.black,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const Spacer(),
-                  const Icon(Icons.arrow_drop_down),
-                ],
-              ),
-            ),
+          _buildContactInfoRow(
+            label: 'Email',
+            value: _driverData!['email'] ?? 'N/A',
+            verified: _driverData!['emailVerified'] == true,
+            requiredFlag: _driverData!['requiresEmailVerification'] == true,
+            source: _driverData!['emailVerificationSource'],
           ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-            ),
-            child: DropdownButtonFormField<String>(
-              value: _selectedGender,
-              decoration: const InputDecoration(
-                labelText: 'Gender *',
-                prefixIcon: Icon(Icons.person),
-                border: InputBorder.none,
-              ),
-              items: const [
-                DropdownMenuItem(value: 'Male', child: Text('Male')),
-                DropdownMenuItem(value: 'Female', child: Text('Female')),
-                DropdownMenuItem(value: 'Other', child: Text('Other')),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  _selectedGender = value;
-                });
-              },
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please select your gender';
-                }
-                return null;
-              },
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _nicNumberController,
-            decoration: const InputDecoration(
-              labelText: 'NIC Number *',
-              prefixIcon: Icon(Icons.credit_card),
-              border: InputBorder.none,
-              filled: true,
-              fillColor: Colors.white,
-            ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Please enter your NIC number';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 24),
-          // Contact Details Section
-          Row(
-            children: [
-              Icon(Icons.contact_phone, color: AppTheme.primaryColor, size: 24),
-              const SizedBox(width: 12),
-              const Text(
-                'Contact Details',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          // Simple phone number field
-          SimplePhoneField(
-            controller: _phoneController,
-            label: 'Phone Number *',
-            hint: 'Enter your phone number',
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Phone number is required for driver registration';
-              }
-              // Basic phone validation - at least 7 digits
-              final cleanPhone = value.replaceAll(RegExp(r'[\s\-\(\)]'), '');
-              if (cleanPhone.length < 7) {
-                return 'Please enter a valid phone number (minimum 7 digits)';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-            ),
-            child: DropdownButtonFormField<String>(
-              value: _selectedCity,
-              decoration: InputDecoration(
-                labelText: 'City *',
-                prefixIcon: const Icon(Icons.location_city),
-                border: InputBorder.none,
-                suffixIcon: _loadingCities
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : null,
-              ),
-              items: _availableCities.map((city) {
-                return DropdownMenuItem<String>(
-                  value: city['name'],
-                  child: Text(city['name']),
-                );
-              }).toList()
-                ..add(const DropdownMenuItem(
-                    value: 'other', child: Text('Other'))),
-              onChanged: _loadingCities
-                  ? null
-                  : (value) {
-                      setState(() {
-                        _selectedCity = value;
-                      });
-                    },
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please select your city';
-                }
-                return null;
-              },
-              hint: _loadingCities
-                  ? const Text('Loading cities...')
-                  : const Text('Select your city'),
-            ),
-          ),
-          const SizedBox(height: 24),
-          // Vehicle Ownership Section
-          Row(
-            children: [
-              Icon(Icons.directions_car,
-                  color: AppTheme.primaryColor, size: 24),
-              const SizedBox(width: 12),
-              const Text(
-                'Vehicle Ownership',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-            ),
-            child: Column(
-              children: [
-                RadioListTile<bool>(
-                  title: const Text(
-                      'I am the owner of this vehicle I am about to register.'),
-                  value: true,
-                  groupValue: _isVehicleOwner,
-                  onChanged: (value) {
-                    setState(() {
-                      _isVehicleOwner = value!;
-                    });
-                  },
-                  activeColor: AppTheme.primaryColor,
-                ),
-                RadioListTile<bool>(
-                  title: const Text('I am not the owner of the vehicle.'),
-                  value: false,
-                  groupValue: _isVehicleOwner,
-                  onChanged: (value) {
-                    setState(() {
-                      _isVehicleOwner = value!;
-                    });
-                  },
-                  activeColor: AppTheme.primaryColor,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.1),
-            ),
-            child: GestureDetector(
-              onTap: () {
-                _showDocumentRequirementsDialog();
-              },
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline, color: Colors.blue, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'See list of documents required',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.blue[800],
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _licenseNumberController,
-            decoration: const InputDecoration(
-              labelText: 'Driving License Number *',
-              prefixIcon: Icon(Icons.credit_card),
-              border: InputBorder.none,
-              filled: true,
-              fillColor: Colors.white,
-            ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Please enter your license number';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-          if (!_licenseHasNoExpiry)
-            GestureDetector(
-              onTap: _selectLicenseExpiryDate,
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.calendar_today),
-                    const SizedBox(width: 12),
-                    Text(
-                      _licenseExpiryDate == null
-                          ? 'Expiration Date *'
-                          : 'Expiration Date: ${_licenseExpiryDate!.day}/${_licenseExpiryDate!.month}/${_licenseExpiryDate!.year}',
-                      style: TextStyle(
-                        color: _licenseExpiryDate == null
-                            ? Colors.grey[600]
-                            : Colors.black,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const Spacer(),
-                    const Icon(Icons.arrow_drop_down),
-                  ],
-                ),
-              ),
-            ),
-          if (!_licenseHasNoExpiry) const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-            ),
-            child: CheckboxListTile(
-              title: const Text(
-                'My licence does not have an expiry date. (for older licences)',
-                style: TextStyle(fontSize: 14),
-              ),
-              value: _licenseHasNoExpiry,
-              onChanged: (value) {
-                setState(() {
-                  _licenseHasNoExpiry = value!;
-                  if (_licenseHasNoExpiry) {
-                    _licenseExpiryDate = null;
-                  }
-                });
-              },
-              activeColor: AppTheme.primaryColor,
-              controlAffinity: ListTileControlAffinity.leading,
-            ),
-          ),
+          if ((_driverData!['secondaryMobile'] ?? '').isNotEmpty)
+            _buildInfoRow('Secondary Mobile', _driverData!['secondaryMobile']),
+          if ((_driverData!['gender'] ?? '').isNotEmpty)
+            _buildInfoRow('Gender', _driverData!['gender']),
+          if (_driverData!['dateOfBirth'] != null)
+            _buildInfoRow(
+                'Date of Birth', _formatDate(_driverData!['dateOfBirth'])),
+          if ((_driverData!['nicNumber'] ?? '').isNotEmpty)
+            _buildInfoRow('NIC Number', _driverData!['nicNumber']),
+          if ((_driverData!['city'] ?? '').isNotEmpty) _buildCityInfoRow(),
+          _buildInfoRow(
+              'License Number', _driverData!['licenseNumber'] ?? 'N/A'),
+          _buildInfoRow(
+              'License Expiry', _formatDate(_driverData!['licenseExpiry'])),
         ],
       ),
     );
   }
 
   Widget _buildDocumentsSection() {
+    final docVerificationRaw = _driverData!['documentVerification'];
+    final docVerification = docVerificationRaw != null
+        ? Map<String, dynamic>.from(docVerificationRaw as Map)
+        : <String, dynamic>{};
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(
-        color: AppTheme.backgroundColor,
-      ),
+      decoration: const BoxDecoration(color: AppTheme.backgroundColor),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -798,7 +377,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
               Icon(Icons.description, color: AppTheme.primaryColor, size: 24),
               const SizedBox(width: 12),
               const Text(
-                'Personal Document Upload',
+                'Documents',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -807,205 +386,66 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          const Text(
-            '* Required',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.red,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
           const SizedBox(height: 16),
-          // Profile Photo Section
-          Row(
-            children: [
-              Icon(Icons.person, color: AppTheme.primaryColor, size: 20),
-              const SizedBox(width: 8),
-              const Text(
-                'Profile Photo',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _buildDocumentUpload(
-            'Profile Photo',
-            'Upload or capture your photo *',
-            _driverImage,
-            () => _pickDocument('driver_image'),
+          _buildDocumentItem(
+            'Driver Photo',
+            docVerification['driverImage'],
+            _driverData!['driverImageUrl'],
+            'Driver identification photo',
             Icons.person,
-            isRequired: true,
           ),
-          const SizedBox(height: 24),
-          // Driving License Section
-          Row(
-            children: [
-              Icon(Icons.credit_card, color: AppTheme.primaryColor, size: 20),
-              const SizedBox(width: 8),
-              const Text(
-                'Driving License',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _buildDocumentUpload(
-            'Driving License - Front',
-            'Upload or capture the front side of your driving license *',
-            _licenseFrontPhoto,
-            () => _pickDocument('license_front'),
+          _buildDocumentItem(
+            'License Front Photo',
+            docVerification['licenseFront'],
+            _driverData!['licenseFrontUrl'],
+            'Front side of driving license',
             Icons.credit_card,
-            isRequired: true,
           ),
-          const SizedBox(height: 16),
-          _buildDocumentUpload(
-            'Driving License - Rear',
-            'Upload or capture the back side of your driving license *',
-            _licenseBackPhoto,
-            () => _pickDocument('license_back'),
+          _buildDocumentItem(
+            'License Back Photo',
+            docVerification['licenseBack'],
+            _driverData!['licenseBackUrl'],
+            'Back side of driving license',
             Icons.flip_to_back,
-            isRequired: true,
           ),
-          const SizedBox(height: 24),
-          // National Identity Card Section
-          Row(
-            children: [
-              Icon(Icons.badge, color: AppTheme.primaryColor, size: 20),
-              const SizedBox(width: 8),
-              const Text(
-                'National Identity Card',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _buildDocumentUpload(
-            'NIC - Front',
-            'Upload or capture the front side of your National Identity Card',
-            _nicFrontPhoto,
-            () => _pickDocument('nic_front'),
+          _buildDocumentItem(
+            'Additional License Document',
+            docVerification['licenseDocument'],
+            _driverData!['licenseDocumentUrl'],
+            'Additional license document (Optional)',
             Icons.badge,
-            isRequired: false,
           ),
-          const SizedBox(height: 16),
-          _buildDocumentUpload(
-            'NIC - Rear',
-            'Upload or capture the back side of your National Identity Card',
-            _nicBackPhoto,
-            () => _pickDocument('nic_back'),
+          _buildDocumentItem(
+            'NIC (Front)',
+            docVerification['nicFront'],
+            _driverData!['nicFrontUrl'],
+            'Front side of National Identity Card',
+            Icons.badge,
+          ),
+          _buildDocumentItem(
+            'NIC (Back)',
+            docVerification['nicBack'],
+            _driverData!['nicBackUrl'],
+            'Back side of National Identity Card',
             Icons.flip_to_back,
-            isRequired: false,
           ),
-          const SizedBox(height: 24),
-          // Billing Proof Section
-          Row(
-            children: [
-              Icon(Icons.receipt, color: AppTheme.primaryColor, size: 20),
-              const SizedBox(width: 8),
-              const Text(
-                'Billing Proof (optional)',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _buildDocumentUpload(
+          _buildDocumentItem(
             'Billing Proof',
-            'Billing proof is used to confirm your address. It can be a utility bill (water, electricity or landline phone) or a bank statement with your correct address.',
-            _billingProofDocument,
-            () => _pickDocument('billing_proof'),
+            docVerification['billingProof'],
+            _driverData!['billingProofUrl'],
+            'Utility bill or bank statement for address verification (Optional)',
             Icons.receipt,
-            isRequired: false,
           ),
-          const SizedBox(height: 16),
-          _buildInsuranceSection(),
+          if (_driverData!['vehicleRegistrationUrl'] != null)
+            _buildDocumentItem(
+              'Vehicle Registration Document',
+              docVerification['vehicleRegistration'],
+              _driverData!['vehicleRegistrationUrl'],
+              'Official vehicle registration document',
+              Icons.assignment,
+            ),
         ],
       ),
-    );
-  }
-
-  Widget _buildInsuranceSection() {
-    return Column(
-      children: [
-        TextFormField(
-          controller: _insuranceNumberController,
-          decoration: const InputDecoration(
-            labelText: 'Insurance Number *',
-            prefixIcon: Icon(Icons.security),
-            border: InputBorder.none,
-            filled: true,
-            fillColor: Colors.white,
-          ),
-          validator: (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'Please enter your insurance number';
-            }
-            return null;
-          },
-        ),
-        const SizedBox(height: 16),
-        GestureDetector(
-          onTap: _selectInsuranceExpiryDate,
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.calendar_today),
-                const SizedBox(width: 12),
-                Text(
-                  _insuranceExpiryDate == null
-                      ? 'Insurance Expiry Date *'
-                      : 'Insurance Expiry: ${_insuranceExpiryDate!.day}/${_insuranceExpiryDate!.month}/${_insuranceExpiryDate!.year}',
-                  style: TextStyle(
-                    color: _insuranceExpiryDate == null
-                        ? Colors.grey[600]
-                        : Colors.black,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        _buildDocumentUpload(
-          'Vehicle Insurance Document',
-          'Upload or capture your vehicle insurance certificate',
-          _insuranceDocument,
-          () => _pickDocument('vehicle_insurance'),
-          Icons.security,
-          isRequired: true,
-        ),
-        const SizedBox(height: 16),
-        _buildDocumentUpload(
-          'Vehicle Registration Document',
-          'Upload or capture your vehicle registration document',
-          _vehicleRegistrationDocument,
-          () => _pickDocument('vehicle_registration'),
-          Icons.assignment,
-          isRequired: true,
-        ),
-      ],
     );
   }
 
@@ -1013,9 +453,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(
-        color: AppTheme.backgroundColor,
-      ),
+      decoration: const BoxDecoration(color: AppTheme.backgroundColor),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1035,176 +473,49 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          // Vehicle Type Selection
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.all(Radius.circular(8)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.category, color: Colors.grey),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Vehicle Type *',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                if (_loadingVehicleTypes)
-                  const Row(
-                    children: [
-                      SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        'Loading vehicle types...',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ],
-                  )
-                else if (_availableVehicleTypes.isEmpty)
-                  const Text(
-                    'No vehicle types available',
-                    style: TextStyle(color: Colors.grey),
-                  )
-                else
-                  DropdownButtonFormField<String>(
-                    value: _selectedVehicleType,
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    items: _availableVehicleTypes.map((vehicle) {
-                      return DropdownMenuItem<String>(
-                        value: vehicle['id'],
-                        child: Row(
-                          children: [
-                            _getVehicleIcon(vehicle['icon']),
-                            const SizedBox(width: 8),
-                            Text(vehicle['name']),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (String? newValue) {
-                      setState(() {
-                        _selectedVehicleType = newValue;
-                      });
-                    },
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please select a vehicle type';
-                      }
-                      return null;
-                    },
-                  ),
-              ],
-            ),
-          ),
+          _buildInfoRow('Make & Model', _driverData!['vehicleModel'] ?? 'N/A'),
+          _buildInfoRow(
+              'Year', _driverData!['vehicleYear']?.toString() ?? 'N/A'),
+          _buildInfoRow('Color', _driverData!['vehicleColor'] ?? 'N/A'),
+          _buildInfoRow(
+              'License Plate', _driverData!['vehicleNumber'] ?? 'N/A'),
+          _buildInfoRow('Vehicle Type', _driverData!['vehicleType'] ?? 'N/A'),
+          if (_driverData!['vehicleOwnership'] != null)
+            _buildInfoRow(
+                'Vehicle Ownership',
+                (_driverData!['vehicleOwnership'] as bool? ?? true)
+                    ? 'Owner'
+                    : 'Not Owner'),
           const SizedBox(height: 16),
-          TextFormField(
-            controller: _vehicleModelController,
-            decoration: const InputDecoration(
-              labelText: 'Vehicle Make & Model *',
-              hintText: 'e.g., Toyota Camry',
-              prefixIcon: Icon(Icons.directions_car),
-              border: InputBorder.none,
-              filled: true,
-              fillColor: Colors.white,
+          // Insurance Information
+          const Text(
+            'Insurance Information',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary,
             ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Please enter your vehicle make & model';
-              }
-              return null;
-            },
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _vehicleYearController,
-                  decoration: const InputDecoration(
-                    labelText: 'Year *',
-                    prefixIcon: Icon(Icons.calendar_today),
-                    border: InputBorder.none,
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Required';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: TextFormField(
-                  controller: _vehicleColorController,
-                  decoration: const InputDecoration(
-                    labelText: 'Color *',
-                    prefixIcon: Icon(Icons.color_lens),
-                    border: InputBorder.none,
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Required';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _vehicleNumberController,
-            decoration: const InputDecoration(
-              labelText: 'Vehicle Number/License Plate *',
-              hintText: 'e.g., ABC-1234',
-              prefixIcon: Icon(Icons.confirmation_number),
-              border: InputBorder.none,
-              filled: true,
-              fillColor: Colors.white,
-            ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Please enter your vehicle number';
-              }
-              return null;
-            },
-          ),
+          const SizedBox(height: 8),
+          _buildInfoRow(
+              'Insurance Number', _driverData!['insuranceNumber'] ?? 'N/A'),
+          _buildInfoRow(
+              'Insurance Expiry', _formatDate(_driverData!['insuranceExpiry'])),
         ],
       ),
     );
   }
 
   Widget _buildVehicleDocuments() {
+    final docVerificationRaw = _driverData!['documentVerification'];
+    final docVerification = docVerificationRaw != null
+        ? Map<String, dynamic>.from(docVerificationRaw as Map)
+        : <String, dynamic>{};
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(
-        color: AppTheme.backgroundColor,
-      ),
+      decoration: const BoxDecoration(color: AppTheme.backgroundColor),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1223,18 +534,89 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
             ],
           ),
           const SizedBox(height: 16),
+          _buildDocumentItem(
+            'Vehicle Insurance Document',
+            docVerification['vehicleInsurance'],
+            _driverData!['insuranceDocumentUrl'],
+            'Vehicle insurance certificate (Expires: ${_formatDate(_driverData!['insuranceExpiry'])})',
+            Icons.security,
+          ),
+          _buildDocumentItem(
+            'Vehicle Registration',
+            docVerification['vehicleRegistration'],
+            _driverData!['vehicleRegistrationUrl'],
+            'Official vehicle registration document',
+            Icons.assignment,
+          ),
         ],
       ),
     );
   }
 
   Widget _buildVehicleImages() {
+    // Handle vehicleImageUrls safely
+    List<dynamic> vehicleImageUrls = [];
+    final imageUrlsData = _driverData!['vehicleImageUrls'];
+
+    // Handle vehicleImageVerification safely - it could be List or Map
+    List<dynamic> imageVerifications = [];
+    final verificationData = _driverData!['vehicleImageVerification'];
+
+    // Fill vehicleImageUrls from the data
+    if (imageUrlsData != null) {
+      if (imageUrlsData is List) {
+        vehicleImageUrls = imageUrlsData;
+      } else if (imageUrlsData is Map) {
+        // Convert Map to List maintaining index order
+        final keys = imageUrlsData.keys
+            .map((k) => int.tryParse(k.toString()) ?? 0)
+            .toList()
+          ..sort();
+        for (var key in keys) {
+          final value = imageUrlsData[key.toString()];
+          if (value != null) {
+            vehicleImageUrls.add(value);
+          }
+        }
+      }
+    }
+
+    // Fill imageVerifications from the data
+    if (verificationData != null) {
+      if (verificationData is List) {
+        imageVerifications = verificationData;
+      } else if (verificationData is Map) {
+        // Convert Map to List maintaining index order
+        final keys = verificationData.keys
+            .map((k) => int.tryParse(k.toString()) ?? 0)
+            .toList()
+          ..sort();
+        final maxIndex = keys.isNotEmpty ? keys.last : 0;
+        imageVerifications = List.filled(maxIndex + 1, null);
+        verificationData.forEach((key, value) {
+          final index = int.tryParse(key.toString());
+          if (index != null && index < imageVerifications.length) {
+            imageVerifications[index] = value;
+          }
+        });
+      }
+    }
+
+    // Ensure we have verification entries for all vehicle images
+    if (vehicleImageUrls.isNotEmpty &&
+        imageVerifications.length < vehicleImageUrls.length) {
+      print(
+          '🔍 DEBUG: Padding imageVerifications to match vehicleImageUrls length');
+      while (imageVerifications.length < vehicleImageUrls.length) {
+        imageVerifications.add(null);
+      }
+      print('🔍 DEBUG: Padded imageVerifications list: $imageVerifications');
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(
-        color: AppTheme.backgroundColor,
-      ),
+      decoration: const BoxDecoration(color: AppTheme.backgroundColor),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1256,695 +638,1458 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
+              color: Colors.blue.withOpacity(0.1),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.orange, size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Required: 4 vehicle photos (upload or capture)',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.orange[800],
-                        ),
-                      ),
+                Icon(Icons.info_outline, color: Colors.blue, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '${vehicleImageUrls.length} of 6 photos uploaded. Minimum 4 required for approval.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.blue[800],
                     ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Padding(
-                  padding: const EdgeInsets.only(left: 26),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '1. Front view with number plate visible',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.orange[700],
-                        ),
-                      ),
-                      Text(
-                        '2. Rear view with number plate visible',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.orange[700],
-                        ),
-                      ),
-                      Text(
-                        '3. & 4. Additional vehicle photos',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.orange[700],
-                        ),
-                      ),
-                    ],
                   ),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 16),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1.2,
+          // Show upload option if no photos uploaded
+          if (vehicleImageUrls.where((url) => url != null).isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: Column(
+                children: [
+                  Icon(Icons.add_a_photo, color: Colors.grey[600], size: 48),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'No Vehicle Photos Uploaded',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Upload at least 4 vehicle photos to complete your verification',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      // Navigate to driver verification screen to upload photos
+                      Navigator.pushNamed(context, '/driver-verification');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.upload, size: 18),
+                        SizedBox(width: 8),
+                        Text('Upload Vehicle Photos'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            itemCount:
-                _vehicleImages.length < 6 ? _vehicleImages.length + 1 : 6,
-            itemBuilder: (context, index) {
-              if (index < _vehicleImages.length) {
-                return _buildVehicleImageItem(index);
-              } else {
-                return _buildAddImageButton();
-              }
-            },
+          ...vehicleImageUrls
+              .asMap()
+              .entries
+              .where((entry) => entry.value != null)
+              .map((entry) {
+            final index = entry.key;
+            final imageUrl = entry.value as String;
+            final verification = imageVerifications.length > index
+                ? imageVerifications[index]
+                : null;
+
+            String title = '';
+            String description = '';
+            switch (index) {
+              case 0:
+                title = '1. Front View with Number Plate';
+                description =
+                    'Clear front view showing number plate (Required)';
+                break;
+              case 1:
+                title = '2. Rear View with Number Plate';
+                description = 'Clear rear view showing number plate (Required)';
+                break;
+              default:
+                title = '${index + 1}. Vehicle Photo';
+                description = 'Additional vehicle photo';
+            }
+
+            return _buildVehicleImageItem(
+              title,
+              verification,
+              imageUrl,
+              description,
+              index < 2, // First two are required
+            );
+          }).toList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOverallStatusChip() {
+    final status = _driverData!['status'] as String? ?? 'pending';
+    final phoneVerified = _driverData!['phoneVerified'] == true;
+    final emailVerified = _driverData!['emailVerified'] == true;
+
+    Color color;
+    String text;
+
+    // Check if all documents are approved (for complete verification)
+    final docVerification =
+        _driverData!['documentVerification'] as Map<String, dynamic>? ?? {};
+    final vehicleImageVerification =
+        _driverData!['vehicleImageVerification'] as List<dynamic>? ?? [];
+
+    bool allDocumentsApproved = true;
+
+    // Check document verification statuses
+    for (var docStatus in docVerification.values) {
+      if (docStatus is Map<String, dynamic> &&
+          docStatus['status'] != 'approved') {
+        allDocumentsApproved = false;
+        break;
+      }
+    }
+
+    // Check vehicle image verification statuses
+    for (var imgStatus in vehicleImageVerification) {
+      if (imgStatus is Map<String, dynamic> &&
+          imgStatus['status'] != 'approved') {
+        allDocumentsApproved = false;
+        break;
+      }
+    }
+
+    if (status == 'approved' && allDocumentsApproved) {
+      color = Colors.green;
+      text = 'Fully Approved';
+    } else if (status == 'rejected') {
+      color = Colors.red;
+      text = 'Rejected';
+    } else if (phoneVerified && emailVerified) {
+      color = Colors.blue;
+      text = 'Contact Verified';
+    } else {
+      color = Colors.orange;
+      text = 'Pending Review';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDocumentItem(String title, Map<String, dynamic>? verification,
+      String? documentUrl, String description, IconData icon) {
+    final status = verification?['status'] as String? ??
+        (documentUrl != null ? 'pending' : 'not_uploaded');
+    final rejectionReason = verification?['rejectionReason'] as String?;
+
+    Color statusColor = _getStatusColor(status);
+    String statusText = _getStatusText(status);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.grey.withOpacity(0.05),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                _getStatusIcon(status),
+                color: statusColor,
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  statusText,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
           ),
-          if (_vehicleImages.length < 4) ...[
+          const SizedBox(height: 8),
+          Text(
+            description,
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppTheme.textSecondary,
+            ),
+          ),
+          if (rejectionReason != null) ...[
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 children: [
                   Icon(Icons.warning, color: Colors.red, size: 18),
                   const SizedBox(width: 8),
-                  Text(
-                    'Please upload at least ${4 - _vehicleImages.length} more photo(s)',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.red,
-                      fontWeight: FontWeight.w500,
+                  Expanded(
+                    child: Text(
+                      'Rejection reason: $rejectionReason',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.red,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
           ],
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              if (documentUrl != null && documentUrl.isNotEmpty) ...[
+                // Check if it's a placeholder URL
+                if (documentUrl.startsWith('https://example.com/')) ...[
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.warning, color: Colors.orange, size: 16),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              'Demo URL - Storage not setup',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.orange[700],
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  TextButton.icon(
+                    onPressed: () => _viewDocument(documentUrl, title),
+                    icon: const Icon(Icons.visibility, size: 18),
+                    label: const Text('View Document'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.blue,
+                      padding: EdgeInsets.zero,
+                    ),
+                  ),
+                ],
+                if (status == 'rejected') ...[
+                  const SizedBox(width: 16),
+                  TextButton.icon(
+                    onPressed: () => _replaceDocument(title),
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: const Text('Replace'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.orange,
+                      padding: EdgeInsets.zero,
+                    ),
+                  ),
+                ],
+              ] else ...[
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.upload_file, color: Colors.grey, size: 16),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Not uploaded',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildVehicleImageItem(int index) {
-    String title = '';
-    switch (index) {
-      case 0:
-        title = '1. Front View\n(with number plate)';
-        break;
-      case 1:
-        title = '2. Rear View\n(with number plate)';
-        break;
-      default:
-        title = '${index + 1}. Vehicle Photo';
-    }
+  Widget _buildVehicleImageItem(
+      String title,
+      Map<String, dynamic>? verification,
+      String imageUrl,
+      String description,
+      bool isRequired) {
+    final status = verification?['status'] as String? ??
+        (imageUrl.isNotEmpty ? 'pending' : 'not_uploaded');
+    final rejectionReason = verification?['rejectionReason'] as String?;
+
+    Color statusColor = _getStatusColor(status);
+    String statusText = _getStatusText(status);
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.grey.withOpacity(0.05),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            children: [
+              Icon(
+                _getStatusIcon(status),
+                color: statusColor,
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    if (isRequired)
+                      Text(
+                        'Required',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.red[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      )
+                    else
+                      Text(
+                        'Optional',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  statusText,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            description,
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppTheme.textSecondary,
+            ),
+          ),
+          if (rejectionReason != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.warning, color: Colors.red, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Rejection reason: $rejectionReason',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.red,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              // Document icon instead of thumbnail
+              Container(
+                height: 60,
+                width: 60,
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: Icon(
+                  imageUrl.isNotEmpty ? Icons.photo : Icons.add_a_photo,
+                  color:
+                      imageUrl.isNotEmpty ? Colors.blue[600] : Colors.grey[400],
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Row(
+                  children: [
+                    if (imageUrl.isNotEmpty) ...[
+                      // Check if it's a placeholder URL
+                      if (imageUrl.startsWith('https://example.com/')) ...[
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.warning,
+                                    color: Colors.orange, size: 16),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    'Demo URL - Storage not setup',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.orange[700],
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ] else ...[
+                        TextButton.icon(
+                          onPressed: () => _viewVehiclePhoto(imageUrl, title),
+                          icon: const Icon(Icons.visibility, size: 18),
+                          label: const Text('View Photo'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.blue,
+                            padding: EdgeInsets.zero,
+                          ),
+                        ),
+                      ],
+                      if (status == 'rejected') ...[
+                        const SizedBox(width: 12),
+                        TextButton.icon(
+                          onPressed: () => _replaceVehiclePhoto(title),
+                          icon: const Icon(Icons.refresh, size: 18),
+                          label: const Text('Replace'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.orange,
+                            padding: EdgeInsets.zero,
+                          ),
+                        ),
+                      ],
+                    ] else ...[
+                      Text(
+                        'Not uploaded',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          ),
           Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'approved':
+        return Colors.green;
+      case 'rejected':
+        return Colors.red;
+      case 'not_uploaded':
+        return Colors.grey;
+      default:
+        return Colors.orange;
+    }
+  }
+
+  String _getStatusText(String status) {
+    switch (status) {
+      case 'approved':
+        return 'Approved';
+      case 'rejected':
+        return 'Rejected';
+      case 'not_uploaded':
+        return 'Not Uploaded';
+      default:
+        return 'Pending';
+    }
+  }
+
+  IconData _getStatusIcon(String status) {
+    switch (status) {
+      case 'approved':
+        return Icons.check_circle;
+      case 'rejected':
+        return Icons.error;
+      case 'not_uploaded':
+        return Icons.upload_file;
+      default:
+        return Icons.schedule;
+    }
+  }
+
+  Widget _buildContactInfoRow({
+    required String label,
+    required String value,
+    required bool verified,
+    required bool requiredFlag,
+    String? source,
+  }) {
+    // Special handling for phone verification
+    if (label == 'Phone' && value != 'N/A' && !verified) {
+      return _buildPhoneVerificationSection(value);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                ),
+                if (verified || requiredFlag)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    margin: const EdgeInsets.only(left: 8),
+                    decoration: BoxDecoration(
+                      color: verified ? Colors.green : Colors.orange,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          verified ? Icons.check_circle : Icons.schedule,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          verified ? 'Verified' : 'Pending',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (!verified && !requiredFlag)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    margin: const EdgeInsets.only(left: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[400],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      'Optional',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPhoneVerificationSection(String phoneNumber) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.orange.withOpacity(0.1),
+        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.phone, color: Colors.orange, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Phone Verification Required',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Phone: $phoneNumber',
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (!_isPhoneOtpSent) ...[
+            const Text(
+              'Verify your phone number to complete your driver profile.',
+              style: TextStyle(
+                fontSize: 14,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: _isVerifyingPhone
+                  ? null
+                  : () => _startPhoneVerification(phoneNumber),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
+              child: _isVerifyingPhone
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text('Send Verification Code'),
+            ),
+          ] else ...[
+            const Text(
+              'Enter the 6-digit verification code sent to your phone:',
+              style: TextStyle(
+                fontSize: 14,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _phoneOtpController,
+              decoration: const InputDecoration(
+                hintText: '123456',
+                border: OutlineInputBorder(),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                ElevatedButton(
+                  onPressed: _verifyPhoneOTP,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  ),
+                  child: const Text('Verify'),
+                ),
+                const SizedBox(width: 12),
+                TextButton(
+                  onPressed: () => _startPhoneVerification(phoneNumber),
+                  child: const Text('Resend Code'),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(dynamic date) {
+    if (date == null) return 'N/A';
+    if (date is Timestamp) {
+      final DateTime dateTime = date.toDate();
+      return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+    }
+    return date.toString();
+  }
+
+  void _viewDocument(String documentUrl, String title) async {
+    // Debug: Print the URL being accessed
+    print('🖼️ Attempting to load image: $documentUrl');
+
+    // Show loading dialog first
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.black,
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(color: Colors.white),
+              const SizedBox(height: 16),
+              const Text(
+                'Getting secure document link...',
+                style: TextStyle(color: Colors.white),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    try {
+      // Get signed URL from backend
+      final signedUrl = await ApiClient.instance.getSignedUrl(documentUrl);
+
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+
+      if (signedUrl == null) {
+        // Show error dialog
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Error'),
+              content: const Text('Unable to load document. Please try again.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
+
+      // Show image dialog with signed URL
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => Dialog(
+            backgroundColor: Colors.black,
             child: Stack(
               children: [
-                Container(
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: Colors.grey,
-                  ),
-                  child: Image.file(
-                    _vehicleImages[index],
-                    fit: BoxFit.cover,
+                Center(
+                  child: InteractiveViewer(
+                    child: Image.network(
+                      signedUrl,
+                      fit: BoxFit.contain,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) {
+                          return child;
+                        }
+                        return Container(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const CircularProgressIndicator(
+                                  color: Colors.white),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Loading image...',
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        print('🚨 Image load error: $error');
+                        return Container(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.error,
+                                  size: 64, color: Colors.white),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Failed to load document',
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 18),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'URL: $signedUrl',
+                                style: const TextStyle(
+                                    color: Colors.grey, fontSize: 12),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Error: ${error.toString()}',
+                                style: const TextStyle(
+                                    color: Colors.grey, fontSize: 10),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
                 Positioned(
-                  top: 4,
-                  right: 4,
-                  child: GestureDetector(
-                    onTap: () => _removeVehicleImage(index),
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.close,
-                        color: Colors.white,
-                        size: 16,
-                      ),
+                  top: 40,
+                  left: 20,
+                  right: 20,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(20),
                     ),
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 40,
+                  right: 20,
+                  child: IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon:
+                        const Icon(Icons.close, color: Colors.white, size: 30),
                   ),
                 ),
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
+        );
+      }
+    } catch (e) {
+      // Close loading dialog if still open
+      if (mounted) Navigator.pop(context);
+
+      print('❌ Error getting signed URL: $e');
+
+      // Show error dialog
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Error'),
+            content: Text('Failed to load document: $e'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
               ),
-              textAlign: TextAlign.center,
-            ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAddImageButton() {
-    return GestureDetector(
-      onTap: _pickVehicleImage,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.grey[100],
-          border: Border.all(
-              color: Colors.grey[300]!, style: BorderStyle.solid, width: 2),
-        ),
-        child: const Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.add_a_photo,
-              size: 40,
-              color: Colors.grey,
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Add Photo',
-              style: TextStyle(
-                color: Colors.grey,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDocumentUpload(String title, String description, File? file,
-      VoidCallback onTap, IconData icon,
-      {bool isRequired = false}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: file != null ? Colors.green.withOpacity(0.1) : Colors.white,
-        ),
-        child: Column(
-          children: [
-            Icon(
-              file != null ? Icons.check_circle : icon,
-              size: 40,
-              color: file != null ? Colors.green : Colors.grey,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              file != null ? '$title - Uploaded' : title,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: file != null ? Colors.green : AppTheme.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              file != null ? 'Tap to change document' : description,
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppTheme.textSecondary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSubmitButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: _canSubmit() ? _submitVerification : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.primaryColor,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: const RoundedRectangleBorder(),
-        ),
-        child: _isLoading
-            ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-            : const Text(
-                'Submit for Verification',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
-      ),
-    );
-  }
-
-  bool _canSubmit() {
-    // No phone verification required in form - will be handled post-submission
-    return _firstNameController.text.trim().isNotEmpty &&
-        _lastNameController.text.trim().isNotEmpty &&
-        _phoneController.text.trim().isNotEmpty && // Phone number required
-        _dateOfBirth != null &&
-        _selectedGender != null &&
-        _nicNumberController.text.trim().isNotEmpty &&
-        _selectedCity != null &&
-        _licenseNumberController.text.trim().isNotEmpty &&
-        (_licenseExpiryDate != null || _licenseHasNoExpiry) &&
-        _driverImage != null && // Driver photo required
-        _licenseFrontPhoto != null && // License front photo required
-        _licenseBackPhoto != null && // License back photo required
-        _insuranceNumberController.text.trim().isNotEmpty &&
-        _insuranceExpiryDate != null && // Insurance expiry date required
-        _insuranceDocument != null && // Vehicle insurance required
-        _vehicleModelController.text.trim().isNotEmpty &&
-        _vehicleYearController.text.trim().isNotEmpty &&
-        _vehicleColorController.text.trim().isNotEmpty &&
-        _vehicleNumberController.text.trim().isNotEmpty &&
-        _vehicleRegistrationDocument != null && // Vehicle registration required
-        _vehicleImages.length >= 4 && // Minimum 4 vehicle photos
-        !_isLoading;
-  }
-
-  // (Removed duplicate _loadAvailableCities and obsolete _buildDocumentListItem)
-
-  Future<void> _selectLicenseExpiryDate() async {
-    final date = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now().add(const Duration(days: 365)),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 3650)),
-    );
-    if (date != null) {
-      setState(() => _licenseExpiryDate = date);
+        );
+      }
     }
   }
 
-  Future<void> _selectInsuranceExpiryDate() async {
-    final date = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now().add(const Duration(days: 365)),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 3650)),
-    );
-    if (date != null) {
-      setState(() => _insuranceExpiryDate = date);
-    }
+  void _viewVehiclePhoto(String imageUrl, String title) {
+    _viewDocument(imageUrl, title);
   }
 
-  Future<void> _pickDocument(String type) async {
-    // Show dialog to choose between camera and gallery
-    final source = await showDialog<ImageSource>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Select Image Source'),
-        content: const Text('Choose how you want to add the document:'),
-        actions: [
-          TextButton.icon(
-            onPressed: () => Navigator.pop(context, ImageSource.camera),
-            icon: const Icon(Icons.camera_alt),
-            label: const Text('Camera'),
-          ),
-          TextButton.icon(
-            onPressed: () => Navigator.pop(context, ImageSource.gallery),
-            icon: const Icon(Icons.photo_library),
-            label: const Text('Gallery'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-        ],
-      ),
-    );
-
-    if (source == null) return;
-
-    final picker = ImagePicker();
-    final image = await picker.pickImage(
-      source: source,
-      imageQuality: 80,
-      maxWidth: 1500,
-      maxHeight: 1500,
-    );
-
-    if (image != null) {
-      setState(() {
-        switch (type) {
-          case 'driver_image':
-            _driverImage = File(image.path);
-            break;
-          case 'license_front':
-            _licenseFrontPhoto = File(image.path);
-            break;
-          case 'license_back':
-            _licenseBackPhoto = File(image.path);
-            break;
-          case 'license_document':
-            _licenseDocument = File(image.path);
-            break;
-          case 'nic_front':
-            _nicFrontPhoto = File(image.path);
-            break;
-          case 'nic_back':
-            _nicBackPhoto = File(image.path);
-            break;
-          case 'billing_proof':
-            _billingProofDocument = File(image.path);
-            break;
-          case 'vehicle_insurance':
-            _insuranceDocument = File(image.path);
-            break;
-          case 'vehicle_registration':
-            _vehicleRegistrationDocument = File(image.path);
-            break;
-        }
-      });
-    }
-  }
-
-  Future<void> _pickVehicleImage() async {
-    if (_vehicleImages.length >= 6) return;
-
-    // Show dialog to choose between camera and gallery
-    final source = await showDialog<ImageSource>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Select Image Source'),
-        content: Text(
-          _vehicleImages.length < 2
-              ? 'Photo ${_vehicleImages.length + 1}: ${_vehicleImages.length == 0 ? "Front view with number plate" : "Rear view with number plate"}'
-              : 'Additional vehicle photo ${_vehicleImages.length + 1}',
-        ),
-        actions: [
-          TextButton.icon(
-            onPressed: () => Navigator.pop(context, ImageSource.camera),
-            icon: const Icon(Icons.camera_alt),
-            label: const Text('Camera'),
-          ),
-          TextButton.icon(
-            onPressed: () => Navigator.pop(context, ImageSource.gallery),
-            icon: const Icon(Icons.photo_library),
-            label: const Text('Gallery'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-        ],
-      ),
-    );
-
-    if (source == null) return;
-
-    final picker = ImagePicker();
-    final image = await picker.pickImage(
-      source: source,
-      imageQuality: 80,
-      maxWidth: 1500,
-      maxHeight: 1500,
-    );
-
-    if (image != null) {
-      setState(() {
-        _vehicleImages.add(File(image.path));
-      });
-    }
-  }
-
-  void _removeVehicleImage(int index) {
-    setState(() {
-      _vehicleImages.removeAt(index);
-    });
-  }
-
-  Future<void> _submitVerification() async {
-    if (!_formKey.currentState!.validate() || !_canSubmit()) return;
-
-    setState(() => _isLoading = true);
-
+  void _replaceDocument(String title) async {
     try {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Replace $title'),
+          content:
+              const Text('Choose how to upload your replacement document:'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _pickAndUploadReplacement(title, ImageSource.camera);
+              },
+              child: const Text('Take Photo'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _pickAndUploadReplacement(title, ImageSource.gallery);
+              },
+              child: const Text('Choose from Gallery'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      print('Error replacing document: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    }
+  }
+
+  Future<void> _pickAndUploadReplacement(
+      String title, ImageSource source) async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        await _uploadReplacementDocument(title, File(image.path));
+      }
+    } catch (e) {
+      print('Error picking image: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error picking image: ${e.toString()}')),
+      );
+    }
+  }
+
+  Future<void> _uploadReplacementDocument(String title, File imageFile) async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Uploading replacement document...'),
+            ],
+          ),
+        ),
+      );
+
       final currentUser = await _userService.getCurrentUser();
       if (currentUser == null) throw Exception('User not authenticated');
 
-      // Upload documents
-      String? driverImageUrl,
-          licenseFrontUrl,
-          licenseBackUrl,
-          licenseDocumentUrl,
-          nicFrontUrl,
-          nicBackUrl,
-          billingProofUrl,
-          insuranceUrl,
-          registrationUrl;
-      List<String> vehicleImageUrls = [];
-
-      // Upload driver photo (required)
-      if (_driverImage != null) {
-        driverImageUrl = await _fileUploadService.uploadDriverDocument(
-            currentUser.uid, _driverImage!, 'driver_photo');
+      // Map title to backend document type
+      String backendDocumentType;
+      switch (title) {
+        case 'Driver Photo':
+          backendDocumentType = 'driver_image';
+          break;
+        case 'License Front Photo':
+          backendDocumentType = 'license_front';
+          break;
+        case 'License Back Photo':
+          backendDocumentType = 'license_back';
+          break;
+        case 'NIC (Front)':
+          backendDocumentType = 'nic_front';
+          break;
+        case 'NIC (Back)':
+          backendDocumentType = 'nic_back';
+          break;
+        case 'Billing Proof':
+          backendDocumentType = 'billing_proof';
+          break;
+        case 'Vehicle Insurance Document':
+          backendDocumentType = 'vehicle_insurance';
+          break;
+        case 'Vehicle Registration Document':
+          backendDocumentType = 'vehicle_registration';
+          break;
+        case 'Additional License Document':
+          backendDocumentType = 'license_document';
+          break;
+        default:
+          throw Exception('Unknown document type: $title');
       }
 
-      // Upload license front photo (required)
-      if (_licenseFrontPhoto != null) {
-        licenseFrontUrl = await _fileUploadService.uploadDriverDocument(
-            currentUser.uid, _licenseFrontPhoto!, 'license_front');
+      // Upload image to S3 via image upload service
+      final uploadService = ImageUploadService();
+      final downloadUrl = await uploadService.uploadImage(
+        XFile(imageFile.path),
+        'drivers/${currentUser.uid}/${backendDocumentType}_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
+
+      if (downloadUrl == null) {
+        throw Exception('Failed to upload image');
       }
 
-      // Upload license back photo (required)
-      if (_licenseBackPhoto != null) {
-        licenseBackUrl = await _fileUploadService.uploadDriverDocument(
-            currentUser.uid, _licenseBackPhoto!, 'license_back');
+      // Get driver verification ID from current data
+      final driverVerificationId = _driverData?['id'];
+      if (driverVerificationId == null) {
+        throw Exception('Driver verification ID not found');
       }
 
-      // Upload additional license document (optional)
-      if (_licenseDocument != null) {
-        licenseDocumentUrl = await _fileUploadService.uploadDriverDocument(
-            currentUser.uid, _licenseDocument!, 'license_document');
-      }
-
-      // Upload NIC front photo (optional)
-      if (_nicFrontPhoto != null) {
-        nicFrontUrl = await _fileUploadService.uploadDriverDocument(
-            currentUser.uid, _nicFrontPhoto!, 'nic_front');
-      }
-
-      // Upload NIC back photo (optional)
-      if (_nicBackPhoto != null) {
-        nicBackUrl = await _fileUploadService.uploadDriverDocument(
-            currentUser.uid, _nicBackPhoto!, 'nic_back');
-      }
-
-      // Upload billing proof document (optional)
-      if (_billingProofDocument != null) {
-        billingProofUrl = await _fileUploadService.uploadDriverDocument(
-            currentUser.uid, _billingProofDocument!, 'billing_proof');
-      }
-
-      // Upload license front photo (required)
-      if (_licenseFrontPhoto != null) {
-        licenseFrontUrl = await _fileUploadService.uploadDriverDocument(
-            currentUser.uid, _licenseFrontPhoto!, 'license_front');
-      }
-
-      // Upload license back photo (required)
-      if (_licenseBackPhoto != null) {
-        licenseBackUrl = await _fileUploadService.uploadDriverDocument(
-            currentUser.uid, _licenseBackPhoto!, 'license_back');
-      }
-
-      // Upload additional license document (optional)
-      if (_licenseDocument != null) {
-        licenseDocumentUrl = await _fileUploadService.uploadDriverDocument(
-            currentUser.uid, _licenseDocument!, 'license_document');
-      }
-
-      // Upload vehicle insurance document (required)
-      if (_insuranceDocument != null) {
-        insuranceUrl = await _fileUploadService.uploadDriverDocument(
-            currentUser.uid, _insuranceDocument!, 'vehicle_insurance');
-      }
-
-      // Upload vehicle registration document (required)
-      if (_vehicleRegistrationDocument != null) {
-        registrationUrl = await _fileUploadService.uploadDriverDocument(
-            currentUser.uid,
-            _vehicleRegistrationDocument!,
-            'vehicle_registration');
-      }
-
-      // Upload vehicle images
-      for (int i = 0; i < _vehicleImages.length; i++) {
-        final imageUrl = await _fileUploadService.uploadVehicleImage(
-            currentUser.uid, _vehicleImages[i], i + 1);
-        vehicleImageUrls.add(imageUrl);
-      }
-
-      // Create driver verification data
-      final driverData = {
-        'userId': currentUser.uid,
-        'firstName': _firstNameController.text.trim(),
-        'lastName': _lastNameController.text.trim(),
-        'fullName':
-            '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}',
-        'email': currentUser.email,
-        'phoneNumber': _phoneController.text.trim(),
-        'phoneVerified': false, // Will be verified post-submission
-        'phoneVerificationSource': 'form_submission',
-        'secondaryMobile': _secondaryMobileController.text.trim().isNotEmpty
-            ? _secondaryMobileController.text.trim()
-            : null,
-        'dateOfBirth': _dateOfBirth,
-        'gender': _selectedGender,
-        'nicNumber': _nicNumberController.text.trim(),
-        'city': _getSelectedCityData(),
-        'isVehicleOwner': _isVehicleOwner,
-        'licenseNumber': _licenseNumberController.text.trim(),
-        'licenseExpiry': _licenseHasNoExpiry ? null : _licenseExpiryDate,
-        'licenseHasNoExpiry': _licenseHasNoExpiry,
-        'insuranceNumber': _insuranceNumberController.text.trim(),
-        'insuranceExpiry': _insuranceExpiryDate,
-        'vehicleModel': _vehicleModelController.text.trim(),
-        'vehicleYear': int.parse(_vehicleYearController.text.trim()),
-        'vehicleColor': _vehicleColorController.text.trim(),
-        'vehicleNumber': _vehicleNumberController.text.trim(),
-        'vehicleType': _getSelectedVehicleTypeData(),
-        'country': _userCountry,
-        'status': 'pending',
-        'isVerified': false,
-        'isActive': true,
-        'availability': true,
-        'rating': 0.0,
-        'totalRides': 0,
-        'totalEarnings': 0.0,
-        'subscriptionPlan': 'free',
-        'createdAt': DateTime.now(),
-        'updatedAt': DateTime.now(),
-
-        // Document URLs
-        'driverImageUrl': driverImageUrl, // Driver photo (profile photo)
-        'licenseFrontUrl': licenseFrontUrl, // License front photo
-        'licenseBackUrl': licenseBackUrl, // License back photo
-        'licenseDocumentUrl':
-            licenseDocumentUrl, // Additional license document (optional)
-        'nicFrontUrl': nicFrontUrl, // NIC front photo (optional)
-        'nicBackUrl': nicBackUrl, // NIC back photo (optional)
-        'billingProofUrl': billingProofUrl, // Billing proof (optional)
-        'insuranceDocumentUrl': insuranceUrl, // Vehicle insurance
-        'vehicleRegistrationUrl': registrationUrl, // Vehicle registration
-        'vehicleImageUrls': vehicleImageUrls,
-
-        // Verification status for each document/image
-        'documentVerification': {
-          'driverImage': {
-            'status': 'pending',
-            'submittedAt': DateTime.now()
-          }, // Driver photo
-          'licenseFront': {
-            'status': 'pending',
-            'submittedAt': DateTime.now()
-          }, // License front
-          'licenseBack': {
-            'status': 'pending',
-            'submittedAt': DateTime.now()
-          }, // License back
-          'licenseDocument': licenseDocumentUrl != null
-              ? {'status': 'pending', 'submittedAt': DateTime.now()}
-              : null, // Optional: License document
-          'nicFront': nicFrontUrl != null
-              ? {'status': 'pending', 'submittedAt': DateTime.now()}
-              : null, // Optional: NIC front
-          'nicBack': nicBackUrl != null
-              ? {'status': 'pending', 'submittedAt': DateTime.now()}
-              : null, // Optional: NIC back
-          'billingProof': billingProofUrl != null
-              ? {'status': 'pending', 'submittedAt': DateTime.now()}
-              : null, // Optional: Billing proof
-          'vehicleInsurance': {
-            'status': 'pending',
-            'submittedAt': DateTime.now()
-          }, // Vehicle insurance
-          'vehicleRegistration': {
-            'status': 'pending',
-            'submittedAt': DateTime.now()
-          }, // Vehicle registration
+      // Call replace document API using ApiClient
+      final response = await ApiClient.instance.put(
+        '/api/driver-verifications/$driverVerificationId/replace-document',
+        data: {
+          'documentType': backendDocumentType,
+          'fileUrl': downloadUrl,
         },
-        'vehicleImageVerification': _vehicleImages
-            .asMap()
-            .entries
-            .map((entry) => {
-                  'imageIndex': entry.key,
-                  'status': 'pending',
-                  'submittedAt': DateTime.now(),
-                  'imageType': entry.key == 0
-                      ? 'front_with_plate'
-                      : entry.key == 1
-                          ? 'rear_with_plate'
-                          : 'additional',
-                })
-            .toList(),
-      };
+      );
 
-      // Save to Firestore
-      await _userService.submitDriverVerification(driverData);
+      if (!response.isSuccess) {
+        throw Exception(response.error ?? 'Failed to replace document');
+      }
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-                'Driver verification submitted successfully! We\'ll review your documents within 1-3 business days.'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 4),
+      // Close loading dialog
+      Navigator.pop(context);
+
+      // Refresh data
+      await _loadDriverData();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              '$title replaced successfully! Status reset to pending review.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      // Close loading dialog
+      Navigator.pop(context);
+
+      print('Error uploading replacement document: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to upload replacement: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _replaceVehiclePhoto(String title) async {
+    try {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Replace $title'),
+          content: const Text('Choose how to upload your replacement photo:'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _pickAndUploadVehicleReplacement(title, ImageSource.camera);
+              },
+              child: const Text('Take Photo'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _pickAndUploadVehicleReplacement(title, ImageSource.gallery);
+              },
+              child: const Text('Choose from Gallery'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      print('Error replacing vehicle photo: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    }
+  }
+
+  Future<void> _pickAndUploadVehicleReplacement(
+      String title, ImageSource source) async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        await _uploadVehicleReplacementPhoto(title, File(image.path));
+      }
+    } catch (e) {
+      print('Error picking vehicle image: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error picking image: ${e.toString()}')),
+      );
+    }
+  }
+
+  Future<void> _uploadVehicleReplacementPhoto(
+      String title, File imageFile) async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Uploading replacement photo...'),
+            ],
           ),
-        );
-        Navigator.pop(context);
+        ),
+      );
+
+      final currentUser = await _userService.getCurrentUser();
+      if (currentUser == null) throw Exception('User not authenticated');
+
+      // Extract image index from title (e.g., "1. Front View with Number Plate" -> index 0)
+      final match = RegExp(r'(\d+)\.').firstMatch(title);
+      if (match == null) throw Exception('Invalid vehicle photo title: $title');
+
+      final imageIndex =
+          int.parse(match.group(1)!) - 1; // Convert to 0-based index
+
+      // Upload image via ImageUploadService
+      final uploadService = ImageUploadService();
+      final downloadUrl = await uploadService.uploadImage(
+        XFile(imageFile.path),
+        'vehicles/${currentUser.uid}/vehicle_${imageIndex}_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
+
+      if (downloadUrl == null) {
+        throw Exception('Failed to upload image');
+      }
+
+      // Get driver verification ID from current data
+      final driverVerificationId = _driverData?['id'];
+      if (driverVerificationId == null) {
+        throw Exception('Driver verification ID not found');
+      }
+
+      // Call replace vehicle image API
+      final response = await ApiClient.instance.put(
+        '/api/driver-verifications/$driverVerificationId/vehicle-images/$imageIndex/replace',
+        data: {
+          'fileUrl': downloadUrl,
+        },
+      );
+
+      if (!response.isSuccess) {
+        throw Exception(response.error ?? 'Failed to replace vehicle image');
+      }
+
+      // Close loading dialog
+      Navigator.pop(context);
+
+      // Refresh data
+      await _loadDriverData();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              '$title replaced successfully! Status reset to pending review.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      // Close loading dialog
+      Navigator.pop(context);
+
+      print('Error uploading replacement vehicle photo: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to upload replacement: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Widget _buildCityInfoRow() {
+    return FutureBuilder<String>(
+      future: _resolveCityName(_driverData!['city']),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildInfoRow('City', 'Loading...');
+        } else if (snapshot.hasError) {
+          return _buildInfoRow('City', 'Error loading city');
+        } else {
+          return _buildInfoRow('City', snapshot.data ?? 'N/A');
+        }
+      },
+    );
+  }
+
+  Future<void> _startPhoneVerification(String phoneNumber) async {
+    setState(() {
+      _isVerifyingPhone = true;
+      _phoneVerificationId = null;
+      _isPhoneOtpSent = false;
+    });
+
+    try {
+      final result = await _contactService.startBusinessPhoneVerification(
+        phoneNumber: phoneNumber,
+        onCodeSent: (verificationId) {
+          if (mounted) {
+            setState(() {
+              _phoneVerificationId = verificationId;
+              _isVerifyingPhone = false;
+              _isPhoneOtpSent = true;
+            });
+
+            String message;
+            if (verificationId.startsWith('dev_verification_')) {
+              message = '🚀 DEVELOPMENT MODE: Use OTP code 123456 to verify';
+            } else {
+              message = 'Verification code sent to $phoneNumber!';
+            }
+            _showSnackBar(message, isError: false);
+          }
+        },
+        onError: (error) {
+          if (mounted) {
+            setState(() => _isVerifyingPhone = false);
+            _showSnackBar(error, isError: true);
+          }
+        },
+      );
+
+      if (!result.success && mounted) {
+        setState(() => _isVerifyingPhone = false);
+        _showSnackBar(result.error ?? 'Failed to send verification code',
+            isError: true);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error submitting verification: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() => _isVerifyingPhone = false);
+        _showSnackBar('Error: $e', isError: true);
       }
     }
   }
 
-  // Phone verification is now handled post-submission
-  // Users enter their phone number in the form and verification happens
-  // after they check their verification status
+  Future<void> _verifyPhoneOTP() async {
+    if (_phoneVerificationId == null ||
+        _phoneOtpController.text.trim().isEmpty) {
+      _showSnackBar('Please enter the verification code', isError: true);
+      return;
+    }
+
+    try {
+      final result = await _contactService.verifyBusinessPhoneOTP(
+        verificationId: _phoneVerificationId!,
+        otp: _phoneOtpController.text.trim(),
+      );
+
+      if (result.success) {
+        setState(() {
+          _isPhoneOtpSent = false;
+          _phoneVerificationId = null;
+        });
+        _phoneOtpController.clear();
+        _showSnackBar('Phone verified successfully!', isError: false);
+
+        // Reload driver data to update verification status
+        await _loadDriverData();
+      } else {
+        _showSnackBar(result.error ?? 'Verification failed', isError: true);
+      }
+    } catch (e) {
+      _showSnackBar('Error verifying code: $e', isError: true);
+    }
+  }
+
+  void _showSnackBar(String message, {required bool isError}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+        duration: Duration(seconds: isError ? 4 : 3),
+      ),
+    );
+  }
 }

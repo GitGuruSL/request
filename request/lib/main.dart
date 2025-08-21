@@ -17,12 +17,12 @@ import 'src/screens/pricing/business_pricing_dashboard.dart';
 import 'src/screens/account_screen.dart';
 import 'src/screens/requests/ride/create_ride_request_screen.dart';
 import 'src/screens/unified_request_response/unified_response_edit_screen.dart';
-import 'src/screens/driver_verification_screen.dart';
+import 'src/screens/driver_registration_screen.dart'; // Driver registration (was driver_verification)
+import 'src/screens/driver_verification_screen.dart'; // Driver verification (was driver_documents_view)
 import 'src/screens/business_verification_screen.dart';
 import 'src/screens/business_registration_screen.dart';
 import 'src/screens/delivery_verification_screen.dart';
 import 'src/screens/verification_status_screen.dart';
-import 'src/screens/driver_documents_view_screen.dart'; // Driver documents view
 import 'src/screens/role_management_screen.dart';
 import 'src/screens/modern_menu_screen.dart';
 import 'src/screens/content_page_screen.dart';
@@ -102,6 +102,10 @@ class MyApp extends StatelessWidget {
                 otpToken: args?['otpToken'],
               ),
             );
+          case '/driver-registration':
+            return MaterialPageRoute(
+              builder: (context) => const DriverRegistrationScreen(),
+            );
           case '/driver-verification':
             return MaterialPageRoute(
               builder: (context) => const DriverVerificationScreen(),
@@ -124,7 +128,7 @@ class MyApp extends StatelessWidget {
             );
           case '/driver-documents-view':
             return MaterialPageRoute(
-              builder: (context) => const DriverDocumentsViewScreen(),
+              builder: (context) => const DriverVerificationScreen(),
             );
           case '/role-management':
             return MaterialPageRoute(

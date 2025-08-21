@@ -448,7 +448,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
 
   void _registerRole(UserRole role) {
     if (role == UserRole.driver) {
-      Navigator.pushNamed(context, '/driver-verification')
+      Navigator.pushNamed(context, '/driver-registration')
           .then((_) => _loadUserData());
     } else if (role == UserRole.business) {
       Navigator.pushNamed(context, '/business-registration')
@@ -463,7 +463,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
   void _manageRole(UserRole role) {
     switch (role) {
       case UserRole.driver:
-        Navigator.pushNamed(context, '/driver-documents-view')
+        Navigator.pushNamed(context, '/driver-verification')
             .then((_) => _loadUserData());
         break;
       case UserRole.business:
@@ -480,7 +480,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
   }
 
   void _manageDriverDetails() {
-    Navigator.pushNamed(context, '/driver-documents-view')
+    Navigator.pushNamed(context, '/driver-verification')
         .then((_) => _loadUserData());
   }
 
