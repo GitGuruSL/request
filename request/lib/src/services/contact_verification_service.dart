@@ -209,6 +209,102 @@ class ContactVerificationService {
     }
   }
 
+  /// Check unified verification status across ALL verification types (business, driver, user)
+  Future<Map<String, dynamic>> checkUnifiedVerificationStatus({
+    String? phoneNumber,
+    String? email,
+  }) async {
+    try {
+      final user = await EnhancedUserService.instance.getCurrentUser();
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+          'phoneVerified': false,
+          'emailVerified': false,
+        };
+      }
+
+      bool phoneVerified = false;
+      bool emailVerified = false;
+
+      // Check business verification status
+      try {
+        final businessResp = await ApiClient.instance
+            .get('/api/business-verifications/user/${user.id}');
+        if (businessResp.isSuccess && businessResp.data != null) {
+          final wrapper = businessResp.data as Map<String, dynamic>;
+          final businessData = wrapper['data'] as Map<String, dynamic>?;
+          if (businessData != null) {
+            // Check if phone matches and is verified
+            if (phoneNumber != null) {
+              final businessPhone = businessData['businessPhone'] as String?;
+              if (businessPhone == phoneNumber &&
+                  (businessData['phoneVerified'] == true ||
+                      businessData['phone_verified'] == true)) {
+                phoneVerified = true;
+              }
+            }
+            // Check if email matches and is verified
+            if (email != null) {
+              final businessEmail = businessData['businessEmail'] as String?;
+              if (businessEmail == email &&
+                  (businessData['emailVerified'] == true ||
+                      businessData['email_verified'] == true)) {
+                emailVerified = true;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        print('Error checking business verification: $e');
+      }
+
+      // Check driver verification status
+      try {
+        final driverResp = await ApiClient.instance
+            .get('/api/driver-verifications/user/${user.id}');
+        if (driverResp.isSuccess && driverResp.data != null) {
+          final wrapper = driverResp.data as Map<String, dynamic>;
+          final driverData = wrapper['data'] as Map<String, dynamic>?;
+          if (driverData != null) {
+            // Check if phone matches and is verified
+            if (phoneNumber != null && !phoneVerified) {
+              final driverPhone = driverData['phoneNumber'] as String?;
+              if (driverPhone == phoneNumber &&
+                  driverData['phoneVerified'] == true) {
+                phoneVerified = true;
+              }
+            }
+            // Check if email matches and is verified
+            if (email != null && !emailVerified) {
+              final driverEmail = driverData['email'] as String?;
+              if (driverEmail == email && driverData['emailVerified'] == true) {
+                emailVerified = true;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        print('Error checking driver verification: $e');
+      }
+
+      return {
+        'success': true,
+        'phoneVerified': phoneVerified,
+        'emailVerified': emailVerified,
+        'message': 'Unified verification status checked successfully',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'error': 'Check unified verification failed: $e',
+        'phoneVerified': false,
+        'emailVerified': false,
+      };
+    }
+  }
+
   /// Check verification status for a specific phone/email (unified endpoint)
   Future<Map<String, dynamic>> checkVerificationStatus({
     String? phoneNumber,

@@ -54,15 +54,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     if (_currentUser == null) return;
 
     try {
-      // Check unified verification status for both phone and email
-      final phoneStatus = await _contactService.checkVerificationStatus(
+      // Check unified verification status across ALL verification types (business, driver, user)
+      final phoneStatus = await _contactService.checkUnifiedVerificationStatus(
         phoneNumber: _currentUser!.phoneNumber,
-        endpoint: '/api/business-verifications/check-verification-status',
       );
 
-      final emailStatus = await _contactService.checkVerificationStatus(
+      final emailStatus = await _contactService.checkUnifiedVerificationStatus(
         email: _currentUser!.email,
-        endpoint: '/api/business-verifications/check-verification-status',
       );
 
       if (mounted) {
@@ -70,6 +68,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           _unifiedPhoneVerified = phoneStatus['phoneVerified'] == true;
           _unifiedEmailVerified = emailStatus['emailVerified'] == true;
         });
+
+        print('DEBUG: Unified verification status loaded:');
+        print('  Phone (${_currentUser!.phoneNumber}): $_unifiedPhoneVerified');
+        print('  Email (${_currentUser!.email}): $_unifiedEmailVerified');
       }
     } catch (e) {
       print('Error loading unified verification status: $e');
@@ -900,16 +902,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
 
     try {
-      // TODO: Implement API call to update and verify phone
-      // await _userService.updateAndVerifyPhone(phoneNumber);
-
       // Format phone number with country code
       String formattedPhone = phoneNumber.trim();
       if (!formattedPhone.startsWith('+94')) {
         formattedPhone = '+94 $formattedPhone';
       }
 
-      // For now, update local state
+      // First check if this phone number is already verified across all verification types
+      final verificationStatus =
+          await _contactService.checkUnifiedVerificationStatus(
+        phoneNumber: formattedPhone,
+      );
+
+      // Update local state
       setState(() {
         _currentUser = UserModel(
           id: _currentUser!.id,
@@ -922,19 +927,47 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           activeRole: _currentUser!.activeRole,
           roleData: _currentUser!.roleData,
           isEmailVerified: _currentUser!.isEmailVerified,
-          isPhoneVerified: false, // Reset verification status
+          isPhoneVerified: verificationStatus['phoneVerified'] == true,
           profileComplete: _currentUser!.profileComplete,
           countryCode: _currentUser!.countryCode,
           countryName: _currentUser!.countryName,
           createdAt: _currentUser!.createdAt,
           updatedAt: DateTime.now(),
         );
+        _unifiedPhoneVerified = verificationStatus['phoneVerified'] == true;
       });
 
       Navigator.pop(context);
 
-      // Show verification process
-      _startPhoneVerification(formattedPhone);
+      if (verificationStatus['phoneVerified'] == true) {
+        // Phone is already verified, show success message
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Phone Number Updated'),
+            content: Text(
+                '$formattedPhone is already verified and has been updated successfully.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+
+        // Also update the user data in the backend
+        try {
+          await _userService.updateUserProfile(
+            phoneNumber: formattedPhone,
+          );
+        } catch (e) {
+          print('Error updating user profile: $e');
+        }
+      } else {
+        // Phone is not verified, start verification process
+        _startPhoneVerification(formattedPhone);
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error updating phone: $e')),
@@ -959,22 +992,27 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
 
     try {
-      // TODO: Implement API call to update and verify email
-      // await _userService.updateAndVerifyEmail(email);
+      final emailAddress = email.trim();
 
-      // For now, update local state
+      // First check if this email is already verified across all verification types
+      final verificationStatus =
+          await _contactService.checkUnifiedVerificationStatus(
+        email: emailAddress,
+      );
+
+      // Update local state
       setState(() {
         _currentUser = UserModel(
           id: _currentUser!.id,
           name: _currentUser!.name,
           firstName: _currentUser!.firstName,
           lastName: _currentUser!.lastName,
-          email: email.trim(),
+          email: emailAddress,
           phoneNumber: _currentUser!.phoneNumber,
           roles: _currentUser!.roles,
           activeRole: _currentUser!.activeRole,
           roleData: _currentUser!.roleData,
-          isEmailVerified: false, // Reset verification status
+          isEmailVerified: verificationStatus['emailVerified'] == true,
           isPhoneVerified: _currentUser!.isPhoneVerified,
           profileComplete: _currentUser!.profileComplete,
           countryCode: _currentUser!.countryCode,
@@ -982,12 +1020,41 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           createdAt: _currentUser!.createdAt,
           updatedAt: DateTime.now(),
         );
+        _unifiedEmailVerified = verificationStatus['emailVerified'] == true;
       });
 
       Navigator.pop(context);
 
-      // Show verification process
-      _startEmailVerification(email.trim());
+      if (verificationStatus['emailVerified'] == true) {
+        // Email is already verified, show success message
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Email Updated'),
+            content: Text(
+                '$emailAddress is already verified and has been updated successfully.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+
+        // Also update the user data in the backend
+        try {
+          await _userService.updateUserProfile(
+            firstName: _currentUser!.firstName,
+            lastName: _currentUser!.lastName,
+          );
+        } catch (e) {
+          print('Error updating user profile: $e');
+        }
+      } else {
+        // Email is not verified, start verification process
+        _startEmailVerification(emailAddress);
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error updating email: $e')),
@@ -998,9 +1065,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   void _startPhoneVerification(String phoneNumber) async {
     // First check if phone is already verified through unified system
     try {
-      final status = await _contactService.checkVerificationStatus(
+      final status = await _contactService.checkUnifiedVerificationStatus(
         phoneNumber: phoneNumber,
-        endpoint: '/api/business-verifications/check-verification-status',
       );
 
       if (status['phoneVerified'] == true) {
@@ -1137,9 +1203,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   void _startEmailVerification(String email) async {
     // First check if email is already verified through unified system
     try {
-      final status = await _contactService.checkVerificationStatus(
+      final status = await _contactService.checkUnifiedVerificationStatus(
         email: email,
-        endpoint: '/api/business-verifications/check-verification-status',
       );
 
       if (status['emailVerified'] == true) {
