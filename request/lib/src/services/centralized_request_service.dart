@@ -120,7 +120,8 @@ class CentralizedRequestService {
         requestType: data['type']?.toString(), // Add request_type from data
         metadata: {
           'type': data['type'],
-          'request_type': data['type']?.toString(), // Keep in metadata for backward compatibility
+          'request_type': data['type']
+              ?.toString(), // Keep in metadata for backward compatibility
           ...typeSpecific,
         },
       );

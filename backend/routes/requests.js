@@ -309,7 +309,8 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       location_longitude,
       currency,
       deadline,
-      image_urls
+      image_urls,
+      request_type // Add request_type field
     } = req.body;
 
     const user_id = req.user.id;
@@ -320,6 +321,7 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
     console.log('metadata field exists?', 'metadata' in req.body);
     console.log('metadata value:', req.body.metadata);
     console.log('metadata type:', typeof req.body.metadata);
+    console.log('request_type field:', request_type);
     console.log('=== LOCATION DATA DEBUG ===');
     console.log('location_address:', location_address);
     console.log('location_latitude:', location_latitude);
@@ -336,15 +338,17 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       category_id,
       city_id,
       budget,
+      request_type,
       metadata: metadata ? JSON.stringify(metadata) : null
     });
 
     // Validate required fields
-    // For ride requests (identified by metadata containing pickup/destination), category_id is optional
-    const isRideRequest = metadata && 
-                          metadata.request_type === 'ride' && 
-                          metadata.pickup && 
-                          metadata.destination;
+    // For ride requests (identified by request_type or metadata), category_id is optional
+    const isRideRequest = request_type === 'ride' || 
+                          (metadata && 
+                           metadata.request_type === 'ride' && 
+                           metadata.pickup && 
+                           metadata.destination);
     
     if (!title || !description || !city_id) {
       return res.status(400).json({
@@ -361,20 +365,20 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       });
     }
 
-    // Create the request with metadata
+    // Create the request with metadata and request_type
     const request = await database.queryOne(`
       INSERT INTO requests (
         user_id, title, description, category_id, subcategory_id, location_city_id,
         location_address, location_latitude, location_longitude,
-        budget, currency, deadline, image_urls, country_code, metadata, status, created_at, updated_at
+        budget, currency, deadline, image_urls, country_code, metadata, request_type, status, created_at, updated_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'active',
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 'active',
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
       ) RETURNING *
     `, [
       user_id, title, description, category_id, subcategory_id, city_id,
       location_address, location_latitude, location_longitude,
-      budget, currency, deadline, image_urls, country_code, metadata ? JSON.stringify(metadata) : null
+      budget, currency, deadline, image_urls, country_code, metadata ? JSON.stringify(metadata) : null, request_type
     ]);
 
     res.status(201).json({

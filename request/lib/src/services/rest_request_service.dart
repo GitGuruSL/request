@@ -37,6 +37,7 @@ class RequestModel {
   final DateTime? deadline;
   final List<String>? imageUrls;
   final Map<String, dynamic>? metadata;
+  final String? requestType; // Add request_type field from database
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -66,6 +67,7 @@ class RequestModel {
     this.deadline,
     this.imageUrls,
     this.metadata,
+    this.requestType, // Add requestType to constructor
     required this.createdAt,
     required this.updatedAt,
   });
@@ -103,6 +105,8 @@ class RequestModel {
           ? List<String>.from(json['image_urls'])
           : null,
       metadata: json['metadata'],
+      requestType:
+          json['request_type']?.toString(), // Add request_type from database
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
     );
@@ -231,7 +235,8 @@ class CreateRequestData {
       if (deadline != null) 'deadline': deadline!.toIso8601String(),
       if (imageUrls != null) 'image_urls': imageUrls,
       if (metadata != null) 'metadata': metadata,
-      if (requestType != null) 'request_type': requestType, // Add request_type to JSON
+      if (requestType != null)
+        'request_type': requestType, // Add request_type to JSON
     };
   }
 }
@@ -387,6 +392,7 @@ class RestRequestService {
     String? status,
     String? userId,
     bool? hasAccepted,
+    String? requestType, // Add request_type filtering parameter
     int page = 1,
     int limit = 20,
     String sortBy = 'created_at',
@@ -407,6 +413,8 @@ class RestRequestService {
       if (status != null) queryParams['status'] = status;
       if (userId != null) queryParams['user_id'] = userId;
       if (hasAccepted == true) queryParams['has_accepted'] = 'true';
+      if (requestType != null)
+        queryParams['request_type'] = requestType; // Add request_type parameter
 
       final response = await _apiClient.get<Map<String, dynamic>>(
         '/api/requests',

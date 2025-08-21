@@ -27,6 +27,7 @@ class CountryFilteredDataService {
     int limit = 20,
     String? categoryId,
     String? status,
+    String? requestType, // Add request_type parameter
   }) async {
     if (currentCountry == null) {
       if (kDebugMode) print('⚠️ No country selected, returning empty requests');
@@ -39,21 +40,14 @@ class CountryFilteredDataService {
         limit: limit,
         categoryId: categoryId,
         hasAccepted: false,
-        // country: currentCountry, // Add when backend implements this
+        requestType: requestType, // Pass request_type to backend
+        countryCode: currentCountry!, // Pass country to backend
       );
 
       if (result == null) return null;
 
-      // Client-side filtering by country until backend implements it
-      final countryFiltered = result.requests
-          .where((r) => r.countryCode == currentCountry)
-          .toList();
-
-      // Return modified response with filtered data
-      return RequestsResponse(
-        requests: countryFiltered,
-        pagination: result.pagination,
-      );
+      // No need for client-side country filtering since backend now handles it
+      return result;
     } catch (e) {
       if (kDebugMode) print('❌ Error loading country requests: $e');
       return null;
@@ -76,25 +70,47 @@ class CountryFilteredDataService {
     }
 
     try {
-      // TODO: Add country parameter to REST request service when backend supports it
+      // Convert type parameter for backend filtering
+      String? requestTypeFilter;
+      if (type != null) {
+        // Map UI enum names to backend request_type values
+        switch (type.toLowerCase()) {
+          case 'item':
+            requestTypeFilter = 'item';
+            break;
+          case 'service':
+            requestTypeFilter = 'service';
+            break;
+          case 'rental':
+            requestTypeFilter = 'rent'; // Map rental to rent
+            break;
+          case 'delivery':
+            requestTypeFilter = 'delivery';
+            break;
+          case 'ride':
+            requestTypeFilter = 'ride';
+            break;
+          case 'price':
+            requestTypeFilter = 'price';
+            break;
+        }
+      }
+
+      // Use backend filtering with request_type parameter
       final result = await _requests.getRequests(
         page: 1,
         limit: limit,
         hasAccepted: false,
-        // country: currentCountry, // Add when backend implements this
+        requestType: requestTypeFilter, // Use request_type filtering
+        countryCode: currentCountry!, // Pass country to backend
       );
 
       if (result == null) {
         yield <models.RequestModel>[];
       } else {
-        // Client-side filtering by country until backend implements it
-        final countryFiltered = result.requests
-            .where((r) => r.countryCode == currentCountry)
-            .toList();
+        // Apply additional client-side filters
+        var filtered = result.requests;
 
-        // Apply additional filters
-        var filtered = countryFiltered;
-        // Note: type filtering removed because REST RequestModel doesn't have type property
         if (status != null) {
           filtered = filtered
               .where((r) => r.status.toLowerCase() == status.toLowerCase())
@@ -245,12 +261,17 @@ class CountryFilteredDataService {
   }
 
   String? _getRequestTypeFromMetadata(RequestModel r) {
-    // First check metadata for request_type
+    // First priority: check the new request_type column from database
+    if (r.requestType != null && r.requestType!.isNotEmpty) {
+      return r.requestType;
+    }
+
+    // Second priority: check metadata for request_type
     if (r.metadata != null && r.metadata!['request_type'] != null) {
       return r.metadata!['request_type'] as String;
     }
 
-    // Second, check category type from backend (category.type field)
+    // Third priority: check category type from backend (category.type field)
     if (r.categoryType != null && r.categoryType!.isNotEmpty) {
       return r.categoryType;
     }
