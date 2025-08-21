@@ -123,9 +123,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         _buildInfoItem(
                           icon: Icons.language_outlined,
                           title: 'Language',
-                          value:
-                              'English', // TODO: Add language preference to user model
-                          onTap: () => _showLanguageOptions(),
+                          value: 'English',
+                          onTap: () {
+                            // Language is fixed to English for now
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Language is set to English')),
+                            );
+                          },
                         ),
                         const SizedBox(height: 8),
                         _buildInfoItem(
