@@ -197,45 +197,48 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                GestureDetector(
-                  onTap: () => Navigator.pushNamed(context, '/account'),
-                  child: CircleAvatar(
-                      radius: 24,
-                      backgroundImage: _profileImageUrl != null &&
-                              _profileImageUrl!.isNotEmpty
+                CircleAvatar(
+                  radius: 24,
+                  backgroundImage:
+                      _profileImageUrl != null && _profileImageUrl!.isNotEmpty
                           ? NetworkImage(_profileImageUrl!)
                           : null,
-                      backgroundColor: Colors.grey[300],
-                      child:
-                          _profileImageUrl == null || _profileImageUrl!.isEmpty
-                              ? Icon(Icons.person,
-                                  color: Colors.grey[600], size: 28)
-                              : null,
+                  backgroundColor: Colors.grey[300],
+                  child: _profileImageUrl == null || _profileImageUrl!.isEmpty
+                      ? Icon(Icons.person, color: Colors.grey[600], size: 28)
+                      : null,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    _currentUser?['name'] ??
+                        _currentUser?['displayName'] ??
+                        'User',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const UserProfileScreen(),
-                        ),
-                      ),
-                      child: Text(
-                        _currentUser?['name'] ??
-                            _currentUser?['displayName'] ??
-                            'User',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                ),
+                GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const UserProfileScreen(),
                     ),
                   ),
-                ],
-              ),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    child: Icon(
+                      Icons.arrow_forward_ios,
+                      color: Colors.grey[600],
+                      size: 16,
+                    ),
+                  ),
+                ),
+              ],
             ),
+          ),
         ],
       ),
     );
