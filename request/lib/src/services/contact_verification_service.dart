@@ -107,6 +107,82 @@ class ContactVerificationService {
           {required String email}) async =>
       {'success': true, 'message': 'Email flow not yet implemented'};
 
+  // ========== Driver Verification Methods ==========
+
+  /// Start driver phone verification (Send OTP)
+  Future<Map<String, dynamic>> startDriverPhoneVerification({
+    required String phoneNumber,
+  }) async {
+    try {
+      _lastPhoneNumber = phoneNumber;
+      final resp = await ApiClient.instance.post(
+        '/api/driver-verifications/verify-phone/send-otp',
+        data: {'phoneNumber': phoneNumber},
+      );
+      final dataWrapper = resp.data;
+      if (resp.isSuccess && dataWrapper is Map<String, dynamic>) {
+        return {
+          ...dataWrapper,
+          'success': dataWrapper['success'] == true,
+          'verificationId':
+              dataWrapper['otpId'] ?? dataWrapper['verificationId'],
+        };
+      }
+      return {
+        'success': false,
+        'error': (dataWrapper is Map && dataWrapper['message'] != null)
+            ? dataWrapper['message'].toString()
+            : 'Failed to start verification'
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'error': 'Start driver phone verification failed: $e'
+      };
+    }
+  }
+
+  /// Verify driver phone OTP
+  Future<Map<String, dynamic>> verifyDriverPhoneOTP({
+    required String verificationId, // maps to otpId
+    required String otp,
+  }) async {
+    try {
+      final phone = _lastPhoneNumber;
+      if (phone == null) {
+        return {
+          'success': false,
+          'error': 'No phone number cached for verification'
+        };
+      }
+      final resp = await ApiClient.instance.post(
+        '/api/driver-verifications/verify-phone/verify-otp',
+        data: {
+          'phoneNumber': phone,
+          'otp': otp,
+          'otpId': verificationId,
+        },
+      );
+      final dataWrapper = resp.data;
+      if (resp.isSuccess && dataWrapper is Map<String, dynamic>) {
+        return {
+          ...dataWrapper,
+          'success': dataWrapper['success'] == true,
+          'verified': dataWrapper['verified'] == true,
+          'phoneVerified': dataWrapper['userPhoneVerified'] == true,
+        };
+      }
+      return {
+        'success': false,
+        'error': (dataWrapper is Map && dataWrapper['message'] != null)
+            ? dataWrapper['message'].toString()
+            : 'Verification failed'
+      };
+    } catch (e) {
+      return {'success': false, 'error': 'Verify driver OTP failed: $e'};
+    }
+  }
+
   /// Compute overall linked credential status from backend record.
   Future<LinkedCredentialsStatus> getLinkedCredentialsStatus() async {
     try {

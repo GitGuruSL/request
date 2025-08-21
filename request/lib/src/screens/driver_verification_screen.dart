@@ -2000,42 +2000,41 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
     });
 
     try {
-      final result = await _contactService.startBusinessPhoneVerification(
+      final result = await _contactService.startDriverPhoneVerification(
         phoneNumber: phoneNumber,
-        onCodeSent: (verificationId) {
-          if (mounted) {
-            setState(() {
-              _phoneVerificationId = verificationId;
-              _isVerifyingPhone = false;
-              _isPhoneOtpSent = true;
-            });
-
-            String message;
-            if (verificationId.startsWith('dev_verification_')) {
-              message = '🚀 DEVELOPMENT MODE: Use OTP code 123456 to verify';
-            } else {
-              message = 'Verification code sent to $phoneNumber!';
-            }
-            _showSnackBar(message, isError: false);
-          }
-        },
-        onError: (error) {
-          if (mounted) {
-            setState(() => _isVerifyingPhone = false);
-            _showSnackBar(error, isError: true);
-          }
-        },
       );
 
-      if (!result.success && mounted) {
+      if (mounted) {
         setState(() => _isVerifyingPhone = false);
-        _showSnackBar(result.error ?? 'Failed to send verification code',
-            isError: true);
+      }
+
+      if (result['success'] == true) {
+        if (mounted) {
+          setState(() {
+            _phoneVerificationId = result['verificationId'];
+            _isPhoneOtpSent = true;
+          });
+
+          String message;
+          final verificationId = result['verificationId'] ?? '';
+          if (verificationId.startsWith('dev_') || result['devOtp'] != null) {
+            message =
+                '🚀 DEVELOPMENT MODE: Use OTP code ${result['devOtp'] ?? '123456'} to verify';
+          } else {
+            message = 'Verification code sent to $phoneNumber!';
+          }
+          _showSnackBar(message, isError: false);
+        }
+      } else {
+        if (mounted) {
+          _showSnackBar(result['error'] ?? 'Failed to send verification code',
+              isError: true);
+        }
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isVerifyingPhone = false);
-        _showSnackBar('Error: $e', isError: true);
+        _showSnackBar('Error sending verification code: $e', isError: true);
       }
     }
   }
@@ -2048,7 +2047,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
     }
 
     try {
-      final result = await _contactService.verifyBusinessPhoneOTP(
+      final result = await _contactService.verifyDriverPhoneOTP(
         verificationId: _phoneVerificationId!,
         otp: _phoneOtpController.text.trim(),
       );

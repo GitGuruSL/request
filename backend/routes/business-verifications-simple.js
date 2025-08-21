@@ -39,35 +39,47 @@ async function checkPhoneVerificationStatus(userId, phoneNumber) {
     const normalizedUserPhone = normalizePhoneNumber(user.phone);
     const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber);
     
-    // First check user_phone_numbers table for verified phone numbers
-    console.log(`📱 Checking user_phone_numbers table for verified phones...`);
-    const phoneQuery = `
-      SELECT phone_number, is_verified, verified_at, purpose 
-      FROM user_phone_numbers 
-      WHERE user_id = $1 AND is_verified = true
+    // 1. Check if phone is verified in business_verifications table (priority 1)
+    console.log(`📱 Checking business_verifications table for phone verification...`);
+    const businessQuery = `
+      SELECT phone_verified, phone_verified_at 
+      FROM business_verifications 
+      WHERE user_id = $1 AND phone_number = $2 AND phone_verified = true
     `;
-    const phoneResult = await database.query(phoneQuery, [userId]);
+    const businessResult = await database.query(businessQuery, [userId, normalizedPhoneNumber]);
     
-    console.log(`📱 Found ${phoneResult.rows.length} verified phone numbers in user_phone_numbers table`);
+    if (businessResult.rows.length > 0) {
+      console.log(`✅ Phone verification found in business_verifications table!`);
+      return { 
+        phoneVerified: true, 
+        needsUpdate: false, 
+        requiresManualVerification: false, 
+        verificationSource: 'business_verification',
+        verifiedAt: businessResult.rows[0].phone_verified_at
+      };
+    }
+
+    // 2. Check if phone is verified in driver_verifications table (priority 2)
+    console.log(`📱 Checking driver_verifications table for phone verification...`);
+    const driverQuery = `
+      SELECT phone_verified, phone_verified_at 
+      FROM driver_verifications 
+      WHERE user_id = $1 AND phone_number = $2 AND phone_verified = true
+    `;
+    const driverResult = await database.query(driverQuery, [userId, normalizedPhoneNumber]);
     
-    // Check against verified phone numbers in user_phone_numbers table
-    for (const phoneRecord of phoneResult.rows) {
-      const normalizedDbPhone = normalizePhoneNumber(phoneRecord.phone_number);
-      console.log(`📱 Comparing: ${normalizedPhoneNumber} === ${normalizedDbPhone} (Purpose: ${phoneRecord.purpose})`);
-      
-      if (normalizedPhoneNumber === normalizedDbPhone) {
-        console.log(`✅ Phone verification match found in user_phone_numbers table!`);
-        return { 
-          phoneVerified: true, 
-          needsUpdate: false, 
-          requiresManualVerification: false, 
-          verificationSource: 'user_phone_numbers',
-          verifiedAt: phoneRecord.verified_at
-        };
-      }
+    if (driverResult.rows.length > 0) {
+      console.log(`✅ Phone verification found in driver_verifications table!`);
+      return { 
+        phoneVerified: true, 
+        needsUpdate: true, 
+        requiresManualVerification: false, 
+        verificationSource: 'driver_verification',
+        verifiedAt: driverResult.rows[0].phone_verified_at
+      };
     }
     
-    // If user phone is null but business has phone number, update users table
+    // 3. Check if the business phone matches user's personal phone and it's verified (priority 3)
     if (!user.phone && phoneNumber) {
       await database.query(
         'UPDATE users SET phone = $1, updated_at = NOW() WHERE id = $2',
@@ -117,6 +129,10 @@ async function checkEmailVerificationStatus(userId, email) {
   try {
     console.log(`📧 Checking email verification for user ${userId}, email: ${email}`);
     
+    if (!email) {
+      return { emailVerified: false, needsUpdate: false, requiresManualVerification: true };
+    }
+
     // Check if user exists and get current email status
     const userResult = await database.query(
       'SELECT email, email_verified FROM users WHERE id = $1',
@@ -128,36 +144,49 @@ async function checkEmailVerificationStatus(userId, email) {
     }
     
     const user = userResult.rows[0];
-    
-    // First check user_email_addresses table for verified emails (professional emails)
-    console.log(`📧 Checking user_email_addresses table for verified emails...`);
-    const emailQuery = `
-      SELECT email_address, is_verified, verified_at, purpose, verification_method 
-      FROM user_email_addresses 
-      WHERE user_id = $1 AND is_verified = true
+    const normalizedEmail = email.toLowerCase();
+
+    // 1. Check if email is verified in business_verifications table (priority 1)
+    console.log(`📧 Checking business_verifications table for email verification...`);
+    const businessQuery = `
+      SELECT email_verified, email_verified_at 
+      FROM business_verifications 
+      WHERE user_id = $1 AND LOWER(email) = $2 AND email_verified = true
     `;
-    const emailResult = await database.query(emailQuery, [userId]);
+    const businessResult = await database.query(businessQuery, [userId, normalizedEmail]);
     
-    console.log(`📧 Found ${emailResult.rows.length} verified emails in user_email_addresses table`);
-    
-    // Check against verified emails in user_email_addresses table
-    for (const emailRecord of emailResult.rows) {
-      console.log(`📧 Comparing: ${email} === ${emailRecord.email_address} (Purpose: ${emailRecord.purpose})`);
-      
-      if (email.toLowerCase() === emailRecord.email_address.toLowerCase()) {
-        console.log(`✅ Email verification match found in user_email_addresses table!`);
-        return { 
-          emailVerified: true, 
-          needsUpdate: false, 
-          requiresManualVerification: false, 
-          verificationSource: 'user_email_addresses',
-          verifiedAt: emailRecord.verified_at,
-          verificationMethod: emailRecord.verification_method
-        };
-      }
+    if (businessResult.rows.length > 0) {
+      console.log(`✅ Email verification found in business_verifications table!`);
+      return { 
+        emailVerified: true, 
+        needsUpdate: false, 
+        requiresManualVerification: false, 
+        verificationSource: 'business_verification',
+        verifiedAt: businessResult.rows[0].email_verified_at
+      };
     }
+
+    // 2. Check if email is verified in driver_verifications table (priority 2)
+    console.log(`📧 Checking driver_verifications table for email verification...`);
+    const driverQuery = `
+      SELECT email_verified, email_verified_at 
+      FROM driver_verifications 
+      WHERE user_id = $1 AND LOWER(email) = $2 AND email_verified = true
+    `;
+    const driverResult = await database.query(driverQuery, [userId, normalizedEmail]);
     
-    // If user email is null but business has email, update users table
+    if (driverResult.rows.length > 0) {
+      console.log(`✅ Email verification found in driver_verifications table!`);
+      return { 
+        emailVerified: true, 
+        needsUpdate: true, 
+        requiresManualVerification: false, 
+        verificationSource: 'driver_verification',
+        verifiedAt: driverResult.rows[0].email_verified_at
+      };
+    }
+
+    // 3. Check if the business email matches user's personal email and it's verified (priority 3)
     if (!user.email && email) {
       await database.query(
         'UPDATE users SET email = $1, updated_at = NOW() WHERE id = $2',
@@ -168,13 +197,13 @@ async function checkEmailVerificationStatus(userId, email) {
     }
     
     // If emails match and user is verified, email is verified
-    if (user.email && user.email.toLowerCase() === email.toLowerCase() && user.email_verified) {
+    if (user.email && user.email.toLowerCase() === normalizedEmail && user.email_verified) {
       console.log(`📧 Email auto-verified: ${user.email} === ${email}`);
-      return { emailVerified: true, needsUpdate: false, requiresManualVerification: false, verificationSource: 'registration' };
+      return { emailVerified: true, needsUpdate: false, requiresManualVerification: false, verificationSource: 'personal_verification' };
     }
     
     // If emails match but not verified, check email verification table
-    if (user.email && user.email.toLowerCase() === email.toLowerCase()) {
+    if (user.email && user.email.toLowerCase() === normalizedEmail) {
       const emailVerificationResult = await database.query(
         'SELECT verified FROM email_otp_verifications WHERE email = $1 AND verified = true ORDER BY verified_at DESC LIMIT 1',
         [email]
@@ -195,7 +224,7 @@ async function checkEmailVerificationStatus(userId, email) {
       emailVerified: user.email_verified || false, 
       needsUpdate: false, 
       requiresManualVerification: !user.email_verified,
-      verificationSource: user.email_verified ? 'registration' : null
+      verificationSource: user.email_verified ? 'personal_verification' : null
     };
   } catch (error) {
     console.error('Error checking email verification:', error);
@@ -919,13 +948,12 @@ router.post('/verify-phone/verify-otp', auth.authMiddleware(), async (req, res) 
         // Auto-detect country for phone number
         const detectedCountry = smsService.detectCountry(normalizedPhone);
 
-        // 1. Upsert into user_phone_numbers (source of truth for multi numbers)
+        // 1. Update business verification phone verification status
         await database.query(`
-          INSERT INTO user_phone_numbers (user_id, phone_number, country_code, is_verified, phone_type, purpose, verified_at, created_at)
-          VALUES ($1, $2, $3, true, 'professional', 'business_verification', NOW(), NOW())
-          ON CONFLICT (user_id, phone_number) 
-          DO UPDATE SET is_verified = true, verified_at = NOW(), purpose = 'business_verification', phone_type = 'professional'
-        `, [userId, normalizedPhone, detectedCountry]);
+          UPDATE business_verifications 
+          SET phone_verified = true, phone_verified_at = NOW() 
+          WHERE user_id = $1
+        `, [userId]);
 
         // 2. Mark user record phone_verified (only if not already) WITHOUT overwriting existing phone value unless empty
         await database.query(`
