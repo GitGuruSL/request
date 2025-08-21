@@ -81,7 +81,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         _buildInfoItem(
                           icon: Icons.phone_outlined,
                           title: 'Mobile',
-                          value: _currentUser!.phoneNumber ?? 'Not provided',
+                          value: _currentUser!.phoneNumber != null
+                              ? (_currentUser!.phoneNumber!.startsWith('+94')
+                                  ? _currentUser!.phoneNumber!
+                                  : '+94 ${_currentUser!.phoneNumber}')
+                              : '+94 Not provided',
                           isVerified: _currentUser!.isPhoneVerified,
                           verificationStatus: _currentUser!.isPhoneVerified
                               ? 'Verified'
@@ -103,17 +107,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         _buildInfoItem(
                           icon: Icons.cake_outlined,
                           title: 'Birthday',
-                          value:
-                              'Not provided', // TODO: Add date of birth to user model
-                          onTap: () => _navigateToEditProfile(),
+                          value: 'Not provided',
+                          onTap: () => _showEditBirthdayBottomSheet(),
                         ),
                         const SizedBox(height: 8),
                         _buildInfoItem(
                           icon: Icons.wc_outlined,
                           title: 'Gender',
-                          value:
-                              'Not specified', // TODO: Add gender to user model
-                          onTap: () => _navigateToEditProfile(),
+                          value: 'Not specified',
+                          onTap: () => _showEditGenderBottomSheet(),
                         ),
                         const SizedBox(height: 32),
                         _buildSectionTitle('Your preferences'),
@@ -536,7 +538,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   void _showEditPhoneBottomSheet() {
     final TextEditingController phoneController = TextEditingController();
-    phoneController.text = _currentUser!.phoneNumber ?? '';
+    // Remove +94 prefix if present for editing
+    String phoneNumber = _currentUser!.phoneNumber ?? '';
+    if (phoneNumber.startsWith('+94 ')) {
+      phoneNumber = phoneNumber.substring(4);
+    } else if (phoneNumber.startsWith('+94')) {
+      phoneNumber = phoneNumber.substring(3);
+    }
+    phoneController.text = phoneNumber;
 
     showModalBottomSheet(
       context: context,
@@ -578,7 +587,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               decoration: const InputDecoration(
                 labelText: 'Mobile Number',
                 border: OutlineInputBorder(),
-                prefixText: '+',
+                prefixText: '+94 ',
+                hintText: '77 123 4567',
               ),
             ),
             const SizedBox(height: 24),
@@ -721,6 +731,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       // TODO: Implement API call to update and verify phone
       // await _userService.updateAndVerifyPhone(phoneNumber);
 
+      // Format phone number with country code
+      String formattedPhone = phoneNumber.trim();
+      if (!formattedPhone.startsWith('+94')) {
+        formattedPhone = '+94 $formattedPhone';
+      }
+
       // For now, update local state
       setState(() {
         _currentUser = UserModel(
@@ -729,7 +745,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           firstName: _currentUser!.firstName,
           lastName: _currentUser!.lastName,
           email: _currentUser!.email,
-          phoneNumber: phoneNumber.trim(),
+          phoneNumber: formattedPhone,
           roles: _currentUser!.roles,
           activeRole: _currentUser!.activeRole,
           roleData: _currentUser!.roleData,
@@ -746,7 +762,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       Navigator.pop(context);
 
       // Show verification process
-      _startPhoneVerification(phoneNumber.trim());
+      _startPhoneVerification(formattedPhone);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error updating phone: $e')),
@@ -837,5 +853,139 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         ],
       ),
     );
+  }
+
+  void _showEditBirthdayBottomSheet() {
+    DateTime selectedDate = DateTime.now();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Select Birthday',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Container(
+              height: 200,
+              child: CalendarDatePicker(
+                initialDate: selectedDate,
+                firstDate: DateTime(1950),
+                lastDate: DateTime.now(),
+                onDateChanged: (date) {
+                  selectedDate = date;
+                },
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => _saveBirthday(selectedDate),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: const Text('Save'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditGenderBottomSheet() {
+    final List<String> genders = [
+      'Male',
+      'Female',
+      'Other',
+      'Prefer not to say'
+    ];
+    String selectedGender = 'Not specified';
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Select Gender',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            ...genders
+                .map((gender) => ListTile(
+                      title: Text(gender),
+                      onTap: () {
+                        selectedGender = gender;
+                        _saveGender(selectedGender);
+                      },
+                    ))
+                .toList(),
+            const SizedBox(height: 10),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _saveBirthday(DateTime birthday) {
+    // TODO: Implement API call to save birthday
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+          content: Text('Birthday saved: ${_formatDateForDisplay(birthday)}')),
+    );
+  }
+
+  void _saveGender(String gender) {
+    // TODO: Implement API call to save gender
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Gender saved: $gender')),
+    );
+  }
+
+  String _formatDateForDisplay(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
   }
 }
