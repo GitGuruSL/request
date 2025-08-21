@@ -75,7 +75,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           value: _currentUser!.name.isNotEmpty
                               ? _currentUser!.name
                               : 'Not provided',
-                          onTap: () => _navigateToEditProfile(),
+                          onTap: () => _showEditNameBottomSheet(),
                         ),
                         const SizedBox(height: 8),
                         _buildInfoItem(
@@ -86,7 +86,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           verificationStatus: _currentUser!.isPhoneVerified
                               ? 'Verified'
                               : 'Not verified',
-                          onTap: () => _handlePhoneVerification(),
+                          onTap: () => _showEditPhoneBottomSheet(),
                         ),
                         const SizedBox(height: 8),
                         _buildInfoItem(
@@ -97,7 +97,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           verificationStatus: _currentUser!.isEmailVerified
                               ? 'Verified'
                               : 'Not verified',
-                          onTap: () => _handleEmailVerification(),
+                          onTap: () => _showEditEmailBottomSheet(),
                         ),
                         const SizedBox(height: 8),
                         _buildInfoItem(
@@ -451,5 +451,391 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         }
       }
     }
+  }
+
+  void _showEditNameBottomSheet() {
+    final TextEditingController firstNameController = TextEditingController();
+    final TextEditingController lastNameController = TextEditingController();
+
+    // Split current name if available
+    final nameParts = _currentUser!.name.split(' ');
+    if (nameParts.isNotEmpty) {
+      firstNameController.text = nameParts.first;
+      if (nameParts.length > 1) {
+        lastNameController.text = nameParts.sublist(1).join(' ');
+      }
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+          left: 20,
+          right: 20,
+          top: 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Edit Name',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: firstNameController,
+              decoration: const InputDecoration(
+                labelText: 'First Name',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: lastNameController,
+              decoration: const InputDecoration(
+                labelText: 'Last Name',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => _saveName(
+                    firstNameController.text, lastNameController.text),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: const Text('Save'),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditPhoneBottomSheet() {
+    final TextEditingController phoneController = TextEditingController();
+    phoneController.text = _currentUser!.phoneNumber ?? '';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+          left: 20,
+          right: 20,
+          top: 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Edit Mobile Number',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                labelText: 'Mobile Number',
+                border: OutlineInputBorder(),
+                prefixText: '+',
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => _savePhone(phoneController.text),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: const Text('Save & Verify'),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditEmailBottomSheet() {
+    final TextEditingController emailController = TextEditingController();
+    emailController.text = _currentUser!.email;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+          left: 20,
+          right: 20,
+          top: 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Edit Email Address',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
+                labelText: 'Email Address',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => _saveEmail(emailController.text),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: const Text('Save & Verify'),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _saveName(String firstName, String lastName) async {
+    if (firstName.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('First name is required')),
+      );
+      return;
+    }
+
+    try {
+      final fullName = '${firstName.trim()} ${lastName.trim()}'.trim();
+      // TODO: Implement API call to update user name
+      // await _userService.updateUserName(fullName);
+
+      // For now, update local state
+      setState(() {
+        _currentUser = UserModel(
+          id: _currentUser!.id,
+          name: fullName,
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          email: _currentUser!.email,
+          phoneNumber: _currentUser!.phoneNumber,
+          roles: _currentUser!.roles,
+          activeRole: _currentUser!.activeRole,
+          roleData: _currentUser!.roleData,
+          isEmailVerified: _currentUser!.isEmailVerified,
+          isPhoneVerified: _currentUser!.isPhoneVerified,
+          profileComplete: _currentUser!.profileComplete,
+          countryCode: _currentUser!.countryCode,
+          countryName: _currentUser!.countryName,
+          createdAt: _currentUser!.createdAt,
+          updatedAt: DateTime.now(),
+        );
+      });
+
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Name updated successfully')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error updating name: $e')),
+      );
+    }
+  }
+
+  Future<void> _savePhone(String phoneNumber) async {
+    if (phoneNumber.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Phone number is required')),
+      );
+      return;
+    }
+
+    try {
+      // TODO: Implement API call to update and verify phone
+      // await _userService.updateAndVerifyPhone(phoneNumber);
+
+      // For now, update local state
+      setState(() {
+        _currentUser = UserModel(
+          id: _currentUser!.id,
+          name: _currentUser!.name,
+          firstName: _currentUser!.firstName,
+          lastName: _currentUser!.lastName,
+          email: _currentUser!.email,
+          phoneNumber: phoneNumber.trim(),
+          roles: _currentUser!.roles,
+          activeRole: _currentUser!.activeRole,
+          roleData: _currentUser!.roleData,
+          isEmailVerified: _currentUser!.isEmailVerified,
+          isPhoneVerified: false, // Reset verification status
+          profileComplete: _currentUser!.profileComplete,
+          countryCode: _currentUser!.countryCode,
+          countryName: _currentUser!.countryName,
+          createdAt: _currentUser!.createdAt,
+          updatedAt: DateTime.now(),
+        );
+      });
+
+      Navigator.pop(context);
+
+      // Show verification process
+      _startPhoneVerification(phoneNumber.trim());
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error updating phone: $e')),
+      );
+    }
+  }
+
+  Future<void> _saveEmail(String email) async {
+    if (email.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Email address is required')),
+      );
+      return;
+    }
+
+    // Basic email validation
+    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email.trim())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid email address')),
+      );
+      return;
+    }
+
+    try {
+      // TODO: Implement API call to update and verify email
+      // await _userService.updateAndVerifyEmail(email);
+
+      // For now, update local state
+      setState(() {
+        _currentUser = UserModel(
+          id: _currentUser!.id,
+          name: _currentUser!.name,
+          firstName: _currentUser!.firstName,
+          lastName: _currentUser!.lastName,
+          email: email.trim(),
+          phoneNumber: _currentUser!.phoneNumber,
+          roles: _currentUser!.roles,
+          activeRole: _currentUser!.activeRole,
+          roleData: _currentUser!.roleData,
+          isEmailVerified: false, // Reset verification status
+          isPhoneVerified: _currentUser!.isPhoneVerified,
+          profileComplete: _currentUser!.profileComplete,
+          countryCode: _currentUser!.countryCode,
+          countryName: _currentUser!.countryName,
+          createdAt: _currentUser!.createdAt,
+          updatedAt: DateTime.now(),
+        );
+      });
+
+      Navigator.pop(context);
+
+      // Show verification process
+      _startEmailVerification(email.trim());
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error updating email: $e')),
+      );
+    }
+  }
+
+  void _startPhoneVerification(String phoneNumber) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Phone Verification'),
+        content: Text('A verification code has been sent to $phoneNumber'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _startEmailVerification(String email) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Email Verification'),
+        content: Text('A verification link has been sent to $email'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 }
