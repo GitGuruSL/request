@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../services/enhanced_user_service.dart';
 import '../services/api_client.dart';
+import '../services/feature_gate_service.dart';
+import '../services/module_management_service.dart';
 import '../models/enhanced_user_model.dart';
 import '../theme/app_theme.dart';
 
@@ -230,7 +232,15 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
                         style: TextStyle(
                             fontSize: 16, color: AppTheme.textSecondary)),
                     const SizedBox(height: 24),
-                    _buildRoleCard(UserRole.driver),
+                    // Driver role card with module gating
+                    FeatureGateService.instance.gateWidget(
+                      requiredModule: BusinessModule.rideSharing,
+                      enabledWidget: _buildRoleCard(UserRole.driver),
+                      disabledWidget: _buildDisabledRoleCard(
+                        UserRole.driver,
+                        'Driver registration is not available in your country yet.',
+                      ),
+                    ),
                     const SizedBox(height: 16),
                     _buildRoleCard(UserRole.business),
                     const SizedBox(height: 32),
@@ -311,6 +321,98 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
           ),
         ]
       ]),
+    );
+  }
+
+  Widget _buildDisabledRoleCard(UserRole role, String disabledMessage) {
+    final roleTitle = _getRoleDisplayName(role);
+    final roleIcon = _getRoleIcon(role);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      color: AppTheme.backgroundColor,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(roleIcon, size: 32, color: Colors.grey),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      roleTitle,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Coming Soon',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.orange[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Not Available',
+                  style: TextStyle(
+                    color: Colors.orange[600],
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            disabledMessage,
+            style: TextStyle(
+              fontSize: 14,
+              color: AppTheme.textSecondary,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                FeatureGateService.instance.showComingSoonModal(
+                  context: context,
+                  featureName: '$roleTitle Registration',
+                  description: disabledMessage,
+                  icon: roleIcon,
+                );
+              },
+              icon: const Icon(Icons.info_outline, size: 18),
+              label: Text('Learn More'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.grey.shade300,
+                foregroundColor: Colors.grey.shade700,
+                elevation: 0,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -446,8 +548,24 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
     ]);
   }
 
-  void _registerRole(UserRole role) {
+  void _registerRole(UserRole role) async {
     if (role == UserRole.driver) {
+      // Check if driver registration is enabled via module management
+      final isDriverRegistrationEnabled =
+          await FeatureGateService.instance.isDriverRegistrationEnabled();
+
+      if (!isDriverRegistrationEnabled) {
+        // Show coming soon for driver registration
+        FeatureGateService.instance.showComingSoonModal(
+          context: context,
+          featureName: 'Driver Registration',
+          description:
+              'Driver registration is not available in your country yet. We\'re working to bring ride sharing services to your region soon!',
+          icon: Icons.directions_car,
+        );
+        return;
+      }
+
       Navigator.pushNamed(context, '/driver-registration')
           .then((_) => _loadUserData());
     } else if (role == UserRole.business) {

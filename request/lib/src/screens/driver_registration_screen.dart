@@ -349,15 +349,16 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
             body: const Center(child: CircularProgressIndicator()),
           );
         }
-        
+
         if (snapshot.data == false) {
           return ComingSoonWidget(
             title: 'Driver Registration',
-            description: 'Driver registration is not available in your country yet. We\'re working to bring ride sharing services to your region soon!',
+            description:
+                'Driver registration is not available in your country yet. We\'re working to bring ride sharing services to your region soon!',
             icon: Icons.drive_eta,
           );
         }
-        
+
         // Original driver registration form
         return Scaffold(
           backgroundColor: AppTheme.backgroundColor,

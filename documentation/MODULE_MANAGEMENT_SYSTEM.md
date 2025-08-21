@@ -1,44 +1,83 @@
 # 🏗️ Centralized Module Management System
 
-## 📖 Overview
+## � Overview
 
-The **Centralized Module Management System** provides complete control over business modules and features across the entire Request Marketplace application. This system allows administrators to enable or disable specific request types and related features on a per-country basis.
+The **Centralized Module Management System** provides country-specific control over business modules and features in the Request Marketplace application. This system allows administrators to enable/disable specific modules for different countries, providing granular control over feature availability.
 
 ## 🎯 System Architecture
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Backend API   │◄──►│  Flutter Service │◄──►│   UI Features   │
-│                 │    │                  │    │                 │
-│ modules.js      │    │ ModuleManagement │    │ FeatureGate     │
-│ Configuration   │    │ Service          │    │ Service         │
+│   Backend API   │◄──►│ Module Management │◄──►│ Feature Gating  │
+│   (Express.js)  │    │    Service       │    │    Service      │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+         │                       │                       │
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│ Country Config  │    │   Module Cache   │    │   UI Components │
+│   Database      │    │   (30min TTL)    │    │ (Coming Soon)   │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
 ```
 
-## 🗂️ Module Definitions
+## � Business Modules
 
-### Available Business Modules
+| Module | ID | Description | Controls |
+|--------|----|-----------  |----------|
+| **Item Request** | `item_request` | Basic marketplace for buying/selling items | Create item requests |
+| **Service Request** | `service_request` | Service marketplace | Create service requests |
+| **Rental Request** | `rental_request` | Equipment/vehicle rental | Create rental requests |
+| **Delivery Request** | `delivery_request` | Delivery services | Create delivery requests, delivery business registration |
+| **Ride Sharing** | `ride_sharing` | Taxi and ride services | Create ride requests, driver registration, ride alerts menu |
+| **Price Request** | `price_request` | Price comparison | Create price requests, price comparison navigation, business type restrictions |
 
-| Module | ID | Request Types | Business Types | Navigation Features | Menu Features | Driver Reg Required |
-|--------|----|--------------|--------------|--------------------|---------------|-------------------|
-| **Item Request** | `item_request` | `['item']` | `[]` (all) | `[]` | `[]` | ❌ |
-| **Service Request** | `service_request` | `['service']` | `[]` (all) | `[]` | `[]` | ❌ |
-| **Rental Request** | `rental_request` | `['rental', 'rent']` | `[]` (all) | `[]` | `[]` | ❌ |
-| **Delivery Request** | `delivery_request` | `['delivery']` | `['delivery']` | `[]` | `[]` | ❌ |
-| **Ride Sharing** | `ride_sharing` | `['ride']` | `[]` (all) | `[]` | `['ride_alerts']` | ✅ |
-| **Price Request** | `price_request` | `['price']` | `['retail', 'wholesale', 'ecommerce']` | `['price_comparison']` | `['product_section']` | ❌ |
+## 🔧 Backend Implementation
 
-## 🔧 Backend Configuration
+### API Endpoints
 
-### File Location
+#### 1. Get Enabled Modules
+```http
+GET /api/modules/enabled?country=LK
 ```
-backend/routes/modules.js
+
+**Response:**
+```json
+{
+  "success": true,
+  "country": "LK",
+  "enabled_modules": ["item_request", "service_request", "rental_request", "delivery_request", "ride_sharing", "price_request"],
+  "disabled_modules": [],
+  "total_modules": 6
+}
 ```
 
-### Configuration Structure
+#### 2. Check Specific Module
+```http
+GET /api/modules/check/ride_sharing?country=LK
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "country": "LK", 
+  "module": "ride_sharing",
+  "enabled": true
+}
+```
+
+#### 3. Get All Available Modules
+```http
+GET /api/modules/all
+```
+
+### Configuration Management
+
+#### File: `backend/routes/modules.js`
+
 ```javascript
 const COUNTRY_MODULE_CONFIG = {
-  'LK': { // Sri Lanka
+  'LK': { // Sri Lanka - All modules enabled
     enabled_modules: [
       'item_request',
       'service_request', 
@@ -48,6 +87,27 @@ const COUNTRY_MODULE_CONFIG = {
       'price_request'
     ],
     disabled_modules: []
+  },
+  'US': { // United States - Price requests disabled 
+    enabled_modules: [
+      'item_request',
+      'service_request',
+      'rental_request',
+      'delivery_request',
+      'ride_sharing'
+    ],
+    disabled_modules: ['price_request']
+  },
+  'IN': { // India - Rental and price disabled
+    enabled_modules: [
+      'item_request',
+      'service_request',
+      'delivery_request',
+      'ride_sharing'
+    ],
+    disabled_modules: ['rental_request', 'price_request']
+  }
+};
   },
   'US': { // United States  
     enabled_modules: [
