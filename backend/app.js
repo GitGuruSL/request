@@ -55,6 +55,7 @@ app.get('/health', async (req, res) => {
 // Import routes
 const authRoutes = require('./routes/auth');
 const flutterAuthRoutes = require('./routes/flutter-auth'); // NEW
+const usersRoutes = require('./routes/users'); // NEW - user profile management
 const categoryRoutes = require('./routes/categories');
 const cityRoutes = require('./routes/cities');
 const vehicleTypeRoutes = require('./routes/vehicle-types');
@@ -84,6 +85,7 @@ app.use('/uploads', express.static('uploads', {
 // Use routes
 app.use('/api/auth', authRoutes);
 app.use('/api/auth', flutterAuthRoutes); // NEW - adds Flutter-specific endpoints
+app.use('/api/users', usersRoutes); // NEW - user profile management
 app.use('/api/categories', categoryRoutes);
 app.use('/api/cities', cityRoutes);
 app.use('/api/vehicle-types', vehicleTypeRoutes);

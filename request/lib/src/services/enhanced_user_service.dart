@@ -86,14 +86,48 @@ class EnhancedUserService {
     String? firstName,
     String? lastName,
     String? phoneNumber,
+    String? email,
     String? displayName,
+    DateTime? dateOfBirth,
+    String? gender,
   }) async {
     try {
-      // TODO: Implement REST API endpoint for updating user profile
-      if (kDebugMode) {
-        print('Update user profile: firstName=$firstName, lastName=$lastName');
+      final user = await getCurrentUser();
+      if (user == null) {
+        print('Error: No authenticated user found');
+        return false;
       }
-      return true;
+
+      // Build update data
+      final Map<String, dynamic> updateData = {};
+      if (firstName != null) updateData['first_name'] = firstName;
+      if (lastName != null) updateData['last_name'] = lastName;
+      if (phoneNumber != null) updateData['phone'] = phoneNumber;
+      if (email != null) updateData['email'] = email;
+      if (displayName != null) updateData['display_name'] = displayName;
+      if (dateOfBirth != null)
+        updateData['date_of_birth'] =
+            dateOfBirth.toIso8601String().split('T')[0]; // Send as YYYY-MM-DD
+      if (gender != null) updateData['gender'] = gender;
+
+      if (updateData.isEmpty) {
+        print('No data to update');
+        return true;
+      }
+
+      // Make REST API call to update user profile
+      final response = await ApiClient.instance.put(
+        '/api/users/${user.id}',
+        data: updateData,
+      );
+
+      if (response.isSuccess) {
+        print('DEBUG: User profile updated successfully: $updateData');
+        return true;
+      } else {
+        print('Error updating user profile: ${response.error}');
+        return false;
+      }
     } catch (e) {
       if (kDebugMode) {
         print('Error updating user profile: $e');
@@ -107,13 +141,19 @@ class EnhancedUserService {
     String? firstName,
     String? lastName,
     String? phoneNumber,
+    String? email,
     String? displayName,
+    DateTime? dateOfBirth,
+    String? gender,
   }) =>
       updateUserProfile(
         firstName: firstName,
         lastName: lastName,
         phoneNumber: phoneNumber,
+        email: email,
         displayName: displayName,
+        dateOfBirth: dateOfBirth,
+        gender: gender,
       );
 
   // ---- Stubs to satisfy legacy verification / role management screens ----

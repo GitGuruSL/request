@@ -150,14 +150,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         _buildInfoItem(
                           icon: Icons.cake_outlined,
                           title: 'Birthday',
-                          value: 'Not provided',
+                          value: _currentUser!.dateOfBirth != null
+                              ? '${_currentUser!.dateOfBirth!.day}/${_currentUser!.dateOfBirth!.month}/${_currentUser!.dateOfBirth!.year}'
+                              : 'Not provided',
                           onTap: () => _showEditBirthdayBottomSheet(),
                         ),
                         const SizedBox(height: 8),
                         _buildInfoItem(
                           icon: Icons.wc_outlined,
                           title: 'Gender',
-                          value: 'Not specified',
+                          value: _currentUser!.gender ?? 'Not specified',
                           onTap: () => _showEditGenderBottomSheet(),
                         ),
                         const SizedBox(height: 32),
@@ -1370,21 +1372,72 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
-  void _saveBirthday(DateTime birthday) {
-    // TODO: Implement API call to save birthday
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-          content: Text('Birthday saved: ${_formatDateForDisplay(birthday)}')),
-    );
+  void _saveBirthday(DateTime birthday) async {
+    try {
+      if (_currentUser == null) return;
+
+      // Save to backend
+      final success = await _userService.updateUserProfile(
+        dateOfBirth: birthday,
+      );
+
+      if (success) {
+        // Reload user data to get updated information
+        await _loadUserData();
+
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Birthday saved: ${_formatDateForDisplay(birthday)}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        throw Exception('Failed to update profile');
+      }
+    } catch (e) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to save birthday: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
-  void _saveGender(String gender) {
-    // TODO: Implement API call to save gender
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Gender saved: $gender')),
-    );
+  void _saveGender(String gender) async {
+    try {
+      if (_currentUser == null) return;
+
+      // Save to backend
+      final success = await _userService.updateUserProfile(
+        gender: gender,
+      );
+
+      if (success) {
+        // Reload user data to get updated information
+        await _loadUserData();
+
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gender saved: $gender'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        throw Exception('Failed to update profile');
+      }
+    } catch (e) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to save gender: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   String _formatDateForDisplay(DateTime date) {

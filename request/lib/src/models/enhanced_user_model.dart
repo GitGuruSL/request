@@ -31,6 +31,8 @@ class UserModel {
   final bool profileComplete;
   final String? countryCode;
   final String? countryName;
+  final DateTime? dateOfBirth;
+  final String? gender;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -49,6 +51,8 @@ class UserModel {
     this.profileComplete = false,
     this.countryCode,
     this.countryName,
+    this.dateOfBirth,
+    this.gender,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -89,6 +93,8 @@ class UserModel {
       profileComplete: map['profileComplete'] ?? false,
       countryCode: map['countryCode'] ?? map['country_code'],
       countryName: map['countryName'] ?? map['country_name'],
+      dateOfBirth: _parseDate(map['dateOfBirth'] ?? map['date_of_birth']),
+      gender: map['gender'],
       createdAt: _parseDateTime(map['createdAt'] ?? map['created_at']),
       updatedAt: _parseDateTime(map['updatedAt'] ?? map['updated_at']),
     );
@@ -111,6 +117,8 @@ class UserModel {
       'profileComplete': profileComplete,
       'countryCode': countryCode,
       'countryName': countryName,
+      'dateOfBirth': dateOfBirth?.toIso8601String(),
+      'gender': gender,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -126,6 +134,24 @@ class UserModel {
       return DateTime.parse(dateTime);
     } else {
       return DateTime.now();
+    }
+  }
+
+  static DateTime? _parseDate(dynamic date) {
+    if (date == null) {
+      return null;
+    } else if (date is Timestamp) {
+      return date.toDate();
+    } else if (date is String) {
+      try {
+        return DateTime.parse(date);
+      } catch (e) {
+        return null;
+      }
+    } else if (date is DateTime) {
+      return date;
+    } else {
+      return null;
     }
   }
 
