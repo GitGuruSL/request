@@ -1363,7 +1363,6 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.orange.withOpacity(0.1),
-        border: Border.all(color: Colors.orange.withOpacity(0.3)),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(

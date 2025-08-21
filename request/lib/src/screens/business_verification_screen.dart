@@ -373,9 +373,12 @@ class _BusinessVerificationScreenState
     }
 
     return Container(
+      margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
+        color: isVerified
+            ? Colors.green.withOpacity(0.1)
+            : Colors.orange.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -385,32 +388,41 @@ class _BusinessVerificationScreenState
             children: [
               Icon(
                 isVerified ? Icons.check_circle : Icons.phone,
-                color: isVerified ? Colors.green : AppTheme.primaryColor,
+                color: isVerified ? Colors.green : Colors.orange,
                 size: 20,
               ),
               const SizedBox(width: 8),
-              const Text(
-                'Business Phone',
+              Text(
+                isVerified ? 'Business Phone' : 'Phone Verification Required',
                 style: TextStyle(
                   fontSize: 16,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
                 ),
               ),
               const Spacer(),
-              _buildVerificationStatusChip(isVerified),
+              if (isVerified) _buildVerificationStatusChip(isVerified),
             ],
           ),
           const SizedBox(height: 8),
           Text(
             businessPhone.isNotEmpty
-                ? businessPhone
+                ? 'Phone: $businessPhone'
                 : 'No phone number provided',
             style: TextStyle(
-              color: AppTheme.textSecondary,
+              color: AppTheme.textPrimary,
               fontSize: 14,
             ),
           ),
           if (!isVerified) ...[
+            const SizedBox(height: 12),
+            const Text(
+              'Verify your phone number to complete your business profile.',
+              style: TextStyle(
+                fontSize: 14,
+                color: AppTheme.textSecondary,
+              ),
+            ),
             const SizedBox(height: 12),
             if (_phoneVerificationId == null)
               SizedBox(
@@ -426,10 +438,11 @@ class _BusinessVerificationScreenState
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.sms),
-                  label:
-                      Text(_isVerifyingPhone ? 'Sending...' : 'Verify Phone'),
+                  label: Text(_isVerifyingPhone
+                      ? 'Sending...'
+                      : 'Send Verification Code'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
+                    backgroundColor: Colors.orange,
                     foregroundColor: Colors.white,
                   ),
                 ),
@@ -451,7 +464,7 @@ class _BusinessVerificationScreenState
                     child: ElevatedButton(
                       onPressed: _verifyPhoneOTP,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryColor,
+                        backgroundColor: Colors.orange,
                         foregroundColor: Colors.white,
                       ),
                       child: const Text('Verify'),

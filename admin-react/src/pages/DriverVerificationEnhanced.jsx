@@ -166,7 +166,14 @@ const DriverVerificationEnhanced = () => {
       // Auto-refresh selected driver object with latest data
       if (selectedDriver) {
         const updated = sorted.find(d => d.id === selectedDriver.id);
-        if (updated) setSelectedDriver(updated);
+        if (updated) {
+          setSelectedDriver(updated);
+        } else {
+          // Driver not found in current filter (e.g., approved driver when filter is 'pending') - close modal
+          console.log(`🔄 Selected driver ${selectedDriver.id} not found in current filter, closing modal`);
+          setSelectedDriver(null);
+          setDetailsOpen(false);
+        }
       }
     } catch (e) {
       console.error('❌ Error loading drivers:', e);
@@ -551,7 +558,24 @@ const DriverVerificationEnhanced = () => {
     }
 
   setActionLoading(true);
-  try { await api.put(`/driver-verifications/${driver.id}/status`, { status: action === 'approve' ? 'approved' : action }); await loadDrivers(); console.log(`✅ Driver ${action}: ${driver.fullName}`);} catch (error){ console.error(`Error ${action} driver`, error);} finally { setActionLoading(false);} 
+  try { 
+    await api.put(`/driver-verifications/${driver.id}/status`, { status: action === 'approve' ? 'approved' : action }); 
+    
+    // If we approved a driver and the filter would hide it, close the modal or change filter
+    if (action === 'approve' && filterStatus !== 'all' && filterStatus !== 'approved') {
+      setDetailsOpen(false);
+      setSelectedDriver(null);
+      alert(`✅ Driver ${driver.fullName || driver.full_name} has been approved successfully! The modal will now close since the current filter would hide approved drivers.`);
+    }
+    
+    await loadDrivers(); 
+    console.log(`✅ Driver ${action}: ${driver.fullName}`);
+  } catch (error){ 
+    console.error(`Error ${action} driver`, error);
+    alert(`❌ Error ${action === 'approve' ? 'approving' : action} driver: ${error.message}`);
+  } finally { 
+    setActionLoading(false);
+  } 
   };
 
   const handleVehicleImageAction = async (driver, imageIndex, action) => {

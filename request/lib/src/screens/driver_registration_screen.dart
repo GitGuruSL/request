@@ -1858,9 +1858,6 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
             'status': 'pending',
             'submittedAt': DateTime.now()
           }, // License back
-          'licenseDocument': licenseDocumentUrl != null
-              ? {'status': 'pending', 'submittedAt': DateTime.now()}
-              : null, // Optional: License document
           'nicFront': nicFrontUrl != null
               ? {'status': 'pending', 'submittedAt': DateTime.now()}
               : null, // Optional: NIC front
