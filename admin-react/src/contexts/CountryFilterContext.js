@@ -29,3 +29,14 @@ export const CountryFilterProvider = ({ children }) => {
     </CountryFilterContext.Provider>
   );
 };
+
+/**
+ * Hook to use country filter context
+ */
+export const useCountryFilter = () => {
+  const context = useContext(CountryFilterContext);
+  if (!context) {
+    throw new Error('useCountryFilter must be used within a CountryFilterProvider');
+  }
+  return context;
+};
