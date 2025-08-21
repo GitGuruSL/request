@@ -133,7 +133,7 @@ async function checkEmailVerificationStatus(userId, email) {
     // 1. Check if email is verified in driver_verifications table (priority 1)
     console.log(`📧 Checking driver_verifications table for email verification...`);
     const driverQuery = `
-      SELECT email_verified, email_verified_at 
+      SELECT email_verified 
       FROM driver_verifications 
       WHERE user_id = $1 AND LOWER(email) = $2 AND email_verified = true
     `;
@@ -145,17 +145,16 @@ async function checkEmailVerificationStatus(userId, email) {
         emailVerified: true, 
         needsUpdate: false, 
         requiresManualVerification: false, 
-        verificationSource: 'driver_verification',
-        verifiedAt: driverResult.rows[0].email_verified_at
+        verificationSource: 'driver_verification'
       };
     }
 
     // 2. Check if email is verified in business_verifications table (priority 2)
     console.log(`📧 Checking business_verifications table for email verification...`);
     const businessQuery = `
-      SELECT email_verified, email_verified_at 
+      SELECT email_verified 
       FROM business_verifications 
-      WHERE user_id = $1 AND LOWER(email) = $2 AND email_verified = true
+      WHERE user_id = $1 AND LOWER(business_email) = $2 AND email_verified = true
     `;
     const businessResult = await database.query(businessQuery, [userId, normalizedEmail]);
     
@@ -165,8 +164,7 @@ async function checkEmailVerificationStatus(userId, email) {
         emailVerified: true, 
         needsUpdate: true, 
         requiresManualVerification: false, 
-        verificationSource: 'business_verification',
-        verifiedAt: businessResult.rows[0].email_verified_at
+        verificationSource: 'business_verification'
       };
     }
 
@@ -439,6 +437,9 @@ router.get('/user/:userId', async (req, res) => {
     // Check phone and email verification status
     const phoneStatus = await checkPhoneVerificationStatus(row.user_id, row.phone_number);
     const emailStatus = await checkEmailVerificationStatus(row.user_id, row.email);
+
+    console.log('📱 Driver phone verification result:', phoneStatus);
+    console.log('📧 Driver email verification result:', emailStatus);
 
     // Add verification status to response
     const enrichedData = {
