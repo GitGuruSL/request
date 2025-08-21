@@ -3,7 +3,6 @@ import '../../services/enhanced_user_service.dart';
 import '../../services/rest_auth_service.dart' hide UserModel;
 import '../../services/contact_verification_service.dart';
 import '../../models/enhanced_user_model.dart';
-import 'edit_profile_screen.dart';
 
 class UserProfileScreen extends StatefulWidget {
   const UserProfileScreen({super.key});
@@ -270,7 +269,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     required String title,
     required String value,
     bool? isVerified,
-    String? verificationStatus,
     required VoidCallback onTap,
   }) {
     return InkWell(
@@ -537,81 +535,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   int _getEmergencyContactsCount() {
     // TODO: Implement emergency contacts count from user model
     return 2; // Placeholder
-  }
-
-  void _navigateToEditProfile() {
-    Navigator.of(context)
-        .push(
-          MaterialPageRoute(
-            builder: (context) => const EditProfileScreen(),
-          ),
-        )
-        .then((_) => _loadUserData()); // Refresh data when coming back
-  }
-
-  void _handlePhoneVerification() {
-    if (_currentUser!.isPhoneVerified) {
-      // Phone already verified, navigate to edit
-      _navigateToEditProfile();
-    } else {
-      // TODO: Navigate to phone verification screen
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Phone verification feature coming soon')),
-      );
-    }
-  }
-
-  void _handleEmailVerification() {
-    if (_currentUser!.isEmailVerified) {
-      // Email already verified, navigate to edit
-      _navigateToEditProfile();
-    } else {
-      // TODO: Navigate to email verification screen
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Email verification feature coming soon')),
-      );
-    }
-  }
-
-  void _showLanguageOptions() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Select Language',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            ListTile(
-              title: const Text('English'),
-              leading: const Icon(Icons.check),
-              onTap: () => Navigator.of(context).pop(),
-            ),
-            ListTile(
-              title: const Text('Sinhala'),
-              onTap: () {
-                // TODO: Implement language change
-                Navigator.of(context).pop();
-              },
-            ),
-            ListTile(
-              title: const Text('Tamil'),
-              onTap: () {
-                // TODO: Implement language change
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   void _navigateToEmergencyContacts() {
@@ -1218,13 +1141,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         email: email,
         endpoint: '/api/business-verifications/check-verification-status',
       );
-      
+
       if (status['emailVerified'] == true) {
         // Email is already verified in the system
         setState(() {
           _unifiedEmailVerified = true;
         });
-        
+
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
@@ -1243,16 +1166,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     } catch (e) {
       print('Error checking email verification status: $e');
     }
-    
+
     // Email not verified, start verification process
     try {
-      final result = await _contactService.sendBusinessEmailVerification(email: email);
-      
+      await _contactService.sendBusinessEmailVerification(email: email);
+
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Email Verification'),
-          content: Text('A verification link has been sent to $email. Please check your email and click the verification link.'),
+          content: Text(
+              'A verification link has been sent to $email. Please check your email and click the verification link.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
