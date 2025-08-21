@@ -47,18 +47,24 @@ class UserRegistrationService {
   /// Fetch user registrations from backend
   Future<UserRegistrations> _fetchUserRegistrations(String userId) async {
     UserRegistrations registrations = UserRegistrations();
-    if (kDebugMode) print('🔍 UserRegistrationService: Fetching registrations for user $userId');
+    if (kDebugMode)
+      print(
+          '🔍 UserRegistrationService: Fetching registrations for user $userId');
 
     try {
       // Check driver registration
       try {
-        if (kDebugMode) print('🚗 UserRegistrationService: Checking driver registration...');
+        if (kDebugMode)
+          print('🚗 UserRegistrationService: Checking driver registration...');
         final driverResponse =
             await _apiClient.get('/api/driver-verifications/user/$userId');
-        if (kDebugMode) print('🚗 UserRegistrationService: Driver response: ${driverResponse.isSuccess ? 'SUCCESS' : 'FAILED'}');
+        if (kDebugMode)
+          print(
+              '🚗 UserRegistrationService: Driver response: ${driverResponse.isSuccess ? 'SUCCESS' : 'FAILED'}');
         if (driverResponse.isSuccess && driverResponse.data != null) {
           final driverData = driverResponse.data['data'];
-          if (kDebugMode) print('🚗 UserRegistrationService: Driver data: $driverData');
+          if (kDebugMode)
+            print('🚗 UserRegistrationService: Driver data: $driverData');
           if (driverData['status'] == 'approved') {
             registrations.isApprovedDriver = true;
             registrations.driverVehicleTypes = [
@@ -67,26 +73,37 @@ class UserRegistrationService {
             registrations.driverVehicleTypeIds = [
               driverData['vehicle_type_id']
             ];
-            if (kDebugMode) print('✅ UserRegistrationService: User is approved driver with vehicle type: ${driverData['vehicle_type_display_name']}');
+            if (kDebugMode)
+              print(
+                  '✅ UserRegistrationService: User is approved driver with vehicle type: ${driverData['vehicle_type_display_name']}');
           } else if (driverData['status'] == 'pending') {
             registrations.hasPendingDriverApplication = true;
-            if (kDebugMode) print('⏳ UserRegistrationService: User has pending driver application');
+            if (kDebugMode)
+              print(
+                  '⏳ UserRegistrationService: User has pending driver application');
           }
         }
       } catch (e) {
         // Driver registration not found or error - user is not a driver
-        if (kDebugMode) print('ℹ️ UserRegistrationService: No driver registration found for user - $e');
+        if (kDebugMode)
+          print(
+              'ℹ️ UserRegistrationService: No driver registration found for user - $e');
       }
 
       // Check business registration
       try {
-        if (kDebugMode) print('🏢 UserRegistrationService: Checking business registration...');
+        if (kDebugMode)
+          print(
+              '🏢 UserRegistrationService: Checking business registration...');
         final businessResponse =
             await _apiClient.get('/api/business-verifications/user/$userId');
-        if (kDebugMode) print('🏢 UserRegistrationService: Business response: ${businessResponse.isSuccess ? 'SUCCESS' : 'FAILED'}');
+        if (kDebugMode)
+          print(
+              '🏢 UserRegistrationService: Business response: ${businessResponse.isSuccess ? 'SUCCESS' : 'FAILED'}');
         if (businessResponse.isSuccess && businessResponse.data != null) {
           final businessData = businessResponse.data['data'];
-          if (kDebugMode) print('🏢 UserRegistrationService: Business data: $businessData');
+          if (kDebugMode)
+            print('🏢 UserRegistrationService: Business data: $businessData');
           if (businessData['status'] == 'approved') {
             registrations.isApprovedBusiness = true;
             // Check if business type includes delivery
@@ -96,18 +113,26 @@ class UserRegistrationService {
                 businessType?.contains('logistics') == true ||
                 businessType?.contains('courier') == true) {
               registrations.canHandleDeliveryRequests = true;
-              if (kDebugMode) print('✅ UserRegistrationService: User is approved business with delivery capabilities: $businessType');
+              if (kDebugMode)
+                print(
+                    '✅ UserRegistrationService: User is approved business with delivery capabilities: $businessType');
             } else {
-              if (kDebugMode) print('ℹ️ UserRegistrationService: User is approved business but no delivery capabilities: $businessType');
+              if (kDebugMode)
+                print(
+                    'ℹ️ UserRegistrationService: User is approved business but no delivery capabilities: $businessType');
             }
           } else if (businessData['status'] == 'pending') {
             registrations.hasPendingBusinessApplication = true;
-            if (kDebugMode) print('⏳ UserRegistrationService: User has pending business application');
+            if (kDebugMode)
+              print(
+                  '⏳ UserRegistrationService: User has pending business application');
           }
         }
       } catch (e) {
         // Business registration not found or error - user is not a business
-        if (kDebugMode) print('ℹ️ UserRegistrationService: No business registration found for user - $e');
+        if (kDebugMode)
+          print(
+              'ℹ️ UserRegistrationService: No business registration found for user - $e');
       }
     } catch (e) {
       if (kDebugMode) print('❌ Error fetching user registrations: $e');
@@ -127,11 +152,14 @@ class UserRegistrationService {
     final registrations = await getUserRegistrations();
     if (registrations == null) {
       // Default for unauthenticated users - only basic request types
-      if (kDebugMode) print('🔍 UserRegistrationService: No user registrations found, returning default types');
+      if (kDebugMode)
+        print(
+            '🔍 UserRegistrationService: No user registrations found, returning default types');
       return ['item', 'service', 'rent'];
     }
 
-    if (kDebugMode) print('🔍 UserRegistrationService: Found registrations: $registrations');
+    if (kDebugMode)
+      print('🔍 UserRegistrationService: Found registrations: $registrations');
 
     List<String> allowedTypes = [
       'item',
@@ -143,16 +171,20 @@ class UserRegistrationService {
     if (registrations.isApprovedBusiness &&
         registrations.canHandleDeliveryRequests) {
       allowedTypes.add('delivery');
-      if (kDebugMode) print('✅ UserRegistrationService: Added delivery type (approved business with delivery capabilities)');
+      if (kDebugMode)
+        print(
+            '✅ UserRegistrationService: Added delivery type (approved business with delivery capabilities)');
     }
 
     // Add ride if user is approved driver
     if (registrations.isApprovedDriver) {
       allowedTypes.add('ride');
-      if (kDebugMode) print('✅ UserRegistrationService: Added ride type (approved driver)');
+      if (kDebugMode)
+        print('✅ UserRegistrationService: Added ride type (approved driver)');
     }
 
-    if (kDebugMode) print('🎯 UserRegistrationService: Final allowed types: $allowedTypes');
+    if (kDebugMode)
+      print('🎯 UserRegistrationService: Final allowed types: $allowedTypes');
     return allowedTypes;
   }
 

@@ -42,9 +42,10 @@ class _BrowseScreenState extends State<BrowseScreen> {
       // Load user's allowed request types based on registrations
       final allowedRequestTypeStrings =
           await _registrationService.getAllowedRequestTypes();
-      
+
       if (kDebugMode) {
-        print('🎯 BrowseScreen: User allowed request types: $allowedRequestTypeStrings');
+        print(
+            '🎯 BrowseScreen: User allowed request types: $allowedRequestTypeStrings');
       }
 
       // Load country modules configuration
@@ -52,12 +53,14 @@ class _BrowseScreenState extends State<BrowseScreen> {
       if (countryCode != null) {
         _countryModules = await ModuleService.getCountryModules(countryCode);
         if (kDebugMode) {
-          print('🌍 BrowseScreen: Country modules: ${_countryModules?.modules}');
+          print(
+              '🌍 BrowseScreen: Country modules: ${_countryModules?.modules}');
         }
         _enabledRequestTypes =
             _getEnabledRequestTypes(allowedRequestTypeStrings);
         if (kDebugMode) {
-          print('✅ BrowseScreen: Enabled request types: ${_enabledRequestTypes.map((t) => t.name).toList()}');
+          print(
+              '✅ BrowseScreen: Enabled request types: ${_enabledRequestTypes.map((t) => t.name).toList()}');
         }
       }
 
@@ -74,22 +77,45 @@ class _BrowseScreenState extends State<BrowseScreen> {
   }
 
   List<RequestType> _getEnabledRequestTypes(List<String> allowedTypes) {
-    if (_countryModules == null) return [];
+    if (_countryModules == null) {
+      if (kDebugMode) print('⚠️ BrowseScreen: No country modules loaded');
+      return [];
+    }
+
+    if (kDebugMode) {
+      print('🔍 BrowseScreen: Country modules: ${_countryModules!.modules}');
+      print('🔍 BrowseScreen: Allowed types: $allowedTypes');
+    }
 
     List<RequestType> enabledTypes = [];
     _countryModules!.modules.forEach((moduleId, isEnabled) {
+      if (kDebugMode)
+        print(
+            '🔍 BrowseScreen: Checking module $moduleId (enabled: $isEnabled)');
       if (isEnabled) {
         // Map module ID to request type string for comparison
         String requestTypeString = _getRequestTypeStringFromModuleId(moduleId);
+        if (kDebugMode)
+          print(
+              '🔍 BrowseScreen: Module $moduleId maps to request type: $requestTypeString');
         if (allowedTypes.contains(requestTypeString)) {
           RequestType? type = _getRequestTypeFromModuleId(moduleId);
           if (type != null) {
             enabledTypes.add(type);
+            if (kDebugMode)
+              print('✅ BrowseScreen: Added request type: ${type.name}');
           }
+        } else {
+          if (kDebugMode)
+            print(
+                '🚫 BrowseScreen: Request type $requestTypeString not in allowed types');
         }
       }
     });
 
+    if (kDebugMode)
+      print(
+          '🎯 BrowseScreen: Final enabled types: ${enabledTypes.map((t) => t.name).toList()}');
     return enabledTypes;
   }
 
