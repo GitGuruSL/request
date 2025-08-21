@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../services/content_service.dart';
 import '../services/auth_service.dart';
 import '../services/enhanced_user_service.dart';
-import '../models/enhanced_user_model.dart';
 import 'content_page_screen.dart';
 import 'my_activities_screen.dart';
 import 'settings_privacy_screen.dart';
@@ -11,6 +10,7 @@ import 'about_request_screen.dart';
 import 'notification_screen.dart';
 import 'driver_subscription_screen.dart';
 import 'api_test_screen.dart';
+import 'account/user_profile_screen.dart';
 
 class ModernMenuScreen extends StatefulWidget {
   const ModernMenuScreen({super.key});
@@ -193,16 +193,13 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
       ),
       child: Column(
         children: [
-          InkWell(
-            onTap: () => _showProfileMenu(context),
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pushNamed(context, '/account'),
-                    child: CircleAvatar(
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: () => Navigator.pushNamed(context, '/account'),
+                  child: CircleAvatar(
                       radius: 24,
                       backgroundImage: _profileImageUrl != null &&
                               _profileImageUrl!.isNotEmpty
@@ -218,63 +215,28 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: Text(
-                      _currentUser?['name'] ??
-                          _currentUser?['displayName'] ??
-                          'User',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
+                    child: GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const UserProfileScreen(),
+                        ),
+                      ),
+                      child: Text(
+                        _currentUser?['name'] ??
+                            _currentUser?['displayName'] ??
+                            'User',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                  ),
-                  Icon(
-                    Icons.keyboard_arrow_down,
-                    color: Colors.grey[600],
-                    size: 28,
                   ),
                 ],
               ),
             ),
-          ),
         ],
-      ),
-    );
-  }
-
-  void _showProfileMenu(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildActionTile(
-              icon: Icons.person,
-              title: 'Profile',
-              subtitle: 'Manage your profile information',
-              color: Colors.blue,
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/account');
-              },
-            ),
-            _buildActionTile(
-              icon: Icons.settings,
-              title: 'Account Settings',
-              subtitle: 'Privacy, security and more',
-              color: Colors.grey,
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/account-settings');
-              },
-            ),
-          ],
-        ),
       ),
     );
   }
