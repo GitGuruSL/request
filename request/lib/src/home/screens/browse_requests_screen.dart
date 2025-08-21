@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../services/rest_request_service.dart';
+import '../../services/country_filtered_data_service.dart';
+import '../../models/request_model.dart' as models;
 import '../../screens/unified_request_response/unified_request_view_screen.dart';
 
 class BrowseRequestsScreen extends StatefulWidget {
@@ -10,7 +11,7 @@ class BrowseRequestsScreen extends StatefulWidget {
 }
 
 class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
-  final List<RequestModel> _requests = [];
+  final List<models.RequestModel> _requests = [];
   bool _initialLoading = true;
   bool _fetchingMore = false;
   bool _hasMore = true;
@@ -22,7 +23,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     'All',
     'Items',
     'Service',
-    'Rent',
+    'Rental',
     'Delivery',
     'Ride',
   ];
@@ -57,7 +58,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     if (_fetchingMore || (!_hasMore && !reset)) return;
     setState(() => _fetchingMore = true);
     try {
-      final response = await RestRequestService.instance.getRequests(
+      final response = await CountryFilteredDataService.instance.getRequests(
         page: _page,
         limit: 20,
         categoryId: _selectedCategory != 'All'
@@ -66,7 +67,23 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
       );
       if (response != null) {
         if (reset) _requests.clear();
-        _requests.addAll(response.requests);
+        // Convert REST requests to models
+        final modelRequests = response.requests.map((restRequest) {
+          return RequestModel(
+            id: restRequest.id,
+            title: restRequest.title ?? '',
+            description: restRequest.description ?? '',
+            categoryName: restRequest.categoryName ?? '',
+            budgetMin: restRequest.budgetMin,
+            budgetMax: restRequest.budgetMax,
+            location: restRequest.location ?? '',
+            status: restRequest.status ?? '',
+            userId: restRequest.userId ?? '',
+            createdAt: restRequest.createdAt,
+            updatedAt: restRequest.updatedAt,
+          );
+        }).toList();
+        _requests.addAll(modelRequests);
         _hasMore = _page < response.pagination.totalPages;
         _page += 1;
       }

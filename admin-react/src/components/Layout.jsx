@@ -299,6 +299,9 @@ const Layout = () => {
             Request Marketplace Admin
           </Typography>
           
+          {/* Country Filter Badge */}
+          <CountryFilterBadge />
+          
           {/* Profile Menu */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
