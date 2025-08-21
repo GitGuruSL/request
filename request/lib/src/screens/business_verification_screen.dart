@@ -78,6 +78,17 @@ class _BusinessVerificationScreenState
           final responseWrapper = response.data as Map<String, dynamic>;
           final businessData = responseWrapper['data'] as Map<String, dynamic>?;
 
+          // Debug: Print verification status from API
+          if (businessData != null) {
+            print('DEBUG: Raw API business data:');
+            print('  phoneVerified: ${businessData['phoneVerified']}');
+            print('  emailVerified: ${businessData['emailVerified']}');
+            print('  requiresPhoneVerification: ${businessData['requiresPhoneVerification']}');
+            print('  requiresEmailVerification: ${businessData['requiresEmailVerification']}');
+            print('  phone_verified (old): ${businessData['phone_verified']}');
+            print('  email_verified (old): ${businessData['email_verified']}');
+          }
+
           setState(() {
             _businessData = businessData;
             _isLoading = false;
@@ -119,8 +130,12 @@ class _BusinessVerificationScreenState
       'taxId': apiData['tax_id'],
       'country': apiData['country'],
       'status': apiData['status'],
-      'phoneVerified': apiData['phone_verified'],
-      'emailVerified': apiData['email_verified'],
+      'phoneVerified': apiData['phoneVerified'] ?? apiData['phone_verified'] ?? false,
+      'emailVerified': apiData['emailVerified'] ?? apiData['email_verified'] ?? false,
+      'requiresPhoneVerification': apiData['requiresPhoneVerification'] ?? true,
+      'requiresEmailVerification': apiData['requiresEmailVerification'] ?? true,
+      'phoneVerificationSource': apiData['phoneVerificationSource'],
+      'emailVerificationSource': apiData['emailVerificationSource'],
       'businessLicenseUrl': apiData['business_license_url'],
       'businessLicenseStatus': apiData['business_license_status'] ?? 'pending',
       'taxCertificateUrl': apiData['tax_certificate_url'],
@@ -218,9 +233,15 @@ class _BusinessVerificationScreenState
   Widget _buildBusinessInformation() {
     final businessPhone = _businessData?['businessPhone'] ?? '';
     final businessEmail = _businessData?['businessEmail'] ?? '';
-    final isPhoneVerified = _credentialsStatus?.businessPhoneVerified ?? false;
+    
+    // Use unified verification status from API with fallback to credentialsStatus
+    final isPhoneVerified = (_businessData?['phoneVerified'] ?? false) ||
+        (_credentialsStatus?.businessPhoneVerified ?? false);
     final isEmailVerified = (_businessData?['emailVerified'] ?? false) ||
         (_credentialsStatus?.businessEmailVerified ?? false);
+    
+    // Check if phone verification is required based on API response
+    final requiresPhoneVerification = _businessData?['requiresPhoneVerification'] ?? !isPhoneVerified;
 
     return Container(
       width: double.infinity,
@@ -261,7 +282,7 @@ class _BusinessVerificationScreenState
             _buildInfoRow('Description', _businessData!['businessDescription']),
 
           // Phone verification section integrated into business info
-          if (businessPhone.isNotEmpty && !isPhoneVerified) ...[
+          if (businessPhone.isNotEmpty && requiresPhoneVerification) ...[
             const SizedBox(height: 16),
             _buildPhoneVerificationSection(businessPhone),
           ],
