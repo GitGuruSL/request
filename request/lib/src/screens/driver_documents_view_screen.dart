@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../services/enhanced_user_service.dart';
 import '../services/api_client.dart';
 import '../services/image_upload_service.dart';
+import '../services/contact_verification_service.dart';
 import '../theme/app_theme.dart';
 import 'src/utils/firebase_shim.dart'; // Added by migration script
 // REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
@@ -20,13 +21,27 @@ class DriverDocumentsViewScreen extends StatefulWidget {
 
 class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
   final EnhancedUserService _userService = EnhancedUserService();
+  final ContactVerificationService _contactService =
+      ContactVerificationService.instance;
   Map<String, dynamic>? _driverData;
   bool _isLoading = true;
+
+  // Phone verification state
+  bool _isVerifyingPhone = false;
+  bool _isPhoneOtpSent = false;
+  String? _phoneVerificationId;
+  final TextEditingController _phoneOtpController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadDriverData();
+  }
+
+  @override
+  void dispose() {
+    _phoneOtpController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadDriverData() async {
@@ -1261,6 +1276,11 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
     required bool requiredFlag,
     String? source,
   }) {
+    // Special handling for phone verification
+    if (label == 'Phone' && value != 'N/A' && !verified) {
+      return _buildPhoneVerificationSection(value);
+    }
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -1339,6 +1359,117 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPhoneVerificationSection(String phoneNumber) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.orange.withOpacity(0.1),
+        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.phone, color: Colors.orange, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Phone Verification Required',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Phone: $phoneNumber',
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (!_isPhoneOtpSent) ...[
+            const Text(
+              'Verify your phone number to complete your driver profile.',
+              style: TextStyle(
+                fontSize: 14,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: _isVerifyingPhone
+                  ? null
+                  : () => _startPhoneVerification(phoneNumber),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
+              child: _isVerifyingPhone
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text('Send Verification Code'),
+            ),
+          ] else ...[
+            const Text(
+              'Enter the 6-digit verification code sent to your phone:',
+              style: TextStyle(
+                fontSize: 14,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _phoneOtpController,
+              decoration: const InputDecoration(
+                hintText: '123456',
+                border: OutlineInputBorder(),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                ElevatedButton(
+                  onPressed: _verifyPhoneOTP,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  ),
+                  child: const Text('Verify'),
+                ),
+                const SizedBox(width: 12),
+                TextButton(
+                  onPressed: () => _startPhoneVerification(phoneNumber),
+                  child: const Text('Resend Code'),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -1869,6 +2000,96 @@ class _DriverDocumentsViewScreenState extends State<DriverDocumentsViewScreen> {
           return _buildInfoRow('City', snapshot.data ?? 'N/A');
         }
       },
+    );
+  }
+
+  Future<void> _startPhoneVerification(String phoneNumber) async {
+    setState(() {
+      _isVerifyingPhone = true;
+      _phoneVerificationId = null;
+      _isPhoneOtpSent = false;
+    });
+
+    try {
+      final result = await _contactService.startBusinessPhoneVerification(
+        phoneNumber: phoneNumber,
+        onCodeSent: (verificationId) {
+          if (mounted) {
+            setState(() {
+              _phoneVerificationId = verificationId;
+              _isVerifyingPhone = false;
+              _isPhoneOtpSent = true;
+            });
+
+            String message;
+            if (verificationId.startsWith('dev_verification_')) {
+              message = '🚀 DEVELOPMENT MODE: Use OTP code 123456 to verify';
+            } else {
+              message = 'Verification code sent to $phoneNumber!';
+            }
+            _showSnackBar(message, isError: false);
+          }
+        },
+        onError: (error) {
+          if (mounted) {
+            setState(() => _isVerifyingPhone = false);
+            _showSnackBar(error, isError: true);
+          }
+        },
+      );
+
+      if (!result.success && mounted) {
+        setState(() => _isVerifyingPhone = false);
+        _showSnackBar(result.error ?? 'Failed to send verification code',
+            isError: true);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isVerifyingPhone = false);
+        _showSnackBar('Error: $e', isError: true);
+      }
+    }
+  }
+
+  Future<void> _verifyPhoneOTP() async {
+    if (_phoneVerificationId == null ||
+        _phoneOtpController.text.trim().isEmpty) {
+      _showSnackBar('Please enter the verification code', isError: true);
+      return;
+    }
+
+    try {
+      final result = await _contactService.verifyBusinessPhoneOTP(
+        verificationId: _phoneVerificationId!,
+        otp: _phoneOtpController.text.trim(),
+      );
+
+      if (result.success) {
+        setState(() {
+          _isPhoneOtpSent = false;
+          _phoneVerificationId = null;
+        });
+        _phoneOtpController.clear();
+        _showSnackBar('Phone verified successfully!', isError: false);
+
+        // Reload driver data to update verification status
+        await _loadDriverData();
+      } else {
+        _showSnackBar(result.error ?? 'Verification failed', isError: true);
+      }
+    } catch (e) {
+      _showSnackBar('Error verifying code: $e', isError: true);
+    }
+  }
+
+  void _showSnackBar(String message, {required bool isError}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+        duration: Duration(seconds: isError ? 4 : 3),
+      ),
     );
   }
 }

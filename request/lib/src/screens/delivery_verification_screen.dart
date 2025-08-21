@@ -4,6 +4,7 @@ import 'dart:io';
 import '../services/enhanced_user_service.dart';
 import '../services/file_upload_service.dart';
 import '../models/enhanced_user_model.dart';
+import '../widgets/simple_phone_field.dart';
 
 class DeliveryVerificationScreen extends StatefulWidget {
   const DeliveryVerificationScreen({Key? key}) : super(key: key);
@@ -325,15 +326,10 @@ class _DeliveryVerificationScreenState
         const SizedBox(height: 16),
 
         // Company Phone
-        TextFormField(
+        SimplePhoneField(
           controller: _companyPhoneController,
-          decoration: const InputDecoration(
-            labelText: 'Business Phone *',
-            hintText: 'Enter your business phone number',
-            prefixIcon: Icon(Icons.phone),
-            border: OutlineInputBorder(),
-          ),
-          keyboardType: TextInputType.phone,
+          label: 'Business Phone *',
+          hint: 'Enter your business phone number',
           validator: (value) {
             if (value == null || value.trim().isEmpty) {
               return 'Please enter your business phone number';
