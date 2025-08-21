@@ -4,6 +4,7 @@ import '../services/country_service.dart';
 import '../theme/app_theme.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/file_upload_service.dart';
+import '../widgets/simple_phone_field.dart';
 import 'dart:io';
 
 class BusinessRegistrationScreen extends StatefulWidget {
@@ -203,12 +204,10 @@ class _BusinessRegistrationScreenState
               return null;
             },
           ),
-          _buildTextField(
+          SimplePhoneField(
             controller: _businessPhoneController,
             label: 'Business Phone *',
             hint: 'Enter business phone number',
-            prefixIcon: Icons.phone,
-            keyboardType: TextInputType.phone,
             validator: (value) =>
                 value?.isEmpty ?? true ? 'Business phone is required' : null,
           ),

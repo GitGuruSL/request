@@ -8,8 +8,8 @@ import 'dart:io';
 import 'dart:async';
 import '../services/enhanced_user_service.dart';
 import '../services/file_upload_service.dart';
-import '../services/contact_verification_service.dart';
 import '../services/api_client.dart';
+import '../widgets/simple_phone_field.dart';
 import '../theme/app_theme.dart';
 
 class DriverVerificationScreen extends StatefulWidget {
@@ -23,8 +23,6 @@ class DriverVerificationScreen extends StatefulWidget {
 class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
   final EnhancedUserService _userService = EnhancedUserService();
   final FileUploadService _fileUploadService = FileUploadService();
-  final ContactVerificationService _contactService =
-      ContactVerificationService.instance;
   final _formKey = GlobalKey<FormState>();
 
   // Form controllers
@@ -55,7 +53,6 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
   String? _selectedVehicleType;
   List<Map<String, dynamic>> _availableVehicleTypes = [];
   String? _userCountry;
-  String? _userCountryPhoneCode; // Add country phone code
 
   // Cities selection
   List<Map<String, dynamic>> _availableCities = [];
@@ -75,18 +72,6 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
   List<File> _vehicleImages = []; // Vehicle photos (4 images)
 
   bool _isLoading = false;
-
-  // OTP Verification variables
-  TextEditingController _phoneOtpController = TextEditingController();
-  String? _phoneVerificationId;
-  bool _isVerifyingPhone = false;
-  bool _isPhoneVerified = false;
-  bool _isPhoneOtpSent = false;
-  bool _isVerifyingPhoneOtp = false;
-  int _otpCountdown = 0;
-
-  // Backend verification status
-  Map<String, dynamic>? _verificationStatus;
 
   @override
   void initState() {
@@ -124,92 +109,14 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
               user.countryCode ?? 'LK'; // Default to Sri Lanka if not set
         });
 
-        // Load country phone code
-        await _loadCountryPhoneCode();
-
         // Load available vehicle types for user's country
         await _loadAvailableVehicleTypes();
 
         // Load available cities for user's country
         await _loadAvailableCities();
-
-        // Check verification status for the auto-populated phone
-        if (user.phoneNumber != null && user.phoneNumber!.isNotEmpty) {
-          await _checkPhoneVerificationStatus(user.phoneNumber!);
-        }
       }
     } catch (e) {
       print('Error loading user data: $e');
-    }
-  }
-
-  /// Check phone verification status using backend unified endpoint
-  Future<void> _checkPhoneVerificationStatus(String phoneNumber) async {
-    try {
-      final user = await _userService.getCurrentUserModel();
-      if (user == null) return;
-
-      final result = await _contactService.checkVerificationStatus(
-        phoneNumber: phoneNumber,
-        userId: user.id,
-        endpoint: '/api/driver-verifications/check-verification-status',
-      );
-
-      if (mounted && result['success'] == true) {
-        setState(() {
-          _verificationStatus = result;
-          _isPhoneVerified = result['phoneVerified'] == true;
-        });
-        print(
-            '📱 Driver phone verification status: ${result['phoneVerified']} (source: ${result['phoneVerificationSource']})');
-      }
-    } catch (e) {
-      print('Error checking phone verification status: $e');
-    }
-  }
-
-  Future<void> _loadCountryPhoneCode() async {
-    try {
-      // For now, use a simple mapping. In a real app, you might fetch this from an API
-      final phoneCodeMap = {
-        'LK': '+94', // Sri Lanka
-        'US': '+1', // United States
-        'IN': '+91', // India
-        'UK': '+44', // United Kingdom
-        'AU': '+61', // Australia
-        'CA': '+1', // Canada
-        'SG': '+65', // Singapore
-        'MY': '+60', // Malaysia
-        'TH': '+66', // Thailand
-        'AE': '+971', // UAE
-        'PH': '+63', // Philippines
-        'ID': '+62', // Indonesia
-        'VN': '+84', // Vietnam
-        'BD': '+880', // Bangladesh
-        'PK': '+92', // Pakistan
-        'NP': '+977', // Nepal
-        'JP': '+81', // Japan
-        'KR': '+82', // South Korea
-        'CN': '+86', // China
-        'DE': '+49', // Germany
-        'FR': '+33', // France
-        'IT': '+39', // Italy
-        'ES': '+34', // Spain
-        'NL': '+31', // Netherlands
-        'BR': '+55', // Brazil
-        'AR': '+54', // Argentina
-        'CL': '+56', // Chile
-        'MX': '+52', // Mexico
-      };
-
-      setState(() {
-        _userCountryPhoneCode = phoneCodeMap[_userCountry ?? 'LK'] ?? '+94';
-      });
-    } catch (e) {
-      print('Error loading country phone code: $e');
-      setState(() {
-        _userCountryPhoneCode = '+94'; // Default to Sri Lanka
-      });
     }
   }
 
@@ -392,21 +299,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
     _vehicleYearController.dispose();
     _vehicleNumberController.dispose();
     _vehicleColorController.dispose();
-    _phoneOtpController.dispose();
     super.dispose();
-  }
-
-  // Validate phone number format
-  bool _isValidPhoneNumber(String phone) {
-    if (phone.trim().isEmpty) return false;
-
-    // Clean phone number (remove spaces, dashes, parentheses)
-    final cleanPhone = phone.replaceAll(RegExp(r'[\s\-\(\)]'), '');
-
-    // Basic phone number validation - should be at least 7 digits and max 15
-    // Must start with + or a digit, and contain only digits after cleaning
-    final phoneRegex = RegExp(r'^\+?[1-9]\d{6,14}$');
-    return phoneRegex.hasMatch(cleanPhone);
   }
 
   // Get selected city data with both ID and name
@@ -437,24 +330,6 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
       'id': vehicleType['id'], // UUID from database
       'name': vehicleType['name'] // Vehicle type name
     };
-  }
-
-  // OTP Countdown timer
-  void _startOtpCountdown() {
-    Timer.periodic(Duration(seconds: 1), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-
-      setState(() {
-        if (_otpCountdown > 0) {
-          _otpCountdown--;
-        } else {
-          timer.cancel();
-        }
-      });
-    });
   }
 
   @override
@@ -690,307 +565,23 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          // Phone Verification Section - Auto or Manual based on backend verification
-          _isPhoneVerified
-              ? Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.green.withOpacity(0.3)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.check_circle,
-                              color: Colors.green, size: 20),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Phone Number (Verified)',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.green,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _phoneController.text.isNotEmpty
-                            ? _phoneController.text
-                            : 'No phone number',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: AppTheme.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _verificationStatus?['phoneVerificationSource'] != null
-                            ? 'Verified via ${_verificationStatus!['phoneVerificationSource']}'
-                            : 'This number is verified',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    // Removed border and shadow as requested
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.warning, color: Colors.orange, size: 20),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Phone Verification Required',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.orange,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _phoneController.text.isNotEmpty
-                            ? _phoneController.text
-                            : 'Phone number required for driver registration',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: _phoneController.text.isEmpty
-                              ? Colors.red[700]
-                              : AppTheme.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      // Dynamic message based on phone number availability
-                      Text(
-                        _phoneController.text.isEmpty
-                            ? 'Please enter your phone number below. This is required for driver verification.'
-                            : 'This number is different from your account phone. Please verify:',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Phone Number Input Field (always editable)
-                      TextFormField(
-                        controller: _phoneController,
-                        decoration: InputDecoration(
-                          labelText: 'Phone Number *',
-                          hintText: 'Enter your phone number',
-                          prefixIcon: Icon(Icons.phone),
-                          prefixText:
-                              '${_userCountryPhoneCode ?? '+94'} ', // Show country code
-                          border: OutlineInputBorder(),
-                          helperText:
-                              'This number will be used for driver verification',
-                        ),
-                        keyboardType: TextInputType.phone,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Phone number is required for driver registration';
-                          }
-                          // Use the same validation as the OTP trigger
-                          if (!_isValidPhoneNumber(value)) {
-                            return 'Please enter a valid phone number (minimum 7 digits)';
-                          }
-                          return null;
-                        },
-                        onChanged: (value) {
-                          setState(() {
-                            // Reset verification status when phone number changes
-                            _isPhoneVerified = false;
-                            _isPhoneOtpSent = false;
-                            _verificationStatus = null;
-                          });
-
-                          // Check verification status for new phone number
-                          if (_isValidPhoneNumber(value)) {
-                            _checkPhoneVerificationStatus(value);
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Show current phone number if available but not verified
-                      if (_isValidPhoneNumber(_phoneController.text) &&
-                          !_isPhoneVerified) ...[
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border:
-                                Border.all(color: Colors.blue.withOpacity(0.3)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Phone Number to Verify:',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.blue[700],
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _phoneController.text,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.textPrimary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-
-                      // OTP Verification UI
-                      if (!_isPhoneVerified &&
-                          !_isPhoneOtpSent &&
-                          _isValidPhoneNumber(_phoneController.text)) ...[
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: _isVerifyingPhone
-                                ? null
-                                : () => _startPhoneVerification(
-                                    _phoneController.text),
-                            icon: _isVerifyingPhone
-                                ? SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                                Colors.white)))
-                                : Icon(Icons.send),
-                            label: Text(_isVerifyingPhone
-                                ? 'Sending OTP...'
-                                : 'Send OTP'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              foregroundColor: Colors.white,
-                              padding: EdgeInsets.symmetric(vertical: 12),
-                            ),
-                          ),
-                        ),
-                      ],
-
-                      if (_isPhoneOtpSent && !_isPhoneVerified) ...[
-                        TextFormField(
-                          controller: _phoneOtpController,
-                          decoration: InputDecoration(
-                            labelText: 'Enter OTP',
-                            hintText: 'Enter the 6-digit code',
-                            prefixIcon: Icon(Icons.message),
-                            border: OutlineInputBorder(),
-                            counterText: _otpCountdown > 0
-                                ? 'Resend in $_otpCountdown seconds'
-                                : '',
-                          ),
-                          keyboardType: TextInputType.number,
-                          maxLength: 6,
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: _isVerifyingPhoneOtp
-                                    ? null
-                                    : _verifyPhoneOTP,
-                                icon: _isVerifyingPhoneOtp
-                                    ? SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            valueColor:
-                                                AlwaysStoppedAnimation<Color>(
-                                                    Colors.white)))
-                                    : Icon(Icons.verified),
-                                label: Text(_isVerifyingPhoneOtp
-                                    ? 'Verifying...'
-                                    : 'Verify OTP'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
-                                  foregroundColor: Colors.white,
-                                  padding: EdgeInsets.symmetric(vertical: 12),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            if (_otpCountdown == 0)
-                              ElevatedButton(
-                                onPressed: () => _startPhoneVerification(
-                                    _phoneController.text),
-                                child: Text('Resend'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.grey,
-                                  foregroundColor: Colors.white,
-                                  padding: EdgeInsets.symmetric(
-                                      vertical: 12, horizontal: 16),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ],
-
-                      if (_isPhoneVerified) ...[
-                        Container(
-                          width: double.infinity,
-                          padding: EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.green),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.check_circle, color: Colors.green),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Phone number verified successfully!',
-                                style: TextStyle(
-                                  color: Colors.green,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+          // Simple phone number field
+          SimplePhoneField(
+            controller: _phoneController,
+            label: 'Phone Number *',
+            hint: 'Enter your phone number',
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Phone number is required for driver registration';
+              }
+              // Basic phone validation - at least 7 digits
+              final cleanPhone = value.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+              if (cleanPhone.length < 7) {
+                return 'Please enter a valid phone number (minimum 7 digits)';
+              }
+              return null;
+            },
+          ),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -1939,13 +1530,10 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
   }
 
   bool _canSubmit() {
-    // Check if phone verification is required and completed
-    bool phoneVerificationComplete = _isPhoneVerified || _isPhoneVerified;
-
+    // No phone verification required in form - will be handled post-submission
     return _firstNameController.text.trim().isNotEmpty &&
         _lastNameController.text.trim().isNotEmpty &&
         _phoneController.text.trim().isNotEmpty && // Phone number required
-        phoneVerificationComplete && // Phone verification required
         _dateOfBirth != null &&
         _selectedGender != null &&
         _nicNumberController.text.trim().isNotEmpty &&
@@ -2230,10 +1818,8 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
             '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}',
         'email': currentUser.email,
         'phoneNumber': _phoneController.text.trim(),
-        'phoneVerified': _isPhoneVerified,
-        'phoneVerificationSource':
-            _verificationStatus?['phoneVerificationSource'] ??
-                'manual_verification',
+        'phoneVerified': false, // Will be verified post-submission
+        'phoneVerificationSource': 'form_submission',
         'secondaryMobile': _secondaryMobileController.text.trim().isNotEmpty
             ? _secondaryMobileController.text.trim()
             : null,
@@ -2358,129 +1944,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
     }
   }
 
-  // Phone Verification Methods
-  Future<void> _startPhoneVerification(String phoneNumber) async {
-    print('DEBUG: Starting phone verification for: $phoneNumber');
-    setState(() {
-      _isVerifyingPhone = true;
-      _phoneVerificationId = null;
-      _isPhoneOtpSent = false;
-    });
-
-    try {
-      print(
-          'DEBUG: Calling ContactVerificationService.startBusinessPhoneVerification for driver');
-      final result = await _contactService.startBusinessPhoneVerification(
-        phoneNumber: phoneNumber,
-        onCodeSent: (verificationId) {
-          print(
-              'DEBUG: SMS code sent successfully. VerificationId: $verificationId');
-          if (mounted) {
-            setState(() {
-              _phoneVerificationId = verificationId;
-              _isVerifyingPhone = false;
-              _isPhoneOtpSent = true;
-              _otpCountdown = 60; // Start 60 second countdown
-            });
-
-            // Start countdown timer
-            _startOtpCountdown();
-
-            // Show different message for development mode
-            String message;
-            if (verificationId.startsWith('dev_verification_')) {
-              message = '🚀 DEVELOPMENT MODE: Use OTP code 123456 to verify';
-            } else {
-              message =
-                  'SMS sent to $phoneNumber! Check your messages for the 6-digit code.';
-            }
-            _showSnackBar(message, isError: false);
-          }
-        },
-        onError: (error) {
-          print('DEBUG: Phone verification error: $error');
-          if (mounted) {
-            setState(() {
-              _isVerifyingPhone = false;
-            });
-            _showSnackBar(error, isError: true);
-          }
-        },
-      );
-
-      if (!result.success && mounted) {
-        setState(() {
-          _isVerifyingPhone = false;
-        });
-        _showSnackBar(result.error ?? 'Failed to send SMS', isError: true);
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isVerifyingPhone = false;
-        });
-        _showSnackBar('Error: $e', isError: true);
-      }
-    }
-  }
-
-  Future<void> _verifyPhoneOTP() async {
-    if (_phoneVerificationId == null ||
-        _phoneOtpController.text.trim().isEmpty) {
-      _showSnackBar('Please enter the OTP', isError: true);
-      return;
-    }
-
-    setState(() {
-      _isVerifyingPhoneOtp = true;
-    });
-
-    try {
-      final result = await _contactService.verifyBusinessPhoneOTP(
-        verificationId: _phoneVerificationId!,
-        otp: _phoneOtpController.text.trim(),
-      );
-
-      if (mounted) {
-        setState(() {
-          _isVerifyingPhoneOtp = false;
-        });
-
-        if (result.success) {
-          _showSnackBar('Phone number verified successfully!', isError: false);
-          _phoneOtpController.clear();
-          setState(() {
-            _phoneVerificationId = null;
-            _isPhoneVerified = true;
-            _isPhoneOtpSent = false;
-          });
-        } else if (result.isCredentialConflict) {
-          _showSnackBar(
-            'This phone number is linked to another account. Please contact support.',
-            isError: true,
-          );
-        } else {
-          _showSnackBar(result.error ?? 'Verification failed', isError: true);
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isVerifyingPhoneOtp = false;
-        });
-        _showSnackBar('Error verifying OTP: $e', isError: true);
-      }
-    }
-  }
-
-  void _showSnackBar(String message, {required bool isError}) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
-        duration: Duration(seconds: isError ? 4 : 3),
-      ),
-    );
-  }
+  // Phone verification is now handled post-submission
+  // Users enter their phone number in the form and verification happens
+  // after they check their verification status
 }
