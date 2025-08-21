@@ -11,29 +11,7 @@ class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
 
   @override
-  State<AccountScreen> createState() => _AccountS          Navigator.pushNamedAndRemoveUntil(
-            context,
-            '/login',
-            (route) => false,
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error signing out: $e')),
-          );
-        }
-      }
-    }
-  }
-
-  void _navigateToUserProfile() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const UserProfileScreen(),
-      ),
-    ).then((_) => _loadUserData()); // Refresh data when coming back
-  }
+  State<AccountScreen> createState() => _AccountScreenState();
 }
 
 class _AccountScreenState extends State<AccountScreen> {
@@ -135,7 +113,8 @@ class _AccountScreenState extends State<AccountScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue[600],
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
               ),
               child: const Text('Sign In'),
             ),
@@ -146,7 +125,8 @@ class _AccountScreenState extends State<AccountScreen> {
               },
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: Colors.blue[600]!),
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
               ),
               child: Text(
                 'Create Account',
@@ -194,9 +174,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    _currentUser!.name.isNotEmpty
-                        ? _currentUser!.name
-                        : 'User',
+                    _currentUser!.name.isNotEmpty ? _currentUser!.name : 'User',
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -257,7 +235,8 @@ class _AccountScreenState extends State<AccountScreen> {
               ),
               const Spacer(),
               TextButton(
-                onPressed: () => Navigator.pushNamed(context, '/verification-status'),
+                onPressed: () =>
+                    Navigator.pushNamed(context, '/verification-status'),
                 child: const Text('View All'),
               ),
             ],
@@ -273,15 +252,17 @@ class _AccountScreenState extends State<AccountScreen> {
             _currentUser!.isEmailVerified,
             _currentUser!.email,
           ),
-          
+
           // Show active role verification status
           if (_currentUser!.activeRole != UserRole.general)
             _buildVerificationItem(
               '${_getRoleDisplayName(_currentUser!.activeRole)} Verification',
               _currentUser!.isRoleVerified(_currentUser!.activeRole),
-              _currentUser!.isRoleVerified(_currentUser!.activeRole) ? 'Verified' : 'Pending Review',
+              _currentUser!.isRoleVerified(_currentUser!.activeRole)
+                  ? 'Verified'
+                  : 'Pending Review',
             ),
-            
+
           // Show additional roles count if user has multiple roles
           if (_currentUser!.roles.length > 1)
             Padding(
@@ -303,7 +284,8 @@ class _AccountScreenState extends State<AccountScreen> {
                     ),
                   ),
                   TextButton(
-                    onPressed: () => Navigator.pushNamed(context, '/verification-status'),
+                    onPressed: () =>
+                        Navigator.pushNamed(context, '/verification-status'),
                     child: const Text('Manage'),
                   ),
                 ],
@@ -314,7 +296,8 @@ class _AccountScreenState extends State<AccountScreen> {
     );
   }
 
-  Widget _buildVerificationItem(String title, bool isVerified, String? subtitle) {
+  Widget _buildVerificationItem(
+      String title, bool isVerified, String? subtitle) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -386,7 +369,8 @@ class _AccountScreenState extends State<AccountScreen> {
           _buildMenuItem(
             icon: Icons.person_add,
             title: 'Role Management',
-            subtitle: 'Manage your roles, verification status, and add new roles',
+            subtitle:
+                'Manage your roles, verification status, and add new roles',
             onTap: () => Navigator.pushNamed(context, '/role-management'),
           ),
           _buildDivider(),
@@ -546,5 +530,15 @@ class _AccountScreenState extends State<AccountScreen> {
         }
       }
     }
+  }
+
+  void _navigateToUserProfile() {
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (context) => const UserProfileScreen(),
+          ),
+        )
+        .then((_) => _loadUserData()); // Refresh data when coming back
   }
 }
