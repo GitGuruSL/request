@@ -859,36 +859,27 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
     try {
       final fullName = '${firstName.trim()} ${lastName.trim()}'.trim();
-      // TODO: Implement API call to update user name
-      // await _userService.updateUserName(fullName);
 
-      // For now, update local state
-      setState(() {
-        _currentUser = UserModel(
-          id: _currentUser!.id,
-          name: fullName,
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
-          email: _currentUser!.email,
-          phoneNumber: _currentUser!.phoneNumber,
-          roles: _currentUser!.roles,
-          activeRole: _currentUser!.activeRole,
-          roleData: _currentUser!.roleData,
-          isEmailVerified: _currentUser!.isEmailVerified,
-          isPhoneVerified: _currentUser!.isPhoneVerified,
-          profileComplete: _currentUser!.profileComplete,
-          countryCode: _currentUser!.countryCode,
-          countryName: _currentUser!.countryName,
-          createdAt: _currentUser!.createdAt,
-          updatedAt: DateTime.now(),
-        );
-      });
-
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Name updated successfully')),
+      // Update user name via API
+      final success = await _userService.updateUserProfile(
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        displayName: fullName,
       );
+
+      if (success) {
+        // Reload user data to get updated information
+        await _loadUserData();
+
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Name updated successfully')),
+        );
+      } else {
+        throw Exception('Failed to update profile');
+      }
     } catch (e) {
+      Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error updating name: $e')),
       );
@@ -963,6 +954,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           await _userService.updateUserProfile(
             phoneNumber: formattedPhone,
           );
+          // Reload user data to refresh the UI
+          await _loadUserData();
         } catch (e) {
           print('Error updating user profile: $e');
         }

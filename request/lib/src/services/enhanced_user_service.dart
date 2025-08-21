@@ -23,7 +23,7 @@ class EnhancedUserService {
   /// Getter used by legacy screens expecting synchronous access (nullable)
   UserModel? get currentUser => _cachedUser;
 
-  /// Get current user model
+  /// Get current user model (fetches fresh data from API)
   Future<UserModel?> getCurrentUserModel() async {
     try {
       if (!await _authService.isAuthenticated()) {
@@ -31,7 +31,59 @@ class EnhancedUserService {
       }
       final authUser = _authService.currentUser;
       if (authUser == null) return null;
-      // Map lightweight auth user to enhanced model (legacy screens expect richer model)
+
+      // Fetch fresh user data from the API
+      try {
+        final response =
+            await ApiClient.instance.get('/api/users/${authUser.id}');
+
+        if (response.isSuccess && response.data != null) {
+          final userData = response.data['data'] ?? response.data;
+
+          // Create enhanced user model from fresh API data
+          final mapped = UserModel(
+            id: userData['id'] ?? authUser.id,
+            name: userData['display_name'] ?? authUser.fullName,
+            firstName: userData['first_name'],
+            lastName: userData['last_name'],
+            email: userData['email'] ?? authUser.email,
+            phoneNumber: userData['phone'],
+            dateOfBirth: userData['date_of_birth'] != null
+                ? DateTime.tryParse(userData['date_of_birth'].toString())
+                : null,
+            gender: userData['gender'],
+            roles: const [UserRole.general],
+            activeRole: UserRole.general,
+            roleData: const {},
+            isEmailVerified:
+                userData['email_verified'] ?? authUser.emailVerified,
+            isPhoneVerified:
+                userData['phone_verified'] ?? authUser.phoneVerified,
+            profileComplete: true,
+            countryCode: userData['country_code'] ?? authUser.countryCode,
+            countryName: null,
+            createdAt: userData['created_at'] != null
+                ? (DateTime.tryParse(userData['created_at'].toString()) ??
+                    authUser.createdAt)
+                : authUser.createdAt,
+            updatedAt: userData['updated_at'] != null
+                ? (DateTime.tryParse(userData['updated_at'].toString()) ??
+                    authUser.updatedAt)
+                : authUser.updatedAt,
+          );
+
+          _cachedUser = mapped;
+          return mapped;
+        } else {
+          print(
+              'API response not successful, falling back to auth service data');
+        }
+      } catch (apiError) {
+        print(
+            'Error fetching user data from API: $apiError, falling back to auth service data');
+      }
+
+      // Fallback to auth service data if API call fails
       final mapped = UserModel(
         id: authUser.id,
         name: authUser.fullName,
@@ -60,6 +112,17 @@ class EnhancedUserService {
 
   /// Get current user (alias for getCurrentUserModel)
   Future<UserModel?> getCurrentUser() async {
+    return getCurrentUserModel();
+  }
+
+  /// Clear cached user data to force fresh fetch
+  void clearCache() {
+    _cachedUser = null;
+  }
+
+  /// Refresh user data (clears cache and fetches fresh data)
+  Future<UserModel?> refreshCurrentUser() async {
+    clearCache();
     return getCurrentUserModel();
   }
 
@@ -123,6 +186,8 @@ class EnhancedUserService {
 
       if (response.isSuccess) {
         print('DEBUG: User profile updated successfully: $updateData');
+        // Clear cache to ensure fresh data is fetched next time
+        clearCache();
         return true;
       } else {
         print('Error updating user profile: ${response.error}');
