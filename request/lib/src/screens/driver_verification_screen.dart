@@ -104,7 +104,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
             _lastNameController.text = nameParts.skip(1).join(' ');
           }
 
-          _phoneController.text = user.phoneNumber ?? '';
+          // Phone field starts empty - user enters their phone number
           _userCountry =
               user.countryCode ?? 'LK'; // Default to Sri Lanka if not set
         });
