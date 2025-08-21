@@ -312,4 +312,65 @@ router.get('/public/:countryCode', async (req, res) => {
   }
 });
 
+// Public endpoint for ride requests to get available vehicle types 
+// (country enabled + actually registered by verified drivers)
+router.get('/available/:countryCode', async (req, res) => {
+  try {
+    const countryCode = (req.params.countryCode || 'LK').toUpperCase();
+    
+    const result = await database.query(`
+      SELECT DISTINCT
+        vt.id,
+        vt.name,
+        vt.description,
+        vt.icon,
+        0 AS display_order,
+        COALESCE(vt.capacity, 1) AS passenger_capacity,
+        vt.is_active,
+        vt.created_at,
+        vt.updated_at,
+        COUNT(dv.id) AS registered_drivers_count
+      FROM vehicle_types vt
+      INNER JOIN country_vehicle_types cvt 
+        ON vt.id = cvt.vehicle_type_id 
+       AND cvt.country_code = $1
+       AND cvt.is_active = true
+      INNER JOIN driver_verifications dv
+        ON dv.vehicle_type_id = vt.id
+       AND dv.country = $1
+       AND dv.is_verified = true
+       AND dv.is_active = true
+       AND dv.status = 'approved'
+      WHERE vt.is_active = true
+      GROUP BY vt.id, vt.name, vt.description, vt.icon, vt.capacity, vt.is_active, vt.created_at, vt.updated_at
+      HAVING COUNT(dv.id) > 0
+      ORDER BY vt.name
+    `, [countryCode]);
+
+    // Adapt to frontend expected camelCase keys
+    const data = result.rows.map(r => ({
+      id: r.id,
+      name: r.name,
+      description: r.description,
+      icon: r.icon || 'DirectionsCar',
+      displayOrder: r.display_order,
+      passengerCapacity: r.passenger_capacity,
+      isActive: r.is_active,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+      registeredDriversCount: parseInt(r.registered_drivers_count) || 0
+    }));
+
+    res.json({ 
+      success: true, 
+      data,
+      count: data.length,
+      message: `Found ${data.length} available vehicle types in ${countryCode} with registered drivers`
+    });
+  } catch (error) {
+    console.error('Error fetching available vehicle types:', error);
+    res.status(500).json({ success: false, message: 'Error fetching available vehicle types', error: error.message });
+  }
+});
+
 module.exports = router;

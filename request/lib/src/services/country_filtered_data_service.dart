@@ -344,4 +344,80 @@ class CountryFilteredDataService {
       return <Map<String, dynamic>>[];
     }
   }
+
+  /// Get available vehicle types for ride requests in the current country
+  /// Returns only vehicle types that are:
+  /// 1. Enabled by country admin in country_vehicle_types
+  /// 2. Actually registered by verified drivers in that country
+  Future<List<Map<String, dynamic>>> getAvailableVehicleTypes() async {
+    if (currentCountry == null) {
+      if (kDebugMode)
+        print('⚠️ No country selected, returning empty vehicle types');
+      return <Map<String, dynamic>>[];
+    }
+
+    try {
+      // Get base URL from platform configuration
+      String baseUrl;
+      if (kIsWeb) {
+        baseUrl = 'http://localhost:3001';
+      } else if (Platform.isAndroid) {
+        baseUrl = 'http://10.0.2.2:3001';
+      } else if (Platform.isIOS) {
+        baseUrl = 'http://localhost:3001';
+      } else {
+        baseUrl = 'http://localhost:3001';
+      }
+
+      final url =
+          Uri.parse('$baseUrl/api/vehicle-types/available/$currentCountry');
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true && data['data'] is List) {
+          final vehicleTypes = data['data'] as List;
+
+          // Convert to expected format
+          final formattedTypes = vehicleTypes
+              .map((vt) => {
+                    'id': vt['id']?.toString() ?? '',
+                    'name': vt['name'] ?? '',
+                    'description': vt['description'] ?? '',
+                    'icon': vt['icon'] ?? 'DirectionsCar',
+                    'displayOrder': vt['displayOrder'] ?? 0,
+                    'passengerCapacity': vt['passengerCapacity'] ?? 1,
+                    'isActive': vt['isActive'] ?? true,
+                    'registeredDriversCount': vt['registeredDriversCount'] ?? 0,
+                  })
+              .toList();
+
+          if (kDebugMode) {
+            print(
+                '✅ Loaded ${formattedTypes.length} available vehicle types for country $currentCountry');
+            for (final vt in formattedTypes) {
+              print(
+                  '   ${vt['name']}: ${vt['registeredDriversCount']} drivers');
+            }
+          }
+          return formattedTypes;
+        }
+      }
+
+      if (kDebugMode)
+        print(
+            '❌ Failed to load available vehicle types: ${response.statusCode}');
+      return <Map<String, dynamic>>[];
+    } catch (e) {
+      if (kDebugMode) print('❌ Error loading available vehicle types: $e');
+      return <Map<String, dynamic>>[];
+    }
+  }
 }

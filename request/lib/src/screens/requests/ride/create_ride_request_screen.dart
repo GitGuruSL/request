@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../services/rest_vehicle_type_service.dart';
+import '../../../services/country_filtered_data_service.dart';
 import '../../../services/rest_ride_request_service.dart';
 import '../../../services/rest_auth_service.dart';
 import '../../../utils/address_utils.dart';
@@ -66,15 +67,58 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
 
   Future<void> _loadVehicleTypes() async {
     setState(() => _isLoading = true);
-    final vehicles =
-        await RestVehicleTypeService.instance.getEnabledVehicleTypes();
-    setState(() {
-      _vehicleTypes = vehicles;
-      if (_vehicleTypes.isNotEmpty && _selectedVehicleType.isEmpty) {
-        _selectedVehicleType = _vehicleTypes.first.id;
+
+    try {
+      // Get available vehicle types (country enabled + has registered drivers)
+      final availableTypes =
+          await CountryFilteredDataService.instance.getAvailableVehicleTypes();
+
+      // Convert to VehicleType objects
+      final vehicles = availableTypes
+          .map((vt) => VehicleType(
+                id: vt['id']?.toString() ?? '',
+                name: vt['name']?.toString() ?? '',
+                description: vt['description']?.toString(),
+                iconUrl: vt['icon']?.toString(),
+                isActive: vt['isActive'] == true,
+                countryEnabled:
+                    true, // These are already filtered to be country enabled
+                createdAt: DateTime.now(), // Placeholder
+                updatedAt: DateTime.now(), // Placeholder
+              ))
+          .toList();
+
+      setState(() {
+        _vehicleTypes = vehicles;
+        if (_vehicleTypes.isNotEmpty && _selectedVehicleType.isEmpty) {
+          _selectedVehicleType = _vehicleTypes.first.id;
+        }
+        _isLoading = false;
+      });
+
+      if (_vehicleTypes.isEmpty) {
+        // Show a message that no vehicles are available in this country
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'No vehicles available in your area. Please try again later.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
       }
-      _isLoading = false;
-    });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to load available vehicles'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
