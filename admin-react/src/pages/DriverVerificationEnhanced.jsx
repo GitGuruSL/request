@@ -435,7 +435,6 @@ const DriverVerificationEnhanced = () => {
   };
 
   const handleDocumentAction = async (driver, docType, action) => {
-    setDetailsOpen(true); // ensure dialog stays open
     if (action === 'reject') {
       setRejectionDialog({ open: true, target: driver, type: 'document', docType });
       return;

@@ -219,6 +219,68 @@ const BusinessVerificationEnhanced = () => {
     loadBusinesses();
   }, [filterStatus]);
 
+  // Phone verification helper function (matching driver verification pattern)
+  const getPhoneVerificationStatus = (businessData) => {
+    // Use backend-provided verification status if available
+    if (typeof businessData.phoneVerified === 'boolean') {
+      return {
+        isVerified: businessData.phoneVerified,
+        source: businessData.phoneVerificationSource || 'unknown',
+        needsManualVerification: businessData.requiresPhoneVerification || false,
+        hasPhoneNumber: !!(businessData.phoneNumber || businessData.phone)
+      };
+    }
+
+    // Fallback logic for older data
+    if ((businessData.userId || businessData.user_id) && (businessData.phoneNumber || businessData.phone)) {
+      return {
+        isVerified: true,
+        source: 'firebase_auth_registration',
+        needsManualVerification: false,
+        hasPhoneNumber: true
+      };
+    }
+
+    // Default to not verified, needs manual verification
+    return {
+      isVerified: false,
+      source: 'not_verified',
+      needsManualVerification: true,
+      hasPhoneNumber: !!(businessData.phoneNumber || businessData.phone)
+    };
+  };
+
+  // Email verification helper function (matching driver verification pattern)
+  const getEmailVerificationStatus = (businessData) => {
+    // Use backend-provided verification status if available
+    if (typeof businessData.emailVerified === 'boolean') {
+      return {
+        isVerified: businessData.emailVerified,
+        source: businessData.emailVerificationSource || 'unknown',
+        needsManualVerification: businessData.requiresEmailVerification || false,
+        hasEmail: !!(businessData.email || businessData.businessEmail)
+      };
+    }
+
+    // Fallback logic for older data
+    if ((businessData.userId || businessData.user_id) && (businessData.email || businessData.businessEmail)) {
+      return {
+        isVerified: true,
+        source: 'firebase_auth_registration',
+        needsManualVerification: false,
+        hasEmail: true
+      };
+    }
+
+    // Default to not verified, needs manual verification
+    return {
+      isVerified: false,
+      source: 'not_verified',
+      needsManualVerification: true,
+      hasEmail: !!(businessData.email || businessData.businessEmail)
+    };
+  };
+
   const loadBusinesses = async () => {
     try {
       setLoading(true);
@@ -392,34 +454,29 @@ const BusinessVerificationEnhanced = () => {
 
       // Mandatory: Contact verification check - businesses cannot be approved without phone verification
       console.log('🔍 Checking user verification status...');
-      if (!business.userId) {
+      const userId = business.userId || business.user_id;
+      if (!userId) {
         alert('Cannot approve business. No user ID found.');
         return;
       }
 
-      let phoneVerified = false;
-      let emailVerified = false;
-
-      try {
-        const res = await api.get(`/users/${business.userId}`);
-        const userData = res.data || {};
-        const linkedCredentials = userData.linkedCredentials || {};
-        phoneVerified = linkedCredentials.linkedPhoneVerified || userData.phoneVerified || false;
-        emailVerified = linkedCredentials.linkedEmailVerified || userData.emailVerified || false;
-        
-        console.log('📞 Verification status:', { phoneVerified, emailVerified });
-      } catch (error) {
-        console.error('❌ Failed to check verification status:', error);
-        alert('Cannot approve business. Unable to verify phone/email verification status. Please try again.');
-        return;
-      }
+      // Use the same pattern as driver verification - check backend-provided verification status
+      const phoneStatus = getPhoneVerificationStatus(business);
+      const emailStatus = getEmailVerificationStatus(business);
+      
+      console.log('📞 Verification status:', { 
+        phoneVerified: phoneStatus.isVerified, 
+        emailVerified: emailStatus.isVerified,
+        phoneSource: phoneStatus.source,
+        emailSource: emailStatus.source
+      });
 
       // Both phone and email verification are mandatory
       const verificationIssues = [];
-      if (!phoneVerified) {
+      if (!phoneStatus.isVerified) {
         verificationIssues.push('Phone number must be verified');
       }
-      if (!emailVerified) {
+      if (!emailStatus.isVerified) {
         verificationIssues.push('Email address must be verified');
       }
 
@@ -1563,24 +1620,6 @@ const BusinessVerificationEnhanced = () => {
             size="large"
           >
             Close
-          </Button>
-          
-          {/* Debug button */}
-          <Button 
-            onClick={() => {
-              console.log('🧪 TEST BUTTON CLICKED!', {
-                selectedBusiness: selectedBusiness?.id,
-                status: selectedBusiness?.status,
-                actionLoading,
-                timestamp: new Date().toISOString()
-              });
-              alert(`Test button works! Business ID: ${selectedBusiness?.id}, Status: ${selectedBusiness?.status}`);
-            }}
-            color="primary"
-            variant="outlined"
-            size="large"
-          >
-            TEST BUTTON
           </Button>
           
           {selectedBusiness.status === 'pending' && (
