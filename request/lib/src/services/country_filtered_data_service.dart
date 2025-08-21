@@ -43,11 +43,7 @@ class CountryFilteredDataService {
 
       // Client-side filtering by country until backend implements it
       final countryFiltered = result.requests
-          .where((r) =>
-                  r.countryCode == currentCountry ||
-                  (r.countryCode == null &&
-                      currentCountry == 'LK') // Default to LK for legacy data
-              )
+          .where((r) => r.countryCode == currentCountry)
           .toList();
 
       // Return modified response with filtered data
@@ -90,11 +86,7 @@ class CountryFilteredDataService {
       } else {
         // Client-side filtering by country until backend implements it
         final countryFiltered = result.requests
-            .where((r) =>
-                    r.countryCode == currentCountry ||
-                    (r.countryCode == null &&
-                        currentCountry == 'LK') // Default to LK for legacy data
-                )
+            .where((r) => r.countryCode == currentCountry)
             .toList();
 
         // Apply additional filters
