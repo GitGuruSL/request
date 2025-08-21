@@ -47,6 +47,7 @@ const businessVerificationRoutes = require('./routes/business-verifications-simp
 const adminSMSRoutes = require('./routes/admin-sms');
 const emailVerificationRoutes = require('./routes/email-verification');
 const adminEmailManagementRoutes = require('./routes/admin-email-management');
+const tempMigrationRoutes = require('./routes/temp-migration'); // Temporary migration routes
 
 const app = express();
 
@@ -180,6 +181,7 @@ app.use('/api/admin-users', adminUserRoutes);
 app.use('/api/driver-verifications', driverVerificationRoutes);
 app.use('/api/business-verifications', businessVerificationRoutes); // NEW - Business verification routes
 app.use('/api/email-verification', emailVerificationRoutes); // Email OTP verification routes
+app.use('/api/temp-migration', tempMigrationRoutes); // Temporary migration routes
 
 // Mount SMS admin routes
 try {

@@ -1308,14 +1308,22 @@ router.post('/signed-url', async (req, res) => {
 });
 
 // Phone verification endpoints for driver verification
-router.post('/verify-phone/send-otp', async (req, res) => {
+router.post('/verify-phone/send-otp', auth.authMiddleware(), async (req, res) => {
   try {
-    const { phoneNumber, userId, countryCode } = req.body;
+    const { phoneNumber, countryCode } = req.body;
+    const userId = req.user.id; // Get userId from authenticated user
 
-    if (!phoneNumber || !userId) {
+    if (!phoneNumber) {
       return res.status(400).json({
         success: false,
-        message: 'Phone number and user ID are required'
+        message: 'Phone number is required'
+      });
+    }
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User authentication required'
       });
     }
 
@@ -1394,14 +1402,22 @@ router.post('/verify-phone/send-otp', async (req, res) => {
   }
 });
 
-router.post('/verify-phone/verify-otp', async (req, res) => {
+router.post('/verify-phone/verify-otp', auth.authMiddleware(), async (req, res) => {
   try {
-    const { phoneNumber, otp, otpId, userId } = req.body;
+    const { phoneNumber, otp, otpId } = req.body;
+    const userId = req.user.id; // Get userId from authenticated user
 
-    if (!phoneNumber || !otp || !userId) {
+    if (!phoneNumber || !otp) {
       return res.status(400).json({
         success: false,
-        message: 'Phone number, OTP, and user ID are required'
+        message: 'Phone number and OTP are required'
+      });
+    }
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User authentication required'
       });
     }
 
