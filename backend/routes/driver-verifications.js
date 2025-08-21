@@ -1032,9 +1032,27 @@ router.put('/:id/replace-document', auth.authMiddleware(), async (req, res) => {
     if (!validDocuments.includes(documentType)) {
       return res.status(400).json({ success: false, message: 'Invalid documentType' });
     }
-    const urlColumn = `${documentType}_url`;
-    const statusColumn = `${documentType}_status`;
-    const rejectionColumn = `${documentType}_rejection_reason`;
+    // Map document types to actual database column names
+    const columnMapping = {
+      'driver_image': { url: 'driver_image_url', status: 'driver_image_status', rejection: 'driver_image_rejection_reason' },
+      'nic_front': { url: 'nic_front_url', status: 'nic_front_status', rejection: 'nic_front_rejection_reason' },
+      'nic_back': { url: 'nic_back_url', status: 'nic_back_status', rejection: 'nic_back_rejection_reason' },
+      'license_front': { url: 'license_front_url', status: 'license_front_status', rejection: 'license_front_rejection_reason' },
+      'license_back': { url: 'license_back_url', status: 'license_back_status', rejection: 'license_back_rejection_reason' },
+      'license_document': { url: 'license_document_url', status: 'license_document_status', rejection: 'license_document_rejection_reason' },
+      'vehicle_registration': { url: 'vehicle_registration_url', status: 'vehicle_registration_status', rejection: 'vehicle_registration_rejection_reason' },
+      'vehicle_insurance': { url: 'insurance_document_url', status: 'vehicle_insurance_status', rejection: 'vehicle_insurance_rejection_reason' },
+      'billing_proof': { url: 'billing_proof_url', status: 'billing_proof_status', rejection: 'billing_proof_rejection_reason' }
+    };
+
+    const mapping = columnMapping[documentType];
+    if (!mapping) {
+      return res.status(400).json({ success: false, message: 'Invalid documentType' });
+    }
+
+    const urlColumn = mapping.url;
+    const statusColumn = mapping.status;
+    const rejectionColumn = mapping.rejection;
 
     // Build dynamic update; some rejection columns don't exist so guard
     let updateSql = `UPDATE driver_verifications SET ${urlColumn} = $1, ${statusColumn} = 'pending', updated_at = NOW()`;

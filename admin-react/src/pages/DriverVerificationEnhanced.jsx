@@ -33,7 +33,8 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper
+  Paper,
+  Snackbar
 } from '@mui/material';
 import {
   Person as PersonIcon,
@@ -108,6 +109,9 @@ const DriverVerificationEnhanced = () => {
   // City and Vehicle Type mapping
   const [cityNames, setCityNames] = useState({});
   const [vehicleTypeNames, setVehicleTypeNames] = useState({});
+  
+  // Notification state
+  const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
 
   useEffect(() => {
     loadDrivers();
@@ -565,14 +569,28 @@ const DriverVerificationEnhanced = () => {
     if (action === 'approve' && filterStatus !== 'all' && filterStatus !== 'approved') {
       setDetailsOpen(false);
       setSelectedDriver(null);
-      alert(`✅ Driver ${driver.fullName || driver.full_name} has been approved successfully! The modal will now close since the current filter would hide approved drivers.`);
+      setNotification({
+        open: true,
+        message: `✅ Driver ${driver.fullName || driver.full_name} has been approved successfully!`,
+        severity: 'success'
+      });
+    } else if (action === 'approve') {
+      setNotification({
+        open: true,
+        message: `✅ Driver ${driver.fullName || driver.full_name} has been approved successfully!`,
+        severity: 'success'
+      });
     }
     
     await loadDrivers(); 
     console.log(`✅ Driver ${action}: ${driver.fullName}`);
   } catch (error){ 
     console.error(`Error ${action} driver`, error);
-    alert(`❌ Error ${action === 'approve' ? 'approving' : action} driver: ${error.message}`);
+    setNotification({
+      open: true,
+      message: `❌ Error ${action === 'approve' ? 'approving' : action} driver: ${error.message}`,
+      severity: 'error'
+    });
   } finally { 
     setActionLoading(false);
   } 
@@ -2761,6 +2779,22 @@ const DriverVerificationEnhanced = () => {
           )}
         </DialogActions>
       </Dialog>
+
+      {/* Notification Snackbar */}
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={6000}
+        onClose={() => setNotification({ ...notification, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setNotification({ ...notification, open: false })} 
+          severity={notification.severity}
+          sx={{ width: '100%' }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };

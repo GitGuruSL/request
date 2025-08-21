@@ -231,6 +231,7 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       business_phone,
       business_address,
       business_type,
+      business_category, // Accept business_category from Flutter
       registration_number,
       tax_number,
       country_id,
@@ -338,7 +339,7 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       
       const updateValues = [
         business_name, business_email, business_phone, business_address,
-        business_type, registration_number, tax_number, finalCountryValue, 
+        business_category || business_type, registration_number, tax_number, finalCountryValue, 
         business_description || description, business_license_url, tax_certificate_url,
         insurance_document_url, business_logo_url, phoneVerification.phoneVerified, emailVerification.emailVerified, userId,
         ...statusValues
@@ -370,7 +371,7 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       
       const result = await database.query(insertQuery, [
         userId, business_name, business_email, business_phone, business_address,
-        business_type, registration_number, tax_number, finalCountryValue, 
+        business_category || business_type, registration_number, tax_number, finalCountryValue, 
         business_description || description, business_license_url, tax_certificate_url,
         insurance_document_url, business_logo_url, phoneVerification.phoneVerified, emailVerification.emailVerified
       ]);
