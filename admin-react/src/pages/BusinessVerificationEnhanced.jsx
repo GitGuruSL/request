@@ -86,6 +86,7 @@ import {
   Close as CloseIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import useCountryFilter from '../hooks/useCountryFilter';
 import api from '../services/apiClient';
 
 // Component to handle signed URL document images
@@ -195,7 +196,16 @@ const DocumentImage = ({ business, docType, title, onClick }) => {
 };
 
 const BusinessVerificationEnhanced = () => {
-  const { adminData, isCountryAdmin, isSuperAdmin } = useAuth();
+  // Use centralized country filtering
+  const { 
+    getFilteredData, 
+    adminData, 
+    isSuperAdmin, 
+    isCountryAdmin, 
+    userCountry,
+    canEditData,
+    getCountryDisplayName 
+  } = useCountryFilter();
   const [businesses, setBusinesses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedBusiness, setSelectedBusiness] = useState(null);

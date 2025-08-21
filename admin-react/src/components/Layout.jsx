@@ -54,6 +54,7 @@ import {
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import useCountryFilter from '../hooks/useCountryFilter';
+import CountryFilterBadge from './CountryFilterBadge';
 // Firebase password update removed; integrate backend password change API when available.
 
 const drawerWidth = 280;

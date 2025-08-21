@@ -41,7 +41,15 @@ import api from '../services/apiClient';
 import useCountryFilter from '../hooks/useCountryFilter';
 
 const Categories = () => {
-  const { adminData, isSuperAdmin, userCountry } = useCountryFilter();
+  const { 
+    adminData, 
+    isSuperAdmin, 
+    userCountry, 
+    getCategories: getCountryFilteredCategories,
+    getSubcategories: getCountryFilteredSubcategories,
+    getCountryDisplayName,
+    canEditData 
+  } = useCountryFilter();
   
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
@@ -80,10 +88,11 @@ const Categories = () => {
 
   const loadCategories = async () => {
     try {
-      // Fetch all categories; backend expected to handle role-based filtering
-      const res = await api.get('/categories');
-      const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
-      setCategories(data.sort((a, b) => (a.name || '').localeCompare(b.name || '')));
+      // Use country-filtered service
+      const data = await getCountryFilteredCategories();
+      const categoriesArray = Array.isArray(data) ? data : data?.data || [];
+      setCategories(categoriesArray.sort((a, b) => (a.name || '').localeCompare(b.name || '')));
+      console.log(`📂 Loaded ${categoriesArray.length} categories for ${getCountryDisplayName()}`);
     } catch (error) {
       console.error('Error loading categories:', error);
     }
@@ -91,9 +100,11 @@ const Categories = () => {
 
   const loadSubcategories = async () => {
     try {
-      const res = await api.get('/subcategories');
-      const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
-      setSubcategories(data.sort((a, b) => (a.name || '').localeCompare(b.name || '')));
+      // Use country-filtered service
+      const data = await getCountryFilteredSubcategories();
+      const subcategoriesArray = Array.isArray(data) ? data : data?.data || [];
+      setSubcategories(subcategoriesArray.sort((a, b) => (a.name || '').localeCompare(b.name || '')));
+      console.log(`📁 Loaded ${subcategoriesArray.length} subcategories for ${getCountryDisplayName()}`);
     } catch (error) {
       console.error('Error loading subcategories:', error);
     }

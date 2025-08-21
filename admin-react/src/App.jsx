@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { AuthProvider } from './contexts/AuthContext';
-import { CountryFilterProvider } from './hooks/useCountryFilter.jsx';
+import { CountryFilterProvider } from './contexts/CountryFilterContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import Login from './pages/Login';
