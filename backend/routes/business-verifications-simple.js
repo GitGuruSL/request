@@ -641,6 +641,99 @@ router.put('/:id/status', auth.authMiddleware(), async (req, res) => {
   }
 });
 
+// Update individual document status (approve/reject a single document)
+router.put('/:id/documents/:docType', auth.authMiddleware(), async (req, res) => {
+  try {
+    const { id, docType } = req.params;
+    const { status, rejectionReason } = req.body;
+    const reviewedBy = req.user?.id;
+
+    console.log(`🗂 Updating document status: business_verification_id=${id} docType=${docType} -> ${status}`);
+    console.log('📥 Body:', req.body);
+
+    const validDocs = {
+      businessLogo: {
+        statusColumn: 'business_logo_status',
+        reasonColumn: 'business_logo_rejection_reason'
+      },
+      businessLicense: {
+        statusColumn: 'business_license_status',
+        reasonColumn: 'business_license_rejection_reason'
+      },
+      insuranceDocument: {
+        statusColumn: 'insurance_document_status',
+        reasonColumn: 'insurance_document_rejection_reason'
+      },
+      taxCertificate: {
+        statusColumn: 'tax_certificate_status',
+        reasonColumn: 'tax_certificate_rejection_reason'
+      }
+    };
+
+    if (!validDocs[docType]) {
+      return res.status(400).json({ success: false, message: 'Invalid document type' });
+    }
+
+    if (!['approved', 'rejected', 'pending'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status value' });
+    }
+
+    const { statusColumn, reasonColumn } = validDocs[docType];
+
+    const updateQuery = `
+      UPDATE business_verifications
+      SET ${statusColumn} = $1::varchar,
+          ${reasonColumn} = CASE WHEN $1::varchar = 'rejected' THEN $2::text ELSE NULL END,
+          reviewed_by = $3::uuid,
+          reviewed_date = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $4::int
+      RETURNING *
+    `;
+
+    const params = [status, rejectionReason || null, reviewedBy, id];
+    console.log('📝 Doc SQL:', updateQuery);
+    console.log('📊 Doc params:', params);
+
+    const result = await database.query(updateQuery, params);
+    console.log('📥 Raw update result row count:', result.rowCount);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Business verification not found' });
+    }
+
+    const row = result.rows[0];
+    console.log('✅ Updated document row fragment:', {
+      id: row.id,
+      [statusColumn]: row[statusColumn],
+      [reasonColumn]: row[reasonColumn],
+      status: row.status
+    });
+    // Compute is_verified again only if all docs approved & status approved & contact verified
+    const allDocsApproved = ['business_logo_status','business_license_status','insurance_document_status','tax_certificate_status']
+      .every(col => row[col] === 'approved' || row[col] === null || row[col] === undefined);
+
+    if (allDocsApproved && row.status === 'approved' && row.phone_verified && row.email_verified && !row.is_verified) {
+      await database.query('UPDATE business_verifications SET is_verified = true, approved_at = COALESCE(approved_at, CURRENT_TIMESTAMP) WHERE id = $1', [id]);
+      row.is_verified = true;
+    }
+
+    res.json({
+      success: true,
+      message: 'Document status updated',
+      data: {
+        id: row.id,
+        status: row.status,
+        isVerified: row.is_verified,
+        [statusColumn]: row[statusColumn],
+        [reasonColumn]: row[reasonColumn]
+      }
+    });
+  } catch (error) {
+    console.error('Error updating document status:', error);
+    res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
+  }
+});
+
 // Phone verification endpoints for business verification
 router.post('/verify-phone/send-otp', auth.authMiddleware(), async (req, res) => {
   try {
