@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { pool } = require('../config/database');
+// const { pool } = require('../config/database'); // Not needed for now
 
 // Country-specific module configuration
 // This should ideally be stored in a database table, but for now using a configuration object

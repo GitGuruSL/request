@@ -50,6 +50,7 @@ const adminSMSRoutes = require('./routes/admin-sms');
 const emailVerificationRoutes = require('./routes/email-verification');
 const adminEmailManagementRoutes = require('./routes/admin-email-management');
 const tempMigrationRoutes = require('./routes/temp-migration'); // Temporary migration routes
+const modulesRoutes = require('./routes/modules'); // Module management routes
 
 const app = express();
 
@@ -174,6 +175,7 @@ app.use('/api', customProductVariableRoutes);
 app.use('/api/content-pages', contentPagesRoutes);
 app.use('/api/responses', globalResponsesRoutes);
 app.use('/api/sms', smsRoutes);
+app.use('/api/modules', modulesRoutes); // Module management endpoints
 
 // Country-specific routes
 app.use('/api/country-products', countryProductRoutes);
