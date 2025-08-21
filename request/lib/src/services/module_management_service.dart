@@ -87,7 +87,7 @@ class ModuleManagementService {
       requestTypes: ['delivery'],
       businessTypes: ['delivery'], // Only delivery businesses
       navigationFeatures: [],
-      menuFeatures: ['ride_alerts'], // Ride alerts in menu
+      menuFeatures: [], // No menu features for delivery
     ),
     BusinessModule.rideSharing: ModuleConfiguration(
       module: BusinessModule.rideSharing,
@@ -96,7 +96,7 @@ class ModuleManagementService {
       requestTypes: ['ride'],
       businessTypes: [], // Available for all business types
       navigationFeatures: [],
-      menuFeatures: [],
+      menuFeatures: ['ride_alerts'], // Ride alerts in menu (CORRECTED)
       requiresDriverRegistration: true,
     ),
     BusinessModule.priceRequest: ModuleConfiguration(
