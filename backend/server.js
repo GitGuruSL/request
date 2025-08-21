@@ -41,6 +41,7 @@ const countryCategoryRoutes = require('./routes/country-categories');
 const countrySubcategoryRoutes = require('./routes/country-subcategories');
 const countryBrandRoutes = require('./routes/country-brands');
 const countryVariableTypeRoutes = require('./routes/country-variable-types');
+const usersRoutes = require('./routes/users');
 const adminUserRoutes = require('./routes/admin-users');
 const driverVerificationRoutes = require('./routes/driver-verifications');
 const businessVerificationRoutes = require('./routes/business-verifications-simple'); // Use the simple working version
@@ -155,6 +156,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/subcategories', subcategoryRoutes);
 app.use('/api/cities', cityRoutes);
 app.use('/api/requests', requestRoutes);
+app.use('/api/users', usersRoutes);
 app.use('/api/vehicle-types', vehicleTypeRoutes);
 app.use('/api/upload', uploadRoutes); // Image upload endpoint
 app.use('/api/s3', uploadS3Routes); // S3 upload endpoints

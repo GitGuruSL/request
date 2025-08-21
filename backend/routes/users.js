@@ -3,6 +3,15 @@ const router = express.Router();
 const auth = require('../services/auth');
 const database = require('../services/database');
 
+// Test endpoint
+router.get('/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Users route is working!',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Update user profile
 router.put('/:userId', auth.authMiddleware(), async (req, res) => {
   try {
