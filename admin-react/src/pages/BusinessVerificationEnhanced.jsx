@@ -88,6 +88,112 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/apiClient';
 
+// Component to handle signed URL document images
+const DocumentImage = ({ business, docType, title, onClick }) => {
+  const [signedUrl, setSignedUrl] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+
+  const getOriginalUrl = (business, docType) => {
+    switch (docType) {
+      case 'businessLicense': return business.businessLicenseUrl;
+      case 'taxCertificate': return business.taxCertificateUrl;
+      case 'insuranceDocument': return business.insuranceDocumentUrl;
+      case 'businessLogo': return business.businessLogoUrl;
+      default: return null;
+    }
+  };
+
+  useEffect(() => {
+    const fetchSignedUrl = async () => {
+      const originalUrl = getOriginalUrl(business, docType);
+      if (!originalUrl) return;
+
+      setLoading(true);
+      setError(false);
+
+      try {
+        const response = await api.post('/business-verifications/signed-url', {
+          fileUrl: originalUrl
+        });
+        
+        if (response.data.success) {
+          setSignedUrl(response.data.signedUrl);
+        } else {
+          setError(true);
+        }
+      } catch (error) {
+        console.error('Error getting signed URL:', error);
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSignedUrl();
+  }, [business, docType]);
+
+  if (loading) {
+    return (
+      <Box sx={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <CircularProgress size={24} />
+      </Box>
+    );
+  }
+
+  if (error || !signedUrl) {
+    const originalUrl = getOriginalUrl(business, docType);
+    return (
+      <Box sx={{ 
+        height: 120, 
+        display: 'flex', 
+        flexDirection: 'column',
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        bgcolor: 'grey.100',
+        border: '2px dashed',
+        borderColor: 'grey.300',
+        cursor: originalUrl ? 'pointer' : 'default'
+      }}
+      onClick={() => {
+        if (originalUrl && onClick) {
+          // Show document exists but can't be displayed
+          alert(`Document URL available but cannot be displayed due to S3 permissions:\n\n${originalUrl}\n\nContact system administrator to configure S3 bucket permissions.`);
+        }
+      }}
+      >
+        <Typography variant="caption" color="text.secondary" align="center">
+          {originalUrl ? '📄 Document Available' : 'No Document'}
+        </Typography>
+        {originalUrl && (
+          <Typography variant="caption" color="primary" align="center" sx={{ mt: 1 }}>
+            Click to see URL
+          </Typography>
+        )}
+      </Box>
+    );
+  }
+
+  return (
+    <CardMedia
+      component="img"
+      height="120"
+      image={signedUrl}
+      alt={title}
+      sx={{ 
+        objectFit: 'cover',
+        cursor: 'pointer',
+        '&:hover': { opacity: 0.8 }
+      }}
+      onClick={() => onClick && onClick(signedUrl, title)}
+      onError={() => {
+        console.log('Image failed to load, showing fallback');
+        setError(true);
+      }}
+    />
+  );
+};
+
 const BusinessVerificationEnhanced = () => {
   const { adminData, isCountryAdmin, isSuperAdmin } = useAuth();
   const [businesses, setBusinesses] = useState([]);
@@ -1074,17 +1180,11 @@ const BusinessVerificationEnhanced = () => {
           />
           
           {url && (
-            <CardMedia
-              component="img"
-              height="120"
-              image={url}
-              alt={title}
-              sx={{ 
-                objectFit: 'cover',
-                cursor: 'pointer',
-                '&:hover': { opacity: 0.8 }
-              }}
-              onClick={() => setFullscreenImage({ open: true, url, title })}
+            <DocumentImage
+              business={selectedBusiness}
+              docType={docType}
+              title={title}
+              onClick={(signedUrl, title) => setFullscreenImage({ open: true, url: signedUrl, title })}
             />
           )}
           

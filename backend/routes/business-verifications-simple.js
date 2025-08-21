@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const database = require('../services/database');
 const auth = require('../services/auth');
+const { getSignedUrl } = require('../services/s3Upload');
 
 console.log('🏢 Simple business verification routes loaded');
 
@@ -757,6 +758,36 @@ router.post('/verify-phone/verify-otp', auth.authMiddleware(), async (req, res) 
     return res.status(500).json({
       success: false,
       message: 'Internal server error'
+    });
+  }
+});
+
+// Get signed URL for document viewing
+router.post('/signed-url', async (req, res) => {
+  try {
+    const { fileUrl } = req.body;
+    
+    if (!fileUrl) {
+      return res.status(400).json({
+        success: false,
+        message: 'File URL is required'
+      });
+    }
+
+    console.log('🔗 Generating signed URL for business document:', fileUrl);
+    
+    const signedUrl = await getSignedUrl(fileUrl, 3600); // 1 hour expiry
+    
+    res.json({
+      success: true,
+      signedUrl: signedUrl
+    });
+  } catch (error) {
+    console.error('❌ Error generating signed URL:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate signed URL',
+      error: error.message
     });
   }
 });
