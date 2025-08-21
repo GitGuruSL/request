@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../models/request_model.dart';
 import '../models/enhanced_user_model.dart';
 import '../services/country_filtered_data_service.dart';
@@ -41,17 +42,28 @@ class _BrowseScreenState extends State<BrowseScreen> {
       // Load user's allowed request types based on registrations
       final allowedRequestTypeStrings =
           await _registrationService.getAllowedRequestTypes();
+      
+      if (kDebugMode) {
+        print('🎯 BrowseScreen: User allowed request types: $allowedRequestTypeStrings');
+      }
 
       // Load country modules configuration
       final countryCode = CountryService.instance.countryCode;
       if (countryCode != null) {
         _countryModules = await ModuleService.getCountryModules(countryCode);
+        if (kDebugMode) {
+          print('🌍 BrowseScreen: Country modules: ${_countryModules?.modules}');
+        }
         _enabledRequestTypes =
             _getEnabledRequestTypes(allowedRequestTypeStrings);
+        if (kDebugMode) {
+          print('✅ BrowseScreen: Enabled request types: ${_enabledRequestTypes.map((t) => t.name).toList()}');
+        }
       }
 
       await _loadRequests();
     } catch (e) {
+      if (kDebugMode) print('❌ BrowseScreen: Error loading data: $e');
       if (mounted) {
         setState(() {
           _error = e.toString();

@@ -79,8 +79,9 @@ class CountryFilteredDataService {
           await _registrationService.getDriverVehicleTypeIds();
 
       if (kDebugMode) {
-        print('🔐 User allowed request types: $allowedTypes');
-        print('🚗 Driver vehicle types: $driverVehicleTypeIds');
+        print('🔐 CountryFilteredDataService: User allowed request types: $allowedTypes');
+        print('🚗 CountryFilteredDataService: Driver vehicle types: $driverVehicleTypeIds');
+        print('🎯 CountryFilteredDataService: Requested type filter: $type');
       }
 
       // Convert type parameter for backend filtering
