@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
-const authenticateToken = require('../middleware/authMiddleware');
-const dbService = require('../services/dbService');
+const auth = require('../services/auth');
+const database = require('../services/database');
 
 // Update user profile
-router.put('/:userId', authenticateToken, async (req, res) => {
+router.put('/:userId', auth.authMiddleware(), async (req, res) => {
   try {
     const { userId } = req.params;
     const updateData = req.body;
@@ -61,7 +61,7 @@ router.put('/:userId', authenticateToken, async (req, res) => {
       values: updateValues
     });
 
-    const result = await dbService.query(query, updateValues);
+    const result = await database.query(query, updateValues);
 
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -92,7 +92,7 @@ router.put('/:userId', authenticateToken, async (req, res) => {
 });
 
 // Get user profile
-router.get('/:userId', authenticateToken, async (req, res) => {
+router.get('/:userId', auth.authMiddleware(), async (req, res) => {
   try {
     const { userId } = req.params;
 
@@ -104,7 +104,7 @@ router.get('/:userId', authenticateToken, async (req, res) => {
       });
     }
 
-    const result = await dbService.query(
+    const result = await database.query(
       'SELECT * FROM users WHERE id = $1',
       [userId]
     );
