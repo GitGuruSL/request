@@ -15,6 +15,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   final EnhancedUserService _userService = EnhancedUserService();
   UserModel? _currentUser;
   bool _isLoading = true;
+  String _primaryContact = 'email'; // 'email' or 'phone'
 
   @override
   void initState() {
@@ -78,7 +79,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           onTap: () => _showEditNameBottomSheet(),
                         ),
                         const SizedBox(height: 8),
-                        _buildInfoItem(
+                        _buildContactItem(
                           icon: Icons.phone_outlined,
                           title: 'Mobile',
                           value: _currentUser!.phoneNumber != null
@@ -90,10 +91,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           verificationStatus: _currentUser!.isPhoneVerified
                               ? 'Verified'
                               : 'Not verified',
+                          isPrimary: _primaryContact == 'phone',
+                          contactType: 'phone',
                           onTap: () => _showEditPhoneBottomSheet(),
+                          onMakePrimary: () => _makePrimaryContact('phone'),
                         ),
                         const SizedBox(height: 8),
-                        _buildInfoItem(
+                        _buildContactItem(
                           icon: Icons.email_outlined,
                           title: 'E-mail',
                           value: _currentUser!.email,
@@ -101,7 +105,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           verificationStatus: _currentUser!.isEmailVerified
                               ? 'Verified'
                               : 'Not verified',
+                          isPrimary: _primaryContact == 'email',
+                          contactType: 'email',
                           onTap: () => _showEditEmailBottomSheet(),
+                          onMakePrimary: () => _makePrimaryContact('email'),
                         ),
                         const SizedBox(height: 8),
                         _buildInfoItem(
@@ -296,6 +303,170 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildContactItem({
+    required IconData icon,
+    required String title,
+    required String value,
+    bool? isVerified,
+    String? verificationStatus,
+    required bool isPrimary,
+    required String contactType,
+    required VoidCallback onTap,
+    required VoidCallback onMakePrimary,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 0),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: Colors.grey[600],
+              size: 24,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      if (isPrimary) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.blue,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Text(
+                            'Primary',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          value,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ),
+                      if (isVerified != null) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: isVerified ? Colors.green : Colors.orange,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            isVerified ? 'Verified' : 'Not verified',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  if (!isPrimary && isVerified == true) ...[
+                    const SizedBox(height: 8),
+                    InkWell(
+                      onTap: onMakePrimary,
+                      child: Text(
+                        'Make Primary',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.grey[400],
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _makePrimaryContact(String contactType) {
+    if (contactType == 'phone' && !_currentUser!.isPhoneVerified) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please verify your phone number first')),
+      );
+      return;
+    }
+
+    if (contactType == 'email' && !_currentUser!.isEmailVerified) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please verify your email first')),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Change Primary Contact'),
+        content: Text(
+            'Are you sure you want to make ${contactType == 'phone' ? 'phone number' : 'email'} your primary contact method?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _primaryContact = contactType;
+              });
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                    content: Text(
+                        '${contactType == 'phone' ? 'Phone number' : 'Email'} is now your primary contact')),
+              );
+            },
+            child: const Text('Change'),
+          ),
+        ],
       ),
     );
   }
@@ -542,6 +713,25 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   void _showEditPhoneBottomSheet() {
+    // Check if phone is primary and prevent editing if it's the only verified contact
+    if (_primaryContact == 'phone' && (!_currentUser!.isEmailVerified)) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Cannot Edit Primary Contact'),
+          content: const Text(
+              'Your phone number is your primary contact method. Please verify your email and set it as primary before changing your phone number.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     final TextEditingController phoneController = TextEditingController();
     // Remove +94 prefix if present for editing
     String phoneNumber = _currentUser!.phoneNumber ?? '';
@@ -615,6 +805,25 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   void _showEditEmailBottomSheet() {
+    // Check if email is primary and prevent editing if it's the only verified contact
+    if (_primaryContact == 'email' && (!_currentUser!.isPhoneVerified)) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Cannot Edit Primary Contact'),
+          content: const Text(
+              'Your email is your primary contact method. Please verify your phone number and set it as primary before changing your email.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     final TextEditingController emailController = TextEditingController();
     emailController.text = _currentUser!.email;
 
