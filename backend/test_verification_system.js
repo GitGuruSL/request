@@ -5,7 +5,7 @@ const path = require('path');
 const fs = require('fs');
 
 // Read the business verification file to get the functions
-const businessVerificationFile = fs.readFileSync('./routes/business-verifications-simple.js', 'utf8');
+const businessVerificationFile = fs.readFileSync('./routes/business-verifications.js', 'utf8');
 
 // Extract the normalize phone function
 function normalizePhoneNumber(phone) {
