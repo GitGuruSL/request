@@ -369,45 +369,56 @@ router.get('/', auth.authMiddleware(), async (req, res) => {
     
     const result = await database.query(query, params);
 
-    // Transform data to match admin panel expectations (camelCase)
-    const transformedData = result.rows.map(row => ({
-      ...row,
-      // Add camelCase aliases for admin panel
-      businessName: row.business_name,
-      businessEmail: row.business_email,
-      businessPhone: row.business_phone,
-      businessAddress: row.business_address,
-      businessCategory: row.business_category,
-      businessDescription: row.business_description,
-      licenseNumber: row.license_number,
-      taxId: row.tax_id,
-      countryName: row.country_name,
-      businessLogoUrl: row.business_logo_url,
-      businessLicenseUrl: row.business_license_url,
-      insuranceDocumentUrl: row.insurance_document_url,
-      taxCertificateUrl: row.tax_certificate_url,
-      businessLogoStatus: row.business_logo_status,
-      businessLicenseStatus: row.business_license_status,
-      insuranceDocumentStatus: row.insurance_document_status,
-      taxCertificateStatus: row.tax_certificate_status,
-      businessLogoRejectionReason: row.business_logo_rejection_reason,
-      businessLicenseRejectionReason: row.business_license_rejection_reason,
-      insuranceDocumentRejectionReason: row.insurance_document_rejection_reason,
-      taxCertificateRejectionReason: row.tax_certificate_rejection_reason,
-      documentVerification: row.document_verification,
-      isVerified: row.is_verified,
-      phoneVerified: row.phone_verified,
-      emailVerified: row.email_verified,
-      reviewedBy: row.reviewed_by,
-      reviewedDate: row.reviewed_date,
-      submittedAt: row.submitted_at,
-      approvedAt: row.approved_at,
-      lastUpdated: row.last_updated,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-      userEmail: row.user_email,
-      firstName: row.first_name,
-      lastName: row.last_name
+    // Transform data and apply unified verification to each business
+    const transformedData = await Promise.all(result.rows.map(async (row) => {
+      // Check unified verification status for each business
+      const phoneStatus = await checkPhoneVerificationStatus(row.user_id, row.business_phone);
+      const emailStatus = await checkEmailVerificationStatus(row.user_id, row.business_email);
+      
+      return {
+        ...row,
+        // Add camelCase aliases for admin panel
+        businessName: row.business_name,
+        businessEmail: row.business_email,
+        businessPhone: row.business_phone,
+        businessAddress: row.business_address,
+        businessCategory: row.business_category,
+        businessDescription: row.business_description,
+        licenseNumber: row.license_number,
+        taxId: row.tax_id,
+        countryName: row.country_name,
+        businessLogoUrl: row.business_logo_url,
+        businessLicenseUrl: row.business_license_url,
+        insuranceDocumentUrl: row.insurance_document_url,
+        taxCertificateUrl: row.tax_certificate_url,
+        businessLogoStatus: row.business_logo_status,
+        businessLicenseStatus: row.business_license_status,
+        insuranceDocumentStatus: row.insurance_document_status,
+        taxCertificateStatus: row.tax_certificate_status,
+        businessLogoRejectionReason: row.business_logo_rejection_reason,
+        businessLicenseRejectionReason: row.business_license_rejection_reason,
+        insuranceDocumentRejectionReason: row.insurance_document_rejection_reason,
+        taxCertificateRejectionReason: row.tax_certificate_rejection_reason,
+        documentVerification: row.document_verification,
+        isVerified: row.is_verified,
+        // Use unified verification status (overrides database values)
+        phoneVerified: phoneStatus.phoneVerified,
+        phoneVerificationSource: phoneStatus.verificationSource,
+        requiresPhoneVerification: phoneStatus.requiresManualVerification,
+        emailVerified: emailStatus.emailVerified,
+        emailVerificationSource: emailStatus.verificationSource,
+        requiresEmailVerification: emailStatus.requiresManualVerification,
+        reviewedBy: row.reviewed_by,
+        reviewedDate: row.reviewed_date,
+        submittedAt: row.submitted_at,
+        approvedAt: row.approved_at,
+        lastUpdated: row.last_updated,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        userEmail: row.user_email,
+        firstName: row.first_name,
+        lastName: row.last_name
+      };
     }));
 
     res.json({
