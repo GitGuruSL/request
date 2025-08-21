@@ -1321,12 +1321,15 @@ class _BusinessVerificationScreenState
           _isVerifyingPhone = false;
         });
 
-        if (result.success) {
+        if (result.success &&
+            (result['phoneVerified'] == true || result['verified'] == true)) {
           _showSnackBar('Phone number verified successfully!', isError: false);
           _phoneOtpController.clear();
           setState(() {
             _phoneVerificationId = null;
           });
+          // Reload business verification record to reflect phone_verified change
+          await _loadBusinessData();
           await _loadCredentialsStatus();
         } else if (result.isCredentialConflict) {
           _showSnackBar(

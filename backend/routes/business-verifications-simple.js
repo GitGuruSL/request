@@ -754,10 +754,13 @@ router.post('/verify-phone/send-otp', auth.authMiddleware(), async (req, res) =>
       });
     }
 
+    // Normalize phone early (bug fix: previously used before definition)
+    const normalizedPhone = normalizePhoneNumber(phoneNumber);
+
     // Check if phone is already verified in user_phone_numbers
     const existingPhone = await database.query(
       'SELECT * FROM user_phone_numbers WHERE user_id = $1 AND phone_number = $2 AND is_verified = true',
-      [userId, phoneNumber]
+      [userId, normalizedPhone]
     );
 
     if (existingPhone.rows.length > 0) {
@@ -769,11 +772,10 @@ router.post('/verify-phone/send-otp', auth.authMiddleware(), async (req, res) =>
     }
 
     // Send OTP using country-specific SMS service
-    const SMSService = require('../services/smsService');
-    const smsService = new SMSService();
+    const smsService = require('../services/smsService');
     
-    // Auto-detect country if not provided
-    const detectedCountry = countryCode || smsService.detectCountry(normalizedPhone);
+  // Auto-detect country if not provided
+  const detectedCountry = countryCode || smsService.detectCountry(normalizedPhone);
     console.log(`🌍 Using country: ${detectedCountry} for SMS delivery`);
 
     try {
@@ -799,7 +801,38 @@ router.post('/verify-phone/send-otp', auth.authMiddleware(), async (req, res) =>
         expiresIn: result.expiresIn
       });
     } catch (error) {
-      console.error('SMS service error:', error);
+      console.error('SMS service error (business verification):', error.message);
+      // Development fallback: auto-generate OTP when no SMS config
+      if (process.env.NODE_ENV !== 'production') {
+        try {
+          const otp = '123456';
+          const otpId = `dev_${Date.now()}`;
+          await database.query(`
+            INSERT INTO phone_otp_verifications 
+            (otp_id, phone, otp, country_code, expires_at, attempts, max_attempts, created_at, provider_used)
+            VALUES ($1,$2,$3,$4, NOW() + interval '5 minute', 0, 3, NOW(), 'dev_fallback')
+          `, [otpId, normalizedPhone, otp, detectedCountry]);
+          await database.query(
+            `UPDATE phone_otp_verifications 
+             SET user_id = $1, verification_type = 'business_verification'
+             WHERE phone = $2 AND otp_id = $3`,
+            [userId, normalizedPhone, otpId]
+          );
+          console.log('🛠 Dev fallback OTP generated (business): 123456');
+          return res.json({
+            success: true,
+            message: 'DEV MODE: OTP generated (use 123456)',
+            phoneNumber: normalizedPhone,
+            otpId,
+            provider: 'dev_fallback',
+            countryCode: detectedCountry,
+            devOtp: otp,
+            expiresIn: 300
+          });
+        } catch (e2) {
+          console.error('Dev fallback generation failed:', e2.message);
+        }
+      }
       return res.status(500).json({
         success: false,
         message: error.message || 'Failed to send OTP'
@@ -834,9 +867,8 @@ router.post('/verify-phone/verify-otp', auth.authMiddleware(), async (req, res) 
       });
     }
 
-    // Verify OTP using country-specific SMS service
-    const SMSService = require('../services/smsService');
-    const smsService = new SMSService();
+  // Verify OTP using country-specific SMS service
+    const smsService = require('../services/smsService');
     
     const normalizedPhone = normalizePhoneNumber(phoneNumber);
     console.log(`🔍 Verifying OTP for business verification - Phone: ${phoneNumber} → ${normalizedPhone}, OTP: ${otp}, User: ${userId}`);
@@ -847,8 +879,8 @@ router.post('/verify-phone/verify-otp', auth.authMiddleware(), async (req, res) 
       if (verificationResult.verified) {
         // Auto-detect country for phone number
         const detectedCountry = smsService.detectCountry(normalizedPhone);
-        
-        // Add verified phone to user_phone_numbers table
+
+        // 1. Upsert into user_phone_numbers (source of truth for multi numbers)
         await database.query(`
           INSERT INTO user_phone_numbers (user_id, phone_number, country_code, is_verified, phone_type, purpose, verified_at, created_at)
           VALUES ($1, $2, $3, true, 'professional', 'business_verification', NOW(), NOW())
@@ -856,15 +888,56 @@ router.post('/verify-phone/verify-otp', auth.authMiddleware(), async (req, res) 
           DO UPDATE SET is_verified = true, verified_at = NOW(), purpose = 'business_verification', phone_type = 'professional'
         `, [userId, normalizedPhone, detectedCountry]);
 
-        console.log(`✅ Phone verified for business verification: ${normalizedPhone}, stored in user_phone_numbers`);
+        // 2. Mark user record phone_verified (only if not already) WITHOUT overwriting existing phone value unless empty
+        await database.query(`
+          UPDATE users SET phone_verified = true, updated_at = NOW()
+          WHERE id = $1 AND phone_verified = false
+        `, [userId]);
+
+        // 3. Update any associated business_verifications row(s)
+        const businessVerificationUpdate = await database.query(`
+          UPDATE business_verifications
+          SET phone_verified = true, updated_at = NOW()
+          WHERE user_id = $1
+          RETURNING id, status, phone_verified, email_verified,
+                    business_logo_status, business_license_status,
+                    insurance_document_status, tax_certificate_status,
+                    is_verified
+        `, [userId]);
+
+        let businessVerification = businessVerificationUpdate.rows[0] || null;
+
+        // 4. If business_verifications row exists, recompute is_verified if all conditions met
+        if (businessVerification) {
+          const allDocsApproved = ['business_logo_status','business_license_status','insurance_document_status','tax_certificate_status']
+            .every(col => businessVerification[col] === 'approved' || businessVerification[col] == null);
+          if (allDocsApproved && businessVerification.status === 'approved' && businessVerification.phone_verified && businessVerification.email_verified && !businessVerification.is_verified) {
+            const isVerRes = await database.query(
+              'UPDATE business_verifications SET is_verified = true, approved_at = COALESCE(approved_at, CURRENT_TIMESTAMP) WHERE id = $1 RETURNING is_verified, approved_at',
+              [businessVerification.id]
+            );
+            businessVerification.is_verified = isVerRes.rows[0]?.is_verified || businessVerification.is_verified;
+          }
+        }
+
+        console.log(`✅ Phone verified for business verification: ${normalizedPhone}. User & business_verifications updated.`);
 
         return res.json({
           success: true,
-          message: 'Phone number verified successfully',
-          phoneNumber: normalizedPhone,
-          verified: true,
-          provider: verificationResult.provider,
-          verificationSource: 'user_phone_numbers'
+            message: 'Phone number verified successfully',
+            phoneNumber: normalizedPhone,
+            verified: true,
+            provider: verificationResult.provider,
+            verificationSource: 'user_phone_numbers',
+            userPhoneVerified: true,
+            businessVerificationUpdated: !!businessVerification,
+            businessVerification: businessVerification ? {
+              id: businessVerification.id,
+              status: businessVerification.status,
+              phone_verified: businessVerification.phone_verified,
+              email_verified: businessVerification.email_verified,
+              is_verified: businessVerification.is_verified
+            } : null
         });
       } else {
         return res.status(400).json({
@@ -885,6 +958,62 @@ router.post('/verify-phone/verify-otp', auth.authMiddleware(), async (req, res) 
     return res.status(500).json({
       success: false,
       message: 'Internal server error'
+    });
+  }
+});
+
+// Get unified verification status for phone/email (used by both business and driver screens)
+router.post('/check-verification-status', auth.authMiddleware(), async (req, res) => {
+  try {
+    const { phoneNumber, email } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated'
+      });
+    }
+
+    console.log(`🔍 Checking verification status for user ${userId}, phone: ${phoneNumber}, email: ${email}`);
+
+    const result = {
+      success: true,
+      phoneVerified: false,
+      emailVerified: false,
+      phoneVerificationSource: null,
+      emailVerificationSource: null,
+      requiresPhoneOTP: false,
+      requiresEmailOTP: false
+    };
+
+    // Check phone verification if provided
+    if (phoneNumber) {
+      const phoneStatus = await checkPhoneVerificationStatus(userId, phoneNumber);
+      result.phoneVerified = phoneStatus.phoneVerified;
+      result.phoneVerificationSource = phoneStatus.verificationSource;
+      result.requiresPhoneOTP = phoneStatus.requiresManualVerification;
+      
+      console.log(`📱 Phone status: verified=${phoneStatus.phoneVerified}, source=${phoneStatus.verificationSource}`);
+    }
+
+    // Check email verification if provided
+    if (email) {
+      const emailStatus = await checkEmailVerificationStatus(userId, email);
+      result.emailVerified = emailStatus.emailVerified;
+      result.emailVerificationSource = emailStatus.verificationSource;
+      result.requiresEmailOTP = emailStatus.requiresManualVerification;
+      
+      console.log(`📧 Email status: verified=${emailStatus.emailVerified}, source=${emailStatus.verificationSource}`);
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error checking verification status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
     });
   }
 });

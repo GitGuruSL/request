@@ -1162,6 +1162,61 @@ router.delete('/:id', auth.authMiddleware(), auth.roleMiddleware(['super_admin',
   }
 });
 
+// Get unified verification status for phone/email (used by driver verification screen)
+router.post('/check-verification-status', async (req, res) => {
+  try {
+    const { phoneNumber, email, userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required'
+      });
+    }
+
+    console.log(`🔍 [Driver] Checking verification status for user ${userId}, phone: ${phoneNumber}, email: ${email}`);
+
+    const result = {
+      success: true,
+      phoneVerified: false,
+      emailVerified: false,
+      phoneVerificationSource: null,
+      emailVerificationSource: null,
+      requiresPhoneOTP: false,
+      requiresEmailOTP: false
+    };
+
+    // Check phone verification if provided
+    if (phoneNumber) {
+      const phoneStatus = await checkPhoneVerificationStatus(userId, phoneNumber);
+      result.phoneVerified = phoneStatus.phoneVerified;
+      result.phoneVerificationSource = phoneStatus.verificationSource;
+      result.requiresPhoneOTP = phoneStatus.requiresManualVerification;
+      
+      console.log(`📱 [Driver] Phone status: verified=${phoneStatus.phoneVerified}, source=${phoneStatus.verificationSource}`);
+    }
+
+    // Check email verification if provided
+    if (email) {
+      const emailStatus = await checkEmailVerificationStatus(userId, email);
+      result.emailVerified = emailStatus.emailVerified;
+      result.emailVerificationSource = emailStatus.verificationSource;
+      result.requiresEmailOTP = emailStatus.requiresManualVerification;
+      
+      console.log(`📧 [Driver] Email status: verified=${emailStatus.emailVerified}, source=${emailStatus.verificationSource}`);
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error checking driver verification status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+});
+
 // Get signed URL for document viewing
 router.post('/signed-url', async (req, res) => {
   try {
@@ -1208,35 +1263,73 @@ router.post('/verify-phone/send-otp', async (req, res) => {
     console.log(`📱 Sending OTP for driver verification - Phone: ${phoneNumber} → ${normalizedPhone}, User: ${userId}`);
 
     // Use country-specific SMS service
-    const SMSService = require('../services/smsService');
-    const smsService = new SMSService();
+    const smsService = require('../services/smsService');
     
     // Auto-detect country if not provided
     const detectedCountry = countryCode || smsService.detectCountry(normalizedPhone);
     console.log(`🌍 Using country: ${detectedCountry} for SMS delivery`);
 
-    // Send OTP using country-specific SMS provider
-    const result = await smsService.sendOTP(normalizedPhone, detectedCountry);
+    try {
+      // Send OTP using country-specific SMS provider
+      const result = await smsService.sendOTP(normalizedPhone, detectedCountry);
 
-    // Store additional metadata for driver verification
-    await database.query(
-      `UPDATE phone_otp_verifications 
-       SET user_id = $1, verification_type = 'driver_verification'
-       WHERE phone = $2 AND otp_id = $3`,
-      [userId, normalizedPhone, result.otpId]
-    );
+      // Store additional metadata for driver verification
+      await database.query(
+        `UPDATE phone_otp_verifications 
+         SET user_id = $1, verification_type = 'driver_verification'
+         WHERE phone = $2 AND otp_id = $3`,
+        [userId, normalizedPhone, result.otpId]
+      );
 
-    console.log(`✅ OTP sent via ${result.provider} for driver verification: ${normalizedPhone}`);
+      console.log(`✅ OTP sent via ${result.provider} for driver verification: ${normalizedPhone}`);
 
-    res.json({
-      success: true,
-      message: 'OTP sent successfully for driver verification',
-      phoneNumber: normalizedPhone,
-      otpId: result.otpId,
-      provider: result.provider,
-      countryCode: detectedCountry,
-      expiresIn: result.expiresIn
-    });
+      return res.json({
+        success: true,
+        message: 'OTP sent successfully for driver verification',
+        phoneNumber: normalizedPhone,
+        otpId: result.otpId,
+        provider: result.provider,
+        countryCode: detectedCountry,
+        expiresIn: result.expiresIn
+      });
+    } catch (sendErr) {
+      console.error('SMS service error (driver verification):', sendErr.message);
+      if (process.env.NODE_ENV !== 'production') {
+        // Development fallback
+        try {
+          const otp = '123456';
+          const otpId = `dev_${Date.now()}`;
+          await database.query(`
+            INSERT INTO phone_otp_verifications 
+            (otp_id, phone, otp, country_code, expires_at, attempts, max_attempts, created_at, provider_used)
+            VALUES ($1,$2,$3,$4, NOW() + interval '5 minute', 0, 3, NOW(), 'dev_fallback')
+          `, [otpId, normalizedPhone, otp, detectedCountry]);
+          await database.query(
+            `UPDATE phone_otp_verifications 
+             SET user_id = $1, verification_type = 'driver_verification'
+             WHERE phone = $2 AND otp_id = $3`,
+            [userId, normalizedPhone, otpId]
+          );
+          console.log('🛠 Dev fallback OTP generated (driver): 123456');
+          return res.json({
+            success: true,
+            message: 'DEV MODE: OTP generated (use 123456)',
+            phoneNumber: normalizedPhone,
+            otpId,
+            provider: 'dev_fallback',
+            countryCode: detectedCountry,
+            devOtp: otp,
+            expiresIn: 300
+          });
+        } catch (devErr) {
+          console.error('Dev fallback generation failed (driver):', devErr.message);
+        }
+      }
+      return res.status(500).json({
+        success: false,
+        message: sendErr.message || 'Failed to send OTP'
+      });
+    }
   } catch (error) {
     console.error('Error sending OTP for driver verification:', error);
     res.status(500).json({
@@ -1262,8 +1355,7 @@ router.post('/verify-phone/verify-otp', async (req, res) => {
     console.log(`🔍 Verifying OTP for driver verification - Phone: ${phoneNumber} → ${normalizedPhone}, OTP: ${otp}, User: ${userId}`);
 
     // Use country-specific SMS service for verification
-    const SMSService = require('../services/smsService');
-    const smsService = new SMSService();
+    const smsService = require('../services/smsService');
     
     const verificationResult = await smsService.verifyOTP(normalizedPhone, otp, otpId);
 

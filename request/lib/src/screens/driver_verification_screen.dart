@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 // Removed firebase_shim after REST migration
-import '../services/rest_auth_service.dart' hide UserModel;
 // REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
 // REMOVED_FB_IMPORT: import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:io';
@@ -86,6 +85,9 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
   bool _isVerifyingPhoneOtp = false;
   int _otpCountdown = 0;
 
+  // Backend verification status
+  Map<String, dynamic>? _verificationStatus;
+
   @override
   void initState() {
     super.initState();
@@ -130,9 +132,39 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
 
         // Load available cities for user's country
         await _loadAvailableCities();
+
+        // Check verification status for the auto-populated phone
+        if (user.phoneNumber != null && user.phoneNumber!.isNotEmpty) {
+          await _checkPhoneVerificationStatus(user.phoneNumber!);
+        }
       }
     } catch (e) {
       print('Error loading user data: $e');
+    }
+  }
+
+  /// Check phone verification status using backend unified endpoint
+  Future<void> _checkPhoneVerificationStatus(String phoneNumber) async {
+    try {
+      final user = await _userService.getCurrentUserModel();
+      if (user == null) return;
+
+      final result = await _contactService.checkVerificationStatus(
+        phoneNumber: phoneNumber,
+        userId: user.id,
+        endpoint: '/api/driver-verifications/check-verification-status',
+      );
+
+      if (mounted && result['success'] == true) {
+        setState(() {
+          _verificationStatus = result;
+          _isPhoneVerified = result['phoneVerified'] == true;
+        });
+        print(
+            '📱 Driver phone verification status: ${result['phoneVerified']} (source: ${result['phoneVerificationSource']})');
+      }
+    } catch (e) {
+      print('Error checking phone verification status: $e');
     }
   }
 
@@ -407,31 +439,6 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
     };
   }
 
-  // Check if phone number needs OTP verification
-  bool _isPhoneVerifiedByFirebase() {
-    final currentUser = RestAuthService.instance.currentUser;
-    if (currentUser?.phoneNumber == null || _phoneController.text.isEmpty) {
-      return false;
-    }
-
-    // Clean both phone numbers for comparison
-    String firebasePhone =
-        currentUser!.phoneNumber!.replaceAll(' ', '').replaceAll('-', '');
-    String enteredPhone =
-        _phoneController.text.replaceAll(' ', '').replaceAll('-', '');
-
-    // Remove country codes for comparison if present
-    if (firebasePhone.startsWith('+94'))
-      firebasePhone = firebasePhone.substring(3);
-    if (enteredPhone.startsWith('+94'))
-      enteredPhone = enteredPhone.substring(3);
-    if (firebasePhone.startsWith('94'))
-      firebasePhone = firebasePhone.substring(2);
-    if (enteredPhone.startsWith('94')) enteredPhone = enteredPhone.substring(2);
-
-    return firebasePhone == enteredPhone;
-  }
-
   // OTP Countdown timer
   void _startOtpCountdown() {
     Timer.periodic(Duration(seconds: 1), (timer) {
@@ -683,8 +690,8 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          // Phone Verification Section - Auto or Manual based on Firebase verification
-          _isPhoneVerifiedByFirebase()
+          // Phone Verification Section - Auto or Manual based on backend verification
+          _isPhoneVerified
               ? Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
@@ -702,7 +709,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
                               color: Colors.green, size: 20),
                           const SizedBox(width: 8),
                           const Text(
-                            'Phone Number (Auto-Verified)',
+                            'Phone Number (Verified)',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -723,8 +730,10 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      const Text(
-                        'This number was verified during account creation',
+                      Text(
+                        _verificationStatus?['phoneVerificationSource'] != null
+                            ? 'Verified via ${_verificationStatus!['phoneVerificationSource']}'
+                            : 'This number is verified',
                         style: TextStyle(
                           fontSize: 12,
                           color: AppTheme.textSecondary,
@@ -813,14 +822,20 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
                             // Reset verification status when phone number changes
                             _isPhoneVerified = false;
                             _isPhoneOtpSent = false;
+                            _verificationStatus = null;
                           });
+
+                          // Check verification status for new phone number
+                          if (_isValidPhoneNumber(value)) {
+                            _checkPhoneVerificationStatus(value);
+                          }
                         },
                       ),
                       const SizedBox(height: 12),
 
                       // Show current phone number if available but not verified
                       if (_isValidPhoneNumber(_phoneController.text) &&
-                          !_isPhoneVerifiedByFirebase()) ...[
+                          !_isPhoneVerified) ...[
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(12),
@@ -1925,8 +1940,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
 
   bool _canSubmit() {
     // Check if phone verification is required and completed
-    bool phoneVerificationComplete =
-        _isPhoneVerifiedByFirebase() || _isPhoneVerified;
+    bool phoneVerificationComplete = _isPhoneVerified || _isPhoneVerified;
 
     return _firstNameController.text.trim().isNotEmpty &&
         _lastNameController.text.trim().isNotEmpty &&
@@ -2216,9 +2230,10 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
             '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}',
         'email': currentUser.email,
         'phoneNumber': _phoneController.text.trim(),
-        'phoneVerified': _isPhoneVerifiedByFirebase() ? true : _isPhoneVerified,
+        'phoneVerified': _isPhoneVerified,
         'phoneVerificationSource':
-            _isPhoneVerifiedByFirebase() ? 'firebase_auth' : 'otp_verification',
+            _verificationStatus?['phoneVerificationSource'] ??
+                'manual_verification',
         'secondaryMobile': _secondaryMobileController.text.trim().isNotEmpty
             ? _secondaryMobileController.text.trim()
             : null,
