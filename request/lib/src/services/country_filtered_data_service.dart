@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import '../models/request_model.dart' as models;
 import '../models/enhanced_user_model.dart' as enhanced;
 import 'rest_request_service.dart'
@@ -271,6 +274,74 @@ class CountryFilteredDataService {
         return models.RequestStatus.cancelled;
       default:
         return models.RequestStatus.active;
+    }
+  }
+
+  /// Get active variable types for the current country
+  Future<List<Map<String, dynamic>>> getActiveVariableTypes() async {
+    if (currentCountry == null) {
+      if (kDebugMode)
+        print('⚠️ No country selected, returning empty variable types');
+      return <Map<String, dynamic>>[];
+    }
+
+    try {
+      // Get base URL from platform configuration
+      String baseUrl;
+      if (kIsWeb) {
+        baseUrl = 'http://localhost:3001';
+      } else if (Platform.isAndroid) {
+        baseUrl = 'http://10.0.2.2:3001';
+      } else if (Platform.isIOS) {
+        baseUrl = 'http://localhost:3001';
+      } else {
+        baseUrl = 'http://localhost:3001';
+      }
+
+      final url = Uri.parse('$baseUrl/api/country-variable-types');
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true && data['data'] is List) {
+          final allVariableTypes = data['data'] as List;
+
+          // Filter by current country and active status
+          final filteredTypes = allVariableTypes
+              .where((vt) =>
+                  vt['country_code'] == currentCountry &&
+                  (vt['is_active'] == true || vt['is_active'] == 1))
+              .map((vt) => {
+                    'id': vt['variable_id']?.toString() ??
+                        vt['id']?.toString() ??
+                        '',
+                    'name': vt['variable_name'] ?? vt['name'] ?? '',
+                    'type': vt['variable_type'] ?? vt['type'] ?? 'select',
+                    'required': vt['is_required'] ?? false,
+                    'custom_settings': vt['custom_settings'] ?? {},
+                  })
+              .toList();
+
+          if (kDebugMode)
+            print(
+                '✅ Loaded ${filteredTypes.length} active variable types for country $currentCountry');
+          return filteredTypes;
+        }
+      }
+
+      if (kDebugMode)
+        print('❌ Failed to load variable types: ${response.statusCode}');
+      return <Map<String, dynamic>>[];
+    } catch (e) {
+      if (kDebugMode) print('❌ Error loading variable types: $e');
+      return <Map<String, dynamic>>[];
     }
   }
 }
