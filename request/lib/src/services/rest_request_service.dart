@@ -21,6 +21,8 @@ class RequestModel {
   final String description;
   final String categoryId;
   final String? categoryName;
+  final String?
+      categoryType; // Category type: item, service, rental, delivery, etc.
   final String? subcategoryId;
   final String? subcategoryName;
   final String? locationCityId;
@@ -49,6 +51,7 @@ class RequestModel {
     required this.description,
     required this.categoryId,
     this.categoryName,
+    this.categoryType,
     this.subcategoryId,
     this.subcategoryName,
     this.locationCityId,
@@ -79,6 +82,8 @@ class RequestModel {
       description: json['description'] ?? '',
       categoryId: json['category_id'].toString(),
       categoryName: json['category_name'],
+      categoryType: json['category_request_type'] ??
+          json['category_type'], // Add category type from backend
       subcategoryId: json['subcategory_id']?.toString(),
       subcategoryName: json['subcategory_name'],
       locationCityId: json['location_city_id']?.toString(),

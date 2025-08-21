@@ -223,8 +223,8 @@ class CountryFilteredDataService {
       requesterId: r.userId,
       title: r.title,
       description: r.description,
-      type: _convertRequestType(
-          r.categoryName), // Use category name for type mapping
+      type: _convertRequestType(_getRequestTypeFromMetadata(
+          r)), // Use metadata first, then category name
       status: _convertRequestStatus(r.status),
       priority: models.Priority.medium,
       createdAt: r.createdAt,
@@ -242,6 +242,21 @@ class CountryFilteredDataService {
       location: null,
       destinationLocation: null,
     );
+  }
+
+  String? _getRequestTypeFromMetadata(RequestModel r) {
+    // First check metadata for request_type
+    if (r.metadata != null && r.metadata!['request_type'] != null) {
+      return r.metadata!['request_type'] as String;
+    }
+
+    // Second, check category type from backend (category.type field)
+    if (r.categoryType != null && r.categoryType!.isNotEmpty) {
+      return r.categoryType;
+    }
+
+    // Fallback to category name
+    return r.categoryName;
   }
 
   enhanced.RequestType _convertRequestType(String? type) {

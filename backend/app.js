@@ -70,6 +70,7 @@ console.log('🔧 About to require driver-verifications route');
 const driverVerificationRoutes = require('./routes/driver-verifications'); // NEW
 console.log('🔧 About to require business-verifications route');
 const businessVerificationRoutes = require('./routes/business-verifications-simple'); // Use the simple working version
+const modulesRoutes = require('./routes/modules'); // NEW - module management
 console.log('🔧 About to register driver-verifications route');
 
 // Serve static files (uploaded images)
@@ -98,6 +99,7 @@ app.use('/api', subscriptionPlansNew); // new CRUD under /subscription-plans-new
 app.use('/api/content-pages', contentPagesRoutes); // content pages management
 app.use('/api/driver-verifications', driverVerificationRoutes); // NEW - driver verification management
 app.use('/api/business-verifications', businessVerificationRoutes); // NEW - business verification management
+app.use('/api/modules', modulesRoutes); // NEW - module management
 console.log('🔧 Driver-verifications route registered at /api/driver-verifications');
 console.log('🔧 Business-verifications route registered at /api/business-verifications');
 
