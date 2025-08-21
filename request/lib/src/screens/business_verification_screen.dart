@@ -622,8 +622,7 @@ class _BusinessVerificationScreenState
 
   Widget _buildDocumentCard(String title, String? status, String? documentUrl,
       String description, IconData icon, String documentType) {
-    final rejectionReason =
-        null; // You can add rejection reason from Firebase if needed
+    final rejectionReason = _getRejectionReason(documentType);
 
     Color statusColor = _getStatusColor(status ?? 'pending');
     String statusText = _getStatusText(status ?? 'pending');
@@ -744,23 +743,56 @@ class _BusinessVerificationScreenState
     switch (documentType) {
       case 'businessLicense':
         status = _businessData!['businessLicenseStatus'] ??
-            _businessData!['documentVerification']?['businessLicense'];
+            _businessData!['documentVerification']?['businessLicense']
+                ?['status'];
         break;
       case 'taxCertificate':
         status = _businessData!['taxCertificateStatus'] ??
-            _businessData!['documentVerification']?['taxCertificate'];
+            _businessData!['documentVerification']?['taxCertificate']
+                ?['status'];
         break;
       case 'insuranceDocument':
         status = _businessData!['insuranceDocumentStatus'] ??
-            _businessData!['documentVerification']?['insuranceDocument'];
+            _businessData!['documentVerification']?['insuranceDocument']
+                ?['status'];
         break;
       case 'businessLogo':
         status = _businessData!['businessLogoStatus'] ??
-            _businessData!['documentVerification']?['businessLogo'];
+            _businessData!['documentVerification']?['businessLogo']?['status'];
         break;
     }
 
     return status ?? 'pending';
+  }
+
+  String? _getRejectionReason(String documentType) {
+    // Check both flat fields and nested documentVerification
+    String? rejectionReason;
+
+    switch (documentType) {
+      case 'businessLicense':
+        rejectionReason = _businessData!['businessLicenseRejectionReason'] ??
+            _businessData!['documentVerification']?['businessLicense']
+                ?['rejectionReason'];
+        break;
+      case 'taxCertificate':
+        rejectionReason = _businessData!['taxCertificateRejectionReason'] ??
+            _businessData!['documentVerification']?['taxCertificate']
+                ?['rejectionReason'];
+        break;
+      case 'insuranceDocument':
+        rejectionReason = _businessData!['insuranceDocumentRejectionReason'] ??
+            _businessData!['documentVerification']?['insuranceDocument']
+                ?['rejectionReason'];
+        break;
+      case 'businessLogo':
+        rejectionReason = _businessData!['businessLogoRejectionReason'] ??
+            _businessData!['documentVerification']?['businessLogo']
+                ?['rejectionReason'];
+        break;
+    }
+
+    return rejectionReason;
   }
 
   String _getOverallStatus() {
@@ -964,25 +996,20 @@ class _BusinessVerificationScreenState
       final currentUser = await _userService.getCurrentUser();
       if (currentUser == null) throw Exception('User not authenticated');
 
-      // Determine URL field based on document type
-      String urlField;
+      // Determine storage path based on document type
       String storagePath;
 
       switch (documentType) {
         case 'businessLicense':
-          urlField = 'businessLicenseUrl';
           storagePath = 'business_license.jpg';
           break;
         case 'taxCertificate':
-          urlField = 'taxCertificateUrl';
           storagePath = 'tax_certificate.jpg';
           break;
         case 'insuranceDocument':
-          urlField = 'insuranceDocumentUrl';
           storagePath = 'insurance_document.jpg';
           break;
         case 'businessLogo':
-          urlField = 'businessLogoUrl';
           storagePath = 'business_logo.jpg';
           break;
         default:
@@ -999,22 +1026,62 @@ class _BusinessVerificationScreenState
       final uploadTask = await storageRef.putFile(imageFile);
       final downloadUrl = await uploadTask.ref.getDownloadURL();
 
-      // Update Firestore with new document URL and reset status to pending
-// FIRESTORE_TODO: replace with REST service. Original: final businessRef = FirebaseFirestore.instance
-      final businessRef = FirebaseFirestore.instance
-          .collection('new_business_verifications')
-          .doc(currentUser.uid);
+      // Create update data with new document URL and reset status to pending
+      final updateData = <String, dynamic>{};
 
-      await businessRef.update({
-        urlField: downloadUrl,
-        'documentVerification.$documentType.status': 'pending',
-        'documentVerification.$documentType.rejectionReason':
-            FieldValue.delete(),
-        'documentVerification.$documentType.uploadedAt':
-            FieldValue.serverTimestamp(),
-        '${documentType}Status': 'pending', // Also update flat status field
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+      // Set the document URL field
+      switch (documentType) {
+        case 'businessLicense':
+          updateData['business_license_url'] = downloadUrl;
+          break;
+        case 'taxCertificate':
+          updateData['tax_certificate_url'] = downloadUrl;
+          break;
+        case 'insuranceDocument':
+          updateData['insurance_document_url'] = downloadUrl;
+          break;
+        case 'businessLogo':
+          updateData['business_logo_url'] = downloadUrl;
+          break;
+      }
+
+      // Also include current business data to maintain other fields
+      if (_businessData != null) {
+        updateData['business_name'] = _businessData!['businessName'];
+        updateData['business_email'] = _businessData!['businessEmail'];
+        updateData['business_phone'] = _businessData!['businessPhone'];
+        updateData['business_address'] = _businessData!['businessAddress'];
+        updateData['business_category'] = _businessData!['businessCategory'];
+        updateData['license_number'] = _businessData!['licenseNumber'];
+        updateData['tax_id'] = _businessData!['taxId'];
+        updateData['country_code'] = _businessData!['country'];
+        updateData['business_description'] =
+            _businessData!['businessDescription'];
+
+        // Include other document URLs to maintain them
+        if (documentType != 'businessLicense')
+          updateData['business_license_url'] =
+              _businessData!['businessLicenseUrl'];
+        if (documentType != 'taxCertificate')
+          updateData['tax_certificate_url'] =
+              _businessData!['taxCertificateUrl'];
+        if (documentType != 'insuranceDocument')
+          updateData['insurance_document_url'] =
+              _businessData!['insuranceDocumentUrl'];
+        if (documentType != 'businessLogo')
+          updateData['business_logo_url'] = _businessData!['businessLogoUrl'];
+      }
+
+      // Update business verification via REST API
+      print('DEBUG: Sending update data: $updateData');
+      final updateResponse = await ApiClient.instance.post(
+        '/api/business-verifications/',
+        data: updateData,
+      );
+
+      if (!updateResponse.isSuccess) {
+        throw Exception(updateResponse.message ?? 'Failed to update document');
+      }
 
       // Close loading dialog
       Navigator.pop(context);

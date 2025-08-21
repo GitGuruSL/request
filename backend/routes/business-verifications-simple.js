@@ -237,6 +237,7 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       country_code, // Accept country code as alternative
       city_id,
       description,
+      business_description, // Accept both field names
       business_license_url,
       tax_certificate_url,
       insurance_document_url,
@@ -281,26 +282,69 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
     const existingResult = await database.query(existingQuery, [userId]);
 
     if (existingResult.rows.length > 0) {
-      // Update existing record
+      // Get existing record to check for document changes
+      const currentQuery = 'SELECT * FROM business_verifications WHERE user_id = $1';
+      const currentResult = await database.query(currentQuery, [userId]);
+      const currentData = currentResult.rows[0];
+
+      // Check which documents are being updated and build status reset fields
+      const statusUpdates = [];
+      const statusValues = [];
+      let paramCounter = 16; // Starting after the main update parameters
+
+      // Check if business license is being updated
+      if (business_license_url && business_license_url !== currentData.business_license_url) {
+        statusUpdates.push(`business_license_status = $${++paramCounter}`);
+        statusValues.push('pending');
+        console.log('🔄 Resetting business license status to pending due to document change');
+      }
+
+      // Check if tax certificate is being updated
+      if (tax_certificate_url && tax_certificate_url !== currentData.tax_certificate_url) {
+        statusUpdates.push(`tax_certificate_status = $${++paramCounter}`);
+        statusValues.push('pending');
+        console.log('🔄 Resetting tax certificate status to pending due to document change');
+      }
+
+      // Check if insurance document is being updated
+      if (insurance_document_url && insurance_document_url !== currentData.insurance_document_url) {
+        statusUpdates.push(`insurance_document_status = $${++paramCounter}`);
+        statusValues.push('pending');
+        console.log('🔄 Resetting insurance document status to pending due to document change');
+      }
+
+      // Check if business logo is being updated
+      if (business_logo_url && business_logo_url !== currentData.business_logo_url) {
+        statusUpdates.push(`business_logo_status = $${++paramCounter}`);
+        statusValues.push('pending');
+        console.log('🔄 Resetting business logo status to pending due to document change');
+      }
+
+      // Build the update query with dynamic status resets
+      const statusUpdateClause = statusUpdates.length > 0 ? `, ${statusUpdates.join(', ')}` : '';
+      
       const updateQuery = `
         UPDATE business_verifications 
         SET business_name = $1, business_email = $2, business_phone = $3, 
             business_address = $4, business_category = $5, license_number = $6, 
-            tax_id = $7, country = $8, description = $9,
+            tax_id = $7, country = $8, business_description = $9,
             business_license_url = $10, tax_certificate_url = $11,
             insurance_document_url = $12, business_logo_url = $13,
             phone_verified = $14, email_verified = $15,
-            updated_at = CURRENT_TIMESTAMP
+            updated_at = CURRENT_TIMESTAMP${statusUpdateClause}
         WHERE user_id = $16
         RETURNING *
       `;
       
-      const result = await database.query(updateQuery, [
+      const updateValues = [
         business_name, business_email, business_phone, business_address,
         business_type, registration_number, tax_number, finalCountryValue, 
-        description, business_license_url, tax_certificate_url,
-        insurance_document_url, business_logo_url, phoneVerification.phoneVerified, emailVerification.emailVerified, userId
-      ]);
+        business_description || description, business_license_url, tax_certificate_url,
+        insurance_document_url, business_logo_url, phoneVerification.phoneVerified, emailVerification.emailVerified, userId,
+        ...statusValues
+      ];
+
+      const result = await database.query(updateQuery, updateValues);
 
       return res.json({
         success: true,
@@ -327,7 +371,7 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       const result = await database.query(insertQuery, [
         userId, business_name, business_email, business_phone, business_address,
         business_type, registration_number, tax_number, finalCountryValue, 
-        description, business_license_url, tax_certificate_url,
+        business_description || description, business_license_url, tax_certificate_url,
         insurance_document_url, business_logo_url, phoneVerification.phoneVerified, emailVerification.emailVerified
       ]);
 
