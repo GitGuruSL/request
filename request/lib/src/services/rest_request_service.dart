@@ -193,6 +193,7 @@ class CreateRequestData {
   final DateTime? deadline;
   final List<String>? imageUrls;
   final Map<String, dynamic>? metadata;
+  final String? requestType; // Add request_type field
 
   CreateRequestData({
     required this.title,
@@ -209,6 +210,7 @@ class CreateRequestData {
     this.deadline,
     this.imageUrls,
     this.metadata,
+    this.requestType, // Add request_type parameter
   });
 
   Map<String, dynamic> toJson() {
@@ -229,6 +231,7 @@ class CreateRequestData {
       if (deadline != null) 'deadline': deadline!.toIso8601String(),
       if (imageUrls != null) 'image_urls': imageUrls,
       if (metadata != null) 'metadata': metadata,
+      if (requestType != null) 'request_type': requestType, // Add request_type to JSON
     };
   }
 }

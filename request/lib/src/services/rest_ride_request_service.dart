@@ -54,6 +54,7 @@ class RestRideRequestService {
         locationLatitude: pickupLat,
         locationLongitude: pickupLng,
         countryCode: 'LK',
+        requestType: 'ride', // Add request_type field
         metadata: {
           'request_type': 'ride', // Identify this as a ride request
           'pickup': {
