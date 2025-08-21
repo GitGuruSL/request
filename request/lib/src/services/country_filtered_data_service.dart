@@ -8,6 +8,7 @@ import '../models/enhanced_user_model.dart' as enhanced;
 import 'rest_request_service.dart'
     show RestRequestService, RequestModel, RequestsResponse;
 import 'country_service.dart';
+import 'user_registration_service.dart';
 
 /// Provides country-scoped data streams for all app content
 /// Ensures users only see content from their selected country
@@ -17,6 +18,8 @@ class CountryFilteredDataService {
       CountryFilteredDataService._();
 
   final RestRequestService _requests = RestRequestService.instance;
+  final UserRegistrationService _registrationService =
+      UserRegistrationService.instance;
 
   /// Get the current user's country filter
   String? get currentCountry => CountryService.instance.countryCode;
@@ -54,7 +57,7 @@ class CountryFilteredDataService {
     }
   }
 
-  /// Get country-filtered requests stream
+  /// Get country-filtered requests stream with role-based filtering
   Stream<List<models.RequestModel>> getCountryRequestsStream({
     String? status,
     String? type,
@@ -70,29 +73,53 @@ class CountryFilteredDataService {
     }
 
     try {
+      // Check user's registration status and allowed request types
+      final allowedTypes = await _registrationService.getAllowedRequestTypes();
+      final driverVehicleTypeIds =
+          await _registrationService.getDriverVehicleTypeIds();
+
+      if (kDebugMode) {
+        print('🔐 User allowed request types: $allowedTypes');
+        print('🚗 Driver vehicle types: $driverVehicleTypeIds');
+      }
+
       // Convert type parameter for backend filtering
       String? requestTypeFilter;
       if (type != null) {
-        // Map UI enum names to backend request_type values
-        switch (type.toLowerCase()) {
+        // Only allow filtering for types the user is allowed to see
+        final normalizedType = type.toLowerCase();
+        String backendType;
+        switch (normalizedType) {
           case 'item':
-            requestTypeFilter = 'item';
+            backendType = 'item';
             break;
           case 'service':
-            requestTypeFilter = 'service';
+            backendType = 'service';
             break;
           case 'rental':
-            requestTypeFilter = 'rent'; // Map rental to rent
+            backendType = 'rent'; // Map rental to rent
             break;
           case 'delivery':
-            requestTypeFilter = 'delivery';
+            backendType = 'delivery';
             break;
           case 'ride':
-            requestTypeFilter = 'ride';
+            backendType = 'ride';
             break;
           case 'price':
-            requestTypeFilter = 'price';
+            backendType = 'price';
             break;
+          default:
+            backendType = normalizedType;
+        }
+
+        // Check if user is allowed to see this type
+        if (allowedTypes.contains(backendType)) {
+          requestTypeFilter = backendType;
+        } else {
+          if (kDebugMode)
+            print('🚫 User not allowed to see $backendType requests');
+          yield <models.RequestModel>[];
+          return;
         }
       }
 
@@ -111,6 +138,30 @@ class CountryFilteredDataService {
         // Apply additional client-side filters
         var filtered = result.requests;
 
+        // Filter by user's allowed request types
+        filtered = filtered.where((r) {
+          final requestType = r.requestType ??
+              r.metadata?['request_type']?.toString() ??
+              'item';
+          return allowedTypes.contains(requestType);
+        }).toList();
+
+        // For drivers: filter ride requests by vehicle type
+        if (requestTypeFilter == 'ride' &&
+            driverVehicleTypeIds != null &&
+            driverVehicleTypeIds.isNotEmpty) {
+          filtered = filtered.where((r) {
+            final vehicleTypeId = r.metadata?['vehicle_type_id']?.toString();
+            return vehicleTypeId != null &&
+                driverVehicleTypeIds.contains(vehicleTypeId);
+          }).toList();
+
+          if (kDebugMode) {
+            print(
+                '🚗 Filtered ${filtered.length} ride requests for vehicle types: $driverVehicleTypeIds');
+          }
+        }
+
         if (status != null) {
           filtered = filtered
               .where((r) => r.status.toLowerCase() == status.toLowerCase())
@@ -124,7 +175,6 @@ class CountryFilteredDataService {
                   r.description.toLowerCase().contains(query))
               .toList();
         }
-
         final converted = filtered.map(_convertToRequestModel).toList();
         if (kDebugMode)
           print(

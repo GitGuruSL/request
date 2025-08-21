@@ -4,6 +4,7 @@ import '../models/enhanced_user_model.dart';
 import '../services/country_filtered_data_service.dart';
 import '../services/country_service.dart';
 import '../services/module_service.dart';
+import '../services/user_registration_service.dart';
 import 'unified_request_response/unified_request_view_screen.dart';
 
 class BrowseScreen extends StatefulWidget {
@@ -16,6 +17,8 @@ class BrowseScreen extends StatefulWidget {
 class _BrowseScreenState extends State<BrowseScreen> {
   final CountryFilteredDataService _dataService =
       CountryFilteredDataService.instance;
+  final UserRegistrationService _registrationService =
+      UserRegistrationService.instance;
   String _searchQuery = '';
   RequestType? _selectedType;
   List<RequestModel> _requests = [];
@@ -35,11 +38,16 @@ class _BrowseScreenState extends State<BrowseScreen> {
     try {
       _currencySymbol = CountryService.instance.getCurrencySymbol();
 
+      // Load user's allowed request types based on registrations
+      final allowedRequestTypeStrings =
+          await _registrationService.getAllowedRequestTypes();
+
       // Load country modules configuration
       final countryCode = CountryService.instance.countryCode;
       if (countryCode != null) {
         _countryModules = await ModuleService.getCountryModules(countryCode);
-        _enabledRequestTypes = _getEnabledRequestTypes();
+        _enabledRequestTypes =
+            _getEnabledRequestTypes(allowedRequestTypeStrings);
       }
 
       await _loadRequests();
@@ -53,12 +61,12 @@ class _BrowseScreenState extends State<BrowseScreen> {
     }
   }
 
-  List<RequestType> _getEnabledRequestTypes() {
-    if (_countryModules == null) return RequestType.values;
+  List<RequestType> _getEnabledRequestTypes(List<String> allowedTypes) {
+    if (_countryModules == null) return [];
 
     List<RequestType> enabledTypes = [];
     _countryModules!.modules.forEach((moduleId, isEnabled) {
-      if (isEnabled) {
+      if (isEnabled && allowedTypes.contains(moduleId)) {
         RequestType? type = _getRequestTypeFromModuleId(moduleId);
         if (type != null) {
           enabledTypes.add(type);
