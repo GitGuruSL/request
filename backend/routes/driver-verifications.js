@@ -1432,7 +1432,7 @@ router.post('/verify-phone/verify-otp', auth.authMiddleware(), async (req, res) 
     if (verificationResult.verified) {
       // Update driver verification phone verification status
       await database.query(
-        'UPDATE driver_verifications SET phone_verified = true, phone_verified_at = NOW() WHERE user_id = $1',
+        'UPDATE driver_verifications SET phone_verified = true WHERE user_id = $1',
         [userId]
       );
 

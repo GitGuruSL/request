@@ -951,7 +951,7 @@ router.post('/verify-phone/verify-otp', auth.authMiddleware(), async (req, res) 
         // 1. Update business verification phone verification status
         await database.query(`
           UPDATE business_verifications 
-          SET phone_verified = true, phone_verified_at = NOW() 
+          SET phone_verified = true 
           WHERE user_id = $1
         `, [userId]);
 
