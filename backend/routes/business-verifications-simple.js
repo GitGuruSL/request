@@ -6,21 +6,29 @@ const { getSignedUrl } = require('../services/s3Upload');
 
 console.log('🏢 Simple business verification routes loaded');
 
-// Phone number normalization function
+// Phone number normalization function (unified with driver verification)
 function normalizePhoneNumber(phone) {
   if (!phone) return null;
-  // Remove all non-digit characters
-  const digitsOnly = phone.replace(/\D/g, '');
-  
-  // If it starts with country code 94 (Sri Lanka), remove it for comparison
-  if (digitsOnly.startsWith('94') && digitsOnly.length > 9) {
-    return digitsOnly.substring(2); // Remove '94' prefix
+  // Remove all non-digit characters except +
+  let normalized = phone.replace(/[^\d+]/g, '');
+  // If starts with +94, keep as is
+  if (normalized.startsWith('+94')) {
+    return normalized;
   }
-  
-  return digitsOnly;
-}
-
-// Helper function to check and update phone verification status (unified with driver verification)
+  // If starts with 94, add +
+  if (normalized.startsWith('94') && normalized.length === 11) {
+    return '+' + normalized;
+  }
+  // If starts with 0, replace with +94
+  if (normalized.startsWith('0') && normalized.length === 10) {
+    return '+94' + normalized.substring(1);
+  }
+  // If 9 digits, assume it's without leading 0, add +94
+  if (normalized.length === 9) {
+    return '+94' + normalized;
+  }
+  return normalized;
+}// Helper function to check and update phone verification status (unified with driver verification)
 async function checkPhoneVerificationStatus(userId, phoneNumber) {
   try {
     // Check if user exists and get current phone status
@@ -37,16 +45,17 @@ async function checkPhoneVerificationStatus(userId, phoneNumber) {
     
     // Normalize phone numbers for comparison
     const normalizedUserPhone = normalizePhoneNumber(user.phone);
-    const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber);
+    const normalizedPhone = normalizePhoneNumber(phoneNumber);
+    console.log(`🔍 Checking phone verification for user ${userId}, phone: ${phoneNumber} → ${normalizedPhone}`);
     
     // 1. Check if phone is verified in business_verifications table (priority 1)
     console.log(`📱 Checking business_verifications table for phone verification...`);
     const businessQuery = `
-      SELECT phone_verified, phone_verified_at 
+      SELECT phone_verified 
       FROM business_verifications 
-      WHERE user_id = $1 AND phone_number = $2 AND phone_verified = true
+      WHERE user_id = $1 AND (business_phone = $2 OR business_phone = $3) AND phone_verified = true
     `;
-    const businessResult = await database.query(businessQuery, [userId, normalizedPhoneNumber]);
+    const businessResult = await database.query(businessQuery, [userId, normalizedPhone, phoneNumber]);
     
     if (businessResult.rows.length > 0) {
       console.log(`✅ Phone verification found in business_verifications table!`);
@@ -54,19 +63,18 @@ async function checkPhoneVerificationStatus(userId, phoneNumber) {
         phoneVerified: true, 
         needsUpdate: false, 
         requiresManualVerification: false, 
-        verificationSource: 'business_verification',
-        verifiedAt: businessResult.rows[0].phone_verified_at
+        verificationSource: 'business_verification'
       };
     }
 
     // 2. Check if phone is verified in driver_verifications table (priority 2)
     console.log(`📱 Checking driver_verifications table for phone verification...`);
     const driverQuery = `
-      SELECT phone_verified, phone_verified_at 
+      SELECT phone_verified 
       FROM driver_verifications 
-      WHERE user_id = $1 AND phone_number = $2 AND phone_verified = true
+      WHERE user_id = $1 AND (phone_number = $2 OR phone_number = $3) AND phone_verified = true
     `;
-    const driverResult = await database.query(driverQuery, [userId, normalizedPhoneNumber]);
+    const driverResult = await database.query(driverQuery, [userId, normalizedPhone, phoneNumber]);
     
     if (driverResult.rows.length > 0) {
       console.log(`✅ Phone verification found in driver_verifications table!`);
@@ -74,8 +82,7 @@ async function checkPhoneVerificationStatus(userId, phoneNumber) {
         phoneVerified: true, 
         needsUpdate: true, 
         requiresManualVerification: false, 
-        verificationSource: 'driver_verification',
-        verifiedAt: driverResult.rows[0].phone_verified_at
+        verificationSource: 'driver_verification'
       };
     }
     
@@ -90,13 +97,13 @@ async function checkPhoneVerificationStatus(userId, phoneNumber) {
     }
     
     // If phone numbers match and user is verified, phone is verified
-    if (normalizedUserPhone === normalizedPhoneNumber && user.phone_verified) {
-      console.log(`📱 Phone auto-verified: ${normalizedUserPhone} === ${normalizedPhoneNumber}`);
+    if (normalizedUserPhone === normalizedPhone && user.phone_verified) {
+      console.log(`📱 Phone auto-verified: ${normalizedUserPhone} === ${normalizedPhone}`);
       return { phoneVerified: true, needsUpdate: false, requiresManualVerification: false, verificationSource: 'registration' };
     }
     
     // If phone numbers match but not verified, check OTP verification table
-    if (normalizedUserPhone === normalizedPhoneNumber) {
+    if (normalizedUserPhone === normalizedPhone) {
       const otpResult = await database.query(
         'SELECT verified FROM phone_otp_verifications WHERE phone = $1 AND verified = true ORDER BY verified_at DESC LIMIT 1',
         [phoneNumber]
@@ -149,9 +156,9 @@ async function checkEmailVerificationStatus(userId, email) {
     // 1. Check if email is verified in business_verifications table (priority 1)
     console.log(`📧 Checking business_verifications table for email verification...`);
     const businessQuery = `
-      SELECT email_verified, email_verified_at 
+      SELECT email_verified 
       FROM business_verifications 
-      WHERE user_id = $1 AND LOWER(email) = $2 AND email_verified = true
+      WHERE user_id = $1 AND LOWER(business_email) = $2 AND email_verified = true
     `;
     const businessResult = await database.query(businessQuery, [userId, normalizedEmail]);
     
@@ -161,15 +168,14 @@ async function checkEmailVerificationStatus(userId, email) {
         emailVerified: true, 
         needsUpdate: false, 
         requiresManualVerification: false, 
-        verificationSource: 'business_verification',
-        verifiedAt: businessResult.rows[0].email_verified_at
+        verificationSource: 'business_verification'
       };
     }
 
     // 2. Check if email is verified in driver_verifications table (priority 2)
     console.log(`📧 Checking driver_verifications table for email verification...`);
     const driverQuery = `
-      SELECT email_verified, email_verified_at 
+      SELECT email_verified 
       FROM driver_verifications 
       WHERE user_id = $1 AND LOWER(email) = $2 AND email_verified = true
     `;
@@ -181,8 +187,7 @@ async function checkEmailVerificationStatus(userId, email) {
         emailVerified: true, 
         needsUpdate: true, 
         requiresManualVerification: false, 
-        verificationSource: 'driver_verification',
-        verifiedAt: driverResult.rows[0].email_verified_at
+        verificationSource: 'driver_verification'
       };
     }
 
@@ -450,6 +455,14 @@ router.get('/user/:userId', auth.authMiddleware(), async (req, res) => {
 
     // Transform data to match admin panel expectations (camelCase)
     const row = result.rows[0];
+    
+    // Check phone and email verification status using unified system
+    const phoneStatus = await checkPhoneVerificationStatus(userId, row.business_phone);
+    const emailStatus = await checkEmailVerificationStatus(userId, row.business_email);
+    
+    console.log('📱 Business phone verification result:', phoneStatus);
+    console.log('📧 Business email verification result:', emailStatus);
+    
     const transformedData = {
       ...row,
       // Add camelCase aliases for admin panel
@@ -476,15 +489,20 @@ router.get('/user/:userId', auth.authMiddleware(), async (req, res) => {
       taxCertificateRejectionReason: row.tax_certificate_rejection_reason,
       documentVerification: row.document_verification,
       isVerified: row.is_verified,
-      phoneVerified: row.phone_verified,
-      emailVerified: row.email_verified,
       reviewedBy: row.reviewed_by,
       reviewedDate: row.reviewed_date,
       submittedAt: row.submitted_at,
       approvedAt: row.approved_at,
       lastUpdated: row.last_updated,
       createdAt: row.created_at,
-      updatedAt: row.updated_at
+      updatedAt: row.updated_at,
+      // Add unified verification status (overrides database values)
+      phoneVerified: phoneStatus.phoneVerified,
+      phoneVerificationSource: phoneStatus.verificationSource,
+      requiresPhoneVerification: phoneStatus.requiresManualVerification,
+      emailVerified: emailStatus.emailVerified,
+      emailVerificationSource: emailStatus.verificationSource,
+      requiresEmailVerification: emailStatus.requiresManualVerification
     };
 
     res.json({
