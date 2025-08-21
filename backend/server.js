@@ -44,6 +44,7 @@ const countryVariableTypeRoutes = require('./routes/country-variable-types');
 const adminUserRoutes = require('./routes/admin-users');
 const driverVerificationRoutes = require('./routes/driver-verifications');
 const businessVerificationRoutes = require('./routes/business-verifications-simple'); // Use the simple working version
+const unifiedVerificationRoutes = require('./routes/unified-verification'); // Unified verification service
 const adminSMSRoutes = require('./routes/admin-sms');
 const emailVerificationRoutes = require('./routes/email-verification');
 const adminEmailManagementRoutes = require('./routes/admin-email-management');
@@ -180,6 +181,7 @@ app.use('/api/country-variable-types', countryVariableTypeRoutes);
 app.use('/api/admin-users', adminUserRoutes);
 app.use('/api/driver-verifications', driverVerificationRoutes);
 app.use('/api/business-verifications', businessVerificationRoutes); // NEW - Business verification routes
+app.use('/api/unified-verification', unifiedVerificationRoutes); // Unified verification service
 app.use('/api/email-verification', emailVerificationRoutes); // Email OTP verification routes
 app.use('/api/temp-migration', tempMigrationRoutes); // Temporary migration routes
 

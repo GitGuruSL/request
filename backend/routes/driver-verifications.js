@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const database = require('../services/database');
 const auth = require('../services/auth');
+const { checkUnifiedPhoneVerification, checkUnifiedEmailVerification } = require('../utils/unifiedVerification');
 const { getSignedUrl } = require('../services/s3Upload');
 
 console.log('🔧 Driver verifications route loaded');
@@ -30,194 +31,14 @@ function normalizePhoneNumber(phone) {
   return normalized;
 }
 
-// Unified helper function to check and update phone verification status
+// Use unified phone verification checker
 async function checkPhoneVerificationStatus(userId, phoneNumber) {
-  try {
-    if (!phoneNumber) {
-      return { phoneVerified: false, needsUpdate: false, requiresManualVerification: true };
-    }
-
-    const normalizedPhone = normalizePhoneNumber(phoneNumber);
-    console.log(`🔍 Checking phone verification for user ${userId}, phone: ${phoneNumber} → ${normalizedPhone}`);
-
-    // 1. Check if phone is verified in driver_verifications table
-    // Try both normalized and original phone formats for backward compatibility
-    const driverResult = await database.query(
-      'SELECT phone_verified FROM driver_verifications WHERE user_id = $1 AND (phone_number = $2 OR phone_number = $3) AND phone_verified = true',
-      [userId, normalizedPhone, phoneNumber]
-    );
-    
-    if (driverResult.rows.length > 0) {
-      console.log(`✅ Phone ${normalizedPhone} is verified in driver_verifications table`);
-      return { phoneVerified: true, needsUpdate: false, requiresManualVerification: false, verificationSource: 'driver_verification' };
-    }
-
-    // 2. Check if phone is verified in business_verifications table
-    const businessResult = await database.query(
-      'SELECT phone_verified FROM business_verifications WHERE user_id = $1 AND phone_number = $2 AND phone_verified = true',
-      [userId, normalizedPhone]
-    );
-    
-    if (businessResult.rows.length > 0) {
-      console.log(`✅ Phone ${normalizedPhone} is verified in business_verifications table`);
-      return { phoneVerified: true, needsUpdate: true, requiresManualVerification: false, verificationSource: 'business_verification' };
-    }
-
-    // 3. Check if user exists and get personal phone
-    const userResult = await database.query(
-      'SELECT phone, phone_verified FROM users WHERE id = $1',
-      [userId]
-    );
-    
-    if (userResult.rows.length === 0) {
-      console.log(`❌ User ${userId} not found`);
-      return { phoneVerified: false, needsUpdate: false, requiresManualVerification: true };
-    }
-    
-    const user = userResult.rows[0];
-    const normalizedUserPhone = normalizePhoneNumber(user.phone);
-
-    // 4. Check if the driver phone matches user's personal phone and it's verified
-    if (normalizedPhone === normalizedUserPhone && user.phone_verified === true) {
-      console.log(`✅ Driver phone matches verified personal phone: ${normalizedPhone}`);
-      return { phoneVerified: true, needsUpdate: true, requiresManualVerification: false, verificationSource: 'personal_phone' };
-    }
-
-    // 4. Check if there's any OTP verification history for this phone
-    try {
-      const otpResult = await database.query(
-        'SELECT verified FROM phone_otp_verifications WHERE phone = $1 AND verified = true ORDER BY verified_at DESC LIMIT 1',
-        [normalizedPhone]
-      );
-      
-      if (otpResult.rows.length > 0) {
-        console.log(`✅ Phone ${normalizedPhone} has verified OTP history - allowing verification`);
-        return { phoneVerified: true, needsUpdate: true, requiresManualVerification: false, verificationSource: 'otp_history' };
-      }
-    } catch (otpError) {
-      console.log(`⚠️ Could not check OTP history for ${normalizedPhone}:`, otpError.message);
-    }
-
-    // 5. Phone not verified - manual verification required
-    console.log(`❌ Phone ${normalizedPhone} not verified - manual verification required`);
-    return { phoneVerified: false, needsUpdate: true, requiresManualVerification: true };
-  } catch (error) {
-    console.error('Error checking phone verification:', error);
-    return { phoneVerified: false, needsUpdate: false, requiresManualVerification: true };
-  }
+  return await checkUnifiedPhoneVerification(userId, phoneNumber);
 }
 
-// Unified helper function to check and update email verification status
+// Use unified email verification checker  
 async function checkEmailVerificationStatus(userId, email) {
-  try {
-    if (!email) {
-      return { emailVerified: false, needsUpdate: false, requiresManualVerification: true };
-    }
-
-    console.log(`🔍 Checking email verification for user ${userId}, email: ${email}`);
-
-    // Get user's current information
-    const userResult = await database.query(
-      'SELECT email, email_verified FROM users WHERE id = $1',
-      [userId]
-    );
-    
-    if (userResult.rows.length === 0) {
-      console.log(`❌ User ${userId} not found`);
-      return { emailVerified: false, needsUpdate: false, requiresManualVerification: true };
-    }
-    
-    const user = userResult.rows[0];
-    const normalizedEmail = email.toLowerCase();
-
-    // 1. Check if email is verified in driver_verifications table (priority 1)
-    console.log(`📧 Checking driver_verifications table for email verification...`);
-    const driverQuery = `
-      SELECT email_verified 
-      FROM driver_verifications 
-      WHERE user_id = $1 AND LOWER(email) = $2 AND email_verified = true
-    `;
-    const driverResult = await database.query(driverQuery, [userId, normalizedEmail]);
-    
-    if (driverResult.rows.length > 0) {
-      console.log(`✅ Email verification found in driver_verifications table!`);
-      return { 
-        emailVerified: true, 
-        needsUpdate: false, 
-        requiresManualVerification: false, 
-        verificationSource: 'driver_verification'
-      };
-    }
-
-    // 2. Check if email is verified in business_verifications table (priority 2)
-    console.log(`📧 Checking business_verifications table for email verification...`);
-    const businessQuery = `
-      SELECT email_verified 
-      FROM business_verifications 
-      WHERE user_id = $1 AND LOWER(business_email) = $2 AND email_verified = true
-    `;
-    const businessResult = await database.query(businessQuery, [userId, normalizedEmail]);
-    
-    if (businessResult.rows.length > 0) {
-      console.log(`✅ Email verification found in business_verifications table!`);
-      return { 
-        emailVerified: true, 
-        needsUpdate: true, 
-        requiresManualVerification: false, 
-        verificationSource: 'business_verification'
-      };
-    }
-
-    // 3. Check if the driver email matches user's personal email and it's verified (priority 3)
-    if (user.email && user.email.toLowerCase() === normalizedEmail && user.email_verified) {
-      console.log(`✅ Email ${email} verified via users table`);
-      return { 
-        emailVerified: true, 
-        needsUpdate: false, 
-        requiresManualVerification: false, 
-        verificationSource: 'personal_verification'
-      };
-    }
-
-    // 4. If user has no email, update it
-    if (!user.email && email) {
-      await database.query(
-        'UPDATE users SET email = $1, updated_at = NOW() WHERE id = $2',
-        [email, userId]
-      );
-      console.log(`📧 Updated user ${userId} email to ${email}`);
-      return { emailVerified: false, needsUpdate: true, requiresManualVerification: true };
-    }
-
-    // 5. Check email verification table if emails match but not verified
-    if (user.email && user.email.toLowerCase() === normalizedEmail) {
-      const emailVerificationResult = await database.query(
-        'SELECT verified FROM email_otp_verifications WHERE email = $1 AND verified = true ORDER BY verified_at DESC LIMIT 1',
-        [email]
-      );
-      
-      if (emailVerificationResult.rows.length > 0) {
-        // Update user verification status
-        await database.query(
-          'UPDATE users SET email_verified = true, updated_at = NOW() WHERE id = $1',
-          [userId]
-        );
-        console.log(`✅ Auto-verified email for user ${userId}`);
-        return { emailVerified: true, needsUpdate: true, requiresManualVerification: false, verificationSource: 'otp' };
-      }
-    }
-
-    console.log(`❌ Email ${email} not verified for user ${userId}`);
-    return { 
-      emailVerified: false, 
-      needsUpdate: false, 
-      requiresManualVerification: true,
-      verificationSource: null
-    };
-  } catch (error) {
-    console.error('Error checking email verification:', error);
-    return { emailVerified: false, needsUpdate: false, requiresManualVerification: true };
-  }
+  return await checkUnifiedEmailVerification(userId, email);
 }
 
 // Debug endpoint to check verification status
