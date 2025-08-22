@@ -211,19 +211,11 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
     }
   }
 
-  double? _getCheapestFare() {
-    final fares = _responses
-        .map((r) => r.price)
-        .where((p) => p != null && p > 0)
-        .cast<double>()
-        .toList();
-    if (fares.isEmpty) return null;
-    fares.sort();
-    return fares.first;
-  }
+  // Removed cheapest fare computation per requirement
+  // double? _getCheapestFare() { ... }
 
   Widget _buildResponsesSection() {
-    final currencySymbol = CurrencyHelper.instance.getCurrencySymbol();
+    // Removed cheapest label; currency symbol not needed here
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -272,22 +264,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                   ),
                 ),
               ),
-              if (_getCheapestFare() != null)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.orange[50],
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    'Cheapest  $currencySymbol${_getCheapestFare()!.toStringAsFixed(0)}',
-                    style: const TextStyle(
-                      color: Colors.deepOrange,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
+              // Removed cheapest badge per requirement
             ],
           ),
         ],

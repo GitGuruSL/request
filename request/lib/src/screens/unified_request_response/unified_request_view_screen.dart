@@ -1240,16 +1240,7 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
 
   Widget _responsesSection() {
     // Compute cheapest price
-    double? cheapest;
-    String? cheapestCurrency;
-    for (final r in _responses) {
-      if (r.price != null) {
-        if (cheapest == null || r.price! < cheapest) {
-          cheapest = r.price;
-          cheapestCurrency = r.currency ?? _request?.currency;
-        }
-      }
-    }
+    // Removed cheapest price computation per requirement
 
     final typeColor = _getTypeColor(_getCurrentRequestType());
 
@@ -1298,13 +1289,6 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                   _infoChip(
                       label: 'Total',
                       value: _responses.length.toString(),
-                      color: typeColor),
-                  const SizedBox(width: 8),
-                  _infoChip(
-                      label: 'Cheapest',
-                      value: cheapest != null
-                          ? '${cheapestCurrency ?? ''}${cheapest.toStringAsFixed(0)}'
-                          : '—',
                       color: typeColor),
                 ])
             ]

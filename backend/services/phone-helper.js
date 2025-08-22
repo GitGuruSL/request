@@ -89,14 +89,17 @@ async function getBusinessVerificationPhone(userId) {
   // try final/approved business verification phone when available
   try {
     const r = await db.queryOne(`
-      SELECT phone_number, status
+      SELECT business_phone AS phone_number, status,
+             COALESCE(phone_verified, false) AS phone_verified,
+             COALESCE(is_verified, false)   AS is_verified
       FROM business_verifications
       WHERE user_id=$1
       ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST
       LIMIT 1
     `, [userId]);
     if (!r) return null;
-    const ok = (r.status || '').toLowerCase() === 'approved' || (r.status || '').toLowerCase() === 'verified';
+    const st = (r.status || '').toLowerCase();
+    const ok = !!(r.is_verified || r.phone_verified || st === 'approved' || st === 'verified');
     return { phone: normalizeE164(r.phone_number), source: 'business_verifications', verified: ok };
   } catch { return null; }
 }
@@ -104,14 +107,17 @@ async function getBusinessVerificationPhone(userId) {
 async function getDriverVerificationPhone(userId) {
   try {
     const r = await db.queryOne(`
-      SELECT phone_number, status
+      SELECT phone_number, status,
+             COALESCE(phone_verified, false) AS phone_verified,
+             COALESCE(is_verified, false)    AS is_verified
       FROM driver_verifications
       WHERE user_id=$1
       ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST
       LIMIT 1
     `, [userId]);
     if (!r) return null;
-    const ok = (r.status || '').toLowerCase() === 'approved' || (r.status || '').toLowerCase() === 'verified' || (r.status || '').toLowerCase() === 'complete';
+    const st = (r.status || '').toLowerCase();
+    const ok = !!(r.is_verified || r.phone_verified || st === 'approved' || st === 'verified' || st === 'complete');
     return { phone: normalizeE164(r.phone_number), source: 'driver_verifications', verified: ok };
   } catch { return null; }
 }

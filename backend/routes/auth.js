@@ -506,12 +506,12 @@ router.post('/profile/verify-phone-otp', authService.authMiddleware(), async (re
                 [normalizedPhone, userId]
             );
 
-            // Add or update phone in user_phone_numbers table for professional use
+            // Add or update phone in user_phone_numbers table (align with schema: label, is_verified)
             await dbService.query(
-                `INSERT INTO user_phone_numbers (user_id, phone_number, phone_type, verified, verified_at, purpose, created_at)
+                `INSERT INTO user_phone_numbers (user_id, phone_number, label, is_verified, verified_at, purpose, created_at)
                  VALUES ($1, $2, 'personal', true, NOW(), 'profile_update', NOW())
                  ON CONFLICT (user_id, phone_number) DO UPDATE SET
-                 verified = true, verified_at = NOW(), phone_type = 'personal', purpose = 'profile_update'`,
+                 is_verified = true, verified_at = NOW(), label = 'personal', purpose = 'profile_update'`,
                 [userId, normalizedPhone]
             );
 
