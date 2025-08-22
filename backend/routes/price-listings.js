@@ -1,6 +1,6 @@
 const express = require('express');
 const database = require('../services/database');
-const auth = require('../middleware/auth');
+const authService = require('../services/auth');
 const multer = require('multer');
 const path = require('path');
 
@@ -32,6 +32,9 @@ const upload = multer({
     }
   }
 });
+
+// Initialize auth service
+const authInstance = new authService();
 
 // Helper function to format price listing data
 function formatPriceListing(row, includeBusiness = false) {
@@ -492,7 +495,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/price-listings - Create a new price listing (Business users only)
-router.post('/', auth.authMiddleware(), upload.array('images', 5), async (req, res) => {
+router.post('/', authInstance.authMiddleware(), upload.array('images', 5), async (req, res) => {
   try {
     const userId = req.user.id; // Fixed: use 'id' instead of 'uid'
     
@@ -602,7 +605,7 @@ router.post('/', auth.authMiddleware(), upload.array('images', 5), async (req, r
 });
 
 // PUT /api/price-listings/:id - Update a price listing (Business owner only)
-router.put('/:id', auth.authMiddleware(), upload.array('images', 5), async (req, res) => {
+router.put('/:id', authInstance.authMiddleware(), upload.array('images', 5), async (req, res) => {
   try {
     const userId = req.user.uid;
     const { id } = req.params;
@@ -754,7 +757,7 @@ router.put('/:id', auth.authMiddleware(), upload.array('images', 5), async (req,
 });
 
 // DELETE /api/price-listings/:id - Delete/deactivate a price listing (Business owner only)
-router.delete('/:id', auth.authMiddleware(), async (req, res) => {
+router.delete('/:id', authInstance.authMiddleware(), async (req, res) => {
   try {
     const userId = req.user.uid;
     const { id } = req.params;
