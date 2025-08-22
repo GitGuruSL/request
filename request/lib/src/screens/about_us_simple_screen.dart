@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/content_service.dart';
 import 'content_page_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AboutUsSimpleScreen extends StatefulWidget {
   const AboutUsSimpleScreen({super.key});
@@ -13,6 +14,7 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
   final ContentService _contentService = ContentService.instance;
   List<ContentPage> _pages = [];
   bool _loading = true;
+  String? _appVersion;
 
   @override
   void initState() {
@@ -29,16 +31,15 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
           _loading = false;
         });
     } catch (_) {
-      if (mounted)
-        setState(() {
-          _loading = false;
-        });
+      if (mounted) {
+        _loading = false;
+        setState(() {});
+      }
     }
   }
 
   ContentPage? _findPageByKeywords(List<String> keywords) {
-    final lower = _pages;
-    for (final p in lower) {
+    for (final p in _pages) {
       final title = p.title.toLowerCase();
       final cat = (p.category ?? '').toLowerCase();
       if (keywords.any((k) => title.contains(k) || cat.contains(k))) {
@@ -61,17 +62,100 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
+                // Header logo (optional via metadata.logoUrl)
+                if (_getMeta<String>('logoUrl')?.isNotEmpty == true)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Center(
+                      child: Image.network(
+                        _getMeta<String>('logoUrl')!,
+                        height: 48,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
                   ),
+
+                // About text
+                if (_getMeta<String>('aboutText')?.isNotEmpty == true)
+                  _sectionCard(
+                    child: Text(
+                      _getMeta<String>('aboutText')!,
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  ),
+
+                // Address
+                if (_getMeta<String>('hqTitle') != null ||
+                    _getMeta<String>('hqAddress') != null)
+                  _sectionCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (_getMeta<String>('hqTitle')?.isNotEmpty == true)
+                          Text(_getMeta<String>('hqTitle')!,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w600, fontSize: 16)),
+                        if (_getMeta<String>('hqAddress')?.isNotEmpty == true)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(_getMeta<String>('hqAddress')!,
+                                style: const TextStyle(fontSize: 16)),
+                          ),
+                      ],
+                    ),
+                  ),
+
+                // Support numbers row
+                if (_getMeta<String>('supportPassenger')?.isNotEmpty == true ||
+                    _getMeta<String>('hotline')?.isNotEmpty == true)
+                  _sectionCard(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _contactColumn('Support - Passenger',
+                            _getMeta<String>('supportPassenger')),
+                        _contactColumn('Hotline', _getMeta<String>('hotline')),
+                      ],
+                    ),
+                  ),
+
+                // Website link
+                if (_getMeta<String>('websiteUrl')?.isNotEmpty == true)
+                  _sectionCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Website',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 16)),
+                        const SizedBox(height: 6),
+                        InkWell(
+                          onTap: () =>
+                              _launchUrl(_getMeta<String>('websiteUrl')!),
+                          child: Text(
+                            _getMeta<String>('websiteUrl')!,
+                            style: const TextStyle(
+                                color: Colors.indigo, fontSize: 16),
+                          ),
+                        )
+                      ],
+                    ),
+                  ),
+
+                // Feedback blurb
+                if (_getMeta<String>('feedbackText')?.isNotEmpty == true)
+                  _sectionCard(
+                    child: Text(_getMeta<String>('feedbackText')!,
+                        style: const TextStyle(fontSize: 16)),
+                  ),
+
+                // Legal and Privacy links
+                _sectionCard(
                   child: Column(
                     children: [
                       _tile(
                         icon: Icons.gavel_outlined,
                         title: 'Legal',
-                        subtitle: 'Terms and legal information',
                         onTap: () {
                           final preferred = _findPageByKeywords(
                               ['terms', 'legal', 'conditions']);
@@ -80,29 +164,26 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
                               context,
                               MaterialPageRoute(
                                 builder: (_) => ContentPageScreen(
-                                  slug: preferred.slug,
-                                  title: preferred.title,
-                                ),
+                                    slug: preferred.slug,
+                                    title: preferred.title),
                               ),
                             );
-                            return;
-                          }
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const ContentPageScreen(
-                                slug: 'terms-conditions',
-                                title: 'Terms & Conditions',
+                          } else {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const ContentPageScreen(
+                                    slug: 'terms-conditions',
+                                    title: 'Terms & Conditions'),
                               ),
-                            ),
-                          );
+                            );
+                          }
                         },
                       ),
                       _divider(),
                       _tile(
                         icon: Icons.privacy_tip_outlined,
                         title: 'Privacy Policy',
-                        subtitle: 'How we handle your data',
                         onTap: () {
                           final preferred =
                               _findPageByKeywords(['privacy', 'policy']);
@@ -111,28 +192,66 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
                               context,
                               MaterialPageRoute(
                                 builder: (_) => ContentPageScreen(
-                                  slug: preferred.slug,
-                                  title: preferred.title,
-                                ),
+                                    slug: preferred.slug,
+                                    title: preferred.title),
                               ),
                             );
-                            return;
-                          }
-                          // fallback by slug
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const ContentPageScreen(
-                                slug: 'privacy-policy',
-                                title: 'Privacy Policy',
+                          } else {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const ContentPageScreen(
+                                    slug: 'privacy-policy',
+                                    title: 'Privacy Policy'),
                               ),
-                            ),
-                          );
+                            );
+                          }
                         },
                       ),
                     ],
                   ),
                 ),
+
+                // Socials row (optional)
+                if (_getMeta<String>('facebookUrl')?.isNotEmpty == true ||
+                    _getMeta<String>('xUrl')?.isNotEmpty == true)
+                  _sectionCard(
+                    child: Row(
+                      children: [
+                        const Text('Follow Us',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 16)),
+                        const SizedBox(width: 12),
+                        if (_getMeta<String>('facebookUrl')?.isNotEmpty == true)
+                          IconButton(
+                            icon:
+                                const Icon(Icons.facebook, color: Colors.blue),
+                            onPressed: () =>
+                                _launchUrl(_getMeta<String>('facebookUrl')!),
+                          ),
+                        if (_getMeta<String>('xUrl')?.isNotEmpty == true)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8.0),
+                            child: IconButton(
+                              icon: const Icon(Icons.public,
+                                  color: Colors.black87),
+                              onPressed: () =>
+                                  _launchUrl(_getMeta<String>('xUrl')!),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+
+                // App version footer
+                if (_appVersion != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Center(
+                      child: Text('App version $_appVersion',
+                          style: TextStyle(color: Colors.grey[600])),
+                    ),
+                  ),
               ],
             ),
     );
@@ -141,7 +260,6 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
   Widget _tile({
     required IconData icon,
     required String title,
-    String? subtitle,
     required VoidCallback onTap,
   }) {
     return InkWell(
@@ -167,12 +285,6 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
                   Text(title,
                       style: const TextStyle(
                           fontSize: 16, fontWeight: FontWeight.w500)),
-                  if (subtitle != null) ...[
-                    const SizedBox(height: 2),
-                    Text(subtitle,
-                        style:
-                            TextStyle(fontSize: 12, color: Colors.grey[600])),
-                  ],
                 ],
               ),
             ),
@@ -184,4 +296,56 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
   }
 
   Widget _divider() => Container(height: 1, color: Colors.grey[200]);
+
+  // Helpers to build sections from metadata
+  T? _getMeta<T>(String key) {
+    // Prefer About Us page metadata; else search other pages
+    final page = _findPageByKeywords(['about', 'company']);
+    final meta = page?.metadata ?? {};
+    final v = meta[key];
+    if (v is T) return v;
+    if (v is String && T == String) return v as T;
+    return null;
+  }
+
+  Widget _sectionCard({required Widget child}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: child,
+    );
+  }
+
+  Widget _contactColumn(String label, String? value) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style:
+                  const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+          const SizedBox(height: 6),
+          if (value != null && value.isNotEmpty)
+            InkWell(
+              onTap: () => _launchUrl('tel:$value'),
+              child: Text(value,
+                  style: const TextStyle(color: Colors.indigo, fontSize: 16)),
+            )
+        ],
+      ),
+    );
+  }
+
+  Future<void> _launchUrl(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (_) {}
+  }
 }

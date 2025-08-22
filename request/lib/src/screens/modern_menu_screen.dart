@@ -250,7 +250,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
         title: 'Products',
         icon: Icons.inventory_2_outlined,
         color: Colors.orange,
-        route: '/business-pricing',
+        route: '/price',
       ),
       _MenuItem(
         title: 'Messages',

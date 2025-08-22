@@ -293,23 +293,22 @@ router.get('/search', async (req, res) => {
     const isPopularProductsRequest = !query || query.trim().length === 0;
     const searchTerm = isPopularProductsRequest ? null : query.trim();
 
+    // Load products that actually have price listings, regardless of country_products activation
+    // Source of truth: price_listings joined with master_products
     let searchQuery = `
       SELECT DISTINCT
-        cp.product_id as id,
-        cp.product_name as name,
-        LOWER(REPLACE(cp.product_name, ' ', '-')) as slug,
-  NULL as base_unit,
-  NULL as brand_name,
+        mp.id as id,
+        mp.name as name,
+        LOWER(REPLACE(mp.name, ' ', '-')) as slug,
+        mp.base_unit as base_unit,
+        NULL as brand_name,
         COUNT(pl.id) as listing_count,
         MIN(pl.price) as min_price,
         MAX(pl.price) as max_price,
         AVG(pl.price) as avg_price
-      FROM country_products cp
-      LEFT JOIN price_listings pl ON cp.product_id = pl.master_product_id 
-        AND pl.is_active = true 
-        AND pl.country_code = $1
-      WHERE cp.is_active = true
-        AND cp.country_code = $1
+      FROM price_listings pl
+      JOIN master_products mp ON mp.id = pl.master_product_id
+      WHERE pl.is_active = true AND pl.country_code = $1
     `;
 
     let queryParams = [country];
@@ -317,7 +316,7 @@ router.get('/search', async (req, res) => {
 
     // Add search filter only if we have a search term
     if (searchTerm && searchTerm.length >= 2) {
-      searchQuery += ` AND cp.product_name ILIKE $${paramIndex}`;
+      searchQuery += ` AND mp.name ILIKE $${paramIndex}`;
       queryParams.push(`%${searchTerm}%`);
       paramIndex++;
     }
@@ -325,22 +324,24 @@ router.get('/search', async (req, res) => {
     if (categoryId) {
       searchQuery += ` AND EXISTS (
         SELECT 1 FROM price_listings pl2 
-        WHERE pl2.master_product_id = cp.product_id 
-        AND pl2.category_id = $${paramIndex}
+        WHERE pl2.master_product_id = mp.id 
+          AND pl2.category_id = $${paramIndex}
+          AND pl2.is_active = true
+          AND pl2.country_code = $1
       )`;
       queryParams.push(categoryId);
       paramIndex++;
     }
 
     searchQuery += `
-      GROUP BY cp.product_id, cp.product_name
+      GROUP BY mp.id, mp.name, mp.base_unit
     `;
 
     // Order by listing count for popular products, or by name for search results
     if (isPopularProductsRequest) {
-      searchQuery += ` ORDER BY listing_count DESC, cp.product_name`;
+      searchQuery += ` ORDER BY listing_count DESC, mp.name`;
     } else {
-      searchQuery += ` ORDER BY cp.product_name, listing_count DESC`;
+      searchQuery += ` ORDER BY mp.name, listing_count DESC`;
     }
 
     searchQuery += ` LIMIT $${paramIndex}`;
@@ -391,13 +392,13 @@ router.get('/product/:productId', async (req, res) => {
     // Get product details first
     const productQuery = `
       SELECT 
-        cp.product_id AS id,
-        cp.product_name AS name
-      FROM country_products cp
-      WHERE cp.product_id = $1 AND cp.is_active = true AND cp.country_code = $2
+        mp.id AS id,
+        mp.name AS name
+      FROM master_products mp
+      WHERE mp.id = $1 AND mp.is_active = true
     `;
-    
-    const productResult = await database.query(productQuery, [productId, country]);
+
+    const productResult = await database.query(productQuery, [productId]);
     
     if (productResult.rows.length === 0) {
       return res.status(404).json({

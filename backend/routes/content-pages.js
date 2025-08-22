@@ -97,15 +97,18 @@ router.post('/', auth.authMiddleware(), async (req,res)=>{
     let status = b.status || (requiresApproval ? 'pending' : 'draft');
     if(user.role === 'super_admin' && b.status) status = b.status;
 
+    // Merge any caller-provided metadata (arbitrary JSON) with standardized fields
+    const extraMeta = (b.metadata && typeof b.metadata === 'object') ? b.metadata : {};
     const metadata = {
-      category: b.category,
-      keywords: b.keywords || [],
-      metaDescription: b.metaDescription,
+      ...extraMeta,
+      category: b.category ?? extraMeta.category,
+  keywords: (b.keywords ?? (extraMeta.keywords || [])),
+      metaDescription: b.metaDescription ?? extraMeta.metaDescription,
       requiresApproval,
-      isTemplate: b.isTemplate === true,
-      displayOrder: b.displayOrder,
-      createdBy: user.id || null,
-      updatedBy: user.id || null
+      isTemplate: b.isTemplate === true || extraMeta.isTemplate === true,
+      displayOrder: b.displayOrder ?? extraMeta.displayOrder,
+      createdBy: user.id || extraMeta.createdBy || null,
+      updatedBy: user.id || extraMeta.updatedBy || null
     };
 
     const row = await db.insert('content_pages', {
@@ -131,15 +134,27 @@ router.put('/:id', auth.authMiddleware(), async (req,res)=>{
     const update = {};
 
     if(b.title !== undefined) update.title = b.title;
-    if(b.type !== undefined){ update.page_type = toDbType(b.type); }
+    // Determine the resulting page_type for this update
+    const targetPageType = b.type !== undefined ? toDbType(b.type) : existing.page_type;
+    if(b.type !== undefined){ update.page_type = targetPageType; }
     if(b.content !== undefined) update.content = b.content;
-    if(b.country || b.country_code || b.countries){
-      update.country_code = b.country || b.country_code || (Array.isArray(b.countries) ? b.countries[0] : null);
+    // Only set country_code for country_specific pages. For centralized/template pages ensure it's NULL.
+    if(b.country !== undefined || b.country_code !== undefined || b.countries !== undefined){
+      const candidate = b.country || b.country_code || (Array.isArray(b.countries) ? b.countries[0] : null);
+      if(targetPageType === 'country_specific'){
+        // Avoid setting special markers like 'global'
+        update.country_code = (candidate && candidate.toLowerCase() !== 'global') ? candidate : null;
+      } else {
+        update.country_code = null;
+      }
     }
-    // Merge metadata
-    const metadata = existing.metadata || {};
+    // Merge metadata: start with existing, overlay provided metadata object, then explicit known fields
+    const metadata = { ...(existing.metadata || {}) };
+    if (b.metadata && typeof b.metadata === 'object') {
+      Object.assign(metadata, b.metadata);
+    }
     if(b.category !== undefined) metadata.category = b.category;
-    if(b.keywords !== undefined) metadata.keywords = b.keywords;
+    if(b.keywords !== undefined) metadata.keywords = Array.isArray(b.keywords) ? b.keywords : (typeof b.keywords === 'string' ? b.keywords.split(',').map(k=>k.trim()).filter(Boolean) : b.keywords);
     if(b.metaDescription !== undefined) metadata.metaDescription = b.metaDescription;
     if(b.requiresApproval !== undefined) metadata.requiresApproval = b.requiresApproval;
     if(b.isTemplate !== undefined) metadata.isTemplate = b.isTemplate;
