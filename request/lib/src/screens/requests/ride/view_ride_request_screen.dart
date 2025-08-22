@@ -5,11 +5,14 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 // REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
 // REMOVED_FB_IMPORT: import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import 'dart:math' as math;
 import '../../../models/request_model.dart';
 import '../../../models/enhanced_user_model.dart';
 import '../../../services/enhanced_request_service.dart';
 import '../../../services/enhanced_user_service.dart';
+import '../../../services/country_service.dart';
 import '../../../utils/address_utils.dart';
 import 'edit_ride_request_screen.dart';
 import 'create_ride_response_screen.dart';
@@ -1443,11 +1446,94 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
     });
     try {
       final currency = CurrencyHelper.instance.getCurrency();
+
+      // Get user's location and country information
+      String? locationAddress;
+      double? locationLatitude;
+      double? locationLongitude;
+      String? countryCode;
+
+      // Get country code from CountryService (preferred) and user data (fallback)
+      countryCode = CountryService.instance.getCurrentCountryCode();
+      if (countryCode == 'LK' || countryCode.isEmpty) {
+        // Fallback to user's country code if default or empty
+        try {
+          final currentUser = await _userService.getCurrentUserModel();
+          if (currentUser?.countryCode != null &&
+              currentUser!.countryCode!.isNotEmpty) {
+            countryCode = currentUser.countryCode;
+          }
+        } catch (e) {
+          print('Error getting user country: $e');
+        }
+      }
+
+      // Try to get current location if available
+      try {
+        // Check if location services are available and we have permission
+        bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (serviceEnabled) {
+          LocationPermission permission = await Geolocator.checkPermission();
+          if (permission == LocationPermission.whileInUse ||
+              permission == LocationPermission.always) {
+            try {
+              Position position = await Geolocator.getCurrentPosition(
+                desiredAccuracy: LocationAccuracy.medium,
+                timeLimit: const Duration(seconds: 5),
+              );
+
+              locationLatitude = position.latitude;
+              locationLongitude = position.longitude;
+
+              // Try to get address from coordinates
+              List<Placemark> placemarks = await placemarkFromCoordinates(
+                position.latitude,
+                position.longitude,
+              );
+
+              if (placemarks.isNotEmpty) {
+                final place = placemarks[0];
+                List<String> addressParts = [];
+
+                if (place.name != null && place.name!.isNotEmpty) {
+                  addressParts.add(place.name!);
+                }
+                if (place.locality != null && place.locality!.isNotEmpty) {
+                  addressParts.add(place.locality!);
+                }
+                if (place.administrativeArea != null &&
+                    place.administrativeArea!.isNotEmpty) {
+                  addressParts.add(place.administrativeArea!);
+                }
+
+                locationAddress = addressParts.join(', ');
+              }
+            } catch (e) {
+              print('Error getting current location: $e');
+              // Continue without location - non-blocking
+            }
+          }
+        }
+      } catch (e) {
+        print('Error checking location services: $e');
+        // Continue without location - non-blocking
+      }
+
+      // Ensure we have a valid country code - fallback to LK if still null/empty
+      if (countryCode == null || countryCode.isEmpty) {
+        countryCode = 'LK'; // Default to Sri Lanka
+      }
+
       final data = rest.CreateResponseData(
         message: 'Ride offer',
         price: price,
         currency: currency,
+        locationAddress: locationAddress,
+        locationLatitude: locationLatitude,
+        locationLongitude: locationLongitude,
+        countryCode: countryCode,
       );
+
       final created = await rest.RestRequestService.instance
           .createResponse(_request!.id, data);
       if (created != null) {
