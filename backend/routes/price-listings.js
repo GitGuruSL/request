@@ -314,9 +314,16 @@ router.get('/search', async (req, res) => {
 
     searchQuery += `
       GROUP BY mp.id, mp.name, mp.slug, mp.base_unit, b.name, b.id
-      ORDER BY listing_count DESC, mp.name
-      LIMIT $${paramIndex}
     `;
+
+    // Order by listing count for popular products, or by name for search results
+    if (isPopularProductsRequest) {
+      searchQuery += ` ORDER BY listing_count DESC, mp.name`;
+    } else {
+      searchQuery += ` ORDER BY mp.name, listing_count DESC`;
+    }
+
+    searchQuery += ` LIMIT $${paramIndex}`;
     queryParams.push(limit);
 
     console.log('Product search query:', searchQuery);
@@ -344,7 +351,8 @@ router.get('/search', async (req, res) => {
     res.json({
       success: true,
       data: products,
-      count: products.length
+      count: products.length,
+      message: isPopularProductsRequest ? 'Popular products' : `Search results for "${searchTerm}"`
     });
 
   } catch (error) {

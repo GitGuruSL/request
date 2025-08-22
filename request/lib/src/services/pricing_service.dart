@@ -9,6 +9,9 @@ class PricingService {
   Future<List<MasterProduct>> searchProducts(
       {String query = '', String? brand, int limit = 25}) async {
     try {
+      print(
+          'DEBUG: Searching products with query: "$query", brand: $brand, limit: $limit');
+
       final response = await _apiClient.get<List<dynamic>>(
         '/api/price-listings/search',
         queryParameters: {
@@ -19,11 +22,17 @@ class PricingService {
         },
       );
 
+      print(
+          'DEBUG: Search response - success: ${response.isSuccess}, data length: ${response.data?.length}');
+      print('DEBUG: Full response: ${response.data}');
+
       if (response.isSuccess && response.data != null) {
-        return response.data!
-            .map((data) => MasterProduct.fromJson(data))
-            .toList();
+        final products =
+            response.data!.map((data) => MasterProduct.fromJson(data)).toList();
+        print('DEBUG: Parsed ${products.length} products successfully');
+        return products;
       }
+      print('DEBUG: Response not successful or data is null');
       return [];
     } catch (e) {
       print('Error searching products: $e');
