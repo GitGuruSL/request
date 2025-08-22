@@ -106,20 +106,23 @@ class UserRegistrationService {
             print('🏢 UserRegistrationService: Business data: $businessData');
           if (businessData['status'] == 'approved') {
             registrations.isApprovedBusiness = true;
-            // Check if business type includes delivery
-            final businessType =
-                businessData['business_type']?.toString().toLowerCase();
-            if (businessType?.contains('delivery') == true ||
-                businessType?.contains('logistics') == true ||
-                businessType?.contains('courier') == true) {
+            // Check if business category includes delivery
+            final businessCategory =
+                businessData['business_category']?.toString().toLowerCase();
+            if (kDebugMode)
+              print(
+                  '🏢 UserRegistrationService: Business category: $businessCategory');
+            if (businessCategory?.contains('delivery') == true ||
+                businessCategory?.contains('logistics') == true ||
+                businessCategory?.contains('courier') == true) {
               registrations.canHandleDeliveryRequests = true;
               if (kDebugMode)
                 print(
-                    '✅ UserRegistrationService: User is approved business with delivery capabilities: $businessType');
+                    '✅ UserRegistrationService: User is approved business with delivery capabilities: $businessCategory');
             } else {
               if (kDebugMode)
                 print(
-                    'ℹ️ UserRegistrationService: User is approved business but no delivery capabilities: $businessType');
+                    'ℹ️ UserRegistrationService: User is approved business but no delivery capabilities: $businessCategory');
             }
           } else if (businessData['status'] == 'pending') {
             registrations.hasPendingBusinessApplication = true;
