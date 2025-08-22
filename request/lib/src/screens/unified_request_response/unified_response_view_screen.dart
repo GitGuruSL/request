@@ -861,7 +861,7 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
               !widget.response.isAccepted)
           ? FloatingActionButton.extended(
               onPressed: _editResponse,
-              backgroundColor: Colors.green,
+              backgroundColor: _getTypeColor(widget.request.type),
               foregroundColor: Colors.white,
               icon: const Icon(Icons.edit),
               label: const Text('Edit'),

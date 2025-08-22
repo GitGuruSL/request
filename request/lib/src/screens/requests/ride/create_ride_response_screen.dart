@@ -781,7 +781,9 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _submitResponse,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
+                  backgroundColor:
+                      const Color(0xFFFFC107), // Yellow for ride requests
+                  foregroundColor: Colors.black, // Better contrast on yellow
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: const RoundedRectangleBorder(
                     borderRadius: BorderRadius.all(Radius.circular(12)),
@@ -796,7 +798,8 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
-                              color: Colors.white,
+                              color: Colors
+                                  .black, // Changed to black for better contrast on yellow
                               strokeWidth: 2,
                             ),
                           ),

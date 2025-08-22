@@ -1097,7 +1097,7 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
         if (myResponse != null) {
           return FloatingActionButton.extended(
             onPressed: () => _navigateToResponseEdit(myResponse!),
-            backgroundColor: Colors.green,
+            backgroundColor: _getTypeColor(_getCurrentRequestType()),
             foregroundColor: Colors.white,
             icon: const Icon(Icons.edit),
             label: const Text('Edit'),
