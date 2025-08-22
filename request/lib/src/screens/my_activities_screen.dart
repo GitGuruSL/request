@@ -25,19 +25,18 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
 
   // Data
   List<rest.RequestModel> _myRequests = [];
-  List<rest.RequestModel> _myOrders =
-      []; // requests where I accepted a response
+  // Removed Orders tab; only Requests and Responses are shown
   List<_ResponseSummary> _myResponses = [];
 
   // Loading states
   bool _loadingRequests = false;
-  bool _loadingOrders = false;
+  // Removed loading flag for Orders
   bool _loadingResponses = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
     _loadAll();
   }
 
@@ -82,9 +81,7 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
                 indicatorColor: Colors.blue,
                 tabs: const [
                   Tab(text: 'Requests'),
-                  Tab(text: 'Orders'),
                   Tab(text: 'Responses'),
-                  Tab(text: 'History'),
                 ],
               ),
             ),
@@ -95,9 +92,7 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
                 controller: _tabController,
                 children: [
                   _buildRequestsTab(),
-                  _buildOrdersTab(),
                   _buildResponsesTab(),
-                  _buildHistoryTab(),
                 ],
               ),
             ),
@@ -124,21 +119,6 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
     );
   }
 
-  Widget _buildOrdersTab() {
-    return RefreshIndicator(
-      onRefresh: _loadOrders,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: _loadingOrders ? 3 : _myOrders.length,
-        itemBuilder: (context, index) {
-          if (_loadingOrders) return _skeletonCard();
-          final r = _myOrders[index];
-          return _requestCard(r, isOrder: true);
-        },
-      ),
-    );
-  }
-
   Widget _buildResponsesTab() {
     return RefreshIndicator(
       onRefresh: _loadResponses,
@@ -154,27 +134,7 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
     );
   }
 
-  Widget _buildHistoryTab() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        _buildHistorySection('Today', [
-          'Viewed 3 service providers',
-          'Updated profile information',
-        ]),
-        _buildHistorySection('Yesterday', [
-          'Posted new request',
-          'Responded to 2 messages',
-          'Left review for completed service',
-        ]),
-        _buildHistorySection('This Week', [
-          'Completed 2 transactions',
-          'Updated location settings',
-          'Added new payment method',
-        ]),
-      ],
-    );
-  }
+  // Removed History tab
 
   Widget _requestCard(rest.RequestModel r, {bool isOrder = false}) {
     final statusColor = isOrder ? Colors.blue : Colors.green;
@@ -453,54 +413,11 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
         child: Container(height: 76, padding: const EdgeInsets.all(16)),
       );
 
-  Widget _buildHistorySection(String title, List<String> activities) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Text(
-            title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        ...activities.map((activity) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[400],
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      activity,
-                      style: TextStyle(
-                        color: Colors.grey[700],
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            )),
-        const SizedBox(height: 16),
-      ],
-    );
-  }
+  // Removed history helper
 
   Future<void> _loadAll() async {
     await Future.wait([
       _loadRequests(),
-      _loadOrders(),
       _loadResponses(),
     ]);
   }
@@ -515,21 +432,7 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
     }
   }
 
-  Future<void> _loadOrders() async {
-    setState(() => _loadingOrders = true);
-    try {
-      final uid = AuthService.instance.currentUser?.uid;
-      final r = await _rest.getRequests(
-        limit: 50,
-        hasAccepted: true,
-        userId: uid,
-        countryCode: CountryService.instance.getCurrentCountryCode(),
-      );
-      setState(() => _myOrders = r?.requests ?? []);
-    } finally {
-      if (mounted) setState(() => _loadingOrders = false);
-    }
-  }
+  // Removed Orders loading function
 
   Future<void> _loadResponses() async {
     setState(() => _loadingResponses = true);
