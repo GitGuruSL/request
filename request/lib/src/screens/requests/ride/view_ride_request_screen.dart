@@ -15,7 +15,6 @@ import '../../../services/enhanced_user_service.dart';
 import '../../../services/country_service.dart';
 import '../../../utils/address_utils.dart';
 import 'edit_ride_request_screen.dart';
-import 'create_ride_response_screen.dart';
 import '../../../services/rest_vehicle_type_service.dart';
 import '../../../services/chat_service.dart';
 import '../../chat/conversation_screen.dart';
@@ -224,8 +223,6 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   }
 
   Widget _buildResponsesSection() {
-    final isDriverView = !_isOwner;
-    final canEdit = isDriverView && _hasUserResponded();
     final currencySymbol = CurrencyHelper.instance.getCurrencySymbol();
 
     return Container(
@@ -248,18 +245,6 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                 ),
               ),
               const Spacer(),
-              if (canEdit)
-                TextButton.icon(
-                  onPressed: _showEditResponseSheet,
-                  icon: const Icon(Icons.edit, size: 16),
-                  label: const Text('Edit Response'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.blue,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    minimumSize: const Size(0, 0),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                ),
               IconButton(
                 onPressed: _loadRequestData,
                 icon: const Icon(Icons.refresh, color: Colors.black87),
@@ -498,6 +483,9 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
       );
     }
 
+    final isDriverView = !_isOwner;
+    final canEdit = isDriverView && _hasUserResponded();
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
@@ -554,15 +542,6 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                         icon: const Icon(Icons.edit),
                         tooltip: 'Edit Request',
                       ),
-                    ],
-                    if (!_isOwner) ...[
-                      // Show edit response icon for drivers who have already responded
-                      if (_getUserResponse() != null)
-                        IconButton(
-                          onPressed: () => _showResponseDialog(),
-                          icon: const Icon(Icons.edit),
-                          tooltip: 'Edit Response',
-                        ),
                     ],
                   ],
                 ),
@@ -624,6 +603,22 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
           ),
         ],
       ),
+      floatingActionButton: canEdit
+          ? FloatingActionButton.extended(
+              onPressed: _showEditResponseSheet,
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              elevation: 6,
+              icon: const Icon(Icons.edit, size: 20),
+              label: const Text(
+                'Edit',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            )
+          : null,
     );
   }
 
@@ -1308,7 +1303,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                         elevation: 0,
                       ),
                       child: const Text(
-                        'Save',
+                        'Update',
                         style: TextStyle(
                             fontSize: 16, fontWeight: FontWeight.w600),
                       ),
@@ -1548,25 +1543,6 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
         setState(() => _isSubmittingResponse = false);
       }
     }
-  }
-
-  void _showResponseDialog() {
-    // Navigate to the comprehensive ride response screen
-    final existingResponse = _getUserResponse();
-
-    Navigator.of(context)
-        .push(
-      MaterialPageRoute(
-        builder: (context) => CreateRideResponseScreen(
-          request: _request!,
-          existingResponse: existingResponse,
-        ),
-      ),
-    )
-        .then((_) {
-      // Refresh the responses when returning from the response screen
-      _loadRequestData(); // Reload data when coming back
-    });
   }
 
   String _formatDate(DateTime date) {
