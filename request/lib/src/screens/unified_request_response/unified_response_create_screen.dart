@@ -3,6 +3,7 @@ import '../../models/request_model.dart';
 import '../../models/enhanced_user_model.dart';
 import '../../services/centralized_request_service.dart';
 import '../../services/enhanced_user_service.dart';
+import '../../services/user_registration_service.dart';
 import '../../widgets/image_upload_widget.dart';
 import '../../utils/currency_helper.dart';
 import '../../widgets/accurate_location_picker_widget.dart';
@@ -133,24 +134,39 @@ class _UnifiedResponseCreateScreenState
     }
   }
 
-  // Role validation to ensure only appropriate users can respond to specific requests
-  String? _validateUserRole(UserModel user) {
+  // Async role validation using UserRegistrationService for better cache management
+  Future<String?> _validateUserRoleAsync(UserModel user) async {
     switch (widget.request.type) {
       case RequestType.delivery:
-        // Allow either delivery OR business role (both verified) to create response
-        final hasDelivery = user.hasRole(UserRole.delivery) &&
-            user.isRoleVerified(UserRole.delivery);
-        final hasBusiness = user.hasRole(UserRole.business) &&
-            user.isRoleVerified(UserRole.business);
-        if (!hasDelivery && !hasBusiness) {
-          final hasEitherRole = user.hasRole(UserRole.delivery) ||
-              user.hasRole(UserRole.business);
-          if (hasEitherRole) {
+        try {
+          // Clear cache to get fresh data for delivery requests
+          UserRegistrationService.instance.clearCache();
+
+          // Get current registrations
+          final registrations =
+              await UserRegistrationService.instance.getUserRegistrations();
+
+          if (registrations == null) {
+            return 'delivery_business_required';
+          }
+
+          // Check if user is approved business with delivery capabilities
+          if (registrations.isApprovedBusiness &&
+              registrations.canHandleDeliveryRequests) {
+            return null; // User is qualified for delivery
+          }
+
+          // If business exists but not approved
+          if (registrations.hasPendingBusinessApplication) {
             return 'delivery_business_verification_required';
           }
+
+          // No business registration found
+          return 'delivery_business_required';
+        } catch (e) {
+          print('Error validating delivery role: $e');
           return 'delivery_business_required';
         }
-        break;
 
       case RequestType.ride:
         // Check if user has driver role
@@ -1584,8 +1600,8 @@ class _UnifiedResponseCreateScreenState
         return;
       }
 
-      // Role-based validation
-      final validationError = _validateUserRole(currentUser);
+      // Role-based validation with cache clearing for delivery requests
+      final validationError = await _validateUserRoleAsync(currentUser);
       if (validationError != null) {
         setState(() {
           _isLoading = false;

@@ -1219,35 +1219,42 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
             builder: (context, setModalState) {
               return Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const Text(
-                    'Edit your fare',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: controller,
-                    keyboardType: const TextInputType.numberWithOptions(
-                        signed: false, decimal: true),
-                    decoration: InputDecoration(
-                      hintText: 'Enter fare',
-                      prefixText: currencySymbol,
-                      filled: true,
-                      fillColor: Colors.grey[50],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      errorText: errorText,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 14),
+                  const Center(
+                    child: Text(
+                      'Edit your fare',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                     ),
-                    onChanged: (_) {
-                      if (errorText != null) {
-                        setModalState(() => errorText = null);
-                      }
-                    },
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: 200, // Make text field smaller
+                    child: TextField(
+                      controller: controller,
+                      keyboardType: const TextInputType.numberWithOptions(
+                          signed: false, decimal: true),
+                      textAlign: TextAlign.center,
+                      decoration: InputDecoration(
+                        hintText: 'Enter fare',
+                        prefixText: currencySymbol,
+                        filled: true,
+                        fillColor: Colors.grey[50],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        errorText: errorText,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                      ),
+                      onChanged: (_) {
+                        if (errorText != null) {
+                          setModalState(() => errorText = null);
+                        }
+                      },
+                    ),
                   ),
                   const SizedBox(height: 12),
                   SizedBox(
