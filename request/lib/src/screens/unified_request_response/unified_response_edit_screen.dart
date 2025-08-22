@@ -448,25 +448,39 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
     super.dispose();
   }
 
-  // Role validation to ensure only appropriate users can respond to specific requests
-  String? _validateUserRole(UserModel user) {
+  // Async role validation using UserRegistrationService for better cache management
+  Future<String?> _validateUserRoleAsync(UserModel user) async {
     switch (widget.request.type) {
       case RequestType.delivery:
-        // Allow either delivery OR business role (both verified) to edit response
-        final hasDelivery = user.hasRole(UserRole.delivery) &&
-            user.isRoleVerified(UserRole.delivery);
-        final hasBusiness = user.hasRole(UserRole.business) &&
-            user.isRoleVerified(UserRole.business);
-        if (!hasDelivery && !hasBusiness) {
-          // Distinguish between unregistered and unverified if one role exists but unverified
-          final hasEitherRole = user.hasRole(UserRole.delivery) ||
-              user.hasRole(UserRole.business);
-          if (hasEitherRole) {
+        try {
+          // Clear cache to get fresh data for delivery requests
+          UserRegistrationService.instance.clearCache();
+
+          // Get current registrations
+          final registrations =
+              await UserRegistrationService.instance.getUserRegistrations();
+
+          if (registrations == null) {
+            return 'delivery_business_required';
+          }
+
+          // Check if user is approved business with delivery capabilities
+          if (registrations.isApprovedBusiness &&
+              registrations.canHandleDeliveryRequests) {
+            return null; // User is qualified for delivery
+          }
+
+          // If business exists but not approved
+          if (registrations.hasPendingBusinessApplication) {
             return 'delivery_business_verification_required';
           }
+
+          // No business registration found
+          return 'delivery_business_required';
+        } catch (e) {
+          print('Error validating delivery role: $e');
           return 'delivery_business_required';
         }
-        break;
 
       case RequestType.ride:
         // Check if user has driver role
@@ -1931,6 +1945,8 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
       // For delivery requests, clear registration cache to ensure we have the latest data
       if (widget.request.type == RequestType.delivery) {
         UserRegistrationService.instance.clearCache();
+        // Also clear user service cache to get fresh user data
+        _userService.clearCache();
       }
 
       final currentUser = await _userService.getCurrentUserModel();
@@ -1952,8 +1968,8 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
         return;
       }
 
-      // Role-based validation
-      final validationError = _validateUserRole(currentUser);
+      // Role-based validation using async method for proper registration checks
+      final validationError = await _validateUserRoleAsync(currentUser);
       if (validationError != null) {
         setState(() {
           _isLoading = false;
