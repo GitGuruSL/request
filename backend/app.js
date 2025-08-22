@@ -129,6 +129,7 @@ app.use('/api/price-listings', priceListingsRoutes);
 app.use('/api/payment-methods', paymentMethodsRoutes);
 
 app.use('/api/upload', uploadRoutes); // NEW - image upload endpoint
+app.use('/api/uploads', uploadRoutes); // Alias to support admin-react '/uploads/payment-methods'
 app.use('/api/test-images', testImageRoutes); // TEST - image serving test
 app.use('/api', subscriptionPlansLegacy); // legacy paths /subscription-plans, /user-subscriptions
 app.use('/api', subscriptionPlansNew); // new CRUD under /subscription-plans-new

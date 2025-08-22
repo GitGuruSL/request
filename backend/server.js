@@ -52,6 +52,7 @@ const adminEmailManagementRoutes = require('./routes/admin-email-management');
 const tempMigrationRoutes = require('./routes/temp-migration'); // Temporary migration routes
 const modulesRoutes = require('./routes/modules'); // Module management routes
 const priceListingsRoutes = require('./routes/price-listings'); // Price listings routes
+const paymentMethodsRoutes = require('./routes/payment-methods'); // Country payment methods and business mappings
 
 const app = express();
 
@@ -103,34 +104,35 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
-    try {
-        const dbHealth = await dbService.healthCheck();
-        
-        if (!dbHealth.connected) {
-            const diag = await dbService.diagnoseConnectivity().catch(()=>null);
-            return res.status(503).json({
-                status: 'unhealthy',
-                timestamp: new Date().toISOString(),
-                database: dbHealth,
-                diagnosis: diag
-            });
-        }
-        
-        res.json({
-            status: 'healthy',
-            timestamp: new Date().toISOString(),
-            database: dbHealth,
-            version: process.env.npm_package_version || '1.0.0'
-        });
-    } catch (error) {
-        const diag = await dbService.diagnoseConnectivity().catch(()=>null);
-        res.status(503).json({
-            status: 'unhealthy',
-            timestamp: new Date().toISOString(),
-            error: error.message,
-            diagnosis: diag
-        });
+  try {
+    const dbHealth = await dbService.healthCheck();
+
+    const isDbHealthy = dbHealth && (dbHealth.status === 'healthy' || dbHealth.timestamp);
+    if (!isDbHealthy) {
+      const diag = await dbService.diagnoseConnectivity().catch(() => null);
+      return res.status(503).json({
+        status: 'unhealthy',
+        timestamp: new Date().toISOString(),
+        database: dbHealth,
+        diagnosis: diag
+      });
     }
+
+    return res.status(200).json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      database: dbHealth,
+      version: process.env.npm_package_version || '1.0.0'
+    });
+  } catch (error) {
+    const diag = await dbService.diagnoseConnectivity().catch(() => null);
+    return res.status(503).json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      error: error.message,
+      diagnosis: diag
+    });
+  }
 });
 
 // Test endpoint
@@ -178,6 +180,7 @@ app.use('/api/responses', globalResponsesRoutes);
 app.use('/api/sms', smsRoutes);
 app.use('/api/modules', modulesRoutes); // Module management endpoints
 app.use('/api/price-listings', priceListingsRoutes); // Price listings endpoints
+app.use('/api/payment-methods', paymentMethodsRoutes); // Payment methods endpoints
 
 // Country-specific routes
 app.use('/api/country-products', countryProductRoutes);

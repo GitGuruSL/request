@@ -194,7 +194,7 @@ router.get('/', async (req, res) => {
     }
 
     if (search) {
-      whereConditions.push(`(pl.title ILIKE $${paramIndex} OR pl.description ILIKE $${paramIndex} OR cp.name ILIKE $${paramIndex})`);
+      whereConditions.push(`(pl.title ILIKE $${paramIndex} OR pl.description ILIKE $${paramIndex} OR cp.product_name ILIKE $${paramIndex})`);
       queryParams.push(`%${search}%`);
       paramIndex++;
     }
@@ -623,8 +623,8 @@ router.post('/', authService.authMiddleware(), upload.array('images', 5), async 
       JSON.stringify(images), website, whatsapp, cityId, countryCode
     ];
 
-    const result = await database.query(insertQuery, values);
-    const newListing = formatPriceListing(result.rows[0]);
+  const result = await database.query(insertQuery, values);
+  const newListing = await formatPriceListing(result.rows[0]);
 
     res.status(201).json({
       success: true,
@@ -775,8 +775,8 @@ router.put('/:id', authService.authMiddleware(), upload.array('images', 5), asyn
     
     updateValues.push(id, userId);
 
-    const result = await database.query(updateQuery, updateValues);
-    const updatedListing = formatPriceListing(result.rows[0]);
+  const result = await database.query(updateQuery, updateValues);
+  const updatedListing = await formatPriceListing(result.rows[0]);
 
     res.json({
       success: true,
@@ -821,12 +821,12 @@ router.delete('/:id', authService.authMiddleware(), async (req, res) => {
       RETURNING *
     `;
 
-    const result = await database.query(deleteQuery, [id, userId]);
+  const result = await database.query(deleteQuery, [id, userId]);
 
     res.json({
       success: true,
       message: 'Price listing deleted successfully',
-      data: formatPriceListing(result.rows[0])
+      data: await formatPriceListing(result.rows[0])
     });
 
   } catch (error) {
