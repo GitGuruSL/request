@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/country_filtered_data_service.dart';
 import '../../models/request_model.dart' as models;
 import '../../screens/unified_request_response/unified_request_view_screen.dart';
+import '../../screens/requests/ride/view_ride_request_screen.dart';
 
 class BrowseRequestsScreen extends StatefulWidget {
   const BrowseRequestsScreen({super.key});
@@ -552,11 +553,21 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
   }
 
   void _showRequestDetails(models.RequestModel request) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => UnifiedRequestViewScreen(requestId: request.id),
-      ),
-    ).then((_) => _loadInitial()); // Refresh list when returning
+    // Use specific view screen for ride requests, unified for others
+    if (request.type.name == 'ride') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ViewRideRequestScreen(requestId: request.id),
+        ),
+      ).then((_) => _loadInitial()); // Refresh list when returning
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => UnifiedRequestViewScreen(requestId: request.id),
+        ),
+      ).then((_) => _loadInitial()); // Refresh list when returning
+    }
   }
 }

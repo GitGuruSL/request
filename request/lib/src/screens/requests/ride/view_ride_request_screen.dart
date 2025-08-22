@@ -5,6 +5,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 // REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
 // REMOVED_FB_IMPORT: import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:math' as math;
 import '../../../models/request_model.dart';
 import '../../../models/enhanced_user_model.dart';
 import '../../../services/enhanced_request_service.dart';
@@ -487,27 +488,81 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
         // Location Details
         _buildLocationInfo(),
 
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
 
-        // Ride Specific Details - Clean layout without borders
+        // Distance and Route Info
+        if (_request!.location != null && _request!.destinationLocation != null) ...[
+          _buildDistanceInfo(),
+          const SizedBox(height: 20),
+        ],
+
+        // Ride Specific Details - Enhanced layout
         if (rideData != null) ...[
           Row(
             children: [
-              const Icon(Icons.person, size: 18, color: Colors.grey),
-              const SizedBox(width: 8),
-              Text(
-                '${rideData.passengers} passenger(s)',
-                style: const TextStyle(fontSize: 16),
-              ),
-              const SizedBox(width: 24),
-              const Icon(Icons.schedule, size: 18, color: Colors.grey),
-              const SizedBox(width: 8),
+              // Passengers
               Expanded(
-                child: Text(
-                  rideData.isFlexibleTime
-                      ? 'Flexible timing'
-                      : 'Scheduled: ${_formatDateTime(rideData.preferredTime)}',
-                  style: const TextStyle(fontSize: 16),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(Icons.person, size: 24, color: Colors.blue[700]),
+                      const SizedBox(height: 8),
+                      Text(
+                        '${rideData.passengers}',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue[700],
+                        ),
+                      ),
+                      Text(
+                        'Passenger${rideData.passengers > 1 ? 's' : ''}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.blue[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Timing
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange[50],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(Icons.schedule, size: 24, color: Colors.orange[700]),
+                      const SizedBox(height: 8),
+                      Text(
+                        rideData.isFlexibleTime ? 'Flexible' : 'Scheduled',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange[700],
+                        ),
+                      ),
+                      if (!rideData.isFlexibleTime)
+                        Text(
+                          _formatDateTime(rideData.preferredTime),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.orange[600],
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -603,100 +658,212 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   Widget _buildLocationInfo() {
     return Column(
       children: [
-        // Pickup Location
-        GestureDetector(
-          onTap: () {
-            if (_request!.location != null) {
-              _openGoogleMaps(
-                _request!.location!.latitude,
-                _request!.location!.longitude,
-                _request!.location!.address,
-              );
-            }
-          },
-          child: Row(
-            children: [
-              Container(
-                width: 12,
-                height: 12,
-                decoration: const BoxDecoration(
-                  color: Colors.green,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 16),
-              const Text(
-                'Pickup:',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  AddressUtils.cleanAddress(_request!.location?.address ??
-                      'Pickup location not specified'),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w500,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-              if (_request!.location != null)
-                const Icon(Icons.navigation, size: 20, color: Colors.grey),
-            ],
+        // Pickup Location - Enhanced clickable design
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.green[50],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.green[200]!, width: 1),
           ),
-        ),
-        if (_request!.destinationLocation != null) ...[
-          const SizedBox(height: 16),
-          // Destination Location
-          GestureDetector(
+          child: InkWell(
             onTap: () {
-              _openGoogleMaps(
-                _request!.destinationLocation!.latitude,
-                _request!.destinationLocation!.longitude,
-                _request!.destinationLocation!.address,
-              );
+              if (_request!.location != null) {
+                _openGoogleMaps(
+                  _request!.location!.latitude,
+                  _request!.location!.longitude,
+                  _request!.location!.address,
+                );
+              }
             },
             child: Row(
               children: [
                 Container(
-                  width: 12,
-                  height: 12,
-                  decoration: const BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.circle,
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.green,
+                    borderRadius: BorderRadius.circular(8),
                   ),
+                  child: const Icon(Icons.my_location, color: Colors.white, size: 20),
                 ),
                 const SizedBox(width: 16),
-                const Text(
-                  'Destination:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey,
-                    fontSize: 14,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Pickup Location',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.green[700],
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        AddressUtils.cleanAddress(_request!.location?.address ??
+                            'Pickup location not specified'),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    AddressUtils.cleanAddress(
-                        _request!.destinationLocation!.address),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w500,
-                      fontSize: 16,
+                Icon(Icons.navigation, color: Colors.green[700], size: 24),
+              ],
+            ),
+          ),
+        ),
+        
+        if (_request!.destinationLocation != null) ...[
+          const SizedBox(height: 16),
+          // Destination Location - Enhanced clickable design
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.red[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.red[200]!, width: 1),
+            ),
+            child: InkWell(
+              onTap: () {
+                _openGoogleMaps(
+                  _request!.destinationLocation!.latitude,
+                  _request!.destinationLocation!.longitude,
+                  _request!.destinationLocation!.address,
+                );
+              },
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.location_on, color: Colors.white, size: 20),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Drop-off Location',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.red[700],
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          AddressUtils.cleanAddress(_request!.destinationLocation!.address),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w500,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-                const Icon(Icons.navigation, size: 20, color: Colors.grey),
-              ],
+                  Icon(Icons.navigation, color: Colors.red[700], size: 24),
+                ],
+              ),
             ),
           ),
         ],
       ],
     );
+  }
+
+  Widget _buildDistanceInfo() {
+    if (_request!.location == null || _request!.destinationLocation == null) {
+      return const SizedBox.shrink();
+    }
+
+    final distance = _calculateDistance(
+      _request!.location!.latitude,
+      _request!.location!.longitude,
+      _request!.destinationLocation!.latitude,
+      _request!.destinationLocation!.longitude,
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.purple[50],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          Column(
+            children: [
+              Icon(Icons.straighten, color: Colors.purple[700], size: 24),
+              const SizedBox(height: 8),
+              Text(
+                '${distance.toStringAsFixed(1)} km',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.purple[700],
+                ),
+              ),
+              Text(
+                'Distance',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.purple[600],
+                ),
+              ),
+            ],
+          ),
+          Column(
+            children: [
+              Icon(Icons.access_time, color: Colors.purple[700], size: 24),
+              const SizedBox(height: 8),
+              Text(
+                '~${(distance * 2).toInt()} min',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.purple[700],
+                ),
+              ),
+              Text(
+                'Est. Time',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.purple[600],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+    const double radiusOfEarth = 6371; // Earth's radius in kilometers
+    
+    double dLat = _degreesToRadians(lat2 - lat1);
+    double dLon = _degreesToRadians(lon2 - lon1);
+    
+    double a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_degreesToRadians(lat1)) * math.cos(_degreesToRadians(lat2)) *
+        math.sin(dLon / 2) * math.sin(dLon / 2);
+    
+    double c = 2 * math.asin(math.sqrt(a));
+    
+    return radiusOfEarth * c;
+  }
+  
+  double _degreesToRadians(double degrees) {
+    return degrees * (math.pi / 180);
   }
 
   Widget _buildRequesterInfo() {

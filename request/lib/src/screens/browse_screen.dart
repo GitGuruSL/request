@@ -7,6 +7,7 @@ import '../services/country_service.dart';
 import '../services/module_service.dart';
 import '../services/user_registration_service.dart';
 import 'unified_request_response/unified_request_view_screen.dart';
+import 'requests/ride/view_ride_request_screen.dart';
 
 class BrowseScreen extends StatefulWidget {
   const BrowseScreen({super.key});
@@ -668,11 +669,21 @@ class _BrowseScreenState extends State<BrowseScreen> {
   }
 
   void _navigateToRequestView(RequestModel request) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => UnifiedRequestViewScreen(requestId: request.id),
-      ),
-    );
+    // Use specific view screen for ride requests, unified for others
+    if (request.type == RequestType.ride) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ViewRideRequestScreen(requestId: request.id),
+        ),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => UnifiedRequestViewScreen(requestId: request.id),
+        ),
+      );
+    }
   }
 }
