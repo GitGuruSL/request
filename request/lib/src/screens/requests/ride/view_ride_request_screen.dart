@@ -18,6 +18,8 @@ import '../../../services/chat_service.dart';
 import '../../chat/conversation_screen.dart';
 import '../../../services/user_registration_service.dart';
 import '../../../services/google_directions_service.dart';
+import '../../../services/rest_request_service.dart' as rest;
+import '../../../utils/currency_helper.dart';
 
 class ViewRideRequestScreen extends StatefulWidget {
   final String requestId;
@@ -45,10 +47,21 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   Set<Marker> _markers = {};
   Set<Polyline> _polylines = {};
 
+  // Quick respond (inline fare)
+  final TextEditingController _fareController = TextEditingController();
+  bool _isSubmittingResponse = false;
+  String? _fareError;
+
   @override
   void initState() {
     super.initState();
     _loadRequestData();
+  }
+
+  @override
+  void dispose() {
+    _fareController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadRequestData() async {
@@ -524,6 +537,9 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                       // Respond Button for non-owners
                       if (!_isOwner) ...[
                         const SizedBox(height: 24),
+                        if (_canUserRespond() && !_hasUserResponded())
+                          _buildQuickRespondSection(),
+                        // Keep full flow as an option
                         _buildRespondButton(),
                       ],
 
@@ -1314,6 +1330,121 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
         return Colors.red;
       case RequestStatus.expired:
         return Colors.brown;
+    }
+  }
+
+  Widget _buildQuickRespondSection() {
+    final currencySymbol = CurrencyHelper.instance.getCurrencySymbol();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Offer your fare',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _fareController,
+                keyboardType: const TextInputType.numberWithOptions(
+                    signed: false, decimal: true),
+                decoration: InputDecoration(
+                  hintText: 'Enter fare',
+                  prefixText: currencySymbol,
+                  filled: true,
+                  fillColor: Colors.grey[50],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  errorText: _fareError,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            SizedBox(
+              height: 48,
+              child: ElevatedButton(
+                onPressed: _isSubmittingResponse ? null : _submitQuickResponse,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: _isSubmittingResponse
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Text('Respond'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Quick submit. You can edit details later.',
+          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _submitQuickResponse() async {
+    if (!_canUserRespond() || _request == null) return;
+    final raw = _fareController.text.trim().replaceAll(',', '');
+    final price = double.tryParse(raw);
+    if (price == null || price <= 0) {
+      setState(() => _fareError = 'Enter a valid amount');
+      return;
+    }
+    setState(() {
+      _fareError = null;
+      _isSubmittingResponse = true;
+    });
+    try {
+      final currency = CurrencyHelper.instance.getCurrency();
+      final data = rest.CreateResponseData(
+        message: 'Ride offer',
+        price: price,
+        currency: currency,
+      );
+      final created = await rest.RestRequestService.instance
+          .createResponse(_request!.id, data);
+      if (created != null) {
+        if (!mounted) return;
+        _fareController.clear();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Response submitted')),
+        );
+        await _loadRequestData();
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to submit response')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to submit response: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmittingResponse = false);
+      }
     }
   }
 
