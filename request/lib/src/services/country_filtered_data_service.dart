@@ -149,19 +149,41 @@ class CountryFilteredDataService {
           return allowedTypes.contains(requestType);
         }).toList();
 
-        // For drivers: filter ride requests by vehicle type
-        if (requestTypeFilter == 'ride' &&
-            driverVehicleTypeIds != null &&
-            driverVehicleTypeIds.isNotEmpty) {
+        // For drivers: filter ride requests by vehicle type (regardless of requestTypeFilter)
+        if (driverVehicleTypeIds != null && driverVehicleTypeIds.isNotEmpty) {
           filtered = filtered.where((r) {
-            final vehicleTypeId = r.metadata?['vehicle_type_id']?.toString();
-            return vehicleTypeId != null &&
-                driverVehicleTypeIds.contains(vehicleTypeId);
+            final requestType = r.requestType ??
+                r.metadata?['request_type']?.toString() ??
+                'item';
+
+            // Only apply vehicle filtering to ride requests
+            if (requestType == 'ride') {
+              final vehicleTypeId = r.metadata?['vehicle_type_id']?.toString();
+              bool matches = vehicleTypeId != null &&
+                  driverVehicleTypeIds.contains(vehicleTypeId);
+
+              if (kDebugMode) {
+                print(
+                    '🚗 CountryFilteredDataService: Ride request ${r.id} - vehicle_type_id: $vehicleTypeId, matches: $matches');
+              }
+
+              return matches;
+            }
+
+            // For non-ride requests, include them
+            return true;
           }).toList();
 
           if (kDebugMode) {
+            final rideCount = filtered
+                .where((r) =>
+                    (r.requestType ??
+                        r.metadata?['request_type']?.toString() ??
+                        'item') ==
+                    'ride')
+                .length;
             print(
-                '🚗 Filtered ${filtered.length} ride requests for vehicle types: $driverVehicleTypeIds');
+                '🚗 CountryFilteredDataService: Filtered to $rideCount ride requests for vehicle types: $driverVehicleTypeIds');
           }
         }
 
