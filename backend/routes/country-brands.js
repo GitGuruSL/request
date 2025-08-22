@@ -6,19 +6,30 @@ const authService = require('../services/auth');
 // Get all country brands
 router.get('/', async (req, res) => {
     try {
-        console.log('Fetching country brands...');
+        const { country } = req.query;
+        console.log('Fetching country brands...', { country });
         
-        const result = await dbService.query(`
+        let query = `
             SELECT 
                 cb.*,
                 b.name as brand_name,
-                b.logo_url,
+                b.slug as brand_slug,
                 co.name as country_name
             FROM country_brands cb
             LEFT JOIN brands b ON cb.brand_id = b.id
             LEFT JOIN countries co ON cb.country_code = co.code
-            ORDER BY co.name, b.name
-        `);
+        `;
+        
+        let queryParams = [];
+        
+        if (country) {
+            query += ` WHERE cb.country_code = $1`;
+            queryParams.push(country);
+        }
+        
+        query += ` ORDER BY co.name, b.name`;
+        
+        const result = await dbService.query(query, queryParams);
 
         console.log(`Found ${result.rows.length} country brands`);
         
@@ -45,7 +56,7 @@ router.get('/:id', async (req, res) => {
             SELECT 
                 cb.*,
                 b.name as brand_name,
-                b.logo_url,
+                b.slug as brand_slug,
                 co.name as country_name
             FROM country_brands cb
             LEFT JOIN brands b ON cb.brand_id = b.id
@@ -76,13 +87,29 @@ router.get('/:id', async (req, res) => {
 // Create new country brand
 router.post('/', authService.authMiddleware(), async (req, res) => {
     try {
-        const { brand_id, country_code, is_active, custom_settings } = req.body;
+        // Handle both frontend camelCase and backend snake_case field names
+        const { 
+            brand_id, 
+            brandId, 
+            country_code, 
+            country,
+            is_active, 
+            isActive, 
+            custom_settings,
+            brandName,
+            countryName
+        } = req.body;
+
+        // Use the provided field or fall back to alternative naming
+        const brandIdValue = brand_id || brandId;
+        const countryCodeValue = country_code || country;
+        const isActiveValue = is_active !== undefined ? is_active : (isActive !== undefined ? isActive : true);
 
         const result = await dbService.query(`
-            INSERT INTO country_brands (brand_id, country_code, is_active, custom_settings)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO country_brands (brand_id, country_code, is_active)
+            VALUES ($1, $2, $3)
             RETURNING *
-        `, [brand_id, country_code, is_active || true, custom_settings || {}]);
+        `, [brandIdValue, countryCodeValue, isActiveValue]);
 
         res.status(201).json({
             success: true,
@@ -102,15 +129,31 @@ router.post('/', authService.authMiddleware(), async (req, res) => {
 router.put('/:id', authService.authMiddleware(), async (req, res) => {
     try {
         const { id } = req.params;
-        const { brand_id, country_code, is_active, custom_settings } = req.body;
+        // Handle both frontend camelCase and backend snake_case field names
+        const { 
+            brand_id, 
+            brandId, 
+            country_code, 
+            country,
+            is_active, 
+            isActive, 
+            custom_settings,
+            brandName,
+            countryName
+        } = req.body;
+
+        // Use the provided field or fall back to alternative naming
+        const brandIdValue = brand_id || brandId;
+        const countryCodeValue = country_code || country;
+        const isActiveValue = is_active !== undefined ? is_active : isActive;
 
         const result = await dbService.query(`
             UPDATE country_brands 
             SET brand_id = $1, country_code = $2, is_active = $3, 
-                custom_settings = $4, updated_at = CURRENT_TIMESTAMP
-            WHERE id = $5
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $4
             RETURNING *
-        `, [brand_id, country_code, is_active, custom_settings, id]);
+        `, [brandIdValue, countryCodeValue, isActiveValue, id]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({

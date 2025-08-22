@@ -6,9 +6,10 @@ const authService = require('../services/auth');
 // Get all country categories
 router.get('/', async (req, res) => {
     try {
-        console.log('Fetching country categories...');
+        const { country } = req.query;
+        console.log('Fetching country categories...', { country });
         
-        const result = await dbService.query(`
+        let query = `
             SELECT 
                 cc.*,
                 c.name as category_name,
@@ -16,8 +17,18 @@ router.get('/', async (req, res) => {
             FROM country_categories cc
             LEFT JOIN categories c ON cc.category_id = c.id
             LEFT JOIN countries co ON cc.country_code = co.code
-            ORDER BY co.name, c.name
-        `);
+        `;
+        
+        let queryParams = [];
+        
+        if (country) {
+            query += ` WHERE cc.country_code = $1`;
+            queryParams.push(country);
+        }
+        
+        query += ` ORDER BY co.name, c.name`;
+        
+        const result = await dbService.query(query, queryParams);
 
         console.log(`Found ${result.rows.length} country categories`);
         
@@ -74,13 +85,29 @@ router.get('/:id', async (req, res) => {
 // Create new country category
 router.post('/', authService.authMiddleware(), async (req, res) => {
     try {
-        const { category_id, country_code, is_active, custom_settings } = req.body;
+        // Handle both frontend camelCase and backend snake_case field names
+        const { 
+            category_id, 
+            categoryId, 
+            country_code, 
+            country,
+            is_active, 
+            isActive, 
+            custom_settings,
+            categoryName,
+            countryName
+        } = req.body;
+
+        // Use the provided field or fall back to alternative naming
+        const categoryIdValue = category_id || categoryId;
+        const countryCodeValue = country_code || country;
+        const isActiveValue = is_active !== undefined ? is_active : (isActive !== undefined ? isActive : true);
 
         const result = await dbService.query(`
-            INSERT INTO country_categories (category_id, country_code, is_active, custom_settings)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO country_categories (category_id, country_code, is_active)
+            VALUES ($1, $2, $3)
             RETURNING *
-        `, [category_id, country_code, is_active || true, custom_settings || {}]);
+        `, [categoryIdValue, countryCodeValue, isActiveValue]);
 
         res.status(201).json({
             success: true,
@@ -100,15 +127,31 @@ router.post('/', authService.authMiddleware(), async (req, res) => {
 router.put('/:id', authService.authMiddleware(), async (req, res) => {
     try {
         const { id } = req.params;
-        const { category_id, country_code, is_active, custom_settings } = req.body;
+        // Handle both frontend camelCase and backend snake_case field names
+        const { 
+            category_id, 
+            categoryId, 
+            country_code, 
+            country,
+            is_active, 
+            isActive, 
+            custom_settings,
+            categoryName,
+            countryName
+        } = req.body;
+
+        // Use the provided field or fall back to alternative naming
+        const categoryIdValue = category_id || categoryId;
+        const countryCodeValue = country_code || country;
+        const isActiveValue = is_active !== undefined ? is_active : isActive;
 
         const result = await dbService.query(`
             UPDATE country_categories 
             SET category_id = $1, country_code = $2, is_active = $3, 
-                custom_settings = $4, updated_at = CURRENT_TIMESTAMP
-            WHERE id = $5
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $4
             RETURNING *
-        `, [category_id, country_code, is_active, custom_settings, id]);
+        `, [categoryIdValue, countryCodeValue, isActiveValue, id]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({

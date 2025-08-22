@@ -6,9 +6,10 @@ const authService = require('../services/auth');
 // Get all country subcategories
 router.get('/', async (req, res) => {
     try {
-        console.log('Fetching country subcategories...');
+        const { country } = req.query;
+        console.log('Fetching country subcategories...', { country });
         
-        const result = await dbService.query(`
+        let query = `
             SELECT 
                 cs.*,
                 sc.name as subcategory_name,
@@ -18,8 +19,18 @@ router.get('/', async (req, res) => {
             LEFT JOIN sub_categories sc ON cs.subcategory_id = sc.id
             LEFT JOIN categories c ON sc.category_id = c.id
             LEFT JOIN countries co ON cs.country_code = co.code
-            ORDER BY co.name, c.name, sc.name
-        `);
+        `;
+        
+        let queryParams = [];
+        
+        if (country) {
+            query += ` WHERE cs.country_code = $1`;
+            queryParams.push(country);
+        }
+        
+        query += ` ORDER BY co.name, c.name, sc.name`;
+        
+        const result = await dbService.query(query, queryParams);
 
         console.log(`Found ${result.rows.length} country subcategories`);
         
@@ -78,13 +89,29 @@ router.get('/:id', async (req, res) => {
 // Create new country subcategory
 router.post('/', authService.authMiddleware(), async (req, res) => {
     try {
-        const { subcategory_id, country_code, is_active, custom_settings } = req.body;
+        // Handle both frontend camelCase and backend snake_case field names
+        const { 
+            subcategory_id, 
+            subcategoryId, 
+            country_code, 
+            country,
+            is_active, 
+            isActive, 
+            custom_settings,
+            subcategoryName,
+            countryName
+        } = req.body;
+
+        // Use the provided field or fall back to alternative naming
+        const subcategoryIdValue = subcategory_id || subcategoryId;
+        const countryCodeValue = country_code || country;
+        const isActiveValue = is_active !== undefined ? is_active : (isActive !== undefined ? isActive : true);
 
         const result = await dbService.query(`
-            INSERT INTO country_subcategories (subcategory_id, country_code, is_active, custom_settings)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO country_subcategories (subcategory_id, country_code, is_active)
+            VALUES ($1, $2, $3)
             RETURNING *
-        `, [subcategory_id, country_code, is_active || true, custom_settings || {}]);
+        `, [subcategoryIdValue, countryCodeValue, isActiveValue]);
 
         res.status(201).json({
             success: true,
@@ -104,15 +131,31 @@ router.post('/', authService.authMiddleware(), async (req, res) => {
 router.put('/:id', authService.authMiddleware(), async (req, res) => {
     try {
         const { id } = req.params;
-        const { subcategory_id, country_code, is_active, custom_settings } = req.body;
+        // Handle both frontend camelCase and backend snake_case field names
+        const { 
+            subcategory_id, 
+            subcategoryId, 
+            country_code, 
+            country,
+            is_active, 
+            isActive, 
+            custom_settings,
+            subcategoryName,
+            countryName
+        } = req.body;
+
+        // Use the provided field or fall back to alternative naming
+        const subcategoryIdValue = subcategory_id || subcategoryId;
+        const countryCodeValue = country_code || country;
+        const isActiveValue = is_active !== undefined ? is_active : isActive;
 
         const result = await dbService.query(`
             UPDATE country_subcategories 
             SET subcategory_id = $1, country_code = $2, is_active = $3, 
-                custom_settings = $4, updated_at = CURRENT_TIMESTAMP
-            WHERE id = $5
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $4
             RETURNING *
-        `, [subcategory_id, country_code, is_active, custom_settings, id]);
+        `, [subcategoryIdValue, countryCodeValue, isActiveValue, id]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({

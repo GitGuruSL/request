@@ -89,13 +89,29 @@ router.post('/:id/toggle-country', auth.authMiddleware(), async (req, res) => {
 // Create new country product
 router.post('/', auth.authMiddleware(), async (req, res) => {
     try {
-        const { master_product_id, country_code, is_active, custom_data } = req.body;
+        // Handle both frontend camelCase and backend snake_case field names
+        const { 
+            master_product_id, 
+            productId, 
+            country_code, 
+            country,
+            is_active, 
+            isActive, 
+            custom_data,
+            productName,
+            countryName
+        } = req.body;
+
+        // Use the provided field or fall back to alternative naming
+        const productIdValue = master_product_id || productId;
+        const countryCodeValue = country_code || country;
+        const isActiveValue = is_active !== undefined ? is_active : (isActive !== undefined ? isActive : true);
 
         const result = await database.query(`
-            INSERT INTO country_products (master_product_id, country_code, is_active, custom_data)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO country_products (product_id, country_code, is_active)
+            VALUES ($1, $2, $3)
             RETURNING *
-        `, [master_product_id, country_code, is_active || true, custom_data || {}]);
+        `, [productIdValue, countryCodeValue, isActiveValue]);
 
         res.status(201).json({
             success: true,
@@ -115,15 +131,31 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
 router.put('/:id', auth.authMiddleware(), async (req, res) => {
     try {
         const { id } = req.params;
-        const { master_product_id, country_code, is_active, custom_data } = req.body;
+        // Handle both frontend camelCase and backend snake_case field names
+        const { 
+            master_product_id, 
+            productId, 
+            country_code, 
+            country,
+            is_active, 
+            isActive, 
+            custom_data,
+            productName,
+            countryName
+        } = req.body;
+
+        // Use the provided field or fall back to alternative naming
+        const productIdValue = master_product_id || productId;
+        const countryCodeValue = country_code || country;
+        const isActiveValue = is_active !== undefined ? is_active : isActive;
 
         const result = await database.query(`
             UPDATE country_products 
-            SET master_product_id = $1, country_code = $2, is_active = $3, 
-                custom_data = $4, updated_at = CURRENT_TIMESTAMP
-            WHERE id = $5
+            SET product_id = $1, country_code = $2, is_active = $3, 
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $4
             RETURNING *
-        `, [master_product_id, country_code, is_active, custom_data, id]);
+        `, [productIdValue, countryCodeValue, isActiveValue, id]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({

@@ -6,19 +6,25 @@ const authService = require('../services/auth');
 // Get all country variable types
 router.get('/', async (req, res) => {
     try {
-        console.log('Fetching country variable types...');
+        const { country } = req.query;
+        console.log('Fetching country variable types...', { country });
         
-        const result = await dbService.query(`
+        let query = `
             SELECT 
-                cvt.*,
-                v.name as variable_name,
-                v.type as variable_type,
-                co.name as country_name
+                cvt.*
             FROM country_variable_types cvt
-            LEFT JOIN variables v ON cvt.variable_id = v.id
-            LEFT JOIN countries co ON cvt.country_code = co.code
-            ORDER BY co.name, v.name
-        `);
+        `;
+        
+        let queryParams = [];
+        
+        if (country) {
+            query += ` WHERE cvt.country_code = $1`;
+            queryParams.push(country);
+        }
+        
+        query += ` ORDER BY cvt.country_name, cvt.variable_type_name`;
+        
+        const result = await dbService.query(query, queryParams);
 
         console.log(`Found ${result.rows.length} country variable types`);
         
@@ -43,13 +49,8 @@ router.get('/:id', async (req, res) => {
         
         const result = await dbService.query(`
             SELECT 
-                cvt.*,
-                v.name as variable_name,
-                v.type as variable_type,
-                co.name as country_name
+                cvt.*
             FROM country_variable_types cvt
-            LEFT JOIN variables v ON cvt.variable_id = v.id
-            LEFT JOIN countries co ON cvt.country_code = co.code
             WHERE cvt.id = $1
         `, [id]);
 
