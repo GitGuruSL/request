@@ -947,37 +947,26 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
   }
 
   Widget _buildPaymentMethodChip(String name, String? imageUrl) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppTheme.primaryColor.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.primaryColor.withOpacity(0.15)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          CircleAvatar(
-            radius: 10,
-            backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
-            backgroundImage: (imageUrl != null && imageUrl.isNotEmpty)
-                ? NetworkImage(imageUrl)
-                : null,
-            child: (imageUrl == null || imageUrl.isEmpty)
-                ? Icon(Icons.payment, size: 12, color: AppTheme.primaryColor)
-                : null,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            name,
-            style: TextStyle(
-              color: AppTheme.primaryColor,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              height: 1,
-            ),
-          ),
-        ],
+    // Image-only circular icon, no borders or labels
+    final hasImage = imageUrl != null && imageUrl.isNotEmpty;
+    return SizedBox(
+      width: 28,
+      height: 28,
+      child: ClipOval(
+        child: hasImage
+            ? Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  color: Colors.grey[200],
+                  child:
+                      const Icon(Icons.payment, size: 16, color: Colors.grey),
+                ),
+              )
+            : Container(
+                color: Colors.grey[200],
+                child: const Icon(Icons.payment, size: 16, color: Colors.grey),
+              ),
       ),
     );
   }

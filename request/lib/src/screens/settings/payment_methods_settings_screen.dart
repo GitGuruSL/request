@@ -260,22 +260,51 @@ class _PaymentMethodsSettingsScreenState
                     ),
                   ] else ...[
                     Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                      spacing: 10,
+                      runSpacing: 10,
                       children: selectedMethods.map((m) {
-                        return Chip(
-                          avatar: CircleAvatar(
-                            backgroundColor: Colors.grey[200],
-                            backgroundImage: (m.imageUrl.isNotEmpty)
-                                ? NetworkImage(m.imageUrl)
-                                : null,
-                            child: (m.imageUrl.isEmpty)
-                                ? const Icon(Icons.payment,
-                                    size: 16, color: Colors.grey)
-                                : null,
-                          ),
-                          label: Text(m.name),
-                          onDeleted: () => _remove(m.id),
+                        final hasImage = m.imageUrl.isNotEmpty;
+                        return Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            SizedBox(
+                              width: 40,
+                              height: 40,
+                              child: ClipOval(
+                                child: hasImage
+                                    ? Image.network(
+                                        m.imageUrl,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => Container(
+                                          color: Colors.grey[200],
+                                          child: const Icon(Icons.payment,
+                                              size: 18, color: Colors.grey),
+                                        ),
+                                      )
+                                    : Container(
+                                        color: Colors.grey[200],
+                                        child: const Icon(Icons.payment,
+                                            size: 18, color: Colors.grey),
+                                      ),
+                              ),
+                            ),
+                            Positioned(
+                              right: -6,
+                              top: -6,
+                              child: InkWell(
+                                onTap: () => _remove(m.id),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.65),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  padding: const EdgeInsets.all(2),
+                                  child: const Icon(Icons.close,
+                                      size: 14, color: Colors.white),
+                                ),
+                              ),
+                            )
+                          ],
                         );
                       }).toList(),
                     ),
