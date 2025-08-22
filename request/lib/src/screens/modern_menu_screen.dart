@@ -3,7 +3,7 @@ import '../services/auth_service.dart';
 import '../services/enhanced_user_service.dart';
 import '../services/user_registration_service.dart';
 import '../services/rest_notification_service.dart';
-import '../services/rest_auth_service.dart';
+// Removed direct RestAuthService usage in this screen
 import 'my_activities_screen.dart';
 import 'help_support_screen.dart';
 import 'notification_screen.dart';
@@ -29,8 +29,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
   bool _isDriver = false;
   int _unreadTotal = 0;
   int _unreadMessages = 0;
-  bool _isAdmin = false;
-  bool _isBusiness = false;
+  // Removed admin/business gating; keep Ride Alerts gated by driver status only.
 
   @override
   void initState() {
@@ -53,12 +52,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
       }
 
       // Determine role flags from REST auth user
-      try {
-        final restUser = RestAuthService.instance.currentUser;
-        final role = restUser?.role ?? 'user';
-        _isAdmin = role == 'super_admin' || role == 'country_admin';
-        _isBusiness = role == 'business';
-      } catch (_) {}
+      // Roles/Products are now always visible; no role gating needed here.
 
       // Check driver registration to gate Ride Alerts
       bool isDriver = false;
@@ -246,20 +240,18 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
 
   Widget _buildMenuGrid() {
     final accountItems = [
-      if (_isAdmin || _isBusiness)
-        _MenuItem(
-          title: 'Roles',
-          icon: Icons.work_outline,
-          color: Colors.purple,
-          route: '/role-management',
-        ),
-      if (_isAdmin || _isBusiness)
-        _MenuItem(
-          title: 'Products',
-          icon: Icons.inventory_2_outlined,
-          color: Colors.orange,
-          route: '/business-pricing',
-        ),
+      _MenuItem(
+        title: 'Roles',
+        icon: Icons.work_outline,
+        color: Colors.purple,
+        route: '/role-management',
+      ),
+      _MenuItem(
+        title: 'Products',
+        icon: Icons.inventory_2_outlined,
+        color: Colors.orange,
+        route: '/business-pricing',
+      ),
       _MenuItem(
         title: 'Messages',
         icon: Icons.message_outlined,
