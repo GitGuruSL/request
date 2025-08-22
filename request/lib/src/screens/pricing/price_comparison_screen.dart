@@ -42,8 +42,9 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
     }
   }
 
-  Future<void> _searchProducts() async {
-    if (_searchController.text.trim().isEmpty) {
+  Future<void> _searchProducts([String? query]) async {
+    final searchQuery = query ?? _searchController.text.trim();
+    if (searchQuery.isEmpty) {
       _loadPopularProducts();
       return;
     }
@@ -51,7 +52,7 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
     setState(() => _isSearching = true);
     try {
       final products = await _pricingService.searchProducts(
-        query: _searchController.text.trim(),
+        query: searchQuery,
         limit: 50,
       );
       setState(() {
@@ -125,64 +126,6 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
     );
   }
 
-  Widget _buildSearchSection() {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Search for products (iPhone, Samsung TV, Rice, etc.)',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        _searchController.clear();
-                        _loadPopularProducts();
-                      },
-                    )
-                  : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey[300]!),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppTheme.primaryColor),
-              ),
-            ),
-            onChanged: (value) {
-              setState(() {});
-              if (value.isEmpty) {
-                _loadPopularProducts();
-              }
-            },
-            onSubmitted: (value) => _searchProducts(),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _searchProducts,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text('Search Products'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildProductsList() {
     if (_isSearching) {
       return const Center(child: CircularProgressIndicator());
@@ -222,6 +165,49 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
     );
   }
 
+  Widget _buildSearchSection() {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.all(16),
+      child: TextField(
+        controller: _searchController,
+        decoration: InputDecoration(
+          hintText: 'Search for products (iPhone, Samsung TV, Rice, etc.)',
+          prefixIcon: Icon(Icons.search, color: AppTheme.primaryColor),
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    _loadPopularProducts();
+                  },
+                )
+              : null,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey[300]!),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
+          ),
+          filled: true,
+          fillColor: Colors.grey[50],
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        ),
+        onChanged: (value) {
+          setState(() {});
+          if (value.length >= 2) {
+            _searchProducts(value);
+          } else if (value.isEmpty) {
+            _loadPopularProducts();
+          }
+        },
+      ),
+    );
+  }
+
   Widget _buildProductCard(dynamic product) {
     final name = product.name ?? 'Unknown Product';
     final brand = product.brand ?? '';
@@ -230,79 +216,198 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
     final minPrice = product.minPrice;
     final maxPrice = product.maxPrice;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: () => _loadPricesForProduct(product.id, name),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    if (brand.isNotEmpty) ...[
-                      const SizedBox(height: 4),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _loadPricesForProduct(product.id, name),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                // Product image
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.grey[100],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: product.images != null && product.images.isNotEmpty
+                        ? Image.network(
+                            product.images.first,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return _buildPlaceholderImage(name);
+                            },
+                          )
+                        : _buildPlaceholderImage(name),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        brand,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
+                        name,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
                         ),
                       ),
-                    ],
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.store,
-                          size: 14,
-                          color: Colors.grey[600],
-                        ),
-                        const SizedBox(width: 4),
+                      if (brand.isNotEmpty) ...[
+                        const SizedBox(height: 4),
                         Text(
-                          '$listingCount sellers',
+                          brand,
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 14,
                             color: Colors.grey[600],
+                            fontWeight: FontWeight.w400,
                           ),
                         ),
-                        if (minPrice != null && maxPrice != null) ...[
-                          const SizedBox(width: 16),
-                          Text(
-                            'LKR ${minPrice.toStringAsFixed(0)} - ${maxPrice.toStringAsFixed(0)}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppTheme.primaryColor,
-                              fontWeight: FontWeight.w500,
+                      ],
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.store_outlined,
+                                  size: 14,
+                                  color: AppTheme.primaryColor,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '$listingCount sellers',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppTheme.primaryColor,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
+                          const Spacer(),
+                          if (minPrice != null && maxPrice != null)
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  'Starting from',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                Text(
+                                  'LKR ${minPrice.toStringAsFixed(0)}',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    color: AppTheme.primaryColor,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
                         ],
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: Colors.grey,
-              ),
-            ],
+                const SizedBox(width: 12),
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildPlaceholderImage(String productName) {
+    final name = productName.toLowerCase();
+    IconData icon;
+    Color backgroundColor;
+
+    if (name.contains('iphone') ||
+        name.contains('samsung') ||
+        name.contains('phone')) {
+      icon = Icons.smartphone;
+      backgroundColor = Colors.blue[100]!;
+    } else if (name.contains('laptop') ||
+        name.contains('macbook') ||
+        name.contains('dell')) {
+      icon = Icons.laptop;
+      backgroundColor = Colors.purple[100]!;
+    } else if (name.contains('tv') || name.contains('television')) {
+      icon = Icons.tv;
+      backgroundColor = Colors.green[100]!;
+    } else if (name.contains('watch')) {
+      icon = Icons.watch;
+      backgroundColor = Colors.orange[100]!;
+    } else if (name.contains('headphone') || name.contains('earphone')) {
+      icon = Icons.headphones;
+      backgroundColor = Colors.red[100]!;
+    } else if (name.contains('camera')) {
+      icon = Icons.camera_alt;
+      backgroundColor = Colors.indigo[100]!;
+    } else if (name.contains('shoe') ||
+        name.contains('nike') ||
+        name.contains('jordan')) {
+      icon = Icons.sports_baseball;
+      backgroundColor = Colors.teal[100]!;
+    } else if (name.contains('car') || name.contains('vehicle')) {
+      icon = Icons.directions_car;
+      backgroundColor = Colors.cyan[100]!;
+    } else {
+      icon = Icons.shopping_bag;
+      backgroundColor = Colors.grey[200]!;
+    }
+
+    return Container(
+      width: 60,
+      height: 60,
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(
+        icon,
+        color: Colors.grey[700],
+        size: 24,
       ),
     );
   }
@@ -459,7 +564,7 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        listing.businessName ?? 'Business',
+                        listing.businessName,
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,

@@ -110,8 +110,8 @@ router.get('/', async (req, res) => {
       SELECT 
         pl.*,
         cp.product_name as product_name,
-        cp.base_unit,
-        b.name as brand_name,
+        NULL as base_unit,
+        NULL as brand_name,
         bv.business_name,
         bv.business_category,
         bv.is_verified as business_verified,
