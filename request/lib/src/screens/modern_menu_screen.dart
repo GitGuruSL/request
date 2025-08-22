@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import '../services/content_service.dart';
 import '../services/auth_service.dart';
 import '../services/enhanced_user_service.dart';
 import '../services/user_registration_service.dart';
 import '../services/rest_notification_service.dart';
 import '../services/rest_auth_service.dart';
-import 'content_page_screen.dart';
 import 'my_activities_screen.dart';
 import 'help_support_screen.dart';
 import 'notification_screen.dart';
@@ -21,11 +19,10 @@ class ModernMenuScreen extends StatefulWidget {
 }
 
 class _ModernMenuScreenState extends State<ModernMenuScreen> {
-  final ContentService _contentService = ContentService.instance;
   final AuthService _authService = AuthService.instance;
   final EnhancedUserService _userService = EnhancedUserService();
 
-  List<ContentPage> _pages = [];
+  // Removed content pages and privacy policy section
   Map<String, dynamic>? _currentUser;
   bool _isLoading = true;
   String? _profileImageUrl;
@@ -63,9 +60,6 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
         _isBusiness = role == 'business';
       } catch (_) {}
 
-      // Load content pages
-      final pages = await _contentService.getPages();
-
       // Check driver registration to gate Ride Alerts
       bool isDriver = false;
       try {
@@ -85,7 +79,6 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
 
       if (mounted) {
         setState(() {
-          _pages = pages;
           _isLoading = false;
           _isDriver = isDriver;
           _unreadTotal = unreadTotal;
@@ -174,9 +167,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
             _buildMenuGrid(),
             const SizedBox(height: 12),
 
-            // Content pages section
-            if (_pages.isNotEmpty) _buildContentPagesSection(),
-            const SizedBox(height: 12),
+            // Information Pages and Privacy Policy removed per requirement
 
             // Account actions section (simplified)
             _buildAccountActionsSection(),
@@ -415,104 +406,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
     );
   }
 
-  Widget _buildContentPagesSection() {
-    // Group pages by category
-    final pagesByCategory = <String, List<ContentPage>>{};
-    for (final page in _pages) {
-      final key =
-          (page.category ?? '').isEmpty ? 'uncategorized' : page.category!;
-      pagesByCategory.putIfAbsent(key, () => []).add(page);
-    }
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.pages,
-                    color: Colors.blue,
-                    size: 18,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                const Text(
-                  'Information Pages',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          ...pagesByCategory.entries.map((entry) {
-            return _buildPageCategory(entry.key, entry.value, pagesByCategory);
-          }),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPageCategory(String category, List<ContentPage> pages,
-      Map<String, List<ContentPage>> pagesByCategory) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (category.isNotEmpty) ...[
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Text(
-              category.toUpperCase(),
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[600],
-                letterSpacing: 0.5,
-              ),
-            ),
-          ),
-        ],
-        ...pages.map((page) {
-          return _buildActionTile(
-            icon: Icons.article,
-            title: page.title,
-            subtitle: page.type == 'country_specific' ? 'Local Content' : null,
-            color: Colors.orange,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ContentPageScreen(
-                    slug: page.slug,
-                    title: page.title,
-                  ),
-                ),
-              );
-            },
-            showDivider: page != pages.last,
-          );
-        }),
-        if (pages.isNotEmpty && category != pagesByCategory.keys.last)
-          const SizedBox(height: 8),
-      ],
-    );
-  }
+  // Removed Information Pages section
 
   Widget _buildAccountActionsSection() {
     return Container(
@@ -552,7 +446,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
           _buildActionTile(
             icon: Icons.info_outline,
             title: 'About Us',
-            subtitle: 'Legal and Privacy Policy',
+            subtitle: 'About Request',
             color: Colors.grey,
             onTap: () => Navigator.push(
               context,
@@ -613,7 +507,6 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
     String? subtitle,
     required Color color,
     required VoidCallback onTap,
-    bool showDivider = true,
   }) {
     return InkWell(
       onTap: onTap,
