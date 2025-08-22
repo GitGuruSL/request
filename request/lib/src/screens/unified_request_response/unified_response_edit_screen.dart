@@ -248,17 +248,35 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
       _uploadedImages = List<String>.from(additionalInfo['images'] ?? []);
     }
 
+    // Debug: Print additionalInfo to see what's actually there
+    print('🔍 DEBUG: AdditionalInfo contents:');
+    print(additionalInfo);
+    print('🔍 DEBUG: Location fields in additionalInfo:');
+    print('  location_address: ${additionalInfo['location_address']}');
+    print('  location_latitude: ${additionalInfo['location_latitude']}');
+    print('  location_longitude: ${additionalInfo['location_longitude']}');
+    print('  locationAddress: ${additionalInfo['locationAddress']}');
+
     // Initialize location (if stored either at top-level additionalInfo or future response fields)
     final locAddr =
         additionalInfo['location_address'] ?? additionalInfo['locationAddress'];
-    if (locAddr != null) _locationAddressController.text = locAddr.toString();
+    if (locAddr != null) {
+      _locationAddressController.text = locAddr.toString();
+      print('🔍 DEBUG: Set location address to: ${locAddr.toString()}');
+    } else {
+      print('🔍 DEBUG: No location address found in additionalInfo');
+    }
     if (additionalInfo['location_latitude'] != null) {
       _locationLatitudeController.text =
           additionalInfo['location_latitude'].toString();
+      print(
+          '🔍 DEBUG: Set location latitude to: ${additionalInfo['location_latitude']}');
     }
     if (additionalInfo['location_longitude'] != null) {
       _locationLongitudeController.text =
           additionalInfo['location_longitude'].toString();
+      print(
+          '🔍 DEBUG: Set location longitude to: ${additionalInfo['location_longitude']}');
     }
 
     // Initialize type-specific fields based on request type
@@ -290,6 +308,37 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
             additionalInfo['deliveryNotes']?.toString() ?? '';
         _selectedVehicleType =
             additionalInfo['vehicleType']?.toString() ?? 'Car';
+
+        // Initialize pickup and dropoff times from metadata
+        final pickupTimeRaw = additionalInfo['estimatedPickupTime'];
+        if (pickupTimeRaw != null) {
+          try {
+            final pickupTime = DateTime.fromMillisecondsSinceEpoch(
+                pickupTimeRaw is int
+                    ? pickupTimeRaw
+                    : int.parse(pickupTimeRaw.toString()));
+            _estimatedPickupTimeController.text = _formatDateTime(pickupTime);
+          } catch (e) {
+            print('Error parsing pickup time: $e');
+          }
+        }
+
+        final dropoffTimeRaw = additionalInfo['estimatedDropoffTime'];
+        if (dropoffTimeRaw != null) {
+          try {
+            final dropoffTime = DateTime.fromMillisecondsSinceEpoch(
+                dropoffTimeRaw is int
+                    ? dropoffTimeRaw
+                    : int.parse(dropoffTimeRaw.toString()));
+            _estimatedDropoffTimeController.text = _formatDateTime(dropoffTime);
+          } catch (e) {
+            print('Error parsing dropoff time: $e');
+          }
+        }
+
+        // Initialize special instructions
+        _specialInstructionsController.text =
+            additionalInfo['specialInstructions']?.toString() ?? '';
         break;
       case RequestType.ride:
         _fareController.text = _formatPrice(additionalInfo['fare']);
