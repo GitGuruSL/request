@@ -56,8 +56,41 @@ class EnhancedRequestService {
   // ---- Responses ----
   Future<List<ui.ResponseModel>> getResponsesForRequest(
       String requestId) async {
+    // Fetch responses
     final page = await _rest.getResponses(requestId, limit: 50);
-    return page.responses.map(_convertResponse).toList();
+
+    // Also fetch the request to know which response (if any) was accepted
+    final req = await _rest.getRequestById(requestId);
+    final acceptedId = req?.acceptedResponseId;
+
+    // Convert to UI models and flag the accepted one so the UI can reflect it
+    final list = page.responses.map(_convertResponse).toList();
+    if (acceptedId != null && acceptedId.isNotEmpty) {
+      for (var i = 0; i < list.length; i++) {
+        final r = list[i];
+        if (r.id == acceptedId) {
+          list[i] = ui.ResponseModel(
+            id: r.id,
+            requestId: r.requestId,
+            responderId: r.responderId,
+            message: r.message,
+            price: r.price,
+            currency: r.currency,
+            availableFrom: r.availableFrom,
+            availableUntil: r.availableUntil,
+            images: r.images,
+            additionalInfo: r.additionalInfo,
+            createdAt: r.createdAt,
+            isAccepted: true,
+            rejectionReason: r.rejectionReason,
+            country: r.country,
+            countryName: r.countryName,
+          );
+        }
+      }
+    }
+
+    return list;
   }
 
   Future<void> updateResponse(

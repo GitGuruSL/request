@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../models/request_model.dart';
 import '../../models/enhanced_user_model.dart';
 import '../../services/enhanced_request_service.dart';
-import '../../services/enhanced_user_service.dart';
 import '../../services/messaging_service.dart';
 import '../messaging/conversation_screen.dart';
 import 'unified_response_view_screen.dart';
@@ -21,8 +20,6 @@ class ViewAllResponsesScreen extends StatefulWidget {
 
 class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
   final EnhancedRequestService _requestService = EnhancedRequestService();
-  final EnhancedUserService _userService = EnhancedUserService();
-
   List<ResponseModel> _responses = [];
   Map<String, UserModel> _responders = {};
   bool _isLoading = true;
@@ -36,25 +33,13 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
 
   Future<void> _loadResponses() async {
     try {
+      // Fetch responses; these already include joined user_name/email/phone in additionalInfo
       final responses =
           await _requestService.getResponsesForRequest(widget.request.id);
-      final responders = <String, UserModel>{};
-
-      // Load responder information
-      for (final response in responses) {
-        try {
-          final user = await _userService.getUserById(response.responderId);
-          if (user != null) {
-            responders[response.responderId] = user;
-          }
-        } catch (e) {
-          print('Error loading user ${response.responderId}: $e');
-        }
-      }
 
       setState(() {
         _responses = responses.cast<ResponseModel>();
-        _responders = responders;
+        _responders = const {}; // avoid per-user fetch to prevent 403s
         _isLoading = false;
       });
 
@@ -379,11 +364,35 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
 
   void _startConversation(String responderId, String responderName) async {
     try {
+      // Fallback in case responderId is empty
+      final id = (responderId.isNotEmpty)
+          ? responderId
+          : (_responses.isNotEmpty ? _responses.first.responderId : '');
+
+      if (id.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Unable to start chat: no responder id')),
+          );
+        }
+        return;
+      }
+
+      // Immediate feedback so users see the tap did something
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Opening chat...'),
+              duration: Duration(milliseconds: 800)),
+        );
+      }
+
       final conversation = await MessagingService().getOrCreateConversation(
         requestId: widget.request.id,
         requestTitle: widget.request.title,
         requesterId: widget.request.requesterId,
-        responderId: responderId,
+        responderId: id,
       );
 
       if (mounted) {
