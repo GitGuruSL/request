@@ -34,6 +34,19 @@ router.post('/:id/read', auth.authMiddleware(), async (req, res) => {
   }
 });
 
+// Get unread counts (total and by type)
+router.get('/counts', auth.authMiddleware(), async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const total = await notif.countUnread(userId);
+    const messages = await notif.countUnread(userId, { type: 'newMessage' });
+    res.json({ success: true, data: { total, messages } });
+  } catch (e) {
+    console.error('notifications.counts error', e);
+    res.status(500).json({ success: false, message: 'Failed to get counts' });
+  }
+});
+
 router.delete('/:id', auth.authMiddleware(), async (req, res) => {
   try {
     const del = await notif.remove(req.params.id);

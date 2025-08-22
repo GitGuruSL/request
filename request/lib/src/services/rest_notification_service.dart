@@ -78,4 +78,18 @@ class RestNotificationService {
           : null,
     );
   }
+
+  Future<({int total, int messages})> unreadCounts() async {
+    final token = await ApiClient.instance.getToken();
+    final resp = await http.get(
+      Uri.parse('$_baseUrl/api/notifications/counts'),
+      headers: {if (token != null) 'Authorization': 'Bearer $token'},
+    );
+    if (resp.statusCode != 200) return (total: 0, messages: 0);
+    final data = jsonDecode(resp.body)['data'] as Map<String, dynamic>;
+    return (
+      total: (data['total'] as num?)?.toInt() ?? 0,
+      messages: (data['messages'] as num?)?.toInt() ?? 0,
+    );
+  }
 }

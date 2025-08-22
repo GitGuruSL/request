@@ -43,6 +43,22 @@ async function listForUser(userId, { limit = 200, offset = 0 } = {}) {
   return rows.rows;
 }
 
+async function countUnread(userId, { type } = {}) {
+  await ensureSchema();
+  if (type) {
+    const row = await db.queryOne(
+      `SELECT COUNT(1)::int AS cnt FROM notifications WHERE recipient_id=$1 AND status='unread' AND type=$2`,
+      [userId, String(type)]
+    );
+    return row ? row.cnt : 0;
+  }
+  const row = await db.queryOne(
+    `SELECT COUNT(1)::int AS cnt FROM notifications WHERE recipient_id=$1 AND status='unread'`,
+    [userId]
+  );
+  return row ? row.cnt : 0;
+}
+
 async function remove(id) {
   await ensureSchema();
   return db.queryOne(`DELETE FROM notifications WHERE id=$1 RETURNING *`, [id]);
@@ -54,5 +70,6 @@ module.exports = {
   markAsRead,
   markAllAsRead,
   listForUser,
+  countUnread,
   remove,
 };

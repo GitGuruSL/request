@@ -3,14 +3,14 @@ import '../services/content_service.dart';
 import '../services/auth_service.dart';
 import '../services/enhanced_user_service.dart';
 import '../services/user_registration_service.dart';
+import '../services/rest_notification_service.dart';
 import 'content_page_screen.dart';
 import 'my_activities_screen.dart';
-import 'settings_privacy_screen.dart';
 import 'help_support_screen.dart';
-import 'about_request_screen.dart';
 import 'notification_screen.dart';
 import 'driver_subscription_screen.dart';
 import 'account/user_profile_screen.dart';
+import 'about_us_simple_screen.dart';
 
 class ModernMenuScreen extends StatefulWidget {
   const ModernMenuScreen({super.key});
@@ -29,6 +29,8 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
   bool _isLoading = true;
   String? _profileImageUrl;
   bool _isDriver = false;
+  int _unreadTotal = 0;
+  int _unreadMessages = 0;
 
   @override
   void initState() {
@@ -61,11 +63,22 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
         isDriver = regs?.isApprovedDriver == true;
       } catch (_) {}
 
+      // Fetch unread counts
+      int unreadTotal = 0;
+      int unreadMessages = 0;
+      try {
+        final counts = await RestNotificationService.instance.unreadCounts();
+        unreadTotal = counts.total;
+        unreadMessages = counts.messages;
+      } catch (_) {}
+
       if (mounted) {
         setState(() {
           _pages = pages;
           _isLoading = false;
           _isDriver = isDriver;
+          _unreadTotal = unreadTotal;
+          _unreadMessages = unreadMessages;
         });
       }
     } catch (e) {
@@ -154,8 +167,12 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
             if (_pages.isNotEmpty) _buildContentPagesSection(),
             const SizedBox(height: 12),
 
-            // Account actions section
+            // Account actions section (simplified)
             _buildAccountActionsSection(),
+            const SizedBox(height: 12),
+
+            // Logout separated
+            _buildLogoutSection(),
             const SizedBox(height: 120),
           ]),
         ),
@@ -244,6 +261,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
         icon: Icons.message_outlined,
         color: Colors.green,
         route: '/messages',
+        badgeCount: _unreadMessages,
       ),
       _MenuItem(
         title: 'My Activities',
@@ -256,6 +274,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
         icon: Icons.notifications_outlined,
         color: Colors.red,
         route: '/notifications',
+        badgeCount: _unreadTotal,
       ),
       if (_isDriver)
         _MenuItem(
@@ -290,29 +309,33 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
               itemBuilder: (context, index) {
                 final item = accountItems[index];
                 return InkWell(
-                  onTap: () {
+                  onTap: () async {
                     if (item.route != null) {
                       if (item.route == '/activities') {
-                        Navigator.push(
+                        await Navigator.push(
                           context,
                           MaterialPageRoute(
                               builder: (context) => const MyActivitiesScreen()),
                         );
                       } else if (item.route == '/notifications') {
-                        Navigator.push(
+                        await Navigator.push(
                           context,
                           MaterialPageRoute(
                               builder: (context) => const NotificationScreen()),
                         );
                       } else if (item.route == '/driver-subscriptions') {
-                        Navigator.push(
+                        await Navigator.push(
                           context,
                           MaterialPageRoute(
                               builder: (context) =>
                                   const DriverSubscriptionScreen()),
                         );
                       } else {
-                        Navigator.pushNamed(context, item.route!);
+                        await Navigator.pushNamed(context, item.route!);
+                      }
+                      // Refresh badges after returning
+                      if (mounted) {
+                        _loadData();
                       }
                     }
                   },
@@ -342,6 +365,23 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        if ((item.badgeCount ?? 0) > 0)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '${item.badgeCount}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -497,60 +537,59 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                 Navigator.pushNamed(context, '/settings/payment-methods'),
           ),
           _buildActionTile(
-            icon: Icons.settings,
-            title: 'Settings & Privacy',
-            subtitle: 'Manage app settings and privacy',
-            color: Colors.grey,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (context) => const SettingsPrivacyScreen()),
-            ),
-          ),
-          _buildActionTile(
             icon: Icons.info_outline,
             title: 'About Us',
-            subtitle: 'Learn more about the app',
+            subtitle: 'Legal and Privacy Policy',
             color: Colors.grey,
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (context) => const AboutRequestScreen()),
+                  builder: (context) => const AboutUsSimpleScreen()),
             ),
           ),
-          _buildActionTile(
-            icon: Icons.logout,
-            title: 'Log Out',
-            subtitle: 'Sign out of your account',
-            color: Colors.grey,
-            onTap: () async {
-              final shouldLogout = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Log Out'),
-                  content: const Text('Are you sure you want to log out?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Cancel'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      child: const Text('Log Out'),
-                    ),
-                  ],
-                ),
-              );
-
-              if (shouldLogout == true) {
-                await _authService.signOut();
-                if (mounted) {
-                  Navigator.pushReplacementNamed(context, '/login');
-                }
-              }
-            },
-          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLogoutSection() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: _buildActionTile(
+        icon: Icons.logout,
+        title: 'Log Out',
+        subtitle: 'Sign out of your account',
+        color: Colors.grey,
+        onTap: () async {
+          final shouldLogout = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Log Out'),
+              content: const Text('Are you sure you want to log out?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Log Out'),
+                ),
+              ],
+            ),
+          );
+
+          if (shouldLogout == true) {
+            await _authService.signOut();
+            if (mounted) {
+              Navigator.pushReplacementNamed(context, '/login');
+            }
+          }
+        },
       ),
     );
   }
@@ -624,11 +663,12 @@ class _MenuItem {
   final IconData icon;
   final Color color;
   final String? route;
-
+  final int? badgeCount;
   _MenuItem({
     required this.title,
     required this.icon,
     required this.color,
     this.route,
+    this.badgeCount,
   });
 }

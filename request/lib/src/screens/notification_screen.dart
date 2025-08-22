@@ -13,11 +13,14 @@ class NotificationScreen extends StatefulWidget {
 }
 
 class _NotificationScreenState extends State<NotificationScreen> {
-  final ComprehensiveNotificationService _notificationService =
-      ComprehensiveNotificationService();
+  // Removed unused placeholder notification service; we use REST directly
   final RestNotificationService _restNotifications =
       RestNotificationService.instance;
   final EnhancedUserService _userService = EnhancedUserService();
+
+  Future<void> _refresh() async {
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,6 +58,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     duration: Duration(seconds: 2),
                   ),
                 );
+                await _refresh();
               }
             },
           ),
@@ -120,13 +124,16 @@ class _NotificationScreenState extends State<NotificationScreen> {
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: notifications.length,
-            itemBuilder: (context, index) {
-              final notification = notifications[index];
-              return _buildNotificationCard(notification);
-            },
+          return RefreshIndicator(
+            onRefresh: _refresh,
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: notifications.length,
+              itemBuilder: (context, index) {
+                final notification = notifications[index];
+                return _buildNotificationCard(notification);
+              },
+            ),
           );
         },
       ),
@@ -336,12 +343,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
   void _handleNotificationTap(NotificationModel notification) async {
     // Mark as read if unread
     if (notification.status == NotificationStatus.unread) {
-      await _notificationService.markAsRead(notification.id);
+      await _restNotifications.markRead(notification.id);
     }
 
-    // Navigate based on notification type and data
     if (mounted) {
       _navigateBasedOnNotification(notification);
+      await _refresh();
     }
   }
 
@@ -398,7 +405,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   void _handleMenuAction(String action, NotificationModel notification) async {
     switch (action) {
       case 'mark_read':
-        await _notificationService.markAsRead(notification.id);
+        await _restNotifications.markRead(notification.id);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -406,6 +413,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
               duration: Duration(seconds: 1),
             ),
           );
+          await _refresh();
         }
         break;
 
@@ -431,7 +439,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         );
 
         if (confirmed == true) {
-          await _notificationService.deleteNotification(notification.id);
+          await _restNotifications.delete(notification.id);
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -439,6 +447,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 duration: Duration(seconds: 1),
               ),
             );
+            await _refresh();
           }
         }
         break;
