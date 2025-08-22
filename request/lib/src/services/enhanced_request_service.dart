@@ -159,42 +159,124 @@ class EnhancedRequestService {
   }
 
   // ---- Converters ----
-  ui.RequestModel _convertRequest(rest.RequestModel r) => ui.RequestModel(
-        id: r.id,
-        requesterId: r.userId,
-        title: r.title,
-        description: r.description,
-        type: _deriveType(r.metadata),
-        status: ui.RequestStatus.active,
-        priority: ui.Priority.medium,
-        location: null,
-        destinationLocation: null,
-        budget: r.budget,
-        currency: r.currency,
-        deadline: r.deadline,
-        images: r.imageUrls ?? const [],
-        typeSpecificData: r.metadata ?? const {},
-        tags: const [],
-        contactMethod: null,
-        isPublic: true,
-        createdAt: r.createdAt,
-        updatedAt: r.updatedAt,
-        assignedTo: null,
-        responses: const [], // populated separately
-        country: r.countryCode,
-        countryName: null,
-      );
+  ui.RequestModel _convertRequest(rest.RequestModel r) {
+    // Normalize metadata and ensure ride fields exist when applicable
+    final Map<String, dynamic> meta =
+        Map<String, dynamic>.from(r.metadata ?? const {});
 
-  // Derive UI RequestType from metadata['type'] string; fallback to item
-  RequestType _deriveType(Map<String, dynamic>? meta) {
-    final t = meta?['type']?.toString();
-    if (t != null) {
+    // Derive request type with preference to top-level requestType, then metadata
+    final reqType = _deriveTypeWithFallback(r.requestType, meta);
+
+    // Extract pickup/destination from metadata (preferred) or fall back to top-level columns
+    ui.LocationInfo? pickup;
+    final pickupMap = meta['pickup'] as Map<String, dynamic>?;
+    if (pickupMap != null) {
+      final lat =
+          (pickupMap['lat'] as num?)?.toDouble() ?? r.locationLatitude ?? 0.0;
+      final lng =
+          (pickupMap['lng'] as num?)?.toDouble() ?? r.locationLongitude ?? 0.0;
+      final address =
+          (pickupMap['address'] as String?) ?? r.locationAddress ?? '';
+      pickup = ui.LocationInfo(
+        latitude: lat,
+        longitude: lng,
+        address: address,
+        city: null,
+        state: null,
+        country: r.countryCode,
+        postalCode: null,
+      );
+    } else if (r.locationAddress != null ||
+        (r.locationLatitude != null && r.locationLongitude != null)) {
+      pickup = ui.LocationInfo(
+        latitude: r.locationLatitude ?? 0.0,
+        longitude: r.locationLongitude ?? 0.0,
+        address: r.locationAddress ?? '',
+        city: r.cityName,
+        state: null,
+        country: r.countryCode,
+        postalCode: null,
+      );
+    }
+
+    ui.LocationInfo? destination;
+    final destMap = meta['destination'] as Map<String, dynamic>?;
+    if (destMap != null) {
+      destination = ui.LocationInfo(
+        latitude: (destMap['lat'] as num?)?.toDouble() ?? 0.0,
+        longitude: (destMap['lng'] as num?)?.toDouble() ?? 0.0,
+        address: (destMap['address'] as String?) ?? '',
+        city: null,
+        state: null,
+        country: r.countryCode,
+        postalCode: null,
+      );
+    }
+
+    // If this is a ride, ensure expected fields exist to avoid parsing errors downstream
+    if (reqType == RequestType.ride) {
+      // Passengers default to 1
+      meta['passengers'] = (meta['passengers'] as num?)?.toInt() ?? 1;
+      // Preferred time required by RideRequestData.fromMap; default to createdAt
+      meta['preferredTime'] =
+          (meta['preferredTime'] as String?) ?? r.createdAt.toIso8601String();
+      // Flexible timing default
+      meta['isFlexibleTime'] = meta['isFlexibleTime'] ?? true;
+      // Vehicle type: prefer human-readable if present; else fallback to id
+      if (meta['vehicleType'] == null) {
+        meta['vehicleType'] = meta['vehicle_type_name'] ??
+            meta['vehicle_type'] ??
+            meta['vehicle_type_id'];
+      }
+    }
+
+    return ui.RequestModel(
+      id: r.id,
+      requesterId: r.userId,
+      title: r.title,
+      description: r.description,
+      type: reqType,
+      status: ui.RequestStatus.active,
+      priority: ui.Priority.medium,
+      location: pickup,
+      destinationLocation: destination,
+      budget: r.budget,
+      currency: r.currency,
+      deadline: r.deadline,
+      images: r.imageUrls ?? const [],
+      typeSpecificData: meta,
+      tags: const [],
+      contactMethod: null,
+      isPublic: true,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+      assignedTo: null,
+      responses: const [],
+      country: r.countryCode,
+      countryName: null,
+    );
+  }
+
+  // Prefer top-level requestType (from DB column) then metadata['request_type'] then metadata['type']
+  RequestType _deriveTypeWithFallback(
+      String? requestType, Map<String, dynamic> meta) {
+    final candidates = <String?>[
+      requestType,
+      meta['request_type']?.toString(),
+      meta['type']?.toString(),
+    ];
+    for (final t in candidates) {
+      if (t == null) continue;
       try {
         return RequestType.values.firstWhere((e) => e.name == t);
-      } catch (_) {}
+      } catch (_) {
+        // continue
+      }
     }
     return RequestType.item;
   }
+
+  // (removed legacy _deriveType to satisfy lints)
 
   ui.ResponseModel _convertResponse(rest.ResponseModel r) => ui.ResponseModel(
         id: r.id,

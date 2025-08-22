@@ -175,26 +175,27 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   }
 
   void _setupMapMarkers() {
-    if (_request?.location == null) return;
+    if (_request == null) return;
 
     setState(() {
       _markers.clear();
       _polylines.clear();
-
-      // Add pickup marker
-      _markers.add(
-        Marker(
-          markerId: const MarkerId('pickup'),
-          position: LatLng(
-              _request!.location!.latitude, _request!.location!.longitude),
-          infoWindow: InfoWindow(
-            title: 'Pickup Location',
-            snippet: AddressUtils.cleanAddress(_request!.location!.address),
+      // Add pickup marker if available
+      if (_request!.location != null) {
+        _markers.add(
+          Marker(
+            markerId: const MarkerId('pickup'),
+            position: LatLng(
+                _request!.location!.latitude, _request!.location!.longitude),
+            infoWindow: InfoWindow(
+              title: 'Pickup Location',
+              snippet: AddressUtils.cleanAddress(_request!.location!.address),
+            ),
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+                BitmapDescriptor.hueGreen),
           ),
-          icon:
-              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-        ),
-      );
+        );
+      }
 
       // Add destination marker if available
       if (_request!.destinationLocation != null) {
@@ -214,22 +215,23 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                 BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
           ),
         );
-
-        // Add route line
-        _polylines.add(
-          Polyline(
-            polylineId: const PolylineId('route'),
-            points: [
-              LatLng(
-                  _request!.location!.latitude, _request!.location!.longitude),
-              LatLng(_request!.destinationLocation!.latitude,
-                  _request!.destinationLocation!.longitude),
-            ],
-            color: const Color(0xFF2196F3),
-            width: 5,
-            patterns: [PatternItem.dash(20), PatternItem.gap(10)],
-          ),
-        );
+        // Add route line when both ends exist
+        if (_request!.location != null) {
+          _polylines.add(
+            Polyline(
+              polylineId: const PolylineId('route'),
+              points: [
+                LatLng(_request!.location!.latitude,
+                    _request!.location!.longitude),
+                LatLng(_request!.destinationLocation!.latitude,
+                    _request!.destinationLocation!.longitude),
+              ],
+              color: const Color(0xFF2196F3),
+              width: 5,
+              patterns: [PatternItem.dash(20), PatternItem.gap(10)],
+            ),
+          );
+        }
       }
     });
 
