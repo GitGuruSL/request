@@ -21,9 +21,16 @@ import {
   Alert,
   Snackbar,
   Paper,
+  Tooltip,
+  CircularProgress,
 } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon } from '@mui/icons-material';
+import { 
+  Add as AddIcon, 
+  Edit as EditIcon,
+  Sync as SyncIcon 
+} from '@mui/icons-material';
 import api from '../services/apiClient';
+import { useAuth } from '../contexts/AuthContext';
 
 // Comprehensive list of all countries with codes and flags
 const AVAILABLE_COUNTRIES = [
@@ -230,6 +237,7 @@ const AVAILABLE_COUNTRIES = [
 ];
 
 const Countries = () => {
+  const { isSuperAdmin } = useAuth();
   const [countries, setCountries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -237,6 +245,7 @@ const Countries = () => {
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [comingSoonMessage, setComingSoonMessage] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [autoActivationLoading, setAutoActivationLoading] = useState({});
 
   useEffect(() => {
     fetchCountries();
@@ -330,6 +339,28 @@ const Countries = () => {
     }
   };
 
+  const handleAutoActivate = async (country) => {
+    setAutoActivationLoading(prev => ({ ...prev, [country.id]: true }));
+    
+    try {
+      const response = await api.post(`/countries/${country.code}/auto-activate`);
+      
+      if (response.data.success) {
+        showSnackbar(`Auto-activation completed for ${country.name}`, 'success');
+      } else {
+        showSnackbar(`Auto-activation failed: ${response.data.message}`, 'error');
+      }
+    } catch (error) {
+      console.error('Auto-activation error:', error);
+      showSnackbar(
+        `Auto-activation failed: ${error.response?.data?.message || error.message}`, 
+        'error'
+      );
+    } finally {
+      setAutoActivationLoading(prev => ({ ...prev, [country.id]: false }));
+    }
+  };
+
   if (loading) {
     return (
       <Box sx={{ p: 3 }}>
@@ -411,6 +442,20 @@ const Countries = () => {
                         >
                           Edit
                         </Button>
+                        {isSuperAdmin && (
+                          <Tooltip title="Auto-activate all master data for this country">
+                            <Button
+                              size="small"
+                              startIcon={autoActivationLoading[country.id] ? <CircularProgress size={14} /> : <SyncIcon />}
+                              onClick={() => handleAutoActivate(country)}
+                              disabled={autoActivationLoading[country.id]}
+                              color="primary"
+                              variant="outlined"
+                            >
+                              Auto-Activate
+                            </Button>
+                          </Tooltip>
+                        )}
                       </Box>
                     </TableCell>
                   </TableRow>

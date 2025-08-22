@@ -13,8 +13,9 @@ router.get('/', async (req, res) => {
       SELECT 
         mp.id,
         mp.name,
-        mp.description,
-        mp.image_url,
+        mp.slug,
+        mp.brand_id,
+        mp.base_unit,
         mp.is_active,
         mp.created_at,
         mp.updated_at,
@@ -86,11 +87,11 @@ router.post('/:id/toggle-country', auth.authMiddleware(), async (req, res) => {
 });
 
 // Create new country product
-router.post('/', authService.authMiddleware(), async (req, res) => {
+router.post('/', auth.authMiddleware(), async (req, res) => {
     try {
         const { master_product_id, country_code, is_active, custom_data } = req.body;
 
-        const result = await dbService.query(`
+        const result = await database.query(`
             INSERT INTO country_products (master_product_id, country_code, is_active, custom_data)
             VALUES ($1, $2, $3, $4)
             RETURNING *
@@ -111,12 +112,12 @@ router.post('/', authService.authMiddleware(), async (req, res) => {
 });
 
 // Update country product
-router.put('/:id', authService.authMiddleware(), async (req, res) => {
+router.put('/:id', auth.authMiddleware(), async (req, res) => {
     try {
         const { id } = req.params;
         const { master_product_id, country_code, is_active, custom_data } = req.body;
 
-        const result = await dbService.query(`
+        const result = await database.query(`
             UPDATE country_products 
             SET master_product_id = $1, country_code = $2, is_active = $3, 
                 custom_data = $4, updated_at = CURRENT_TIMESTAMP
@@ -146,11 +147,11 @@ router.put('/:id', authService.authMiddleware(), async (req, res) => {
 });
 
 // Delete country product
-router.delete('/:id', authService.authMiddleware(), async (req, res) => {
+router.delete('/:id', auth.authMiddleware(), async (req, res) => {
     try {
         const { id } = req.params;
 
-        const result = await dbService.query(`
+        const result = await database.query(`
             DELETE FROM country_products WHERE id = $1 RETURNING *
         `, [id]);
 

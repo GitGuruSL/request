@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../services/database');
 const auth = require('../services/auth');
+const { autoActivateCountryData } = require('../services/adminPermissions');
 
 // Basic ISO country code -> primary currency code mapping.
 // Extend as needed; used when client does not explicitly supply default_currency.
@@ -209,6 +210,56 @@ router.delete('/:codeOrId', auth.authMiddleware(), auth.roleMiddleware(['admin',
   }
 });
 
+// Manual auto-activation endpoint for Super Admin
+router.post('/:codeOrId/auto-activate', auth.authMiddleware(), auth.roleMiddleware(['super_admin']), async (req, res) => {
+  try {
+    const v = req.params.codeOrId;
+    let row;
+    
+    // Get country details
+    if (/^\d+$/.test(v)) {
+      row = await db.queryOne('SELECT * FROM countries WHERE id = $1', [parseInt(v, 10)]);
+    } else {
+      row = await db.queryOne('SELECT * FROM countries WHERE code = $1', [v.toUpperCase()]);
+    }
+    
+    if (!row) {
+      return res.status(404).json({ success: false, message: 'Country not found' });
+    }
+    
+    // Trigger auto-activation
+    console.log(`🔄 Manual auto-activation triggered for ${row.name} (${row.code}) by ${req.user?.name || 'Super Admin'}`);
+    
+    await autoActivateCountryData(
+      row.code, 
+      row.name, 
+      req.user?.id || 'super_admin', 
+      req.user?.name || 'Super Admin Manual Activation'
+    );
+    
+    console.log(`✅ Manual auto-activation completed for ${row.name} (${row.code})`);
+    
+    res.json({ 
+      success: true, 
+      message: `Auto-activation completed successfully for ${row.name}`,
+      data: {
+        country_code: row.code,
+        country_name: row.name,
+        activated_by: req.user?.name || 'Super Admin',
+        activated_at: new Date().toISOString()
+      }
+    });
+    
+  } catch (error) {
+    console.error('Manual auto-activation error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Auto-activation failed', 
+      error: error.message 
+    });
+  }
+});
+
 module.exports = router;
 
 // Additional endpoint for status toggle expected by frontend: PUT /api/countries/:codeOrId/status
@@ -243,6 +294,19 @@ router.put('/:codeOrId/status', auth.authMiddleware(), auth.roleMiddleware(['adm
         updated = await db.queryOne('UPDATE countries SET is_active=$1, updated_at=NOW() WHERE code=$2 RETURNING *',[newVal, v.toUpperCase()]);
       }
     }
+    
+    // Auto-activate country data when a country is enabled
+    if (newVal && !row.is_active) {
+      console.log(`🔄 Country ${updated.code} was activated, triggering auto-activation...`);
+      try {
+        await autoActivateCountryData(updated.code, updated.name, req.user?.id || 'system', req.user?.name || 'System Auto-Activation');
+        console.log(`✅ Auto-activation completed for ${updated.name} (${updated.code})`);
+      } catch (autoActivationError) {
+        console.error(`❌ Auto-activation failed for ${updated.name} (${updated.code}):`, autoActivationError);
+        // Don't fail the main request, just log the error
+      }
+    }
+    
   res.json({ success:true, message:'Status updated', data: adapt(updated) });
   } catch(e){
     console.error('Toggle country status error', e);
