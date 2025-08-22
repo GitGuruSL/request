@@ -506,25 +506,50 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
   }
 
   Widget _buildPriceCard(PriceListing listing, bool isLowestPrice) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: isLowestPrice
-            ? const BorderSide(color: Colors.green, width: 2)
-            : BorderSide.none,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border:
+            isLowestPrice ? Border.all(color: Colors.green, width: 2) : null,
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header with price and badge
+            // Header with business logo, price and badge
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Business Logo
+                GestureDetector(
+                  onTap: () => _showBusinessBottomSheet(listing),
+                  child: Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.grey[100],
+                      border: Border.all(color: Colors.grey[200]!),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: listing.businessLogo.isNotEmpty
+                          ? Image.network(
+                              listing.businessLogo,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return _buildBusinessLogoPlaceholder(
+                                    listing.businessName);
+                              },
+                            )
+                          : _buildBusinessLogoPlaceholder(listing.businessName),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -563,11 +588,16 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        listing.businessName,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
+                      GestureDetector(
+                        onTap: () => _showBusinessBottomSheet(listing),
+                        child: Text(
+                          listing.businessName,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.primaryColor,
+                            decoration: TextDecoration.underline,
+                          ),
                         ),
                       ),
                     ],
@@ -646,6 +676,325 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBusinessLogoPlaceholder(String businessName) {
+    final firstLetter =
+        businessName.isNotEmpty ? businessName[0].toUpperCase() : 'B';
+    return Container(
+      width: 50,
+      height: 50,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppTheme.primaryColor.withOpacity(0.7),
+            AppTheme.primaryColor,
+          ],
+        ),
+      ),
+      child: Center(
+        child: Text(
+          firstLetter,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showBusinessBottomSheet(PriceListing listing) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.3,
+        maxChildSize: 0.9,
+        builder: (context, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(20),
+                  children: [
+                    // Business header
+                    Row(
+                      children: [
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            color: Colors.grey[100],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: listing.businessLogo.isNotEmpty
+                                ? Image.network(
+                                    listing.businessLogo,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return _buildBusinessLogoPlaceholder(
+                                          listing.businessName);
+                                    },
+                                  )
+                                : _buildBusinessLogoPlaceholder(
+                                    listing.businessName),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                listing.businessName,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.green[100],
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  'Verified Business',
+                                  style: TextStyle(
+                                    color: Colors.green[700],
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Product offer
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            listing.productName,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Text(
+                                '${listing.currency} ${listing.price.toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.primaryColor,
+                                ),
+                              ),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange[100],
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  'In Stock',
+                                  style: TextStyle(
+                                    color: Colors.orange[700],
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Business info
+                    const Text(
+                      'Business Information',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    _buildInfoRow(
+                        Icons.business, 'Business Type', 'Electronics Store'),
+                    _buildInfoRow(Icons.star, 'Rating',
+                        '${listing.rating}/5.0 (${listing.reviewCount} reviews)'),
+                    _buildInfoRow(
+                        Icons.location_on, 'Location', 'Colombo, Sri Lanka'),
+                    _buildInfoRow(
+                        Icons.verified, 'Verified', 'Business verified'),
+
+                    const SizedBox(height: 20),
+
+                    // Payment methods
+                    const Text(
+                      'Payment Methods',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        _buildPaymentMethod('Cash'),
+                        const SizedBox(width: 8),
+                        _buildPaymentMethod('Card'),
+                        const SizedBox(width: 8),
+                        _buildPaymentMethod('Transfer'),
+                      ],
+                    ),
+
+                    const SizedBox(height: 30),
+
+                    // Action buttons
+                    Row(
+                      children: [
+                        if (listing.whatsappNumber?.isNotEmpty == true) ...[
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => _contactBusiness(
+                                  'whatsapp', listing.whatsappNumber!),
+                              icon: const Icon(Icons.chat, size: 18),
+                              label: const Text('WhatsApp'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                        ],
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => _contactBusiness(
+                                'website', listing.productLink ?? ''),
+                            icon: const Icon(Icons.shopping_bag, size: 18),
+                            label: Text('Shop at ${listing.businessName}'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: Colors.grey[600]),
+          const SizedBox(width: 8),
+          Text(
+            '$label: ',
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 14,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentMethod(String method) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Text(
+        method,
+        style: TextStyle(
+          color: AppTheme.primaryColor,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
         ),
       ),
     );
