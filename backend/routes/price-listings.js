@@ -124,7 +124,7 @@ router.get('/', async (req, res) => {
       FROM price_listings pl
       LEFT JOIN master_products mp ON pl.master_product_id = mp.id
       LEFT JOIN brands b ON mp.brand_id = b.id
-      LEFT JOIN new_business_verifications bv ON pl.business_id = bv.user_id
+      LEFT JOIN business_verifications bv ON pl.business_id = bv.user_id
       LEFT JOIN cities c ON pl.city_id = c.id
     `;
 
@@ -225,7 +225,7 @@ router.get('/', async (req, res) => {
       SELECT COUNT(*) as total
       FROM price_listings pl
       LEFT JOIN master_products mp ON pl.master_product_id = mp.id
-      LEFT JOIN new_business_verifications bv ON pl.business_id = bv.user_id
+      LEFT JOIN business_verifications bv ON pl.business_id = bv.user_id
     `;
     
     if (whereConditions.length > 0) {
@@ -403,7 +403,7 @@ router.get('/product/:productId', async (req, res) => {
         bv.is_verified as business_verified,
         c.name as city_name
       FROM price_listings pl
-      LEFT JOIN new_business_verifications bv ON pl.business_id = bv.user_id
+      LEFT JOIN business_verifications bv ON pl.business_id = bv.user_id
       LEFT JOIN cities c ON pl.city_id = c.id
       WHERE pl.master_product_id = $1 
         AND pl.country_code = $2 
@@ -466,7 +466,7 @@ router.get('/:id', async (req, res) => {
       FROM price_listings pl
       LEFT JOIN master_products mp ON pl.master_product_id = mp.id
       LEFT JOIN brands b ON mp.brand_id = b.id
-      LEFT JOIN new_business_verifications bv ON pl.business_id = bv.user_id
+      LEFT JOIN business_verifications bv ON pl.business_id = bv.user_id
       LEFT JOIN cities c ON pl.city_id = c.id
       WHERE pl.id = $1
     `;
@@ -504,7 +504,7 @@ router.post('/', auth.authMiddleware(), upload.array('images', 5), async (req, r
     
     // Verify user is a verified business
     const businessCheck = await database.query(
-      'SELECT id, business_name, is_verified FROM new_business_verifications WHERE user_id = $1 AND status = $2',
+      'SELECT id, business_name, is_verified FROM business_verifications WHERE user_id = $1 AND status = $2',
       [userId, 'approved']
     );
 
@@ -555,20 +555,7 @@ router.post('/', auth.authMiddleware(), upload.array('images', 5), async (req, r
     // Handle uploaded images
     const images = req.files ? req.files.map(file => `/uploads/price-listings/${file.filename}`) : [];
 
-    // Check if business already has a listing for this product
-    const existingListing = await database.query(
-      'SELECT id FROM price_listings WHERE business_id = $1 AND master_product_id = $2',
-      [userId, masterProductId]
-    );
-
-    if (existingListing.rows.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'You already have a price listing for this product. Please update the existing listing.'
-      });
-    }
-
-    // Create the price listing
+    // Create the price listing (allow multiple listings per business for same product)
     const insertQuery = `
       INSERT INTO price_listings (
         business_id, master_product_id, category_id, subcategory_id,

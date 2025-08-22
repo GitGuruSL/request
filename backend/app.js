@@ -125,7 +125,6 @@ app.use('/api/country-variable-types', countryVariableTypesRoutes);
 
 // Price comparison routes  
 app.use('/api/price-listings', priceListingsRoutes);
-app.use('/api/business-products', businessProductsRoutes);
 
 app.use('/api/upload', uploadRoutes); // NEW - image upload endpoint
 app.use('/api/test-images', testImageRoutes); // TEST - image serving test

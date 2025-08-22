@@ -1,14 +1,14 @@
--- Create comprehensive price_listings table for price comparison system
--- This table allows businesses to directly add products with pricing and details
+-- Create price_listings table for price comparison system
+-- Simple version without missing table references
 
--- Create price_listings table if it doesn't exist
+-- Create price_listings table
 CREATE TABLE IF NOT EXISTS price_listings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     firebase_id VARCHAR(255),
-    business_id UUID NOT NULL, -- references users.id (business owner)
+    business_id UUID NOT NULL, -- references users.id (business owner firebase_uid)
     master_product_id UUID REFERENCES master_products(id) ON DELETE CASCADE,
     category_id UUID REFERENCES categories(id),
-    subcategory_id UUID REFERENCES subcategories(id),
+    subcategory_id UUID REFERENCES sub_categories(id),
     title VARCHAR(500) NOT NULL,
     description TEXT,
     price DECIMAL(10, 2) NOT NULL,
@@ -27,14 +27,6 @@ CREATE TABLE IF NOT EXISTS price_listings (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Add missing columns to existing price_listings table if they don't exist
-ALTER TABLE price_listings 
-ADD COLUMN IF NOT EXISTS master_product_id UUID REFERENCES master_products(id),
-ADD COLUMN IF NOT EXISTS delivery_charge DECIMAL(10, 2) DEFAULT 0,
-ADD COLUMN IF NOT EXISTS images JSONB DEFAULT '[]',
-ADD COLUMN IF NOT EXISTS website VARCHAR(255),
-ADD COLUMN IF NOT EXISTS whatsapp VARCHAR(20);
-
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_price_listings_master_product ON price_listings(master_product_id);
 CREATE INDEX IF NOT EXISTS idx_price_listings_business_id ON price_listings(business_id);
@@ -43,8 +35,8 @@ CREATE INDEX IF NOT EXISTS idx_price_listings_price ON price_listings(price);
 CREATE INDEX IF NOT EXISTS idx_price_listings_category ON price_listings(category_id);
 CREATE INDEX IF NOT EXISTS idx_price_listings_city ON price_listings(city_id);
 
--- Update business_id to be consistent with user_id from business verifications
-COMMENT ON COLUMN price_listings.business_id IS 'References users.id (firebase_uid) of the business owner';
+-- Add comments
+COMMENT ON COLUMN price_listings.business_id IS 'References users.firebase_uid of the business owner';
 COMMENT ON COLUMN price_listings.master_product_id IS 'References master_products.id for centralized product catalog';
 
 -- Add trigger to update updated_at timestamp
