@@ -3,6 +3,7 @@ import '../../models/request_model.dart';
 import '../../models/enhanced_user_model.dart';
 import '../../services/enhanced_request_service.dart';
 import '../../services/enhanced_user_service.dart';
+import '../../services/user_registration_service.dart';
 import '../../widgets/image_upload_widget.dart';
 import '../../utils/currency_helper.dart';
 import '../../widgets/accurate_location_picker_widget.dart';
@@ -1927,6 +1928,11 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
     });
 
     try {
+      // For delivery requests, clear registration cache to ensure we have the latest data
+      if (widget.request.type == RequestType.delivery) {
+        UserRegistrationService.instance.clearCache();
+      }
+
       final currentUser = await _userService.getCurrentUserModel();
       if (currentUser == null) {
         throw Exception('User not found');
