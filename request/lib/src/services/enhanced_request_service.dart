@@ -230,6 +230,36 @@ class EnhancedRequestService {
       }
     }
 
+    // Provide requester info in metadata for UI fallbacks when direct user fetch is not allowed
+    // These keys are checked by the Ride View screen
+    meta['requester_id'] = meta['requester_id'] ?? r.userId;
+    if ((meta['requester_name'] == null ||
+            meta['requester_name'].toString().trim().isEmpty) &&
+        (r.userName != null && r.userName!.toString().trim().isNotEmpty)) {
+      meta['requester_name'] = r.userName;
+      meta['user_name'] = meta['user_name'] ?? r.userName; // compatibility
+      meta['requester_display_name'] =
+          meta['requester_display_name'] ?? r.userName;
+      meta['user_display_name'] = meta['user_display_name'] ?? r.userName;
+      meta['display_name'] = meta['display_name'] ?? r.userName;
+    }
+    if ((meta['requester_phone'] == null ||
+            meta['requester_phone'].toString().trim().isEmpty) &&
+        (r.userPhone != null && r.userPhone!.toString().trim().isNotEmpty)) {
+      meta['requester_phone'] = r.userPhone;
+      meta['user_phone'] = meta['user_phone'] ?? r.userPhone; // compatibility
+      meta['phone'] = meta['phone'] ?? r.userPhone;
+      meta['requester_mobile'] = meta['requester_mobile'] ?? r.userPhone;
+      meta['mobile'] = meta['mobile'] ?? r.userPhone;
+    }
+    if ((meta['requester_email'] == null ||
+            meta['requester_email'].toString().trim().isEmpty) &&
+        (r.userEmail != null && r.userEmail!.toString().trim().isNotEmpty)) {
+      meta['requester_email'] = r.userEmail;
+      meta['user_email'] = meta['user_email'] ?? r.userEmail;
+      meta['email'] = meta['email'] ?? r.userEmail;
+    }
+
     return ui.RequestModel(
       id: r.id,
       requesterId: r.userId,
