@@ -84,7 +84,8 @@ const CentralizedPagesModule = () => {
     content: '',
     metaDescription: '',
     keywords: [],
-    status: 'draft'
+  status: 'draft',
+  metadata: {}
   });
 
   // Page categories for centralized pages
@@ -143,8 +144,9 @@ const CentralizedPagesModule = () => {
       category: 'info',
       content: '',
       metaDescription: '',
-      keywords: [],
-      status: 'draft'
+  keywords: [],
+  status: 'draft',
+  metadata: {}
     });
     setSelectedPage(null);
     setDialogOpen(true);
@@ -159,7 +161,8 @@ const CentralizedPagesModule = () => {
       content: page.content || '',
       metaDescription: page.metaDescription || '',
       keywords: page.keywords || [],
-      status: page.status || 'draft'
+  status: page.status || 'draft',
+  metadata: page.metadata || {}
     });
     setSelectedPage(page);
     setDialogOpen(true);
@@ -167,7 +170,7 @@ const CentralizedPagesModule = () => {
 
   const handleSavePage = async () => {
     try {
-  const payload = { ...formData, slug: formData.slug || formData.title.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,''), countries:['global'], isTemplate:false, requiresApproval: !isSuperAdmin };
+  const payload = { ...formData, slug: formData.slug || formData.title.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,''), countries:['global'], isTemplate:false, requiresApproval: !isSuperAdmin, metadata: formData.metadata || {} };
   if (selectedPage){ await api.put(`/content-pages/${selectedPage.id}`, payload);} else { await api.post('/content-pages', { ...payload, status: isSuperAdmin ? 'approved' : 'draft' }); }
 
       setDialogOpen(false);
@@ -606,6 +609,149 @@ const CentralizedPagesModule = () => {
                 placeholder="Enter page content (supports HTML/Markdown)"
                 required
               />
+            </Grid>
+
+            {/* About Us helper fields (optional). These map to metadata used by the mobile app. */}
+            <Grid item xs={12}>
+              <Accordion>
+                <AccordionSummary expandIcon={<ExpandMore />}>
+                  <Typography>About Us details (optional)</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="About Text"
+                        multiline
+                        rows={5}
+                        value={formData.metadata?.aboutText || ''}
+                        onChange={(e)=> setFormData(fd=>({...fd, metadata:{...fd.metadata, aboutText: e.target.value}}))}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="Logo URL"
+                        value={formData.metadata?.logoUrl || ''}
+                        onChange={(e)=> setFormData(fd=>({...fd, metadata:{...fd.metadata, logoUrl: e.target.value}}))}
+                        helperText="You can paste a URL or upload below"
+                      />
+                      <Box sx={{ display:'flex', alignItems:'center', gap:2, mt:1, flexWrap:'wrap' }}>
+                        {formData.metadata?.logoUrl && (
+                          <Avatar src={formData.metadata.logoUrl} variant="rounded" sx={{ width:56, height:56 }} />
+                        )}
+                        <Button
+                          variant="outlined"
+                          component="label"
+                        >
+                          Upload Logo
+                          <input type="file" accept="image/*" hidden onChange={async (e)=>{
+                            const file = e.target.files?.[0];
+                            if(!file) return;
+                            const form = new FormData();
+                            form.append('file', file);
+                            try {
+                              // Try S3 first
+                              const s3Form = new FormData();
+                              s3Form.append('file', file);
+                              s3Form.append('uploadType', 'about-us');
+                              let url = '';
+                              try {
+                                const s3 = await api.post('/s3/upload', s3Form, { headers: { 'Content-Type': 'multipart/form-data' } });
+                                url = s3.data?.url || s3.data?.location || '';
+                              } catch(err){
+                                const res = await api.post('/upload/payment-methods', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+                                url = res.data?.url || '';
+                              }
+                              if(url){ setFormData(fd=>({...fd, metadata:{...fd.metadata, logoUrl: url}})); }
+                            } catch(err){ console.error('Logo upload failed', err); }
+                          }} />
+                        </Button>
+                        {formData.metadata?.logoUrl && (
+                          <Button color="error" onClick={()=> setFormData(fd=>({...fd, metadata:{...fd.metadata, logoUrl:''}}))}>Remove</Button>
+                        )}
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="Website URL"
+                        value={formData.metadata?.websiteUrl || ''}
+                        onChange={(e)=> setFormData(fd=>({...fd, metadata:{...fd.metadata, websiteUrl: e.target.value}}))}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="HQ Title"
+                        value={formData.metadata?.hqTitle || ''}
+                        onChange={(e)=> setFormData(fd=>({...fd, metadata:{...fd.metadata, hqTitle: e.target.value}}))}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="HQ Address"
+                        multiline
+                        rows={2}
+                        value={formData.metadata?.hqAddress || ''}
+                        onChange={(e)=> setFormData(fd=>({...fd, metadata:{...fd.metadata, hqAddress: e.target.value}}))}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <TextField
+                        fullWidth
+                        label="Support - Passenger"
+                        value={formData.metadata?.supportPassenger || ''}
+                        onChange={(e)=> setFormData(fd=>({...fd, metadata:{...fd.metadata, supportPassenger: e.target.value}}))}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <TextField
+                        fullWidth
+                        label="Hotline"
+                        value={formData.metadata?.hotline || ''}
+                        onChange={(e)=> setFormData(fd=>({...fd, metadata:{...fd.metadata, hotline: e.target.value}}))}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <TextField
+                        fullWidth
+                        label="Support Email"
+                        value={formData.metadata?.supportEmail || ''}
+                        onChange={(e)=> setFormData(fd=>({...fd, metadata:{...fd.metadata, supportEmail: e.target.value}}))}
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="Feedback Text"
+                        multiline
+                        rows={3}
+                        value={formData.metadata?.feedbackText || ''}
+                        onChange={(e)=> setFormData(fd=>({...fd, metadata:{...fd.metadata, feedbackText: e.target.value}}))}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="Facebook URL"
+                        value={formData.metadata?.facebookUrl || ''}
+                        onChange={(e)=> setFormData(fd=>({...fd, metadata:{...fd.metadata, facebookUrl: e.target.value}}))}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="X (Twitter) URL"
+                        value={formData.metadata?.xUrl || ''}
+                        onChange={(e)=> setFormData(fd=>({...fd, metadata:{...fd.metadata, xUrl: e.target.value}}))}
+                      />
+                    </Grid>
+                  </Grid>
+                </AccordionDetails>
+              </Accordion>
             </Grid>
 
             <Grid item xs={12}>
