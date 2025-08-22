@@ -73,11 +73,28 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
                         title: 'Legal',
                         subtitle: 'Terms and legal information',
                         onTap: () {
-                          showLicensePage(
-                            context: context,
-                            applicationName: 'Request Marketplace',
-                            applicationVersion: '1.0.0',
-                            applicationLegalese: '© 2025 Request Marketplace',
+                          final preferred = _findPageByKeywords(
+                              ['terms', 'legal', 'conditions']);
+                          if (preferred != null) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ContentPageScreen(
+                                  slug: preferred.slug,
+                                  title: preferred.title,
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ContentPageScreen(
+                                slug: 'terms-conditions',
+                                title: 'Terms & Conditions',
+                              ),
+                            ),
                           );
                         },
                       ),

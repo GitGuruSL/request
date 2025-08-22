@@ -4,6 +4,7 @@ import '../services/auth_service.dart';
 import '../services/enhanced_user_service.dart';
 import '../services/user_registration_service.dart';
 import '../services/rest_notification_service.dart';
+import '../services/rest_auth_service.dart';
 import 'content_page_screen.dart';
 import 'my_activities_screen.dart';
 import 'help_support_screen.dart';
@@ -31,6 +32,8 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
   bool _isDriver = false;
   int _unreadTotal = 0;
   int _unreadMessages = 0;
+  bool _isAdmin = false;
+  bool _isBusiness = false;
 
   @override
   void initState() {
@@ -51,6 +54,14 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
           _profileImageUrl = null; // No profile image in current model
         });
       }
+
+      // Determine role flags from REST auth user
+      try {
+        final restUser = RestAuthService.instance.currentUser;
+        final role = restUser?.role ?? 'user';
+        _isAdmin = role == 'super_admin' || role == 'country_admin';
+        _isBusiness = role == 'business';
+      } catch (_) {}
 
       // Load content pages
       final pages = await _contentService.getPages();
@@ -244,18 +255,20 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
 
   Widget _buildMenuGrid() {
     final accountItems = [
-      _MenuItem(
-        title: 'Roles',
-        icon: Icons.work_outline,
-        color: Colors.purple,
-        route: '/role-management',
-      ),
-      _MenuItem(
-        title: 'Products',
-        icon: Icons.inventory_2_outlined,
-        color: Colors.orange,
-        route: '/business-pricing',
-      ),
+      if (_isAdmin || _isBusiness)
+        _MenuItem(
+          title: 'Roles',
+          icon: Icons.work_outline,
+          color: Colors.purple,
+          route: '/role-management',
+        ),
+      if (_isAdmin || _isBusiness)
+        _MenuItem(
+          title: 'Products',
+          icon: Icons.inventory_2_outlined,
+          color: Colors.orange,
+          route: '/business-pricing',
+        ),
       _MenuItem(
         title: 'Messages',
         icon: Icons.message_outlined,
