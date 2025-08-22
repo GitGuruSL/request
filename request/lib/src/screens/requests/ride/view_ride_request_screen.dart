@@ -1347,6 +1347,12 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
     final currencySymbol = CurrencyHelper.instance.getCurrencySymbol();
     final hasResponded = _hasUserResponded();
 
+    // If user has already responded, don't show the quick respond section
+    // The edit functionality is available in the responses section header
+    if (hasResponded) {
+      return const SizedBox.shrink();
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1355,79 +1361,62 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 12),
-        if (!hasResponded) ...[
-          TextField(
-            controller: _fareController,
-            keyboardType: const TextInputType.numberWithOptions(
-                signed: false, decimal: true),
-            decoration: InputDecoration(
-              hintText: 'Enter fare',
-              prefixText: currencySymbol,
-              filled: true,
-              fillColor: Colors.grey[50],
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              errorText: _fareError,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        TextField(
+          controller: _fareController,
+          keyboardType: const TextInputType.numberWithOptions(
+              signed: false, decimal: true),
+          decoration: InputDecoration(
+            hintText: 'Enter fare',
+            prefixText: currencySymbol,
+            filled: true,
+            fillColor: Colors.grey[50],
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
             ),
+            errorText: _fareError,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: ElevatedButton.icon(
-              onPressed: _isSubmittingResponse ? null : _submitQuickResponse,
-              icon: const Icon(Icons.reply, color: Colors.white),
-              label: _isSubmittingResponse
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : const Text(
-                      'Respond to Request',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: ElevatedButton.icon(
+            onPressed: _isSubmittingResponse ? null : _submitQuickResponse,
+            icon: const Icon(Icons.reply, color: Colors.white),
+            label: _isSubmittingResponse
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 0,
+                  )
+                : const Text(
+                    'Respond to Request',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
+              elevation: 0,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Quick submit. You can edit details later.',
-            style: TextStyle(color: Colors.grey[600], fontSize: 12),
-          ),
-        ] else ...[
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: _showEditResponseSheet,
-              icon: const Icon(Icons.edit, size: 18),
-              label: const Text('Edit Response'),
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.blue[700],
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                minimumSize: const Size(0, 0),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-            ),
-          ),
-        ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Quick submit. You can edit details later.',
+          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+        ),
       ],
     );
   }
