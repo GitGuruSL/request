@@ -90,9 +90,9 @@ async function formatPriceListing(row, includeBusiness = false) {
   if (row.product_name) {
     listing.product = {
       name: row.product_name,
-      brandId: row.brand_id,
-      brandName: row.brand_name,
-      baseUnit: row.base_unit
+  brandId: null,
+  brandName: row.brand_name,
+  baseUnit: row.base_unit
     };
   }
   
@@ -298,9 +298,8 @@ router.get('/search', async (req, res) => {
         cp.product_id as id,
         cp.product_name as name,
         LOWER(REPLACE(cp.product_name, ' ', '-')) as slug,
-        NULL as base_unit,
-        NULL as brand_name,
-        NULL as brand_id,
+  NULL as base_unit,
+  NULL as brand_name,
         COUNT(pl.id) as listing_count,
         MIN(pl.price) as min_price,
         MAX(pl.price) as max_price,
@@ -326,7 +325,7 @@ router.get('/search', async (req, res) => {
     if (categoryId) {
       searchQuery += ` AND EXISTS (
         SELECT 1 FROM price_listings pl2 
-        WHERE pl2.master_product_id = cp.id 
+        WHERE pl2.master_product_id = cp.product_id 
         AND pl2.category_id = $${paramIndex}
       )`;
       queryParams.push(categoryId);
@@ -357,10 +356,7 @@ router.get('/search', async (req, res) => {
       name: row.name,
       slug: row.slug,
       baseUnit: row.base_unit,
-      brand: row.brand_name ? {
-        id: row.brand_id,
-        name: row.brand_name
-      } : null,
+      brand: null,
       listingCount: parseInt(row.listing_count) || 0,
       priceRange: {
         min: parseFloat(row.min_price) || 0,
@@ -394,10 +390,11 @@ router.get('/product/:productId', async (req, res) => {
 
     // Get product details first
     const productQuery = `
-      SELECT cp.*, b.name as brand_name
+      SELECT 
+        cp.product_id AS id,
+        cp.product_name AS name
       FROM country_products cp
-      LEFT JOIN brands b ON cp.brand_id = b.id
-      WHERE cp.id = $1 AND cp.is_active = true AND cp.country_code = $2
+      WHERE cp.product_id = $1 AND cp.is_active = true AND cp.country_code = $2
     `;
     
     const productResult = await database.query(productQuery, [productId, country]);
@@ -453,9 +450,9 @@ router.get('/product/:productId', async (req, res) => {
         product: {
           id: product.id,
           name: product.name,
-          slug: product.slug,
-          baseUnit: product.base_unit,
-          brand: product.brand_name ? { name: product.brand_name } : null
+          slug: (product.name || '').toLowerCase().replace(/\s+/g, '-'),
+          baseUnit: null,
+          brand: null
         },
         listings,
         summary: {
@@ -487,16 +484,15 @@ router.get('/:id', async (req, res) => {
     const query = `
       SELECT 
         pl.*,
-        cp.name as product_name,
-        cp.base_unit,
-        b.name as brand_name,
+        cp.product_name as product_name,
+        NULL as base_unit,
+        NULL as brand_name,
         bv.business_name,
         bv.business_category,
         bv.is_verified as business_verified,
         c.name as city_name
       FROM price_listings pl
-      LEFT JOIN country_products cp ON pl.master_product_id = cp.id
-      LEFT JOIN brands b ON cp.brand_id = b.id
+      LEFT JOIN country_products cp ON pl.master_product_id = cp.product_id
       LEFT JOIN business_verifications bv ON pl.business_id = bv.user_id
       LEFT JOIN cities c ON pl.city_id = c.id
       WHERE pl.id = $1
