@@ -109,7 +109,7 @@ router.get('/', async (req, res) => {
     let query = `
       SELECT 
         pl.*,
-        cp.name as product_name,
+        cp.product_name as product_name,
         cp.base_unit,
         b.name as brand_name,
         bv.business_name,
@@ -117,7 +117,7 @@ router.get('/', async (req, res) => {
         bv.is_verified as business_verified,
         c.name as city_name
       FROM price_listings pl
-      LEFT JOIN country_products cp ON pl.master_product_id = cp.id
+      LEFT JOIN country_products cp ON pl.master_product_id = cp.product_id
       LEFT JOIN business_verifications bv ON pl.business_id = bv.user_id
       LEFT JOIN cities c ON pl.city_id = c.id
     `;
@@ -218,7 +218,7 @@ router.get('/', async (req, res) => {
     let countQuery = `
       SELECT COUNT(*) as total
       FROM price_listings pl
-      LEFT JOIN master_products mp ON pl.master_product_id = mp.id
+      LEFT JOIN country_products cp ON pl.master_product_id = cp.product_id
       LEFT JOIN business_verifications bv ON pl.business_id = bv.user_id
     `;
     
@@ -539,7 +539,7 @@ router.post('/', authService.authMiddleware(), upload.array('images', 5), async 
 
     // Verify master product exists
     const productCheck = await database.query(
-      'SELECT id FROM master_products WHERE id = $1 AND is_active = true',
+      'SELECT product_id FROM country_products WHERE product_id = $1 AND is_active = true',
       [masterProductId]
     );
 
