@@ -16,6 +16,7 @@ import 'create_ride_response_screen.dart';
 import '../../../services/rest_vehicle_type_service.dart';
 import '../../../services/chat_service.dart';
 import '../../chat/conversation_screen.dart';
+import '../../../services/user_registration_service.dart';
 
 class ViewRideRequestScreen extends StatefulWidget {
   final String requestId;
@@ -36,6 +37,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   bool _isOwner = false;
   UserModel? _requesterUser;
   String? _vehicleTypeName; // Resolved human-readable vehicle type name
+  bool _isApprovedDriver = false; // From driver_verifications table
 
   // Map related
   GoogleMapController? _mapController;
@@ -67,6 +69,16 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
       final responses =
           await _requestService.getResponsesForRequest(widget.requestId);
       final currentUser = await _userService.getCurrentUserModel();
+      // Fetch driver registration status for current user
+      bool isApprovedDriver = false;
+      try {
+        final regs =
+            await UserRegistrationService.instance.getUserRegistrations();
+        isApprovedDriver = regs?.isApprovedDriver == true;
+        print('🚗 Driver approved? $isApprovedDriver');
+      } catch (e) {
+        print('ℹ️ Could not fetch driver registrations: $e');
+      }
 
       if (request != null) {
         final requesterUser =
@@ -102,6 +114,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
             _responses = responses.cast<ResponseModel>();
             _isOwner = isOwner;
             _requesterUser = requesterUser;
+            _isApprovedDriver = isApprovedDriver;
             _isLoading = false;
           });
 
@@ -113,7 +126,8 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
           print('🔍 Debug Ride - Final Current User ID: $currentUserId');
           print('🔍 Debug Ride - Request Owner ID: ${request.requesterId}');
           print('🔍 Debug Ride - Is Owner: $isOwner');
-          print('🔍 Debug Ride - Will Show Respond Button: ${!isOwner}');
+          print(
+              '🔍 Debug Ride - Will Show Respond Button: ${!isOwner && isApprovedDriver}');
 
           _setupMapMarkers();
           _resolveVehicleTypeName();
@@ -182,8 +196,9 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   // Role-based validation methods
   bool _canUserRespond() {
     if (_request == null) return false;
-    // For now, allow any non-owner to respond (simplified gating)
-    return !_isOwner;
+    if (_isOwner) return false;
+    // Only approved drivers (driver_verifications.status == approved)
+    return _isApprovedDriver;
   }
 
   bool _hasUserResponded() {
@@ -889,11 +904,25 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
 
   Widget _buildRequesterInfo() {
     // Fallback name/phone from request metadata if user lookup missing
-    final meta = _request?.typeSpecificData ?? const {};
-    final fallbackName =
-        (meta['requester_name'] ?? meta['user_name'] ?? '').toString().trim();
-    final fallbackPhone =
-        (meta['requester_phone'] ?? meta['user_phone'] ?? '').toString().trim();
+    final meta = _request?.typeSpecificData ?? {};
+    // Common backend variations
+    final fallbackName = (meta['requester_name'] ??
+            meta['requester_display_name'] ??
+            meta['user_display_name'] ??
+            meta['user_name'] ??
+            meta['display_name'] ??
+            meta['name'] ??
+            '')
+        .toString()
+        .trim();
+    final fallbackPhone = (meta['requester_phone'] ??
+            meta['user_phone'] ??
+            meta['phone'] ??
+            meta['requester_mobile'] ??
+            meta['mobile'] ??
+            '')
+        .toString()
+        .trim();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
