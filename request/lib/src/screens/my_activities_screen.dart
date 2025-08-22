@@ -59,8 +59,8 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
         child: Column(
           children: [
             // Custom header
-            Padding(
-              padding: const EdgeInsets.all(16),
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 12),
               child: Row(
                 children: const [
                   BackButton(),
@@ -74,7 +74,7 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
             ),
             // Tab bar
             Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
+              margin: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
@@ -84,6 +84,11 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
                 labelColor: Colors.blue,
                 unselectedLabelColor: Colors.grey,
                 indicatorColor: Colors.blue,
+                isScrollable: true,
+                labelStyle:
+                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                unselectedLabelStyle: const TextStyle(fontSize: 12),
+                labelPadding: const EdgeInsets.symmetric(horizontal: 10),
                 tabs: const [
                   Tab(text: 'Requests'),
                   Tab(text: 'Responses'),
