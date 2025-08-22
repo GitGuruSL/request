@@ -1064,14 +1064,44 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
           ]),
         ),
       ),
-      floatingActionButton: _canRespond
-          ? FloatingActionButton.extended(
-              onPressed: _openCreateResponseSheet,
-              backgroundColor: _getTypeColor(_getCurrentRequestType()),
-              foregroundColor: Colors.white,
-              icon: const Icon(Icons.reply),
-              label: const Text('Respond'))
-          : null,
+      floatingActionButton: () {
+        // Check if current user has a response
+        final currentUserId = RestAuthService.instance.currentUser?.uid;
+        rest.ResponseModel? myResponse;
+        if (currentUserId != null) {
+          for (final resp in _responses) {
+            if (resp.userId == currentUserId) {
+              myResponse = resp;
+              break;
+            }
+          }
+        }
+
+        // If user has a response, show edit button
+        if (myResponse != null) {
+          return FloatingActionButton.extended(
+            onPressed: () => _navigateToResponseEdit(myResponse!),
+            backgroundColor: Colors.green,
+            foregroundColor: Colors.white,
+            icon: const Icon(Icons.edit),
+            label: const Text('Edit'),
+          );
+        }
+
+        // If user can respond but hasn't yet, show respond button
+        if (_canRespond) {
+          return FloatingActionButton.extended(
+            onPressed: _openCreateResponseSheet,
+            backgroundColor: _getTypeColor(_getCurrentRequestType()),
+            foregroundColor: Colors.white,
+            icon: const Icon(Icons.reply),
+            label: const Text('Respond'),
+          );
+        }
+
+        // No floating action button
+        return null;
+      }(),
     );
   }
 
@@ -1217,28 +1247,11 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Builder(builder: (context) {
-              // Determine if current user is a responder
-              final currentUserId = RestAuthService.instance.currentUser?.uid;
-              rest.ResponseModel? myResponse;
-              if (currentUserId != null) {
-                for (final resp in _responses) {
-                  if (resp.userId == currentUserId) {
-                    myResponse = resp;
-                    break;
-                  }
-                }
-              }
               return Row(children: [
                 const Text('Responses',
                     style:
                         TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 const Spacer(),
-                if (myResponse != null)
-                  TextButton.icon(
-                    onPressed: () => _navigateToResponseEdit(myResponse!),
-                    icon: const Icon(Icons.edit, size: 16),
-                    label: const Text('Edit Response'),
-                  ),
                 if (_responses.isNotEmpty && _isOwner)
                   TextButton(
                     onPressed: _navigateToViewAllResponses,

@@ -541,15 +541,6 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
         elevation: 0,
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         foregroundColor: Theme.of(context).textTheme.titleLarge?.color,
-        actions: [
-          if (_currentUser?.id == widget.response.responderId &&
-              !widget.response.isAccepted)
-            IconButton(
-              icon: const Icon(Icons.edit),
-              tooltip: 'Edit Your Response',
-              onPressed: _editResponse,
-            ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -866,6 +857,16 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
           ],
         ),
       ),
+      floatingActionButton: (_currentUser?.id == widget.response.responderId &&
+              !widget.response.isAccepted)
+          ? FloatingActionButton.extended(
+              onPressed: _editResponse,
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.edit),
+              label: const Text('Edit'),
+            )
+          : null,
     );
   }
 }
