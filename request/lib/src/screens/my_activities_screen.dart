@@ -1,4 +1,14 @@
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
+import '../services/rest_request_service.dart' as rest;
+import '../services/rest_support_services.dart';
+import '../services/api_client.dart';
+import '../models/request_model.dart' as ui;
+import '../models/enhanced_user_model.dart' as em;
+import 'unified_request_response/unified_request_view_screen.dart';
+import 'unified_request_response/unified_request_edit_screen.dart';
+import 'unified_request_response/unified_response_view_screen.dart';
+import 'unified_request_response/unified_response_edit_screen.dart';
 
 class MyActivitiesScreen extends StatefulWidget {
   const MyActivitiesScreen({super.key});
@@ -10,11 +20,25 @@ class MyActivitiesScreen extends StatefulWidget {
 class _MyActivitiesScreenState extends State<MyActivitiesScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final _rest = rest.RestRequestService.instance;
+  final _api = ApiClient.instance;
+
+  // Data
+  List<rest.RequestModel> _myRequests = [];
+  List<rest.RequestModel> _myOrders =
+      []; // requests where I accepted a response
+  List<_ResponseSummary> _myResponses = [];
+
+  // Loading states
+  bool _loadingRequests = false;
+  bool _loadingOrders = false;
+  bool _loadingResponses = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _loadAll();
   }
 
   @override
@@ -34,17 +58,12 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
             Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  const Text(
+                children: const [
+                  BackButton(),
+                  SizedBox(width: 8),
+                  Text(
                     'My Activities',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -64,7 +83,7 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
                 tabs: const [
                   Tab(text: 'Requests'),
                   Tab(text: 'Orders'),
-                  Tab(text: 'Reviews'),
+                  Tab(text: 'Responses'),
                   Tab(text: 'History'),
                 ],
               ),
@@ -77,7 +96,7 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
                 children: [
                   _buildRequestsTab(),
                   _buildOrdersTab(),
-                  _buildReviewsTab(),
+                  _buildResponsesTab(),
                   _buildHistoryTab(),
                 ],
               ),
@@ -89,78 +108,49 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
   }
 
   Widget _buildRequestsTab() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        _buildActivityCard(
-          icon: Icons.add_circle,
-          title: 'Request Created',
-          subtitle: 'Need a plumber for kitchen sink',
-          time: '2 hours ago',
-          status: 'Active',
-          statusColor: Colors.green,
-        ),
-        _buildActivityCard(
-          icon: Icons.handshake,
-          title: 'Request Accepted',
-          subtitle: 'Moving service from downtown',
-          time: '1 day ago',
-          status: 'In Progress',
-          statusColor: Colors.orange,
-        ),
-        _buildActivityCard(
-          icon: Icons.check_circle,
-          title: 'Request Completed',
-          subtitle: 'Taxi service to airport',
-          time: '3 days ago',
-          status: 'Completed',
-          statusColor: Colors.blue,
-        ),
-      ],
+    return RefreshIndicator(
+      onRefresh: _loadRequests,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _loadingRequests ? 3 : _myRequests.length,
+        itemBuilder: (context, index) {
+          if (_loadingRequests) {
+            return _skeletonCard();
+          }
+          final r = _myRequests[index];
+          return _requestCard(r);
+        },
+      ),
     );
   }
 
   Widget _buildOrdersTab() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        _buildActivityCard(
-          icon: Icons.shopping_cart,
-          title: 'Order Placed',
-          subtitle: 'Food delivery from downtown restaurant',
-          time: '1 hour ago',
-          status: 'Processing',
-          statusColor: Colors.orange,
-        ),
-        _buildActivityCard(
-          icon: Icons.local_shipping,
-          title: 'Order Shipped',
-          subtitle: 'Electronics package',
-          time: '2 days ago',
-          status: 'Shipped',
-          statusColor: Colors.blue,
-        ),
-      ],
+    return RefreshIndicator(
+      onRefresh: _loadOrders,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _loadingOrders ? 3 : _myOrders.length,
+        itemBuilder: (context, index) {
+          if (_loadingOrders) return _skeletonCard();
+          final r = _myOrders[index];
+          return _requestCard(r, isOrder: true);
+        },
+      ),
     );
   }
 
-  Widget _buildReviewsTab() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        _buildReviewCard(
-          name: 'John Smith',
-          rating: 5,
-          review: 'Excellent service! Very professional and quick.',
-          time: '1 day ago',
-        ),
-        _buildReviewCard(
-          name: 'Sarah Johnson',
-          rating: 4,
-          review: 'Good work, would recommend.',
-          time: '3 days ago',
-        ),
-      ],
+  Widget _buildResponsesTab() {
+    return RefreshIndicator(
+      onRefresh: _loadResponses,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _loadingResponses ? 3 : _myResponses.length,
+        itemBuilder: (context, index) {
+          if (_loadingResponses) return _skeletonCard();
+          final resp = _myResponses[index];
+          return _responseCard(resp);
+        },
+      ),
     );
   }
 
@@ -186,86 +176,81 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
     );
   }
 
-  Widget _buildActivityCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required String time,
-    required String status,
-    required Color statusColor,
-  }) {
+  Widget _requestCard(rest.RequestModel r, {bool isOrder = false}) {
+    final statusColor = isOrder ? Colors.blue : Colors.green;
+    final statusText = isOrder ? 'Accepted' : 'Active';
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(16),
+        leading: CircleAvatar(
+          backgroundColor: statusColor.withOpacity(0.1),
+          child: Icon(isOrder ? Icons.shopping_bag : Icons.receipt_long,
+              color: statusColor),
+        ),
+        title: Text(
+          r.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Text(
+          r.description,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 48,
-              height: 48,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: statusColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(
-                icon,
-                color: statusColor,
-                size: 24,
-              ),
+              child: Text(statusText,
+                  style: TextStyle(color: statusColor, fontSize: 11)),
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
+            const SizedBox(width: 6),
+            PopupMenuButton<String>(
+              tooltip: 'Actions',
+              onSelected: (v) async {
+                if (v == 'view') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => UnifiedRequestViewScreen(
+                              requestId: r.id,
+                            )),
+                  );
+                } else if (v == 'edit') {
+                  final full = await _rest.getRequestById(r.id);
+                  if (full != null && mounted) {
+                    final uiReq = _toUiRequestModel(full);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            UnifiedRequestEditScreen(request: uiReq),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          status,
-                          style: TextStyle(
-                            color: statusColor,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    time,
-                    style: TextStyle(
-                      color: Colors.grey[500],
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
+                    );
+                  }
+                } else if (v == 'delete') {
+                  final ok = await _confirm('Delete this request?');
+                  if (ok) {
+                    final done = await _rest.deleteRequest(r.id);
+                    if (done) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Request deleted')));
+                      _loadRequests();
+                    }
+                  }
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(value: 'view', child: Text('View')),
+                const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                const PopupMenuItem(value: 'delete', child: Text('Delete')),
+              ],
             ),
           ],
         ),
@@ -273,81 +258,200 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
     );
   }
 
-  Widget _buildReviewCard({
-    required String name,
-    required int rating,
-    required String review,
-    required String time,
-  }) {
+  Widget _responseCard(_ResponseSummary s) {
+    final statusColor = s.accepted ? Colors.blue : Colors.orange;
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(16),
+        leading: CircleAvatar(
+          backgroundColor: statusColor.withOpacity(0.1),
+          child: Icon(s.accepted ? Icons.verified : Icons.reply,
+              color: statusColor),
+        ),
+        title: Text(
+          s.requestTitle ?? 'Response',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Text(
+          s.message ?? '',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Colors.blue[100],
-                  child: Text(
-                    name.split(' ').map((n) => n[0]).join(),
-                    style: TextStyle(
-                      color: Colors.blue[800],
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: statusColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                s.accepted ? 'Accepted' : 'Sent',
+                style: TextStyle(color: statusColor, fontSize: 11),
+              ),
+            ),
+            const SizedBox(width: 6),
+            PopupMenuButton<String>(
+              tooltip: 'Actions',
+              onSelected: (v) async {
+                if (v == 'view' || v == 'edit') {
+                  final req = await _rest.getRequestById(s.requestId);
+                  if (req == null) return;
+                  final page =
+                      await _rest.getResponses(s.requestId, limit: 100);
+                  rest.ResponseModel? resp;
+                  try {
+                    resp = page.responses.firstWhere((e) => e.id == s.id);
+                  } catch (_) {
+                    resp =
+                        page.responses.isNotEmpty ? page.responses.first : null;
+                  }
+                  if (!mounted || resp == null) return;
+                  if (v == 'view') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => UnifiedResponseViewScreen(
+                          request: _toUiRequestModel(req),
+                          response: _toUiResponseModel(resp!, req),
                         ),
                       ),
-                      Row(
-                        children: [
-                          ...List.generate(5, (index) {
-                            return Icon(
-                              index < rating ? Icons.star : Icons.star_border,
-                              color: Colors.amber,
-                              size: 16,
-                            );
-                          }),
-                          const SizedBox(width: 8),
-                          Text(
-                            time,
-                            style: TextStyle(
-                              color: Colors.grey[500],
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
+                    );
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => UnifiedResponseEditScreen(
+                          request: _toUiRequestModel(req),
+                          response: _toUiResponseModel(resp!, req),
+                        ),
                       ),
-                    ],
-                  ),
-                ),
+                    );
+                  }
+                }
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(value: 'view', child: Text('View')),
+                PopupMenuItem(value: 'edit', child: Text('Edit')),
               ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              review,
-              style: TextStyle(
-                color: Colors.grey[700],
-                fontSize: 14,
-              ),
             ),
           ],
         ),
       ),
     );
   }
+
+  // Converters from REST models to UI models
+  ui.RequestModel _toUiRequestModel(rest.RequestModel r) {
+    return ui.RequestModel(
+      id: r.id,
+      requesterId: r.userId,
+      title: r.title,
+      description: r.description,
+      type:
+          _getRequestTypeFromString(r.metadata?['type']?.toString() ?? 'item'),
+      status: _getRequestStatusFromString(r.status),
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+      budget: r.budget,
+      currency: r.currency,
+      images: r.imageUrls ?? const [],
+      tags: const [],
+      priority: ui.Priority.medium,
+      location: (r.locationAddress != null &&
+              r.locationLatitude != null &&
+              r.locationLongitude != null)
+          ? ui.LocationInfo(
+              latitude: r.locationLatitude ?? 0.0,
+              longitude: r.locationLongitude ?? 0.0,
+              address: r.locationAddress!,
+              city: r.cityName ?? r.locationAddress!,
+              country: r.countryCode,
+            )
+          : (r.cityName != null
+              ? ui.LocationInfo(
+                  latitude: 0.0,
+                  longitude: 0.0,
+                  address: r.cityName!,
+                  city: r.cityName!,
+                  country: r.countryCode,
+                )
+              : null),
+      typeSpecificData: r.metadata ?? const {},
+      country: r.countryCode,
+    );
+  }
+
+  ui.RequestStatus _getRequestStatusFromString(String status) {
+    final s = status.toLowerCase();
+    switch (s) {
+      case 'active':
+      case 'open':
+        return ui.RequestStatus.active;
+      case 'inprogress':
+      case 'in_progress':
+        return ui.RequestStatus.inProgress;
+      case 'completed':
+        return ui.RequestStatus.completed;
+      case 'cancelled':
+        return ui.RequestStatus.cancelled;
+      case 'expired':
+        return ui.RequestStatus.expired;
+      default:
+        return ui.RequestStatus.draft;
+    }
+  }
+
+  em.RequestType _getRequestTypeFromString(String type) {
+    final t = type.toLowerCase();
+    switch (t) {
+      case 'item':
+        return em.RequestType.item;
+      case 'service':
+        return em.RequestType.service;
+      case 'delivery':
+        return em.RequestType.delivery;
+      case 'rental':
+      case 'rent':
+        return em.RequestType.rental;
+      case 'ride':
+        return em.RequestType.ride;
+      case 'price':
+        return em.RequestType.price;
+      default:
+        return em.RequestType.item;
+    }
+  }
+
+  ui.ResponseModel _toUiResponseModel(
+      rest.ResponseModel r, rest.RequestModel req) {
+    return ui.ResponseModel(
+      id: r.id,
+      requestId: r.requestId,
+      responderId: r.userId,
+      message: r.message,
+      price: r.price,
+      currency: r.currency,
+      availableFrom: null,
+      availableUntil: null,
+      images: r.imageUrls ?? const [],
+      additionalInfo: r.metadata ?? const {},
+      createdAt: r.createdAt,
+      isAccepted:
+          (req.acceptedResponseId != null && req.acceptedResponseId == r.id),
+      rejectionReason: null,
+      country: r.countryCode,
+      countryName: null,
+    );
+  }
+
+  Widget _skeletonCard() => Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        child: Container(height: 76, padding: const EdgeInsets.all(16)),
+      );
 
   Widget _buildHistorySection(String title, List<String> activities) {
     return Column(
@@ -364,32 +468,147 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
           ),
         ),
         ...activities.map((activity) => Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Row(
-            children: [
-              Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: Colors.grey[400],
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  activity,
-                  style: TextStyle(
-                    color: Colors.grey[700],
-                    fontSize: 14,
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[400],
+                      borderRadius: BorderRadius.circular(3),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      activity,
+                      style: TextStyle(
+                        color: Colors.grey[700],
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        )),
+            )),
         const SizedBox(height: 16),
       ],
+    );
+  }
+
+  Future<void> _loadAll() async {
+    await Future.wait([
+      _loadRequests(),
+      _loadOrders(),
+      _loadResponses(),
+    ]);
+  }
+
+  Future<void> _loadRequests() async {
+    setState(() => _loadingRequests = true);
+    try {
+      final r = await _rest.getUserRequests(limit: 50);
+      setState(() => _myRequests = r?.requests ?? []);
+    } finally {
+      if (mounted) setState(() => _loadingRequests = false);
+    }
+  }
+
+  Future<void> _loadOrders() async {
+    setState(() => _loadingOrders = true);
+    try {
+      final uid = AuthService.instance.currentUser?.uid;
+      final r = await _rest.getRequests(
+        limit: 50,
+        hasAccepted: true,
+        userId: uid,
+        countryCode: CountryService.instance.getCurrentCountryCode(),
+      );
+      setState(() => _myOrders = r?.requests ?? []);
+    } finally {
+      if (mounted) setState(() => _loadingOrders = false);
+    }
+  }
+
+  Future<void> _loadResponses() async {
+    setState(() => _loadingResponses = true);
+    try {
+      final uid = AuthService.instance.currentUser?.uid;
+      final country = CountryService.instance.getCurrentCountryCode();
+      final res = await _api.get<dynamic>(
+        '/api/responses',
+        queryParameters: {'country': country, 'limit': '100'},
+      );
+      final list = (res.data is List)
+          ? res.data as List
+          : (res.data is Map && (res.data as Map)['data'] is List
+              ? (res.data as Map)['data'] as List
+              : []);
+      final mine =
+          list.where((e) => (e['user_id'] ?? e['userId']) == uid).toList();
+      setState(() {
+        _myResponses = mine
+            .map((e) => _ResponseSummary.fromJson(e as Map<String, dynamic>))
+            .toList();
+      });
+    } catch (_) {
+      setState(() => _myResponses = []);
+    } finally {
+      if (mounted) setState(() => _loadingResponses = false);
+    }
+  }
+
+  Future<bool> _confirm(String message) async {
+    final res = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Confirm'),
+        content: Text(message),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('OK')),
+        ],
+      ),
+    );
+    return res == true;
+  }
+}
+
+class _ResponseSummary {
+  final String id;
+  final String requestId;
+  final String? message;
+  final num? price;
+  final String? currency;
+  final bool accepted;
+  final String? requestTitle;
+  _ResponseSummary({
+    required this.id,
+    required this.requestId,
+    this.message,
+    this.price,
+    this.currency,
+    this.accepted = false,
+    this.requestTitle,
+  });
+  factory _ResponseSummary.fromJson(Map<String, dynamic> json) {
+    return _ResponseSummary(
+      id: json['id']?.toString() ?? '',
+      requestId:
+          json['request_id']?.toString() ?? json['requestId']?.toString() ?? '',
+      message: json['message']?.toString(),
+      price: json['price'] is num
+          ? json['price'] as num
+          : num.tryParse('${json['price']}'),
+      currency: json['currency']?.toString(),
+      accepted: (json['accepted'] == true) ||
+          (json['raw_status']?.toString() == 'accepted'),
+      requestTitle: json['request_title']?.toString(),
     );
   }
 }
