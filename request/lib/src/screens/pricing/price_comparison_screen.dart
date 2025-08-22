@@ -13,7 +13,7 @@ class PriceComparisonScreen extends StatefulWidget {
 class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
   final PricingService _pricingService = PricingService();
   final TextEditingController _searchController = TextEditingController();
-  
+
   List<dynamic> _products = [];
   List<PriceListing> _priceListings = [];
   bool _isSearching = false;
@@ -30,7 +30,8 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
   Future<void> _loadPopularProducts() async {
     setState(() => _isSearching = true);
     try {
-      final products = await _pricingService.searchProducts(query: '', limit: 20);
+      final products =
+          await _pricingService.searchProducts(query: '', limit: 20);
       setState(() {
         _products = products;
         _isSearching = false;
@@ -63,7 +64,8 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
     }
   }
 
-  Future<void> _loadPricesForProduct(String productId, String productName) async {
+  Future<void> _loadPricesForProduct(
+      String productId, String productName) async {
     setState(() {
       _isLoadingPrices = true;
       _selectedProductId = productId;
@@ -72,7 +74,8 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
     });
 
     try {
-      await for (final listings in _pricingService.getPriceListingsForProduct(productId).take(1)) {
+      await for (final listings
+          in _pricingService.getPriceListingsForProduct(productId).take(1)) {
         setState(() {
           _priceListings = listings;
           _isLoadingPrices = false;
@@ -336,7 +339,7 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
             ],
           ),
         ),
-        
+
         // Price listings
         Expanded(
           child: _isLoadingPrices
@@ -390,7 +393,7 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
       itemBuilder: (context, index) {
         final listing = sortedListings[index];
         final isLowestPrice = index == 0;
-        
+
         return _buildPriceCard(listing, isLowestPrice);
       },
     );
@@ -427,13 +430,16 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: isLowestPrice ? Colors.green : AppTheme.primaryColor,
+                              color: isLowestPrice
+                                  ? Colors.green
+                                  : AppTheme.primaryColor,
                             ),
                           ),
                           if (isLowestPrice) ...[
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 color: Colors.green,
                                 borderRadius: BorderRadius.circular(12),
@@ -463,9 +469,9 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             // Product details
             if (listing.modelNumber?.isNotEmpty == true) ...[
               Text(
@@ -477,7 +483,7 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
               ),
               const SizedBox(height: 8),
             ],
-            
+
             // Contact info
             Row(
               children: [
@@ -497,14 +503,15 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            
+
             // Contact buttons
             Row(
               children: [
                 if (listing.whatsappNumber?.isNotEmpty == true) ...[
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: () => _contactBusiness('whatsapp', listing.whatsappNumber!),
+                      onPressed: () =>
+                          _contactBusiness('whatsapp', listing.whatsappNumber!),
                       icon: const Icon(Icons.phone, size: 16),
                       label: const Text('WhatsApp'),
                       style: ElevatedButton.styleFrom(
@@ -519,7 +526,8 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                 if (listing.productLink?.isNotEmpty == true) ...[
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () => _contactBusiness('website', listing.productLink!),
+                      onPressed: () =>
+                          _contactBusiness('website', listing.productLink!),
                       icon: const Icon(Icons.web, size: 16),
                       label: const Text('Website'),
                       style: OutlinedButton.styleFrom(

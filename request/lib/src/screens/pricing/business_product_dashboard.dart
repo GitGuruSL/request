@@ -10,7 +10,8 @@ class BusinessProductDashboard extends StatefulWidget {
   const BusinessProductDashboard({super.key});
 
   @override
-  State<BusinessProductDashboard> createState() => _BusinessProductDashboardState();
+  State<BusinessProductDashboard> createState() =>
+      _BusinessProductDashboardState();
 }
 
 class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
@@ -18,12 +19,12 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
   final EnhancedUserService _userService = EnhancedUserService();
   final FileUploadService _fileUploadService = FileUploadService();
   final TextEditingController _searchController = TextEditingController();
-  
+
   List<dynamic> _countryProducts = [];
   List<dynamic> _myPriceListings = [];
   bool _isSearching = false;
   bool _isLoadingMyPrices = false;
-  
+
   @override
   void initState() {
     super.initState();
@@ -40,7 +41,8 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
   Future<void> _loadCountryProducts() async {
     setState(() => _isSearching = true);
     try {
-      final products = await _pricingService.searchProducts(query: '', limit: 50);
+      final products =
+          await _pricingService.searchProducts(query: '', limit: 50);
       setState(() {
         _countryProducts = products;
         _isSearching = false;
@@ -57,7 +59,8 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
       final userId = _userService.currentUser?.uid;
       if (userId == null) return;
 
-      await for (final listings in _pricingService.getBusinessPriceListings(userId).take(1)) {
+      await for (final listings
+          in _pricingService.getBusinessPriceListings(userId).take(1)) {
         setState(() {
           _myPriceListings = listings;
           _isLoadingMyPrices = false;
@@ -233,8 +236,8 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
   Widget _buildProductCard(dynamic product) {
     final name = product.name ?? 'Unknown Product';
     final brand = product.brand ?? '';
-    final hasExistingPrice = _myPriceListings.any((listing) => 
-        listing.masterProductId == product.id);
+    final hasExistingPrice = _myPriceListings
+        .any((listing) => listing.masterProductId == product.id);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -269,7 +272,8 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                   if (hasExistingPrice) ...[
                     const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.green,
                         borderRadius: BorderRadius.circular(12),
@@ -290,7 +294,8 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
             ElevatedButton(
               onPressed: () => _addEditPrice(product),
               style: ElevatedButton.styleFrom(
-                backgroundColor: hasExistingPrice ? Colors.orange : AppTheme.primaryColor,
+                backgroundColor:
+                    hasExistingPrice ? Colors.orange : AppTheme.primaryColor,
                 foregroundColor: Colors.white,
               ),
               child: Text(hasExistingPrice ? 'Edit Price' : 'Add Price'),
@@ -393,9 +398,12 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: listing.isAvailable == true ? Colors.green : Colors.red,
+                        color: listing.isAvailable == true
+                            ? Colors.green
+                            : Colors.red,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
@@ -411,9 +419,7 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                 ),
               ],
             ),
-            
             const SizedBox(height: 12),
-            
             Row(
               children: [
                 Expanded(
@@ -466,11 +472,10 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
     final TextEditingController websiteController = TextEditingController(
       text: isEditing ? existingListing.productLink ?? '' : '',
     );
-    
+
     List<File> selectedImages = [];
-    List<String> existingImageUrls = isEditing 
-        ? List<String>.from(existingListing.productImages ?? [])
-        : [];
+    List<String> existingImageUrls =
+        isEditing ? List<String>.from(existingListing.productImages ?? []) : [];
 
     showDialog(
       context: context,
@@ -486,7 +491,7 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                 children: [
                   // Product name
                   Text(
-                    isEditing 
+                    isEditing
                         ? existingListing.productName ?? 'Product'
                         : product.name ?? 'Product',
                     style: const TextStyle(
@@ -495,7 +500,7 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Price input
                   TextField(
                     controller: priceController,
@@ -506,7 +511,7 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // WhatsApp number
                   TextField(
                     controller: whatsappController,
@@ -517,7 +522,7 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Website/Product link
                   TextField(
                     controller: websiteController,
@@ -527,99 +532,104 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Images section
                   const Text(
                     'Product Images',
                     style: TextStyle(fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 8),
-                  
+
                   // Show existing images
                   if (existingImageUrls.isNotEmpty) ...[
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: existingImageUrls.map((url) => Stack(
-                        children: [
-                          Container(
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              image: DecorationImage(
-                                image: NetworkImage(url),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            top: -4,
-                            right: -4,
-                            child: IconButton(
-                              icon: const Icon(Icons.close, size: 16),
-                              onPressed: () {
-                                setDialogState(() {
-                                  existingImageUrls.remove(url);
-                                });
-                              },
-                              style: IconButton.styleFrom(
-                                backgroundColor: Colors.red,
-                                foregroundColor: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      )).toList(),
+                      children: existingImageUrls
+                          .map((url) => Stack(
+                                children: [
+                                  Container(
+                                    width: 60,
+                                    height: 60,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8),
+                                      image: DecorationImage(
+                                        image: NetworkImage(url),
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: -4,
+                                    right: -4,
+                                    child: IconButton(
+                                      icon: const Icon(Icons.close, size: 16),
+                                      onPressed: () {
+                                        setDialogState(() {
+                                          existingImageUrls.remove(url);
+                                        });
+                                      },
+                                      style: IconButton.styleFrom(
+                                        backgroundColor: Colors.red,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ))
+                          .toList(),
                     ),
                     const SizedBox(height: 8),
                   ],
-                  
+
                   // Show selected new images
                   if (selectedImages.isNotEmpty) ...[
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: selectedImages.map((file) => Stack(
-                        children: [
-                          Container(
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              image: DecorationImage(
-                                image: FileImage(file),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            top: -4,
-                            right: -4,
-                            child: IconButton(
-                              icon: const Icon(Icons.close, size: 16),
-                              onPressed: () {
-                                setDialogState(() {
-                                  selectedImages.remove(file);
-                                });
-                              },
-                              style: IconButton.styleFrom(
-                                backgroundColor: Colors.red,
-                                foregroundColor: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      )).toList(),
+                      children: selectedImages
+                          .map((file) => Stack(
+                                children: [
+                                  Container(
+                                    width: 60,
+                                    height: 60,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8),
+                                      image: DecorationImage(
+                                        image: FileImage(file),
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: -4,
+                                    right: -4,
+                                    child: IconButton(
+                                      icon: const Icon(Icons.close, size: 16),
+                                      onPressed: () {
+                                        setDialogState(() {
+                                          selectedImages.remove(file);
+                                        });
+                                      },
+                                      style: IconButton.styleFrom(
+                                        backgroundColor: Colors.red,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ))
+                          .toList(),
                     ),
                     const SizedBox(height: 8),
                   ],
-                  
+
                   // Add image button
                   OutlinedButton.icon(
                     onPressed: () async {
                       final ImagePicker picker = ImagePicker();
-                      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+                      final XFile? image =
+                          await picker.pickImage(source: ImageSource.gallery);
                       if (image != null) {
                         setDialogState(() {
                           selectedImages.add(File(image.path));
@@ -711,8 +721,8 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(existingListing != null 
-                ? 'Price updated successfully!' 
+            content: Text(existingListing != null
+                ? 'Price updated successfully!'
                 : 'Price added successfully!'),
             backgroundColor: Colors.green,
           ),
@@ -736,7 +746,8 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Price'),
-        content: Text('Are you sure you want to delete the price for "${listing.productName}"?'),
+        content: Text(
+            'Are you sure you want to delete the price for "${listing.productName}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -753,7 +764,8 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
 
     if (confirmed == true) {
       try {
-        await _pricingService.deletePriceListing(listing.id, listing.masterProductId);
+        await _pricingService.deletePriceListing(
+            listing.id, listing.masterProductId);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Price deleted successfully'),
