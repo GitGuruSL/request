@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { uploadToMemory, uploadToS3, deleteFromS3 } = require('../services/s3Upload');
+const { uploadToMemory, uploadToS3, deleteFromS3, getSignedUrl } = require('../services/s3Upload');
 
 console.log('🔧 S3 Upload route loaded');
 
@@ -86,3 +86,16 @@ router.get('/test', async (req, res) => {
 });
 
 module.exports = router;
+
+// New: Generate a signed URL for arbitrary S3 object URLs
+router.post('/signed-url', async (req, res) => {
+  try {
+    const { url, expiresIn } = req.body || {};
+    if (!url) return res.status(400).json({ success: false, error: 'url is required' });
+    const signedUrl = await getSignedUrl(url, Number(expiresIn) || 3600);
+    return res.json({ success: true, signedUrl });
+  } catch (error) {
+    console.error('❌ Error generating signed URL:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});

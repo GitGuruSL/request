@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:io';
+import 'dart:convert' as convert;
+import 'package:http/http.dart' as http;
 import '../services/content_service.dart';
+import '../services/api_client.dart';
 import 'content_page_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -15,6 +20,7 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
   List<ContentPage> _pages = [];
   bool _loading = true;
   String? _appVersion;
+  String? _resolvedLogoUrl;
 
   @override
   void initState() {
@@ -31,10 +37,17 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
         final approved = await _contentService.getPages(status: 'approved');
         if (approved.isNotEmpty) pages = approved;
       }
+      // Resolve a displayable logo URL from the freshly fetched pages
+      final rawLogo = _getMetaFromPages<String>(pages, 'logoUrl');
+      String? logoToUse;
+      if (rawLogo != null && rawLogo.isNotEmpty) {
+        logoToUse = await _resolveDisplayUrl(rawLogo);
+      }
       if (mounted)
         setState(() {
           _pages = pages;
           _loading = false;
+          _resolvedLogoUrl = logoToUse ?? rawLogo;
         });
     } catch (_) {
       if (mounted) {
@@ -42,6 +55,37 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
         setState(() {});
       }
     }
+  }
+
+  // Minimal API base resolver mirroring ContentService logic
+  String get _apiBaseUrl {
+    if (kIsWeb) return 'http://localhost:3001';
+    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
+    return 'http://localhost:3001';
+  }
+
+  Future<String?> _resolveDisplayUrl(String url) async {
+    try {
+      final lower = url.toLowerCase();
+      final isS3 = lower.contains('amazonaws.com') || lower.contains('.s3.');
+      final alreadySigned = lower.contains('x-amz-signature');
+      if (!isS3 || alreadySigned) return url;
+      final token = await ApiClient.instance.getToken();
+      final resp = await http.post(
+        Uri.parse('$_apiBaseUrl/api/s3/signed-url'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: '{"url":"${url.replaceAll('"', '\\"')}"}',
+      );
+      if (resp.statusCode == 200) {
+        final data = convert.jsonDecode(resp.body) as Map<String, dynamic>;
+        final signed = (data['signedUrl'] as String?)?.trim();
+        if (signed != null && signed.isNotEmpty) return signed;
+      }
+    } catch (_) {}
+    return url; // fallback to original
   }
 
   ContentPage? _findPageByKeywords(List<String> keywords) {
@@ -82,14 +126,18 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
               padding: const EdgeInsets.all(16),
               children: [
                 // Header logo (optional via metadata.logoUrl)
-                if (_getMeta<String>('logoUrl')?.isNotEmpty == true)
+                if ((_resolvedLogoUrl ?? _getMeta<String>('logoUrl'))
+                        ?.isNotEmpty ==
+                    true)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Center(
                       child: Image.network(
-                        _getMeta<String>('logoUrl')!,
+                        _resolvedLogoUrl ?? _getMeta<String>('logoUrl')!,
                         height: 48,
                         fit: BoxFit.contain,
+                        errorBuilder: (context, error, stack) =>
+                            const SizedBox.shrink(),
                       ),
                     ),
                   ),
@@ -321,6 +369,27 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
     // Prefer About Us page metadata; else search other pages
     final page = _findPageByKeywords(['about', 'company']);
     final meta = page?.metadata ?? {};
+    final v = meta[key];
+    if (v is T) return v;
+    if (v is String && T == String) return v as T;
+    return null;
+  }
+
+  // Read metadata from a provided pages list (used before setState updates _pages)
+  T? _getMetaFromPages<T>(List<ContentPage> pages, String key) {
+    ContentPage? about;
+    for (final p in pages) {
+      final title = p.title.toLowerCase();
+      final cat = (p.category ?? '').toLowerCase();
+      if (title.contains('about') ||
+          title.contains('company') ||
+          cat.contains('about') ||
+          cat.contains('company')) {
+        about = p;
+        break;
+      }
+    }
+    final meta = about?.metadata ?? {};
     final v = meta[key];
     if (v is T) return v;
     if (v is String && T == String) return v as T;

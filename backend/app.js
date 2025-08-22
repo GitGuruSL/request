@@ -88,6 +88,7 @@ const countryVariableTypesRoutes = require('./routes/country-variable-types');
 // Import price comparison routes
 const priceListingsRoutes = require('./routes/price-listings');
 const paymentMethodsRoutes = require('./routes/payment-methods');
+const s3Routes = require('./routes/uploadS3');
 
 console.log('🔧 About to register driver-verifications route');
 
@@ -127,6 +128,7 @@ app.use('/api/country-variable-types', countryVariableTypesRoutes);
 // Price comparison routes  
 app.use('/api/price-listings', priceListingsRoutes);
 app.use('/api/payment-methods', paymentMethodsRoutes);
+app.use('/api/s3', s3Routes);
 
 app.use('/api/upload', uploadRoutes); // NEW - image upload endpoint
 app.use('/api/uploads', uploadRoutes); // Alias to support admin-react '/uploads/payment-methods'
