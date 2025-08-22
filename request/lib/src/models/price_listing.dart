@@ -2,6 +2,29 @@
 
 import 'src/utils/firebase_shim.dart'; // Added by migration script
 
+class PaymentMethodRef {
+  final String id;
+  final String name;
+  final String category;
+  final String? imageUrl;
+
+  PaymentMethodRef({
+    required this.id,
+    required this.name,
+    required this.category,
+    this.imageUrl,
+  });
+
+  factory PaymentMethodRef.fromJson(Map<String, dynamic> json) {
+    return PaymentMethodRef(
+      id: json['id']?.toString() ?? '',
+      name: json['name'] ?? '',
+      category: json['category'] ?? 'other',
+      imageUrl: json['imageUrl'] ?? json['image_url'],
+    );
+  }
+}
+
 class PriceListing {
   final String id;
   final String businessId;
@@ -28,6 +51,7 @@ class PriceListing {
   final int reviewCount;
   final String? country; // Country code (e.g., "LK")
   final String? countryName; // Country name (e.g., "Sri Lanka")
+  final List<PaymentMethodRef> paymentMethods;
 
   PriceListing({
     required this.id,
@@ -55,10 +79,12 @@ class PriceListing {
     this.reviewCount = 0,
     this.country,
     this.countryName,
+    this.paymentMethods = const [],
   });
 
   factory PriceListing.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+    final Map<String, dynamic> data =
+        (doc.data() as Map<String, dynamic>?) ?? <String, dynamic>{};
     return PriceListing(
       id: doc.id,
       businessId: data['businessId'] ?? '',
@@ -90,6 +116,12 @@ class PriceListing {
   }
 
   factory PriceListing.fromJson(Map<String, dynamic> json) {
+    // Parse business payment methods if present
+    final List<dynamic>? pmList =
+        json['business']?['paymentMethods'] as List<dynamic>?;
+    final methods = (pmList ?? [])
+        .map((e) => PaymentMethodRef.fromJson(e as Map<String, dynamic>))
+        .toList();
     return PriceListing(
       id: json['id'] ?? '',
       businessId: json['business_id'] ?? json['businessId'] ?? '',
@@ -123,6 +155,7 @@ class PriceListing {
       reviewCount: json['review_count'] ?? json['reviewCount'] ?? 0,
       country: json['country_code'] ?? json['country'],
       countryName: json['countryName'],
+      paymentMethods: methods,
     );
   }
 
@@ -181,6 +214,7 @@ class PriceListing {
     int? reviewCount,
     String? country,
     String? countryName,
+    List<PaymentMethodRef>? paymentMethods,
   }) {
     return PriceListing(
       id: id ?? this.id,
@@ -208,6 +242,7 @@ class PriceListing {
       reviewCount: reviewCount ?? this.reviewCount,
       country: country ?? this.country,
       countryName: countryName ?? this.countryName,
+      paymentMethods: paymentMethods ?? this.paymentMethods,
     );
   }
 
