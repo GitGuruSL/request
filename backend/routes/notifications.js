@@ -38,12 +38,13 @@ router.post('/:id/read', auth.authMiddleware(), async (req, res) => {
 router.get('/counts', auth.authMiddleware(), async (req, res) => {
   try {
     const userId = req.user.id;
-    const total = await notif.countUnread(userId);
-    const messages = await notif.countUnread(userId, { type: 'newMessage' });
+  console.log('[notifications.counts] userId', userId, 'req.user', req.user);
+  const total = await notif.countUnread(userId);
+  const messages = await notif.countUnread(userId, { type: 'newMessage' });
     res.json({ success: true, data: { total, messages } });
   } catch (e) {
-    console.error('notifications.counts error', e);
-    res.status(500).json({ success: false, message: 'Failed to get counts' });
+  console.error('notifications.counts error', e);
+  res.status(500).json({ success: false, message: 'Failed to get counts', error: e.message });
   }
 });
 
