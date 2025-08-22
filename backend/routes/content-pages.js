@@ -66,7 +66,10 @@ router.get('/', async (req,res)=>{
     sql += ' ORDER BY created_at DESC';
     const result = await db.query(sql, params);
     res.json(result.rows.map(adapt));
-  } catch(e){ res.status(500).json({ error:e.message }); }
+  } catch(e){
+    console.error('GET /content-pages error:', e);
+    res.status(500).json({ error:e.message });
+  }
 });
 
 // Get by id or slug
@@ -81,7 +84,10 @@ router.get('/:idOrSlug', async (req,res)=>{
     }
     if(!row) return res.status(404).json({ error:'Not found'});
     res.json(adapt(row));
-  } catch(e){ res.status(500).json({ error:e.message }); }
+  } catch(e){
+    console.error('GET /content-pages/:idOrSlug error:', e);
+    res.status(500).json({ error:e.message });
+  }
 });
 
 // Create page (country admin or super admin) -> if requiresApproval then status pending else draft/approved
@@ -121,7 +127,10 @@ router.post('/', auth.authMiddleware(), async (req,res)=>{
       content: b.content || ''
     });
     res.status(201).json(adapt(row));
-  } catch(e){ res.status(500).json({ error:e.message }); }
+  } catch(e){
+    console.error('POST /content-pages error:', e, { body: req.body });
+    res.status(500).json({ error:e.message });
+  }
 });
 
 // Update page
@@ -169,7 +178,10 @@ router.put('/:id', auth.authMiddleware(), async (req,res)=>{
 
     const row = await db.update('content_pages', req.params.id, update);
     res.json(adapt(row));
-  } catch(e){ res.status(500).json({ error:e.message }); }
+  } catch(e){
+    console.error('PUT /content-pages/:id error:', e, { id: req.params.id, body: req.body });
+    res.status(500).json({ error:e.message });
+  }
 });
 
 // Status update endpoint expected by frontend (/content-pages/:id/status)
@@ -190,7 +202,10 @@ router.put('/:id/status', auth.authMiddleware(), async (req,res)=>{
       return res.json(adapt(row));
     }
     return res.status(403).json({ error:'Unauthorized status transition'});
-  } catch(e){ res.status(500).json({ error:e.message }); }
+  } catch(e){
+    console.error('PUT /content-pages/:id/status error:', e, { id: req.params.id, body: req.body });
+    res.status(500).json({ error:e.message });
+  }
 });
 
 // Approve / Publish (super admin)
@@ -200,7 +215,10 @@ router.post('/:id/approve', auth.authMiddleware(), auth.roleMiddleware(['super_a
     if(!existing) return res.status(404).json({ error:'Not found'});
   const row = await db.update('content_pages', req.params.id, { status:'approved' });
     res.json(adapt(row));
-  } catch(e){ res.status(500).json({ error:e.message }); }
+  } catch(e){
+    console.error('POST /content-pages/:id/approve error:', e, { id: req.params.id });
+    res.status(500).json({ error:e.message });
+  }
 });
 
 router.post('/:id/publish', auth.authMiddleware(), auth.roleMiddleware(['super_admin']), async (req,res)=>{
@@ -209,7 +227,10 @@ router.post('/:id/publish', auth.authMiddleware(), auth.roleMiddleware(['super_a
     if(!existing) return res.status(404).json({ error:'Not found'});
     const row = await db.update('content_pages', req.params.id, { status:'published' });
     res.json(adapt(row));
-  } catch(e){ res.status(500).json({ error:e.message }); }
+  } catch(e){
+    console.error('POST /content-pages/:id/publish error:', e, { id: req.params.id });
+    res.status(500).json({ error:e.message });
+  }
 });
 
 // Soft delete (mark status=archived) requires super admin
@@ -219,7 +240,10 @@ router.delete('/:id', auth.authMiddleware(), auth.roleMiddleware(['super_admin']
     if(!existing) return res.status(404).json({ error:'Not found'});
     await db.update('content_pages', req.params.id, { status:'archived' });
     res.json({ success:true });
-  } catch(e){ res.status(500).json({ error:e.message }); }
+  } catch(e){
+    console.error('DELETE /content-pages/:id error:', e, { id: req.params.id });
+    res.status(500).json({ error:e.message });
+  }
 });
 
 module.exports = router;

@@ -24,7 +24,13 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
 
   Future<void> _loadPages() async {
     try {
-      final pages = await _contentService.getPages(status: 'published');
+      // Prefer published pages; if none, fall back to approved so global
+      // admin content is visible prior to publishing.
+      var pages = await _contentService.getPages(status: 'published');
+      if (pages.isEmpty) {
+        final approved = await _contentService.getPages(status: 'approved');
+        if (approved.isNotEmpty) pages = approved;
+      }
       if (mounted)
         setState(() {
           _pages = pages;
