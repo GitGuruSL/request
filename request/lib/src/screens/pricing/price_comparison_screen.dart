@@ -1,22 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
-import '../../models/master_product.dart';
 import '../../models/price_listing.dart';
 import '../../services/pricing_service.dart';
-import '../../services/enhanced_user_service.dart';
-import '../../services/comprehensive_notification_service.dart';
-import '../../services/country_filtered_data_service.dart';
 import '../../theme/app_theme.dart';
-import 'add_price_listing_screen.dart';
-import 'business_profile_modal.dart';
 
 class PriceComparisonScreen extends StatefulWidget {
-  final MasterProduct product;
-
-  const PriceComparisonScreen({
-    super.key,
-    required this.product,
-  });
+  const PriceComparisonScreen({super.key});
 
   @override
   State<PriceComparisonScreen> createState() => _PriceComparisonScreenState();
@@ -24,154 +12,84 @@ class PriceComparisonScreen extends StatefulWidget {
 
 class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
   final PricingService _pricingService = PricingService();
-  final EnhancedUserService _userService = EnhancedUserService();
-  final ComprehensiveNotificationService _notificationService = ComprehensiveNotificationService();
+  final TextEditingController _searchController = TextEditingController();
   
+  List<dynamic> _products = [];
   List<PriceListing> _priceListings = [];
-  bool _isLoading = true;
-  bool _canAddListing = false;
-  String? _currentUserId;
-  Map<String, String> _availableAttributes = {};
-  Set<String> _notifiedBusinesses = {}; // Track which businesses we've already notified
+  bool _isSearching = false;
+  bool _isLoadingPrices = false;
+  String? _selectedProductId;
+  String? _selectedProductName;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _loadPopularProducts();
   }
 
-  Future<void> _loadData() async {
-    print('DEBUG: Loading price comparison data for product: ${widget.product.name}');
+  Future<void> _loadPopularProducts() async {
+    setState(() => _isSearching = true);
     try {
-      final userId = _userService.currentUser?.uid;
-      if (userId != null) {
-        _currentUserId = userId;
-        print('DEBUG: Checking if user can add listing...');
-        final canAdd = await _pricingService.isBusinessEligibleForPricing(userId);
-        print('DEBUG: User can add listing: $canAdd');
-        setState(() => _canAddListing = canAdd);
-      }
-
-      // Load available attributes for display
-      await _loadAvailableAttributes();
-
-      print('DEBUG: Starting to listen for price listings...');
-      _pricingService.getPriceListingsForProduct(widget.product.id).listen((listings) {
-        print('DEBUG: Received ${listings.length} price listings');
-        if (mounted) {
-          setState(() {
-            _priceListings = listings;
-            _isLoading = false;
-          });
-          
-          // Send product inquiry notifications for newly visible listings
-          _sendProductInquiryNotifications(listings);
-        }
-      }, onError: (error) {
-        print('DEBUG: Error in price listings stream: $error');
-        if (mounted) {
-          setState(() => _isLoading = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error loading price listings: $error')),
-          );
-        }
-      });
-
-      // Add timeout to prevent infinite loading
-      Future.delayed(const Duration(seconds: 10), () {
-        if (mounted && _isLoading) {
-          print('DEBUG: Timeout reached, stopping loading');
-          setState(() => _isLoading = false);
-        }
+      final products = await _pricingService.searchProducts(query: '', limit: 20);
+      setState(() {
+        _products = products;
+        _isSearching = false;
       });
     } catch (e) {
-      print('DEBUG: Exception in _loadData: $e');
-      setState(() => _isLoading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading data: $e')),
-        );
-      }
+      print('Error loading popular products: $e');
+      setState(() => _isSearching = false);
     }
   }
 
-  Future<void> _loadAvailableAttributes() async {
+  Future<void> _searchProducts() async {
+    if (_searchController.text.trim().isEmpty) {
+      _loadPopularProducts();
+      return;
+    }
+
+    setState(() => _isSearching = true);
     try {
-      // Use country-filtered data service to get only active variable types
-      final CountryFilteredDataService countryService = CountryFilteredDataService.instance;
-      final activeVariableTypesData = await countryService.getActiveVariableTypes();
+      final products = await _pricingService.searchProducts(
+        query: _searchController.text.trim(),
+        limit: 50,
+      );
+      setState(() {
+        _products = products;
+        _isSearching = false;
+      });
+    } catch (e) {
+      print('Error searching products: $e');
+      setState(() => _isSearching = false);
+    }
+  }
 
-      final attributes = <String, String>{};
-      for (final data in activeVariableTypesData) {
-        final id = data['id'] ?? '';
-        final name = data['name'] ?? id;
-        if (id.isNotEmpty) {
-          attributes[id] = name;
-        }
-      }
+  Future<void> _loadPricesForProduct(String productId, String productName) async {
+    setState(() {
+      _isLoadingPrices = true;
+      _selectedProductId = productId;
+      _selectedProductName = productName;
+      _priceListings = [];
+    });
 
-      if (mounted) {
+    try {
+      await for (final listings in _pricingService.getPriceListingsForProduct(productId).take(1)) {
         setState(() {
-          _availableAttributes = attributes;
+          _priceListings = listings;
+          _isLoadingPrices = false;
         });
       }
     } catch (e) {
-      print('DEBUG: Error loading attributes: $e');
+      print('Error loading prices: $e');
+      setState(() => _isLoadingPrices = false);
     }
   }
 
-  String _formatAttributes(Map<String, String> selectedVariables) {
-    final formattedAttributes = <String>[];
-    for (final entry in selectedVariables.entries) {
-      final attributeName = _availableAttributes[entry.key] ?? entry.key;
-      formattedAttributes.add('$attributeName: ${entry.value}');
-    }
-    return formattedAttributes.join(' • ');
-  }
-
-  Future<void> _trackAndLaunchUrl(String url, PriceListing listing) async {
-    if (_currentUserId != null) {
-      await _pricingService.trackProductClick(
-        listingId: listing.id,
-        businessId: listing.businessId,
-        masterProductId: listing.masterProductId,
-        userId: _currentUserId!,
-      );
-    }
-
-    final uri = Uri.parse(url.startsWith('http') ? url : 'https://$url');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open the link')),
-        );
-      }
-    }
-  }
-
-  Future<void> _launchWhatsApp(String number, String productName) async {
-    final message = Uri.encodeComponent('Hi! I\'m interested in $productName');
-    final whatsappUrl = 'https://wa.me/$number?text=$message';
-    
-    final uri = Uri.parse(whatsappUrl);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open WhatsApp')),
-        );
-      }
-    }
-  }
-
-  void _showBusinessProfile(String businessId) {
-    showDialog(
-      context: context,
-      builder: (context) => BusinessProfileModal(businessId: businessId),
-    );
+  void _clearSelection() {
+    setState(() {
+      _selectedProductId = null;
+      _selectedProductName = null;
+      _priceListings = [];
+    });
   }
 
   @override
@@ -181,148 +99,80 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
       appBar: AppBar(
         backgroundColor: AppTheme.backgroundColor,
         foregroundColor: AppTheme.textPrimary,
-        title: Text(widget.product.name),
+        title: const Text('Price Comparison'),
         elevation: 0,
         actions: [
-          if (_canAddListing)
+          if (_selectedProductId != null)
             IconButton(
-              icon: const Icon(Icons.add),
-              onPressed: () => _navigateToAddListing(),
+              icon: const Icon(Icons.clear),
+              onPressed: _clearSelection,
             ),
         ],
       ),
       body: Column(
         children: [
-          _buildProductHeader(),
-          Expanded(child: _buildPriceListings()),
+          _buildSearchSection(),
+          Expanded(
+            child: _selectedProductId == null
+                ? _buildProductsList()
+                : _buildPriceComparisonList(),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildProductHeader() {
+  Widget _buildSearchSection() {
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.all(16),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              // Product image
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  color: Colors.grey[100],
-                ),
-                child: widget.product.images.isNotEmpty
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          widget.product.images.first,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              Icon(Icons.image, color: Colors.grey[400]),
-                        ),
-                      )
-                    : Icon(Icons.image, color: Colors.grey[400]),
+          TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Search for products (iPhone, Samsung TV, Rice, etc.)',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                        _loadPopularProducts();
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey[300]!),
               ),
-              
-              const SizedBox(width: 16),
-              
-              // Product info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.product.name,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.product.brand,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${widget.product.category} • ${widget.product.subcategory}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[500],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          
-          if (widget.product.description.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Text(
-              widget.product.description,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[700],
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.primaryColor),
               ),
             ),
-          ],
-          
-          const SizedBox(height: 16),
-          
-          // Stats
-          Row(
-            children: [
-              _buildStatChip(
-                icon: Icons.store,
-                label: '${_priceListings.length} sellers',
-                color: AppTheme.primaryColor,
-              ),
-              const SizedBox(width: 8),
-              if (_priceListings.isNotEmpty)
-                _buildStatChip(
-                  icon: Icons.trending_down,
-                  label: 'From LKR ${_getMinPrice().toStringAsFixed(2)}',
-                  color: Colors.green,
-                ),
-            ],
+            onChanged: (value) {
+              setState(() {});
+              if (value.isEmpty) {
+                _loadPopularProducts();
+              }
+            },
+            onSubmitted: (value) => _searchProducts(),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatChip({
-    required IconData icon,
-    required String label,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: color,
-              fontWeight: FontWeight.w500,
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _searchProducts,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text('Search Products'),
             ),
           ),
         ],
@@ -330,47 +180,30 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
     );
   }
 
-  Widget _buildPriceListings() {
-    if (_isLoading) {
+  Widget _buildProductsList() {
+    if (_isSearching) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_priceListings.isEmpty) {
+    if (_products.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.price_check_outlined,
+              Icons.search_off,
               size: 64,
               color: Colors.grey[400],
             ),
             const SizedBox(height: 16),
             Text(
-              'No prices listed yet',
+              'No products found',
               style: TextStyle(
                 fontSize: 18,
                 color: Colors.grey[600],
                 fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Be the first to list your price for this product',
-              style: TextStyle(color: Colors.grey[500]),
-            ),
-            if (_canAddListing) ...[
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: () => _navigateToAddListing(),
-                icon: const Icon(Icons.add),
-                label: const Text('Add Price'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ],
           ],
         ),
       );
@@ -378,23 +211,200 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: _priceListings.length,
+      itemCount: _products.length,
       itemBuilder: (context, index) {
-        return _buildPriceListingCard(_priceListings[index], index);
+        final product = _products[index];
+        return _buildProductCard(product);
       },
     );
   }
 
-  Widget _buildPriceListingCard(PriceListing listing, int index) {
-    final isLowest = index == 0;
+  Widget _buildProductCard(dynamic product) {
+    final name = product.name ?? 'Unknown Product';
+    final brand = product.brand ?? '';
+    final listingCount = product.businessListingsCount ?? 0;
+    final minPrice = product.minPrice;
+    final maxPrice = product.maxPrice;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: isLowest ? 4 : 2,
+      elevation: 0,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: () => _loadPricesForProduct(product.id, name),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (brand.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        brand,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.store,
+                          size: 14,
+                          color: Colors.grey[600],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$listingCount sellers',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        if (minPrice != null && maxPrice != null) ...[
+                          const SizedBox(width: 16),
+                          Text(
+                            'LKR ${minPrice.toStringAsFixed(0)} - ${maxPrice.toStringAsFixed(0)}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.primaryColor,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: Colors.grey,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPriceComparisonList() {
+    return Column(
+      children: [
+        // Selected product header
+        Container(
+          color: Colors.white,
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _selectedProductName ?? '',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'Comparing prices from ${_priceListings.length} sellers',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        // Price listings
+        Expanded(
+          child: _isLoadingPrices
+              ? const Center(child: CircularProgressIndicator())
+              : _priceListings.isEmpty
+                  ? _buildNoPricesFound()
+                  : _buildPricesList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNoPricesFound() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.price_check_outlined,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No prices available yet',
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Be the first to know when businesses add prices for this product',
+            style: TextStyle(color: Colors.grey[500]),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPricesList() {
+    // Sort by price (cheapest first)
+    final sortedListings = List<PriceListing>.from(_priceListings)
+      ..sort((a, b) => a.price.compareTo(b.price));
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: sortedListings.length,
+      itemBuilder: (context, index) {
+        final listing = sortedListings[index];
+        final isLowestPrice = index == 0;
+        
+        return _buildPriceCard(listing, isLowestPrice);
+      },
+    );
+  }
+
+  Widget _buildPriceCard(PriceListing listing, bool isLowestPrice) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 0,
+      color: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: isLowest 
-            ? const BorderSide(color: Colors.green, width: 1)
+        side: isLowestPrice
+            ? const BorderSide(color: Colors.green, width: 2)
             : BorderSide.none,
       ),
       child: Padding(
@@ -402,271 +412,125 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header with business info and price
+            // Header with price and badge
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Business logo
-                GestureDetector(
-                  onTap: () => _showBusinessProfile(listing.businessId),
-                  child: Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey[300]!),
-                    ),
-                    child: listing.businessLogo.isNotEmpty
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              listing.businessLogo,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Center(
-                                    child: Text(
-                                      listing.businessName[0].toUpperCase(),
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 18,
-                                      ),
-                                    ),
-                                  ),
-                            ),
-                          )
-                        : Center(
-                            child: Text(
-                              listing.businessName[0].toUpperCase(),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                              ),
-                            ),
-                          ),
-                  ),
-                ),
-                
-                const SizedBox(width: 12),
-                
-                // Business info
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      GestureDetector(
-                        onTap: () => _showBusinessProfile(listing.businessId),
-                        child: Text(
-                          listing.businessName,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
+                      Row(
+                        children: [
+                          Text(
+                            '${listing.currency} ${listing.price.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: isLowestPrice ? Colors.green : AppTheme.primaryColor,
+                            ),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      if (listing.rating > 0)
-                        Row(
-                          children: [
-                            Icon(Icons.star_rounded, size: 16, color: Colors.orange[600]),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${listing.rating.toStringAsFixed(1)} (${listing.reviewCount})',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
+                          if (isLowestPrice) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.green,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Text(
+                                'LOWEST PRICE',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ],
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        listing.businessName ?? 'Business',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
                         ),
+                      ),
                     ],
                   ),
-                ),
-                
-                // Price section
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    if (isLowest)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        margin: const EdgeInsets.only(bottom: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.green,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Text(
-                          'BEST PRICE',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    Text(
-                      '${listing.currency} ${listing.price.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.primaryColor,
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ),
             
-            // Product variables
-            if (listing.selectedVariables.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                _formatAttributes(listing.selectedVariables),
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                ),
-              ),
-            ],
-            
-            // Product images
-            if (listing.productImages.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 60,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: listing.productImages.length,
-                  itemBuilder: (context, imageIndex) {
-                    return Container(
-                      width: 60,
-                      height: 60,
-                      margin: const EdgeInsets.only(right: 8),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        color: Colors.grey[100],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          listing.productImages[imageIndex],
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              Icon(Icons.image, color: Colors.grey[400]),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-            
-            // Stock and interaction info
             const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(6),
+            
+            // Product details
+            if (listing.description.isNotEmpty) ...[
+              Text(
+                listing.description,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
               ),
-              child: Row(
+              const SizedBox(height: 8),
+            ],
+            
+            // Delivery info
+            if (listing.deliveryCharge > 0) ...[
+              Row(
                 children: [
                   Icon(
-                    listing.stockQuantity > 0 ? Icons.inventory_2_rounded : Icons.info_outline,
-                    size: 16,
-                    color: listing.stockQuantity > 0 ? Colors.green : Colors.orange,
+                    Icons.local_shipping,
+                    size: 14,
+                    color: Colors.grey[600],
                   ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      listing.stockQuantity > 0
-                          ? 'In Stock: ${listing.stockQuantity} units'
-                          : 'Contact for availability',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[700],
-                        fontWeight: FontWeight.w500,
-                      ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Delivery: ${listing.currency} ${listing.deliveryCharge.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
                     ),
                   ),
-                  if (listing.clickCount > 0) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.blue[50],
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        '${listing.clickCount} views',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.blue[700],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
                 ],
               ),
-            ),
+              const SizedBox(height: 8),
+            ],
             
-            // Action buttons
-            const SizedBox(height: 16),
+            // Contact buttons
             Row(
               children: [
-                // Contact WhatsApp
-                if (listing.whatsappNumber?.isNotEmpty == true)
+                if (listing.whatsapp?.isNotEmpty == true) ...[
                   Expanded(
-                    child: Container(
-                      height: 40,
-                      child: OutlinedButton.icon(
-                        onPressed: () => _launchWhatsApp(
-                          listing.whatsappNumber!,
-                          listing.productName,
-                        ),
-                        icon: const Icon(Icons.chat_bubble_outline, size: 18),
-                        label: const Text(
-                          'WhatsApp',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.green[600],
-                          side: BorderSide(color: Colors.green[600]!),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
+                    child: ElevatedButton.icon(
+                      onPressed: () => _contactBusiness('whatsapp', listing.whatsapp!),
+                      icon: const Icon(Icons.phone, size: 16),
+                      label: const Text('WhatsApp'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
                       ),
                     ),
                   ),
-                
-                if (listing.whatsappNumber?.isNotEmpty == true && 
-                    listing.productLink?.isNotEmpty == true)
                   const SizedBox(width: 8),
-                
-                // Visit store
-                if (listing.productLink?.isNotEmpty == true)
+                ],
+                if (listing.website?.isNotEmpty == true) ...[
                   Expanded(
-                    child: Container(
-                      height: 40,
-                      child: ElevatedButton.icon(
-                        onPressed: () => _trackAndLaunchUrl(listing.productLink!, listing),
-                        icon: const Icon(Icons.storefront_rounded, size: 18),
-                        label: const Text(
-                          'Visit Store',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryColor,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
+                    child: OutlinedButton.icon(
+                      onPressed: () => _contactBusiness('website', listing.website!),
+                      icon: const Icon(Icons.web, size: 16),
+                      label: const Text('Website'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.primaryColor,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
                       ),
                     ),
                   ),
+                ],
               ],
             ),
           ],
@@ -675,49 +539,28 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
     );
   }
 
-  double _getMinPrice() {
-    if (_priceListings.isEmpty) return 0.0;
-    return _priceListings.map((l) => l.price).reduce((a, b) => a < b ? a : b);
-  }
+  void _contactBusiness(String type, String contact) {
+    // Track the contact attempt
+    _pricingService.trackProductClick(
+      listingId: _selectedProductId,
+      masterProductId: _selectedProductId,
+      businessId: null, // We'd need to pass this from the listing
+    );
 
-  void _navigateToAddListing() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => AddPriceListingScreen(
-          masterProduct: widget.product,
-        ),
+    // Here you would implement the actual contact functionality
+    // For WhatsApp: launch WhatsApp with the number
+    // For Website: launch the website URL
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Contact: $contact'),
+        backgroundColor: Colors.green,
       ),
     );
   }
 
-  // Send product inquiry notifications to businesses
-  Future<void> _sendProductInquiryNotifications(List<PriceListing> listings) async {
-    try {
-      final userId = _currentUserId;
-      if (userId == null) return;
-
-      final userModel = await _userService.getCurrentUserModel();
-      if (userModel == null) return;
-
-      for (final listing in listings) {
-        // Don't notify the same business multiple times
-        if (_notifiedBusinesses.contains(listing.businessId)) continue;
-        
-        // Don't notify if the user is viewing their own listing
-        if (listing.businessId == userId) continue;
-
-        await _notificationService.notifyProductInquiry(
-          businessId: listing.businessId,
-          businessName: listing.businessName,
-          productName: listing.productName,
-          inquirerId: userId,
-          inquirerName: userModel.name,
-        );
-
-        _notifiedBusinesses.add(listing.businessId);
-      }
-    } catch (e) {
-      print('Error sending product inquiry notifications: $e');
-    }
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 }

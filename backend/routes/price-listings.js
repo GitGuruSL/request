@@ -1,6 +1,6 @@
 const express = require('express');
 const database = require('../services/database');
-const auth = require('../services/auth');
+const auth = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
 
@@ -118,7 +118,6 @@ router.get('/', async (req, res) => {
         c.name as city_name
       FROM price_listings pl
       LEFT JOIN country_products cp ON pl.master_product_id = cp.id
-      LEFT JOIN brands b ON cp.brand_id = b.id
       LEFT JOIN business_verifications bv ON pl.business_id = bv.user_id
       LEFT JOIN cities c ON pl.city_id = c.id
     `;
@@ -526,7 +525,8 @@ router.post('/', auth.authMiddleware(), upload.array('images', 5), async (req, r
       website,
       whatsapp,
       cityId,
-      countryCode = 'LK'
+      countryCode = 'LK',
+      images: bodyImages // Images from request body (S3 URLs)
     } = req.body;
 
     // Validate required fields
@@ -550,8 +550,21 @@ router.post('/', auth.authMiddleware(), upload.array('images', 5), async (req, r
       });
     }
 
-    // Handle uploaded images
-    const images = req.files ? req.files.map(file => `/uploads/price-listings/${file.filename}`) : [];
+    // Handle uploaded images - support both multer file uploads and S3 URLs from request body
+    let images = [];
+    
+    // Add multer uploaded files (if any)
+    if (req.files && req.files.length > 0) {
+      images = req.files.map(file => `/uploads/price-listings/${file.filename}`);
+    }
+    
+    // Add S3 URLs from request body (if any)
+    if (bodyImages) {
+      const s3Images = Array.isArray(bodyImages) ? bodyImages : [bodyImages];
+      images = [...images, ...s3Images];
+    }
+    
+    console.log(`DEBUG: Processing images - multer files: ${req.files?.length || 0}, S3 URLs: ${bodyImages ? (Array.isArray(bodyImages) ? bodyImages.length : 1) : 0}, total: ${images.length}`);
 
     // Create the price listing (allow multiple listings per business for same product)
     const insertQuery = `
