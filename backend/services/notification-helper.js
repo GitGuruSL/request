@@ -1,9 +1,14 @@
 const db = require('./database');
 
 async function ensureSchema() {
+  // Best-effort: make sure at least one UUID extension exists
   try { await db.query('CREATE EXTENSION IF NOT EXISTS pgcrypto'); } catch (_) {}
-  await db.query(`CREATE TABLE IF NOT EXISTS notifications (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  try { await db.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"'); } catch (_) {}
+
+  // Create table if missing, trying gen_random_uuid(), then uuid_generate_v4(), then no default
+  const reg = await db.queryOne("SELECT to_regclass('public.notifications') as tbl");
+  if (!reg || !reg.tbl) {
+    const commonCols = `
     recipient_id UUID NOT NULL,
     sender_id UUID,
     type TEXT NOT NULL,
@@ -12,10 +17,33 @@ async function ensureSchema() {
     data JSONB DEFAULT '{}'::jsonb,
     status TEXT DEFAULT 'unread',
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    read_at TIMESTAMPTZ
-  );`);
-  await db.query(`CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON notifications(recipient_id, created_at DESC);`);
-  await db.query(`CREATE INDEX IF NOT EXISTS idx_notifications_status ON notifications(status);`);
+    read_at TIMESTAMPTZ`;
+
+    try {
+      await db.query(`CREATE TABLE notifications (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        ${commonCols}
+      );`);
+    } catch (e1) {
+      console.warn('notifications.ensureSchema: gen_random_uuid() unavailable, retrying with uuid_generate_v4()', e1.message);
+      try {
+        await db.query(`CREATE TABLE notifications (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          ${commonCols}
+        );`);
+      } catch (e2) {
+        console.warn('notifications.ensureSchema: uuid_generate_v4() unavailable, creating without default', e2.message);
+        await db.query(`CREATE TABLE notifications (
+          id UUID PRIMARY KEY,
+          ${commonCols}
+        );`);
+      }
+    }
+  }
+
+  // Indexes (best-effort)
+  try { await db.query(`CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON notifications(recipient_id, created_at DESC);`); } catch (_) {}
+  try { await db.query(`CREATE INDEX IF NOT EXISTS idx_notifications_status ON notifications(status);`); } catch (_) {}
 }
 
 async function createNotification({ recipientId, senderId, type, title, message, data }) {
