@@ -495,7 +495,7 @@ router.get('/:id', async (req, res) => {
 // POST /api/price-listings - Create a new price listing (Business users only)
 router.post('/', auth.authMiddleware(), upload.array('images', 5), async (req, res) => {
   try {
-    const userId = req.user.uid;
+    const userId = req.user.id; // Fixed: use 'id' instead of 'uid'
     
     // Verify user is a verified business
     const businessCheck = await database.query(
