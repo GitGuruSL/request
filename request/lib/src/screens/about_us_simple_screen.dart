@@ -57,6 +57,19 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    String? aboutTextFallback() {
+      // Use metadata.aboutText when available, otherwise use the content
+      // body of the About Us page (plain text fallback).
+      final metaText = _getMeta<String>('aboutText');
+      if (metaText != null && metaText.trim().isNotEmpty) return metaText;
+      final aboutPage = _findPageByKeywords(['about', 'company']);
+      if (aboutPage != null) {
+        final body = aboutPage.content.trim();
+        if (body.isNotEmpty) return body;
+      }
+      return null;
+    }
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -81,11 +94,11 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
                     ),
                   ),
 
-                // About text
-                if (_getMeta<String>('aboutText')?.isNotEmpty == true)
+                // About text (metadata or page content fallback)
+                if (aboutTextFallback()?.isNotEmpty == true)
                   _sectionCard(
                     child: Text(
-                      _getMeta<String>('aboutText')!,
+                      aboutTextFallback()!,
                       style: const TextStyle(fontSize: 16),
                     ),
                   ),
