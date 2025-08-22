@@ -387,6 +387,10 @@ class CentralizedRequestService {
     String? currency,
     Map<String, dynamic>? additionalData,
     List<String>? images,
+    String? locationAddress,
+    double? locationLatitude,
+    double? locationLongitude,
+    String? countryCode,
   }) async {
     if (requestId == null) throw Exception('requestId required');
     final map = <String, dynamic>{
@@ -395,6 +399,12 @@ class CentralizedRequestService {
       if (currency != null) 'currency': currency,
       if (images != null) 'images': images,
       if (additionalData != null) 'additionalData': additionalData,
+      // Location fields
+      if (locationAddress != null) 'location_address': locationAddress,
+      if (locationLatitude != null) 'location_latitude': locationLatitude,
+      if (locationLongitude != null) 'location_longitude': locationLongitude,
+      // Country code
+      if (countryCode != null) 'country_code': countryCode,
     };
     await createResponse(requestId, map);
   }

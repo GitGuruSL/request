@@ -340,11 +340,15 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
         });
       } else {
         // Create new response
+        // Get country code from CountryService
+        final countryCode = CountryService.instance.getCurrentCountryCode();
+
         await _requestService.createResponseNamed(
-          requestId: widget.request.id!,
+          requestId: widget.request.id,
           message: _messageController.text,
           price: double.parse(_priceController.text.trim()),
           images: _imageUrls,
+          countryCode: countryCode,
           additionalData: {
             'vehicleType': _vehicleType,
             'passengers': widget.request.typeSpecificData['passengers'] ?? 1,

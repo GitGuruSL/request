@@ -257,26 +257,40 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
     print('  location_longitude: ${additionalInfo['location_longitude']}');
     print('  locationAddress: ${additionalInfo['locationAddress']}');
 
-    // Initialize location (if stored either at top-level additionalInfo or future response fields)
-    final locAddr =
-        additionalInfo['location_address'] ?? additionalInfo['locationAddress'];
+    // Check if response has direct location fields (newer responses)
+    print('🔍 DEBUG: Checking response model for direct location fields:');
+    final responseLocationAddress =
+        widget.response.additionalInfo['location_address'];
+    final responseLocationLat =
+        widget.response.additionalInfo['location_latitude'];
+    final responseLocationLng =
+        widget.response.additionalInfo['location_longitude'];
+    print('  response locationAddress: $responseLocationAddress');
+    print('  response locationLatitude: $responseLocationLat');
+    print('  response locationLongitude: $responseLocationLng');
+
+    // Initialize location (prioritize additionalInfo, then response model fields)
+    final locAddr = additionalInfo['location_address'] ??
+        additionalInfo['locationAddress'] ??
+        responseLocationAddress;
     if (locAddr != null) {
       _locationAddressController.text = locAddr.toString();
       print('🔍 DEBUG: Set location address to: ${locAddr.toString()}');
     } else {
-      print('🔍 DEBUG: No location address found in additionalInfo');
-    }
-    if (additionalInfo['location_latitude'] != null) {
-      _locationLatitudeController.text =
-          additionalInfo['location_latitude'].toString();
       print(
-          '🔍 DEBUG: Set location latitude to: ${additionalInfo['location_latitude']}');
+          '🔍 DEBUG: No location address found in additionalInfo or response');
     }
-    if (additionalInfo['location_longitude'] != null) {
-      _locationLongitudeController.text =
-          additionalInfo['location_longitude'].toString();
-      print(
-          '🔍 DEBUG: Set location longitude to: ${additionalInfo['location_longitude']}');
+
+    final locLat = additionalInfo['location_latitude'] ?? responseLocationLat;
+    if (locLat != null) {
+      _locationLatitudeController.text = locLat.toString();
+      print('🔍 DEBUG: Set location latitude to: $locLat');
+    }
+
+    final locLng = additionalInfo['location_longitude'] ?? responseLocationLng;
+    if (locLng != null) {
+      _locationLongitudeController.text = locLng.toString();
+      print('🔍 DEBUG: Set location longitude to: $locLng');
     }
 
     // Initialize type-specific fields based on request type
@@ -745,17 +759,28 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
           const Text('Responder Location*',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
-          AccurateLocationPickerWidget(
-            controller: _locationAddressController,
-            hintText: 'Tap to pick responder location',
-            isRequired: true,
-            prefixIcon: Icons.location_on,
-            onLocationSelected: (address, lat, lng) {
-              setState(() {
-                _locationAddressController.text = address;
-                _locationLatitudeController.text = lat.toString();
-                _locationLongitudeController.text = lng.toString();
-              });
+          Builder(
+            builder: (context) {
+              print('🔍 DEBUG: Building AccurateLocationPickerWidget');
+              print('  Controller text: "${_locationAddressController.text}"');
+              print('  Request type: ${widget.request.type}');
+              return AccurateLocationPickerWidget(
+                controller: _locationAddressController,
+                hintText: 'Tap to pick responder location',
+                isRequired: true,
+                prefixIcon: Icons.location_on,
+                onLocationSelected: (address, lat, lng) {
+                  print('🔍 DEBUG: Location selected callback triggered');
+                  print('  New address: "$address"');
+                  print('  New lat: $lat');
+                  print('  New lng: $lng');
+                  setState(() {
+                    _locationAddressController.text = address;
+                    _locationLatitudeController.text = lat.toString();
+                    _locationLongitudeController.text = lng.toString();
+                  });
+                },
+              );
             },
           ),
         ],
