@@ -215,7 +215,9 @@ class PriceListing {
     return {
       'masterProductId': masterProductId,
       'title': productName,
-      'description': modelNumber != null ? '$brand $productName ($modelNumber)' : '$brand $productName',
+      'description': modelNumber != null
+          ? '$brand $productName ($modelNumber)'
+          : '$brand $productName',
       'price': price,
       'currency': currency,
       'deliveryCharge': 0, // Default delivery charge

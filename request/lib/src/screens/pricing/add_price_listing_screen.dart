@@ -215,40 +215,6 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
       // Create price listing
       final countryService = CountryService.instance;
       final userCountryCode = countryService.countryCode ?? 'LK';
-      final userCountryName = countryService.countryName ?? 'Sri Lanka';
-
-      final priceListing = PriceListing(
-        id: widget.existingListing?.id ?? '',
-        businessId: userId,
-        businessName: _businessProfile?['businessName'] ?? 'Unknown Business',
-        businessLogo: _businessProfile?['businessLogo'] ?? '',
-        masterProductId: widget.masterProduct.id,
-        productName: widget.masterProduct.name,
-        brand: widget.masterProduct.brand,
-        category: widget.masterProduct.category,
-        subcategory: widget.masterProduct.subcategory,
-        price: double.parse(_priceController.text),
-        currency: _currency,
-        modelNumber: _modelNumberController.text.isEmpty
-            ? null
-            : _modelNumberController.text,
-        selectedVariables: _selectedVariables,
-        productImages: imageUrls,
-        productLink: _productLinkController.text.isEmpty
-            ? null
-            : _productLinkController.text,
-        whatsappNumber:
-            _whatsappController.text.isEmpty ? null : _whatsappController.text,
-        isAvailable: _isAvailable,
-        stockQuantity: int.tryParse(_stockController.text) ?? 0,
-        createdAt: widget.existingListing?.createdAt ?? DateTime.now(),
-        updatedAt: DateTime.now(),
-        clickCount: widget.existingListing?.clickCount ?? 0,
-        rating: widget.existingListing?.rating ?? 0.0,
-        reviewCount: widget.existingListing?.reviewCount ?? 0,
-        country: userCountryCode,
-        countryName: userCountryName,
-      );
 
       // Create API payload that matches backend expectations
       final apiPayload = {
@@ -260,15 +226,23 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
         'price': double.parse(_priceController.text),
         'currency': _currency,
         'deliveryCharge': 0, // Default delivery charge
-        'website': _productLinkController.text.isEmpty ? null : _productLinkController.text,
-        'whatsapp': _whatsappController.text.isEmpty ? null : _whatsappController.text,
+        'website': _productLinkController.text.isEmpty
+            ? null
+            : _productLinkController.text,
+        'whatsapp':
+            _whatsappController.text.isEmpty ? null : _whatsappController.text,
         'countryCode': userCountryCode,
         'unit': 'piece', // Default unit
         // Add selected variables if any
-        if (_selectedVariables.isNotEmpty) 'selectedVariables': _selectedVariables,
+        if (_selectedVariables.isNotEmpty)
+          'selectedVariables': _selectedVariables,
       };
 
       final success = await _pricingService.addOrUpdatePriceListing(apiPayload);
+
+      if (!success) {
+        throw Exception('Failed to save price listing');
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
