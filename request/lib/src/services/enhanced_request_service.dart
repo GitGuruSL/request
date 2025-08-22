@@ -308,32 +308,41 @@ class EnhancedRequestService {
 
   // (removed legacy _deriveType to satisfy lints)
 
-  ui.ResponseModel _convertResponse(rest.ResponseModel r) => ui.ResponseModel(
-        id: r.id,
-        requestId: r.requestId,
-        responderId: r.userId,
-        message: r.message,
-        price: r.price,
-        currency: r.currency,
-        availableFrom: null,
-        availableUntil: null,
-        images: r.imageUrls ?? const [],
-        additionalInfo: {
-          ...?r.metadata,
-          if (r.locationAddress != null) 'location_address': r.locationAddress,
-          if (r.locationLatitude != null)
-            'location_latitude': r.locationLatitude,
-          if (r.locationLongitude != null)
-            'location_longitude': r.locationLongitude,
-          if (r.countryCode != null) 'country_code': r.countryCode,
-          if (r.userName != null) 'responder_name': r.userName,
-          if (r.userEmail != null) 'responder_email': r.userEmail,
-          if (r.userPhone != null) 'responder_phone': r.userPhone,
-        },
-        createdAt: r.createdAt,
-        isAccepted: false, // derive when backend supplies accepted id
-        rejectionReason: null,
-        country: r.countryCode,
-        countryName: null,
-      );
+  ui.ResponseModel _convertResponse(rest.ResponseModel r) {
+    // Debug: Print the REST response model to see what location data it has
+    print('🔍 DEBUG: REST Response Model conversion:');
+    print('  REST locationAddress: ${r.locationAddress}');
+    print('  REST locationLatitude: ${r.locationLatitude}');
+    print('  REST locationLongitude: ${r.locationLongitude}');
+    print('  REST countryCode: ${r.countryCode}');
+    print('  REST metadata: ${r.metadata}');
+
+    return ui.ResponseModel(
+      id: r.id,
+      requestId: r.requestId,
+      responderId: r.userId,
+      message: r.message,
+      price: r.price,
+      currency: r.currency,
+      availableFrom: null,
+      availableUntil: null,
+      images: r.imageUrls ?? const [],
+      additionalInfo: {
+        ...?r.metadata,
+        if (r.locationAddress != null) 'location_address': r.locationAddress,
+        if (r.locationLatitude != null) 'location_latitude': r.locationLatitude,
+        if (r.locationLongitude != null)
+          'location_longitude': r.locationLongitude,
+        if (r.countryCode != null) 'country_code': r.countryCode,
+        if (r.userName != null) 'responder_name': r.userName,
+        if (r.userEmail != null) 'responder_email': r.userEmail,
+        if (r.userPhone != null) 'responder_phone': r.userPhone,
+      },
+      createdAt: r.createdAt,
+      isAccepted: false, // derive when backend supplies accepted id
+      rejectionReason: null,
+      country: r.countryCode,
+      countryName: null,
+    );
+  }
 }

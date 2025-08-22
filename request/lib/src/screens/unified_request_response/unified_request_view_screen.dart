@@ -381,7 +381,23 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
       createdAt: restResponse.createdAt,
       availableFrom: null,
       availableUntil: null,
-      additionalInfo: restResponse.metadata ?? {},
+      additionalInfo: {
+        ...?restResponse.metadata,
+        if (restResponse.locationAddress != null)
+          'location_address': restResponse.locationAddress,
+        if (restResponse.locationLatitude != null)
+          'location_latitude': restResponse.locationLatitude,
+        if (restResponse.locationLongitude != null)
+          'location_longitude': restResponse.locationLongitude,
+        if (restResponse.countryCode != null)
+          'country_code': restResponse.countryCode,
+        if (restResponse.userName != null)
+          'responder_name': restResponse.userName,
+        if (restResponse.userEmail != null)
+          'responder_email': restResponse.userEmail,
+        if (restResponse.userPhone != null)
+          'responder_phone': restResponse.userPhone,
+      },
       rejectionReason: null,
     );
   }
