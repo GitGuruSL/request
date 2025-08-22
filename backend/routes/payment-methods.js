@@ -46,6 +46,27 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Public endpoint: list active payment methods by country (for apps)
+router.get('/public/list', async (req, res) => {
+  try {
+    const { country } = req.query;
+    if (!country) return res.status(400).json({ success: false, error: 'country is required' });
+    const r = await db.query(`
+      SELECT id, country_code AS country, name, description, category,
+             image_url AS "imageUrl", link_url AS "linkUrl", fees,
+             processing_time AS "processingTime", min_amount AS "minAmount",
+             max_amount AS "maxAmount"
+      FROM country_payment_methods
+      WHERE country_code = $1 AND is_active = true
+      ORDER BY name
+    `, [country]);
+    res.json(r.rows);
+  } catch (e) {
+    console.error('Error fetching public payment methods', e);
+    res.status(500).json({ success: false, error: 'Failed to fetch payment methods' });
+  }
+});
+
 // GET one
 router.get('/:id', async (req, res) => {
   try {
@@ -77,15 +98,19 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
         country_code, name, description, category, image_url, link_url,
         fees, processing_time, min_amount, max_amount, is_active
       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-      RETURNING id
+      RETURNING id, country_code AS country, name, description, category,
+                image_url AS "imageUrl", link_url AS "linkUrl", fees,
+                processing_time AS "processingTime", min_amount AS "minAmount",
+                max_amount AS "maxAmount", is_active AS "isActive",
+                created_at, updated_at
     `;
     const vals = [
       payload.country_code, payload.name, payload.description, payload.category,
       payload.image_url, payload.link_url, payload.fees, payload.processing_time,
       payload.min_amount, payload.max_amount, payload.is_active
     ];
-    const r = await db.query(sql, vals);
-    res.status(201).json({ success: true, id: r.rows[0].id });
+  const r = await db.query(sql, vals);
+  res.status(201).json(r.rows[0]);
   } catch (e) {
     console.error('Error creating payment method', e);
     res.status(500).json({ success: false, error: 'Failed to create payment method' });
@@ -103,10 +128,15 @@ router.put('/:id', auth.authMiddleware(), async (req, res) => {
     });
     if (!fields.length) return res.status(400).json({ success: false, error: 'No fields to update' });
     vals.push(req.params.id);
-    const sql = `UPDATE country_payment_methods SET ${fields.join(', ')}, updated_at = NOW() WHERE id = $${vals.length} RETURNING id`;
-    const r = await db.query(sql, vals);
-    if (!r.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
-    res.json({ success: true });
+  const sql = `UPDATE country_payment_methods SET ${fields.join(', ')}, updated_at = NOW() WHERE id = $${vals.length} 
+         RETURNING id, country_code AS country, name, description, category,
+               image_url AS "imageUrl", link_url AS "linkUrl", fees,
+               processing_time AS "processingTime", min_amount AS "minAmount",
+               max_amount AS "maxAmount", is_active AS "isActive",
+               created_at, updated_at`;
+  const r = await db.query(sql, vals);
+  if (!r.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+  res.json(r.rows[0]);
   } catch (e) {
     console.error('Error updating payment method', e);
     res.status(500).json({ success: false, error: 'Failed to update payment method' });

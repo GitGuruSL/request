@@ -109,6 +109,20 @@ const PaymentMethods = () => {
 
   const uploadImage = async () => {
     if (!imageFile) return formData.imageUrl;
+    // Try S3 upload first
+    try {
+      const s3Form = new FormData();
+      s3Form.append('file', imageFile);
+      s3Form.append('uploadType', 'payment-methods');
+      const { data } = await api.post('/s3/upload', s3Form, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      if (data?.success && data?.url) return data.url;
+    } catch (e) {
+      console.warn('S3 upload failed, will try local upload as fallback', e);
+    }
+
+    // Fallback to local upload route
     try {
       const form = new FormData();
       form.append('file', imageFile);
