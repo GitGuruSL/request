@@ -11,7 +11,8 @@ class BusinessProfileEditScreen extends StatefulWidget {
   const BusinessProfileEditScreen({Key? key}) : super(key: key);
 
   @override
-  State<BusinessProfileEditScreen> createState() => _BusinessProfileEditScreenState();
+  State<BusinessProfileEditScreen> createState() =>
+      _BusinessProfileEditScreenState();
 }
 
 class _BusinessProfileEditScreenState extends State<BusinessProfileEditScreen> {
@@ -22,12 +23,12 @@ class _BusinessProfileEditScreenState extends State<BusinessProfileEditScreen> {
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _websiteController = TextEditingController();
-  
+
   List<String> _selectedPaymentMethods = [];
   List<PaymentMethod> _availablePaymentMethods = [];
   bool _isLoading = false;
   bool _isInitialLoading = true;
-  
+
   String _businessCategory = 'general';
   final List<String> _businessCategories = [
     'general',
@@ -61,32 +62,14 @@ class _BusinessProfileEditScreenState extends State<BusinessProfileEditScreen> {
 
   Future<void> _loadBusinessProfile() async {
     setState(() => _isInitialLoading = true);
-    
-    try {
-      final user = RestAuthService.instance.currentUser;
-      if (user == null) return;
 
-// FIRESTORE_TODO: replace with REST service. Original: final doc = await FirebaseFirestore.instance
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-      
-      if (doc.exists) {
-        final data = doc.data()!;
-        final businessData = data['businessProfile'] as Map<String, dynamic>?;
-        
-        if (businessData != null) {
-          _businessNameController.text = businessData['businessName'] ?? '';
-          _descriptionController.text = businessData['description'] ?? '';
-          _addressController.text = businessData['address'] ?? '';
-          _phoneController.text = businessData['phone'] ?? '';
-          _emailController.text = businessData['email'] ?? '';
-          _websiteController.text = businessData['website'] ?? '';
-          _businessCategory = businessData['category'] ?? 'general';
-          _selectedPaymentMethods = List<String>.from(businessData['paymentMethods'] ?? []);
-        }
-      }
+    try {
+      final user = AuthService.instance.currentUser;
+      if (user == null) return;
+      // Load selected payment methods mapping for this business
+      final selected =
+          await PaymentMethodsService.getSelectedForBusiness(user.uid);
+      _selectedPaymentMethods = selected;
     } catch (e) {
       print('Error loading business profile: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -99,32 +82,16 @@ class _BusinessProfileEditScreenState extends State<BusinessProfileEditScreen> {
 
   Future<void> _saveBusinessProfile() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     setState(() => _isLoading = true);
-    
+
     try {
-      final user = RestAuthService.instance.currentUser;
+      final user = AuthService.instance.currentUser;
       if (user == null) throw Exception('User not authenticated');
 
-      final businessProfile = {
-        'businessName': _businessNameController.text.trim(),
-        'description': _descriptionController.text.trim(),
-        'address': _addressController.text.trim(),
-        'phone': _phoneController.text.trim(),
-        'email': _emailController.text.trim(),
-        'website': _websiteController.text.trim(),
-        'category': _businessCategory,
-        'paymentMethods': _selectedPaymentMethods,
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
-
-// FIRESTORE_TODO: replace with REST service. Original: await FirebaseFirestore.instance
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .update({
-        'businessProfile': businessProfile,
-      });
+      // Persist selected country payment methods mapping for this business
+      await PaymentMethodsService.setSelectedForBusiness(
+          user.uid, _selectedPaymentMethods);
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -132,7 +99,7 @@ class _BusinessProfileEditScreenState extends State<BusinessProfileEditScreen> {
           backgroundColor: Colors.green,
         ),
       );
-      
+
       Navigator.pop(context, true);
     } catch (e) {
       print('Error saving business profile: $e');
@@ -187,7 +154,6 @@ class _BusinessProfileEditScreenState extends State<BusinessProfileEditScreen> {
                               style: Theme.of(context).textTheme.titleLarge,
                             ),
                             const SizedBox(height: 16),
-                            
                             TextFormField(
                               controller: _businessNameController,
                               decoration: const InputDecoration(
@@ -203,7 +169,6 @@ class _BusinessProfileEditScreenState extends State<BusinessProfileEditScreen> {
                               },
                             ),
                             const SizedBox(height: 16),
-                            
                             DropdownButtonFormField<String>(
                               value: _businessCategory,
                               decoration: const InputDecoration(
@@ -224,7 +189,6 @@ class _BusinessProfileEditScreenState extends State<BusinessProfileEditScreen> {
                               },
                             ),
                             const SizedBox(height: 16),
-                            
                             TextFormField(
                               controller: _descriptionController,
                               decoration: const InputDecoration(
@@ -235,7 +199,6 @@ class _BusinessProfileEditScreenState extends State<BusinessProfileEditScreen> {
                               maxLines: 3,
                             ),
                             const SizedBox(height: 16),
-                            
                             TextFormField(
                               controller: _addressController,
                               decoration: const InputDecoration(
@@ -249,9 +212,9 @@ class _BusinessProfileEditScreenState extends State<BusinessProfileEditScreen> {
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 16),
-                    
+
                     // Contact Information Card
                     Card(
                       child: Padding(
@@ -264,7 +227,6 @@ class _BusinessProfileEditScreenState extends State<BusinessProfileEditScreen> {
                               style: Theme.of(context).textTheme.titleLarge,
                             ),
                             const SizedBox(height: 16),
-                            
                             TextFormField(
                               controller: _phoneController,
                               decoration: const InputDecoration(
@@ -275,7 +237,6 @@ class _BusinessProfileEditScreenState extends State<BusinessProfileEditScreen> {
                               keyboardType: TextInputType.phone,
                             ),
                             const SizedBox(height: 16),
-                            
                             TextFormField(
                               controller: _emailController,
                               decoration: const InputDecoration(
@@ -286,7 +247,6 @@ class _BusinessProfileEditScreenState extends State<BusinessProfileEditScreen> {
                               keyboardType: TextInputType.emailAddress,
                             ),
                             const SizedBox(height: 16),
-                            
                             TextFormField(
                               controller: _websiteController,
                               decoration: const InputDecoration(
@@ -300,9 +260,9 @@ class _BusinessProfileEditScreenState extends State<BusinessProfileEditScreen> {
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 16),
-                    
+
                     // Payment Methods Card
                     Card(
                       child: Padding(
@@ -312,7 +272,8 @@ class _BusinessProfileEditScreenState extends State<BusinessProfileEditScreen> {
                           children: [
                             Row(
                               children: [
-                                const Icon(Icons.payment, color: AppTheme.primaryColor),
+                                const Icon(Icons.payment,
+                                    color: AppTheme.primaryColor),
                                 const SizedBox(width: 8),
                                 Text(
                                   'Accepted Payment Methods',
@@ -323,16 +284,19 @@ class _BusinessProfileEditScreenState extends State<BusinessProfileEditScreen> {
                             const SizedBox(height: 8),
                             Text(
                               'Select the payment methods your business accepts. This will be displayed to customers.',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Colors.grey[600],
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color: Colors.grey[600],
+                                  ),
                             ),
                             const SizedBox(height: 16),
-                            
                             PaymentMethodSelector(
                               selectedPaymentMethods: _selectedPaymentMethods,
                               onPaymentMethodsChanged: (methods) {
-                                setState(() => _selectedPaymentMethods = methods);
+                                setState(
+                                    () => _selectedPaymentMethods = methods);
                               },
                               multiSelect: true,
                             ),
@@ -340,9 +304,9 @@ class _BusinessProfileEditScreenState extends State<BusinessProfileEditScreen> {
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 24),
-                    
+
                     // Save Button
                     SizedBox(
                       width: double.infinity,
@@ -352,10 +316,12 @@ class _BusinessProfileEditScreenState extends State<BusinessProfileEditScreen> {
                             ? const SizedBox(
                                 width: 16,
                                 height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
                               )
                             : const Icon(Icons.save),
-                        label: Text(_isLoading ? 'Saving...' : 'Save Business Profile'),
+                        label: Text(
+                            _isLoading ? 'Saving...' : 'Save Business Profile'),
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
