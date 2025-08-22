@@ -129,195 +129,221 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
     final fallbackName = addl['responder_name']?.toString();
     final fallbackEmail = addl['responder_email']?.toString();
     final fallbackPhone = addl['responder_phone']?.toString();
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => UnifiedResponseViewScreen(
-              request: widget.request,
-              response: response,
-            ),
-          ),
-        );
-      },
-      child: Card(
-        margin: const EdgeInsets.only(bottom: 12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header with responder info and status
-              Row(
+    return Stack(
+      children: [
+        GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => UnifiedResponseViewScreen(
+                  request: widget.request,
+                  response: response,
+                ),
+              ),
+            );
+          },
+          child: Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: Colors.grey[200],
-                    child: Text(
-                      (responder != null && responder.name.isNotEmpty)
-                          ? responder.name[0]
-                          : (fallbackName != null && fallbackName.isNotEmpty
-                              ? fallbackName[0]
-                              : 'U'),
-                      style: const TextStyle(
-                        color: Colors.black54,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          responder?.name ?? fallbackName ?? 'Unknown User',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        Text(
-                          'Response to ${_getTypeDisplayName(widget.request.type.toString().split('.').last)}',
+                  // Header with responder info and status
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Colors.grey[200],
+                        child: Text(
+                          (responder != null && responder.name.isNotEmpty)
+                              ? responder.name[0]
+                              : (fallbackName != null && fallbackName.isNotEmpty
+                                  ? fallbackName[0]
+                                  : 'U'),
                           style: const TextStyle(
                             color: Colors.black54,
-                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                        if (((responder?.email ?? '').isNotEmpty) ||
-                            ((fallbackEmail ?? '').isNotEmpty)) ...[
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              responder?.name ?? fallbackName ?? 'Unknown User',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Text(
+                              'Response to ${_getTypeDisplayName(widget.request.type.toString().split('.').last)}',
+                              style: const TextStyle(
+                                color: Colors.black54,
+                                fontSize: 12,
+                              ),
+                            ),
+                            if (((responder?.email ?? '').isNotEmpty) ||
+                                ((fallbackEmail ?? '').isNotEmpty)) ...[
+                              Text(
+                                responder?.email ?? fallbackEmail ?? '',
+                                style: const TextStyle(
+                                  color: Colors.black45,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                            if ((fallbackPhone ?? '').isNotEmpty) ...[
+                              Text(
+                                fallbackPhone!,
+                                style: const TextStyle(
+                                  color: Colors.black45,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      _buildStatusBadge(response),
+                      IconButton(
+                        onPressed: () => _startConversation(
+                            response.responderId, responder?.name ?? 'User'),
+                        icon: Icon(
+                          Icons.message,
+                          color: _getTypeColor(widget.request.type),
+                        ),
+                        tooltip: 'Message',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Price
+                  if (response.price != null) ...[
+                    Text(
+                      '${response.currency ?? 'LKR'} ${_formatPrice(response.price!)}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+
+                  // Message preview
+                  Text(
+                    response.message,
+                    style: const TextStyle(
+                      color: Colors.black87,
+                      fontSize: 14,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Additional details
+                  if (response.availableFrom != null ||
+                      response.availableUntil != null) ...[
+                    Row(
+                      children: [
+                        if (response.availableFrom != null) ...[
+                          const Icon(Icons.calendar_today,
+                              size: 14, color: Colors.black54),
+                          const SizedBox(width: 4),
                           Text(
-                            responder?.email ?? fallbackEmail ?? '',
+                            'From: ${response.availableFrom!.day}/${response.availableFrom!.month}/${response.availableFrom!.year}',
                             style: const TextStyle(
-                              color: Colors.black45,
-                              fontSize: 11,
+                              color: Colors.black54,
+                              fontSize: 12,
                             ),
                           ),
                         ],
-                        if ((fallbackPhone ?? '').isNotEmpty) ...[
+                        if (response.availableFrom != null &&
+                            response.availableUntil != null)
+                          const SizedBox(width: 16),
+                        if (response.availableUntil != null) ...[
+                          const Icon(Icons.event,
+                              size: 14, color: Colors.black54),
+                          const SizedBox(width: 4),
                           Text(
-                            fallbackPhone!,
+                            'Until: ${response.availableUntil!.day}/${response.availableUntil!.month}/${response.availableUntil!.year}',
                             style: const TextStyle(
-                              color: Colors.black45,
-                              fontSize: 11,
+                              color: Colors.black54,
+                              fontSize: 12,
                             ),
                           ),
                         ],
                       ],
                     ),
-                  ),
-                  _buildStatusBadge(response),
-                  IconButton(
-                    onPressed: () => _startConversation(
-                        response.responderId, responder?.name ?? 'User'),
-                    icon: Icon(
-                      Icons.message,
-                      color: _getTypeColor(widget.request.type),
+                    const SizedBox(height: 8),
+                  ],
+
+                  // Images indicator
+                  if (response.images.isNotEmpty) ...[
+                    Row(
+                      children: [
+                        const Icon(Icons.photo,
+                            size: 14, color: Colors.black54),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${response.images.length} image${response.images.length > 1 ? 's' : ''}',
+                          style: const TextStyle(
+                            color: Colors.black54,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
-                    tooltip: 'Message',
-                  ),
+                    const SizedBox(height: 8),
+                  ],
+
+                  // Accept button hidden if any response is accepted for this request
+                  if (!anyAccepted &&
+                      !response.isAccepted &&
+                      response.rejectionReason == null) ...[
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _acceptResponse(response),
+                        icon: const Icon(Icons.check),
+                        label: const Text('Accept Response'),
+                      ),
+                    ),
+                  ],
                 ],
               ),
-              const SizedBox(height: 12),
-
-              // Price
-              if (response.price != null) ...[
-                Text(
-                  '${response.currency ?? 'LKR'} ${_formatPrice(response.price!)}',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 8),
-              ],
-
-              // Message preview
-              Text(
-                response.message,
-                style: const TextStyle(
-                  color: Colors.black87,
-                  fontSize: 14,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 8),
-
-              // Additional details
-              if (response.availableFrom != null ||
-                  response.availableUntil != null) ...[
-                Row(
-                  children: [
-                    if (response.availableFrom != null) ...[
-                      const Icon(Icons.calendar_today,
-                          size: 14, color: Colors.black54),
-                      const SizedBox(width: 4),
-                      Text(
-                        'From: ${response.availableFrom!.day}/${response.availableFrom!.month}/${response.availableFrom!.year}',
-                        style: const TextStyle(
-                          color: Colors.black54,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                    if (response.availableFrom != null &&
-                        response.availableUntil != null)
-                      const SizedBox(width: 16),
-                    if (response.availableUntil != null) ...[
-                      const Icon(Icons.event, size: 14, color: Colors.black54),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Until: ${response.availableUntil!.day}/${response.availableUntil!.month}/${response.availableUntil!.year}',
-                        style: const TextStyle(
-                          color: Colors.black54,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 8),
-              ],
-
-              // Images indicator
-              if (response.images.isNotEmpty) ...[
-                Row(
-                  children: [
-                    const Icon(Icons.photo, size: 14, color: Colors.black54),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${response.images.length} image${response.images.length > 1 ? 's' : ''}',
-                      style: const TextStyle(
-                        color: Colors.black54,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-              ],
-
-              // Accept button hidden if any response is accepted for this request
-              if (!anyAccepted &&
-                  !response.isAccepted &&
-                  response.rejectionReason == null) ...[
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () => _acceptResponse(response),
-                    icon: const Icon(Icons.check),
-                    label: const Text('Accept Response'),
-                  ),
-                ),
-              ],
-            ],
+            ),
           ),
         ),
+        if (response.isAccepted)
+          Positioned(
+            right: 12,
+            bottom: 10,
+            child: _acceptedCornerIcon(),
+          ),
+      ],
+    );
+  }
+
+  Widget _acceptedCornerIcon() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.green,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: const [
+          BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2)),
+        ],
       ),
+      padding: const EdgeInsets.all(6),
+      child: const Icon(Icons.verified, color: Colors.white, size: 16),
     );
   }
 
