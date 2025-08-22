@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/enhanced_user_model.dart';
-import '../models/request_model.dart';
 import '../services/enhanced_user_service.dart';
-import '../services/enhanced_request_service.dart';
+import '../services/rest_notification_service.dart';
+import 'modern_menu_screen.dart';
 
 class EnhancedMainDashboard extends StatefulWidget {
   const EnhancedMainDashboard({Key? key}) : super(key: key);
@@ -13,12 +13,13 @@ class EnhancedMainDashboard extends StatefulWidget {
 
 class _EnhancedMainDashboardState extends State<EnhancedMainDashboard> {
   final EnhancedUserService _userService = EnhancedUserService();
-  final EnhancedRequestService _requestService = EnhancedRequestService();
-  
+  // final EnhancedRequestService _requestService = EnhancedRequestService(); // unused
+
   UserModel? currentUser;
   bool isLoading = true;
   int _currentIndex = 0;
-  
+  int _unreadNotifications = 0;
+
   @override
   void initState() {
     super.initState();
@@ -28,9 +29,16 @@ class _EnhancedMainDashboardState extends State<EnhancedMainDashboard> {
   Future<void> _loadUserData() async {
     try {
       final user = await _userService.getCurrentUserModel();
+      // fetch unread notification count
+      int unread = 0;
+      try {
+        final counts = await RestNotificationService.instance.unreadCounts();
+        unread = counts.total;
+      } catch (_) {}
       setState(() {
         currentUser = user;
         isLoading = false;
+        _unreadNotifications = unread;
       });
     } catch (e) {
       setState(() => isLoading = false);
@@ -91,25 +99,68 @@ class _EnhancedMainDashboardState extends State<EnhancedMainDashboard> {
         ],
       ),
       actions: [
-        IconButton(
-          icon: const Icon(Icons.notifications_outlined),
-          onPressed: () => Navigator.pushNamed(context, '/notifications'),
+        Stack(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.notifications_outlined),
+              onPressed: () async {
+                await Navigator.pushNamed(context, '/notifications');
+                // refresh badge after returning
+                await _loadUserData();
+              },
+            ),
+            if (_unreadNotifications > 0)
+              Positioned(
+                right: 10,
+                top: 10,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '$_unreadNotifications',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+          ],
         ),
-        PopupMenuButton(
-          icon: CircleAvatar(
-            radius: 16,
-            backgroundColor: Colors.white,
-            child: Text(
-              currentUser!.name.isNotEmpty 
-                  ? currentUser!.name[0].toUpperCase() 
-                  : 'U',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.primary,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
+        // Tap avatar to go directly to Menu/Profile
+        GestureDetector(
+          onTap: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ModernMenuScreen()),
+            );
+            await _loadUserData();
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: CircleAvatar(
+              radius: 16,
+              backgroundColor: Colors.white,
+              child: Text(
+                currentUser!.name.isNotEmpty
+                    ? currentUser!.name[0].toUpperCase()
+                    : 'U',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
               ),
             ),
           ),
+        ),
+        // Overflow menu for additional actions
+        PopupMenuButton(
+          icon: const Icon(Icons.more_vert),
           itemBuilder: (context) => [
             PopupMenuItem(
               child: const Row(
@@ -119,7 +170,10 @@ class _EnhancedMainDashboardState extends State<EnhancedMainDashboard> {
                   Text('Profile'),
                 ],
               ),
-              onTap: () => Navigator.pushNamed(context, '/profile'),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ModernMenuScreen()),
+              ),
             ),
             PopupMenuItem(
               child: const Row(
@@ -168,8 +222,8 @@ class _EnhancedMainDashboardState extends State<EnhancedMainDashboard> {
             currentAccountPicture: CircleAvatar(
               backgroundColor: Colors.white,
               child: Text(
-                currentUser!.name.isNotEmpty 
-                    ? currentUser!.name[0].toUpperCase() 
+                currentUser!.name.isNotEmpty
+                    ? currentUser!.name[0].toUpperCase()
                     : 'U',
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.primary,
@@ -182,26 +236,26 @@ class _EnhancedMainDashboardState extends State<EnhancedMainDashboard> {
               color: Theme.of(context).colorScheme.primary,
             ),
           ),
-          
+
           // Role-specific menu items
           ...currentUser!.roles.map((role) => _buildRoleMenuItem(role)),
-          
+
           const Divider(),
-          
+
           ListTile(
             leading: const Icon(Icons.add_circle_outline),
             title: const Text('Add New Role'),
             onTap: () => Navigator.pushNamed(context, '/role-selection'),
           ),
-          
+
           const Divider(),
-          
+
           ListTile(
             leading: const Icon(Icons.analytics),
             title: const Text('Statistics'),
             onTap: () => Navigator.pushNamed(context, '/statistics'),
           ),
-          
+
           ListTile(
             leading: const Icon(Icons.help_outline),
             title: const Text('Help & Support'),
@@ -216,21 +270,17 @@ class _EnhancedMainDashboardState extends State<EnhancedMainDashboard> {
     final isActive = role == currentUser!.activeRole;
     final isVerified = currentUser!.isRoleVerified(role);
     final roleInfo = _getRoleInfo(role);
-    
+
     return ListTile(
       leading: Icon(
         roleInfo['icon'],
-        color: isActive 
-            ? Theme.of(context).colorScheme.primary 
-            : Colors.grey,
+        color: isActive ? Theme.of(context).colorScheme.primary : Colors.grey,
       ),
       title: Text(
         roleInfo['title'],
         style: TextStyle(
           fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-          color: isActive 
-              ? Theme.of(context).colorScheme.primary 
-              : null,
+          color: isActive ? Theme.of(context).colorScheme.primary : null,
         ),
       ),
       trailing: Row(
@@ -289,7 +339,7 @@ class _EnhancedMainDashboardState extends State<EnhancedMainDashboard> {
     final activeRole = currentUser!.activeRole;
     final isVerified = currentUser!.isRoleVerified(activeRole);
     final roleInfo = _getRoleInfo(activeRole);
-    
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -376,15 +426,15 @@ class _EnhancedMainDashboardState extends State<EnhancedMainDashboard> {
 
   Widget _buildQuickActions() {
     final actions = _getQuickActionsForRole(currentUser!.activeRole);
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Quick Actions',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+                fontWeight: FontWeight.bold,
+              ),
         ),
         const SizedBox(height: 12),
         GridView.builder(
@@ -453,8 +503,8 @@ class _EnhancedMainDashboardState extends State<EnhancedMainDashboard> {
         Text(
           'Recent Activity',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+                fontWeight: FontWeight.bold,
+              ),
         ),
         const SizedBox(height: 12),
         Container(
@@ -480,8 +530,8 @@ class _EnhancedMainDashboardState extends State<EnhancedMainDashboard> {
         Text(
           'Recommended for You',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+                fontWeight: FontWeight.bold,
+              ),
         ),
         const SizedBox(height: 12),
         Container(
@@ -520,24 +570,26 @@ class _EnhancedMainDashboardState extends State<EnhancedMainDashboard> {
 
   BottomNavigationBar _buildBottomNavigation() {
     final navItems = _getNavItemsForRole(currentUser!.activeRole);
-    
+
     return BottomNavigationBar(
       currentIndex: _currentIndex,
       onTap: (index) => setState(() => _currentIndex = index),
       type: BottomNavigationBarType.fixed,
       selectedItemColor: Theme.of(context).colorScheme.primary,
       unselectedItemColor: Colors.grey,
-      items: navItems.map((item) => BottomNavigationBarItem(
-        icon: Icon(item['icon']),
-        label: item['label'],
-      )).toList(),
+      items: navItems
+          .map((item) => BottomNavigationBarItem(
+                icon: Icon(item['icon']),
+                label: item['label'],
+              ))
+          .toList(),
     );
   }
 
   FloatingActionButton? _buildFloatingActionButton() {
     final fabAction = _getFabActionForRole(currentUser!.activeRole);
     if (fabAction == null) return null;
-    
+
     return FloatingActionButton(
       onPressed: fabAction['onPressed'],
       backgroundColor: Theme.of(context).colorScheme.primary,
@@ -705,7 +757,7 @@ class _EnhancedMainDashboardState extends State<EnhancedMainDashboard> {
 
   Future<void> _switchRole(UserRole role) async {
     try {
-      await _userService.switchActiveRole(currentUser!.id, role);
+      await _userService.switchActiveRole(currentUser!.id, role.name);
       await _loadUserData();
       Navigator.pop(context); // Close drawer
     } catch (e) {
@@ -750,10 +802,7 @@ class _EnhancedMainDashboardState extends State<EnhancedMainDashboard> {
             onPressed: () {
               // Implement logout
               Navigator.pushNamedAndRemoveUntil(
-                context, 
-                '/login', 
-                (route) => false
-              );
+                  context, '/login', (route) => false);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Logout'),

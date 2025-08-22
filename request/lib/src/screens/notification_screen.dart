@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:request_marketplace/src/services/placeholder_services.dart';
+import '../services/auth_service.dart';
 import '../services/rest_notification_service.dart';
 import '../models/notification_model.dart';
 // import '../services/comprehensive_notification_service.dart'; // Replaced with placeholder
@@ -16,7 +16,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   // Removed unused placeholder notification service; we use REST directly
   final RestNotificationService _restNotifications =
       RestNotificationService.instance;
-  final EnhancedUserService _userService = EnhancedUserService();
+  final AuthService _auth = AuthService.instance;
 
   Future<void> _refresh() async {
     setState(() {});
@@ -25,7 +25,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final userId = _userService.currentUser?.uid;
+    final userId = _auth.currentUser?.uid;
 
     if (userId == null) {
       return Scaffold(
