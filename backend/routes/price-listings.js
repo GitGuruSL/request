@@ -34,7 +34,24 @@ const upload = multer({
 });
 
 // Helper function to format price listing data
-function formatPriceListing(row, includeBusiness = false) {
+async function getBusinessPaymentMethods(businessId) {
+  if (!businessId) return [];
+  try {
+    const sql = `
+      SELECT cpm.id, cpm.name, cpm.category, cpm.image_url AS image_url
+      FROM business_payment_methods bpm
+      JOIN country_payment_methods cpm ON cpm.id = bpm.payment_method_id
+      WHERE bpm.business_id = $1 AND bpm.is_active = true AND cpm.is_active = true
+      ORDER BY cpm.name`;
+    const r = await database.query(sql, [businessId]);
+    return r.rows.map(pm => ({ id: pm.id, name: pm.name, category: pm.category, imageUrl: pm.image_url }));
+  } catch (e) {
+    console.error('Error loading business payment methods', e);
+    return [];
+  }
+}
+
+async function formatPriceListing(row, includeBusiness = false) {
   if (!row) return null;
   
   const listing = {
@@ -64,7 +81,8 @@ function formatPriceListing(row, includeBusiness = false) {
     listing.business = {
       name: row.business_name,
       category: row.business_category,
-      isVerified: row.business_verified || false
+      isVerified: row.business_verified || false,
+      paymentMethods: []
     };
   }
   
@@ -212,7 +230,17 @@ router.get('/', async (req, res) => {
     console.log('Params:', queryParams);
 
     const result = await database.query(query, queryParams);
-    const listings = result.rows.map(row => formatPriceListing(row, true));
+    const temp = await Promise.all(result.rows.map(row => formatPriceListing(row, true)));
+    // Populate payment methods for each listing's business
+    const listings = await Promise.all(temp.map(async (l, idx) => {
+      if (!l) return l;
+      const row = result.rows[idx];
+      if (row.business_id) {
+        const pms = await getBusinessPaymentMethods(row.business_id);
+        if (l.business) l.business.paymentMethods = pms;
+      }
+      return l;
+    }));
 
     // Get total count for pagination
     let countQuery = `
@@ -408,7 +436,16 @@ router.get('/product/:productId', async (req, res) => {
     `;
 
     const listingsResult = await database.query(listingsQuery, [productId, country]);
-    const listings = listingsResult.rows.map(row => formatPriceListing(row, true));
+    const temp = await Promise.all(listingsResult.rows.map(row => formatPriceListing(row, true)));
+    const listings = await Promise.all(temp.map(async (l, idx) => {
+      if (!l) return l;
+      const row = listingsResult.rows[idx];
+      if (row.business_id) {
+        const pms = await getBusinessPaymentMethods(row.business_id);
+        if (l.business) l.business.paymentMethods = pms;
+      }
+      return l;
+    }));
 
     res.json({
       success: true,
@@ -465,7 +502,7 @@ router.get('/:id', async (req, res) => {
       WHERE pl.id = $1
     `;
 
-    const result = await database.query(query, [id]);
+  const result = await database.query(query, [id]);
     
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -474,7 +511,11 @@ router.get('/:id', async (req, res) => {
       });
     }
 
-    const listing = formatPriceListing(result.rows[0], true);
+    const listing = await formatPriceListing(result.rows[0], true);
+    if (listing && result.rows[0].business_id) {
+      listing.business = listing.business || {};
+      listing.business.paymentMethods = await getBusinessPaymentMethods(result.rows[0].business_id);
+    }
 
     res.json({
       success: true,

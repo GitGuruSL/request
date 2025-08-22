@@ -86,7 +86,8 @@ const countrySubcategoriesRoutes = require('./routes/country-subcategories');
 const countryVariableTypesRoutes = require('./routes/country-variable-types');
 
 // Import price comparison routes
-const priceListingsRoutes = require('./routes/price-listings-test');
+const priceListingsRoutes = require('./routes/price-listings');
+const paymentMethodsRoutes = require('./routes/payment-methods');
 
 console.log('🔧 About to register driver-verifications route');
 
@@ -125,6 +126,7 @@ app.use('/api/country-variable-types', countryVariableTypesRoutes);
 
 // Price comparison routes  
 app.use('/api/price-listings', priceListingsRoutes);
+app.use('/api/payment-methods', paymentMethodsRoutes);
 
 app.use('/api/upload', uploadRoutes); // NEW - image upload endpoint
 app.use('/api/test-images', testImageRoutes); // TEST - image serving test

@@ -45,7 +45,7 @@ const upload = multer({
   }
 });
 
-// Upload single image
+// Upload single image (generic images)
 router.post('/', upload.single('image'), (req, res) => {
   try {
     if (!req.file) {
@@ -67,6 +67,33 @@ router.post('/', upload.single('image'), (req, res) => {
     console.error('Error uploading image:', error);
     res.status(500).json({ error: 'Failed to upload image' });
   }
+});
+
+// Upload payment method logo (expects field name 'file' from admin UI)
+router.post('/payment-methods', (req, res, next) => {
+  // Create a multer instance that stores under uploads/images as well
+  const multer = require('multer');
+  const path = require('path');
+  const fs = require('fs');
+  const storage = multer.diskStorage({
+    destination: (req2, file, cb) => {
+      const uploadDir = path.join(__dirname, '../uploads/images');
+      if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+      cb(null, uploadDir);
+    },
+    filename: (req2, file, cb) => {
+      const timestamp = Date.now();
+      const ext = path.extname(file.originalname);
+      cb(null, `pm_${timestamp}_${Math.random().toString(36).slice(2)}${ext}`);
+    }
+  });
+  const uploader = multer({ storage });
+  uploader.single('file')(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    if (!req.file) return res.status(400).json({ error: 'No image file provided' });
+    const imageUrl = `${req.protocol}://${req.get('host')}/uploads/images/${req.file.filename}`;
+    return res.json({ success: true, url: imageUrl, filename: req.file.filename });
+  });
 });
 
 // Delete image
