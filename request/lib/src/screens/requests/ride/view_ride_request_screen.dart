@@ -13,6 +13,7 @@ import '../../../services/enhanced_user_service.dart';
 import '../../../utils/address_utils.dart';
 import 'edit_ride_request_screen.dart';
 import 'create_ride_response_screen.dart';
+import '../../../services/rest_vehicle_type_service.dart';
 
 class ViewRideRequestScreen extends StatefulWidget {
   final String requestId;
@@ -33,6 +34,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   bool _isOwner = false;
   UserModel? _requesterUser;
   UserModel? _currentUser;
+  String? _vehicleTypeName; // Resolved human-readable vehicle type name
 
   // Map related
   GoogleMapController? _mapController;
@@ -115,6 +117,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
           print('🔍 Debug Ride - Will Show Respond Button: ${!isOwner}');
 
           _setupMapMarkers();
+          _resolveVehicleTypeName();
         }
       }
     } catch (e) {
@@ -128,6 +131,51 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
             backgroundColor: Colors.red,
           ),
         );
+      }
+    }
+  }
+
+  Future<void> _resolveVehicleTypeName() async {
+    try {
+      final rideData = _request?.rideData;
+      if (rideData == null) return;
+
+      // Prefer explicit metadata id if present
+      final meta = _request?.typeSpecificData ?? const {};
+      final String? vehicleTypeId =
+          (meta['vehicle_type_id']?.toString().isNotEmpty == true)
+              ? meta['vehicle_type_id'].toString()
+              : null;
+
+      String? value = rideData.vehicleType;
+
+      // If looks like a UUID or an explicit id is provided, resolve via API
+      final String? idToResolve = vehicleTypeId ??
+          ((value != null && value.contains('-') && value.length >= 8)
+              ? value
+              : null);
+
+      if (idToResolve != null) {
+        final vt = await RestVehicleTypeService.instance
+            .getVehicleTypeById(idToResolve);
+        if (mounted) {
+          setState(() {
+            _vehicleTypeName = vt?.name ?? value; // fallback to original
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _vehicleTypeName = value;
+          });
+        }
+      }
+    } catch (e) {
+      // Non-fatal
+      if (mounted) {
+        setState(() {
+          _vehicleTypeName = _request?.rideData?.vehicleType;
+        });
       }
     }
   }
@@ -610,11 +658,15 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                       Icon(Icons.directions_car,
                           size: 20, color: Colors.grey[600]),
                       const SizedBox(width: 8),
-                      Text(
-                        rideData!.vehicleType!,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
+                      Expanded(
+                        child: Text(
+                          _vehicleTypeName ?? rideData!.vehicleType!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                     ],
@@ -642,13 +694,17 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                     children: [
                       Icon(Icons.schedule, size: 20, color: Colors.grey[600]),
                       const SizedBox(width: 8),
-                      Text(
-                        rideData.isFlexibleTime
-                            ? 'Flexible timing'
-                            : 'Scheduled timing',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
+                      Expanded(
+                        child: Text(
+                          rideData.isFlexibleTime
+                              ? 'Flexible timing'
+                              : 'Scheduled timing',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                     ],
@@ -664,64 +720,61 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   Widget _buildLocationInfo() {
     return Column(
       children: [
-        // Pickup Location - Enhanced with more prominence like in screenshot
-        Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: Row(
-            children: [
-              // Green dot for pickup
-              Container(
-                width: 12,
-                height: 12,
-                decoration: const BoxDecoration(
-                  color: Colors.green,
-                  shape: BoxShape.circle,
+        if (_request!.location != null)
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: Row(
+              children: [
+                // Green dot for pickup
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: const BoxDecoration(
+                    color: Colors.green,
+                    shape: BoxShape.circle,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      AddressUtils.cleanAddress(_request!.location?.address ??
-                          'Pickup location not specified'),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.black87,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AddressUtils.cleanAddress(_request!.location!.address),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black87,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              // Navigation arrow
-              InkWell(
-                onTap: () {
-                  if (_request!.location != null) {
+                // Navigation arrow
+                InkWell(
+                  onTap: () {
                     _openGoogleMaps(
                       _request!.location!.latitude,
                       _request!.location!.longitude,
                       _request!.location!.address,
                     );
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(8),
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.navigation,
+                        color: Colors.grey[600], size: 20),
                   ),
-                  child:
-                      Icon(Icons.navigation, color: Colors.grey[600], size: 20),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-
-        if (_request!.destinationLocation != null) ...[
-          // Destination Location - Red dot design
+        if (_request!.destinationLocation != null)
           Container(
             margin: const EdgeInsets.only(bottom: 12),
             child: Row(
@@ -748,6 +801,8 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                           fontWeight: FontWeight.w500,
                           color: Colors.black87,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
@@ -774,7 +829,6 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
               ],
             ),
           ),
-        ],
       ],
     );
   }
@@ -1193,7 +1247,8 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   String _buildAppBarTitle() {
     if (_request == null) return 'Ride Request';
 
-    final vehicleType = _request!.rideData?.vehicleType ?? 'Vehicle';
+    final vehicleType =
+        _vehicleTypeName ?? _request!.rideData?.vehicleType ?? 'Vehicle';
     String pickup = 'Pickup';
     String destination = 'Destination';
 
