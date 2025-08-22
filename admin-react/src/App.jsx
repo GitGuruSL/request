@@ -41,6 +41,8 @@ import SMSConfigurationModule from './pages/SMSConfigurationModule';
 import SuperAdminSMSManagement from './pages/SuperAdminSMSManagement';
 import DebugAuth from './components/DebugAuth';
 import SubscriptionPlansNew from './pages/SubscriptionPlansNew.jsx';
+import BusinessPriceManagement from './pages/BusinessPriceManagement';
+import PriceComparisonPage from './pages/PriceComparisonPage';
 
 const theme = createTheme({
   palette: {
@@ -114,6 +116,10 @@ function App() {
               
               {/* Add more protected routes here */}
               <Route path="subscriptions-new" element={<SubscriptionPlansNew />} />
+              
+              {/* Price Management Routes */}
+              <Route path="business-price-management" element={<BusinessPriceManagement />} />
+              <Route path="price-comparison" element={<PriceComparisonPage />} />
             </Route>
           </Routes>
         </Router>

@@ -49,7 +49,9 @@ import {
   Article,
   Subscriptions,
   LocalOffer,
-  Message
+  Message,
+  StoreMallDirectory,
+  Compare
 } from '@mui/icons-material';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -150,6 +152,8 @@ const Layout = () => {
     { text: 'Requests', icon: <Assignment />, path: '/requests', access: 'all', permission: 'requestManagement' },
     { text: 'Responses', icon: <Reply />, path: '/responses', access: 'all', permission: 'responseManagement' },
     { text: 'Price Listings', icon: <PriceCheck />, path: '/price-listings', access: 'all', permission: 'priceListingManagement' },
+    { text: 'Business Price Management', icon: <StoreMallDirectory />, path: '/business-price-management', access: 'all', permission: 'businessPriceManagement' },
+    { text: 'Price Comparison', icon: <Compare />, path: '/price-comparison', access: 'all', permission: 'priceComparison' },
     { text: 'Divider' },
     { text: 'Products', icon: <ShoppingCart />, path: '/products', access: 'super_admin', permission: 'productManagement' },
     { text: 'Businesses', icon: <Business />, path: '/businesses', access: 'all', permission: 'businessManagement' },
