@@ -29,15 +29,16 @@ class _PaymentMethodsSettingsScreenState
     setState(() => _loading = true);
     try {
       final user = AuthService.instance.currentUser;
+      // Load country methods for current country (always)
+      final countryCode = CountryService.instance.getCurrentCountryCode();
+      _allMethods =
+          await PaymentMethodsService.getPaymentMethodsForCountry(countryCode);
+
+      // Load selected only if user available
       if (user != null) {
-        // Load selected methods
         _selected =
             await PaymentMethodsService.getSelectedForBusiness(user.uid);
         _initialSelected = List.from(_selected);
-        // Load country methods
-        final countryCode = CountryService.instance.getCurrentCountryCode();
-        _allMethods = await PaymentMethodsService.getPaymentMethodsForCountry(
-            countryCode);
       }
     } finally {
       if (mounted) setState(() => _loading = false);
