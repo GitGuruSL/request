@@ -273,77 +273,92 @@ class ApiClient {
 
     final data = response.data;
 
+    // 1) If response is a plain List (e.g., public listings), treat as success
+    if (data is List) {
+      try {
+        final parsed = data as T; // Typically T is dynamic or List
+        return ApiResponse<T>(success: true, data: parsed);
+      } catch (_) {
+        // Fallback: wrap in a map under 'data'
+        return ApiResponse<T>(success: true, data: ({'data': data} as dynamic));
+      }
+    }
+
+    // 2) If response is a Map
     if (data is Map<String, dynamic>) {
-      final success = data['success'] ?? false;
+      final hasSuccessField =
+          data.containsKey('success') && data['success'] is bool;
       final message = data['message'] ?? '';
 
-      if (kDebugMode) {
-        print(
-            '🌐 [ApiClient._handleResponse] Response is Map<String, dynamic>');
-        print('🌐   success field: $success');
-        print('🌐   message field: $message');
-      }
-
-      if (success) {
-        T? parsedData;
-        // If a transformer is provided AND a nested 'data' object exists, parse that.
-        if (fromJson != null && data['data'] is Map<String, dynamic>) {
+      // 2a) Our typical API wrapper { success, data, message }
+      if (hasSuccessField) {
+        final success = data['success'] as bool;
+        if (success) {
+          T? parsedData;
+          // If a transformer is provided AND a nested 'data' object exists, parse that.
+          if (fromJson != null && data['data'] is Map<String, dynamic>) {
+            if (kDebugMode) {
+              print(
+                  '🌐 [ApiClient._handleResponse] Using fromJson transformer with data["data"]');
+            }
+            parsedData = fromJson(data['data'] as Map<String, dynamic>);
+          } else {
+            // If caller didn't provide a transformer, try to return the whole map as T
+            try {
+              if (fromJson == null) {
+                if (kDebugMode) {
+                  print(
+                      '🌐 [ApiClient._handleResponse] No fromJson, returning raw map as T');
+                }
+                parsedData = data as T;
+              }
+            } catch (e) {
+              if (kDebugMode) {
+                print('🌐 [ApiClient._handleResponse] Cast error: $e');
+              }
+            }
+          }
           if (kDebugMode) {
             print(
-                '🌐 [ApiClient._handleResponse] Using fromJson transformer with data["data"]');
+                '🌐 [ApiClient._handleResponse] parsedData type: ${parsedData.runtimeType}');
+            print('🌐 [ApiClient._handleResponse] parsedData: $parsedData');
           }
-          parsedData = fromJson(data['data'] as Map<String, dynamic>);
+          return ApiResponse<T>(
+              success: true, data: parsedData, message: message);
         } else {
-          // Otherwise, if caller expects a Map (common for simple endpoints), return full map.
-          try {
-            // If caller didn't supply a fromJson parser, assume they want the raw map.
-            if (fromJson == null) {
-              if (kDebugMode) {
-                print(
-                    '🌐 [ApiClient._handleResponse] No fromJson, returning raw data as T');
-              }
-              parsedData = data as T; // includes fields like otpToken
-            }
-          } catch (e) {
-            if (kDebugMode) {
-              print('🌐 [ApiClient._handleResponse] Cast error: $e');
-            }
-            // Ignore cast issues; parsedData stays null.
+          if (kDebugMode) {
+            print(
+                '🌐 [ApiClient._handleResponse] Response success=false, returning error');
           }
+          return ApiResponse<T>(success: false, error: message);
         }
+      }
 
-        if (kDebugMode) {
-          print(
-              '🌐 [ApiClient._handleResponse] parsedData type: ${parsedData.runtimeType}');
-          print('🌐 [ApiClient._handleResponse] parsedData: $parsedData');
+      // 2b) Plain map without 'success' field -> treat as success
+      try {
+        if (fromJson != null) {
+          final parsed = fromJson(data);
+          return ApiResponse<T>(success: true, data: parsed);
         }
-
-        return ApiResponse<T>(
-          success: true,
-          data: parsedData,
-          message: message,
-        );
-      } else {
-        if (kDebugMode) {
-          print(
-              '🌐 [ApiClient._handleResponse] Response success=false, returning error');
-        }
-        return ApiResponse<T>(
-          success: false,
-          error: message,
-        );
+        final parsed = data as T; // Caller likely requested dynamic/Map
+        return ApiResponse<T>(success: true, data: parsed);
+      } catch (_) {
+        // As a safe fallback, still mark success and attach raw map under 'data'
+        return ApiResponse<T>(success: true, data: (data as dynamic));
       }
     }
 
-    if (kDebugMode) {
-      print(
-          '🌐 [ApiClient._handleResponse] Response data is not Map<String, dynamic>, returning error');
+    // 3) Primitive or other types -> treat as success and pass through
+    try {
+      final parsed = data as T;
+      return ApiResponse<T>(success: true, data: parsed);
+    } catch (_) {
+      if (kDebugMode) {
+        print(
+            '🌐 [ApiClient._handleResponse] Unrecognized response type: ${data.runtimeType}');
+      }
+      return ApiResponse<T>(success: false, error: 'Invalid response format');
     }
-
-    return ApiResponse<T>(
-      success: false,
-      error: 'Invalid response format',
-    );
   }
 
   /// Get signed URL for document viewing
