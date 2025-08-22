@@ -118,18 +118,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Left outlined circular icon (colored border, white center)
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white,
-                  border: Border.all(color: color, width: 2),
-                ),
-                child: Center(
-                  child: Icon(_icon(n.type), color: color, size: 22),
-                ),
+              // Borderless circular icon with soft tinted background
+              CircleAvatar(
+                radius: 21,
+                backgroundColor: color.withOpacity(0.12),
+                child: Icon(_icon(n.type), color: color, size: 22),
               ),
               const SizedBox(width: 12),
               Expanded(
