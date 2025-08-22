@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/content_service.dart';
 import '../services/auth_service.dart';
 import '../services/enhanced_user_service.dart';
+import '../services/user_registration_service.dart';
 import 'content_page_screen.dart';
 import 'my_activities_screen.dart';
 import 'settings_privacy_screen.dart';
@@ -27,6 +28,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
   Map<String, dynamic>? _currentUser;
   bool _isLoading = true;
   String? _profileImageUrl;
+  bool _isDriver = false;
 
   @override
   void initState() {
@@ -51,10 +53,19 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
       // Load content pages
       final pages = await _contentService.getPages();
 
+      // Check driver registration to gate Ride Alerts
+      bool isDriver = false;
+      try {
+        final regs =
+            await UserRegistrationService.instance.getUserRegistrations();
+        isDriver = regs?.isApprovedDriver == true;
+      } catch (_) {}
+
       if (mounted) {
         setState(() {
           _pages = pages;
           _isLoading = false;
+          _isDriver = isDriver;
         });
       }
     } catch (e) {
@@ -246,12 +257,13 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
         color: Colors.red,
         route: '/notifications',
       ),
-      _MenuItem(
-        title: 'Ride Alerts',
-        icon: Icons.directions_car,
-        color: Colors.blue,
-        route: '/driver-subscriptions',
-      ),
+      if (_isDriver)
+        _MenuItem(
+          title: 'Ride Alerts',
+          icon: Icons.directions_car,
+          color: Colors.blue,
+          route: '/driver-subscriptions',
+        ),
     ];
 
     return Container(
@@ -262,76 +274,89 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 3.0,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-          ),
-          itemCount: accountItems.length,
-          itemBuilder: (context, index) {
-            final item = accountItems[index];
-            return InkWell(
-              onTap: () {
-                if (item.route != null) {
-                  if (item.route == '/activities') {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const MyActivitiesScreen()),
-                    );
-                  } else if (item.route == '/notifications') {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const NotificationScreen()),
-                    );
-                  } else if (item.route == '/driver-subscriptions') {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) =>
-                              const DriverSubscriptionScreen()),
-                    );
-                  } else {
-                    Navigator.pushNamed(context, item.route!);
-                  }
-                }
-              },
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 3.0,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+              ),
+              itemCount: accountItems.length,
+              itemBuilder: (context, index) {
+                final item = accountItems[index];
+                return InkWell(
+                  onTap: () {
+                    if (item.route != null) {
+                      if (item.route == '/activities') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const MyActivitiesScreen()),
+                        );
+                      } else if (item.route == '/notifications') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const NotificationScreen()),
+                        );
+                      } else if (item.route == '/driver-subscriptions') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) =>
+                                  const DriverSubscriptionScreen()),
+                        );
+                      } else {
+                        Navigator.pushNamed(context, item.route!);
+                      }
+                    }
+                  },
                   borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Icon(
-                      item.icon,
-                      color: item.color,
-                      size: 24,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        item.title,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black87,
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Icon(
+                          item.icon,
+                          color: item.color,
+                          size: 24,
                         ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            item.title,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black87,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
+                );
+              },
+            ),
+            if (!_isDriver)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  'Become a verified driver to enable Ride Alerts',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
               ),
-            );
-          },
+          ],
         ),
       ),
     );

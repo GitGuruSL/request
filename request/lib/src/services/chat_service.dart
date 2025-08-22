@@ -14,6 +14,20 @@ class ChatService {
     return 'http://localhost:3001';
   }
 
+  Future<List<Conversation>> listConversations({required String userId}) async {
+    final uri = Uri.parse('$_baseUrl/api/chat/conversations?userId=$userId');
+    final resp = await http.get(uri);
+    if (resp.statusCode != 200) {
+      throw Exception(
+          'Failed to list conversations: ${resp.statusCode} - ${resp.body}');
+    }
+    final data = jsonDecode(resp.body);
+    final list = (data['conversations'] as List? ?? [])
+        .map((e) => Conversation.fromJson(e as Map<String, dynamic>))
+        .toList();
+    return list;
+  }
+
   Future<(Conversation, List<ChatMessage>)> openConversation({
     required String requestId,
     required String currentUserId,
@@ -50,6 +64,21 @@ class ChatService {
       print('🔥 [ChatService] Stack trace: $stack');
       rethrow;
     }
+  }
+
+  Future<List<ChatMessage>> getMessages(
+      {required String conversationId}) async {
+    final uri = Uri.parse('$_baseUrl/api/chat/messages/$conversationId');
+    final resp = await http.get(uri);
+    if (resp.statusCode != 200) {
+      throw Exception(
+          'Failed to get messages: ${resp.statusCode} - ${resp.body}');
+    }
+    final data = jsonDecode(resp.body);
+    final msgs = (data['messages'] as List)
+        .map((m) => ChatMessage.fromJson(m as Map<String, dynamic>))
+        .toList();
+    return msgs;
   }
 
   Future<ChatMessage> sendMessage({

@@ -28,6 +28,8 @@ import 'src/screens/content_page_screen.dart';
 import 'src/screens/content_test_screen.dart';
 import 'src/screens/api_test_screen.dart'; // API test screen
 import 'src/theme/app_theme.dart';
+import 'src/screens/chat/chat_conversations_screen.dart';
+import 'src/screens/notification_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -161,6 +163,14 @@ class MyApp extends StatelessWidget {
           case '/pricing-comparison':
             return MaterialPageRoute(
               builder: (context) => const PriceComparisonScreen(),
+            );
+          case '/messages':
+            return MaterialPageRoute(
+              builder: (context) => const ChatConversationsScreen(),
+            );
+          case '/notifications':
+            return MaterialPageRoute(
+              builder: (context) => const NotificationScreen(),
             );
           case '/business-pricing':
             return MaterialPageRoute(
