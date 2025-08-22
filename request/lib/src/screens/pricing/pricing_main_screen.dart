@@ -86,18 +86,19 @@ class _PricingMainScreenState extends State<PricingMainScreen> {
                       const SizedBox(height: 12),
                       Text(
                         'Price Comparison Marketplace',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.textPrimary,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.textPrimary,
+                                ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'Find the best prices from verified businesses or manage your own pricing',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                              color: Colors.grey[600],
+                            ),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -114,7 +115,8 @@ class _PricingMainScreenState extends State<PricingMainScreen> {
                       _buildActionCard(
                         icon: Icons.search,
                         title: 'Compare Prices',
-                        subtitle: 'Find the best deals from verified businesses',
+                        subtitle:
+                            'Find the best deals from verified businesses',
                         color: AppTheme.primaryColor,
                         onTap: () {
                           Navigator.push(
@@ -139,7 +141,8 @@ class _PricingMainScreenState extends State<PricingMainScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const BusinessPricingDashboard(),
+                                builder: (context) =>
+                                    const BusinessPricingDashboard(),
                               ),
                             );
                           },
@@ -167,17 +170,23 @@ class _PricingMainScreenState extends State<PricingMainScreen> {
                                 children: [
                                   Text(
                                     'How it works',
-                                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.blue[700],
-                                    ),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.blue[700],
+                                        ),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     'Compare prices from verified businesses, contact them directly, and find the best deals in Sri Lanka.',
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: Colors.blue[600],
-                                    ),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                          color: Colors.blue[600],
+                                        ),
                                   ),
                                 ],
                               ),
@@ -236,16 +245,16 @@ class _PricingMainScreenState extends State<PricingMainScreen> {
                     Text(
                       title,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textPrimary,
-                      ),
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.textPrimary,
+                          ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[600],
-                      ),
+                            color: Colors.grey[600],
+                          ),
                     ),
                   ],
                 ),

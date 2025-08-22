@@ -14,7 +14,7 @@ class ProductSearchScreen extends StatefulWidget {
 class _ProductSearchScreenState extends State<ProductSearchScreen> {
   final PricingService _pricingService = PricingService();
   final TextEditingController _searchController = TextEditingController();
-  
+
   List<MasterProduct> _searchResults = [];
   bool _isSearching = false;
   String _searchQuery = '';
@@ -39,7 +39,7 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
         query: '',
         limit: 20,
       );
-      
+
       if (mounted) {
         setState(() {
           _searchResults = products;
@@ -70,7 +70,7 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
         query: query,
         limit: 50,
       );
-      
+
       if (mounted) {
         setState(() {
           _searchResults = products;
@@ -123,9 +123,9 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
                 Text(
                   'Compare Prices from Verified Businesses',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w500,
-                  ),
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
@@ -145,8 +145,10 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
                   child: TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
-                      hintText: 'Search for products (iPhone, Samsung TV, Rice...)',
-                      prefixIcon: const Icon(Icons.search, color: AppTheme.primaryColor),
+                      hintText:
+                          'Search for products (iPhone, Samsung TV, Rice...)',
+                      prefixIcon: const Icon(Icons.search,
+                          color: AppTheme.primaryColor),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -192,20 +194,20 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              _searchQuery.isEmpty 
+              _searchQuery.isEmpty
                   ? 'Start searching for products to compare prices'
                   : 'No products found for "$_searchQuery"',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
+                    color: Colors.grey[600],
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
               'Try searching for popular items like:\n• iPhone\n• Samsung TV\n• Rice\n• Laptop',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[500],
-              ),
+                    color: Colors.grey[500],
+                  ),
               textAlign: TextAlign.center,
             ),
           ],
@@ -261,7 +263,7 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
                     : _buildImagePlaceholder(),
               ),
               const SizedBox(width: 16),
-              
+
               // Product Info
               Expanded(
                 child: Column(
@@ -270,8 +272,8 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
                     Text(
                       product.name,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                            fontWeight: FontWeight.w600,
+                          ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -280,8 +282,8 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
                       Text(
                         'Brand: ${product.brand}',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                              color: Colors.grey[600],
+                            ),
                       ),
                     const SizedBox(height: 8),
                     Row(
@@ -297,10 +299,11 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
                           ),
                           child: Text(
                             '${product.businessListingsCount} prices available',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppTheme.primaryColor,
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: AppTheme.primaryColor,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                           ),
                         ),
                       ],
@@ -308,7 +311,7 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
                   ],
                 ),
               ),
-              
+
               // Arrow Icon
               Icon(
                 Icons.arrow_forward_ios,
