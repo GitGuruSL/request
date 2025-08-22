@@ -62,6 +62,7 @@ const vehicleTypeRoutes = require('./routes/vehicle-types');
 const requestRoutes = require('./routes/requests');
 const countryRoutes = require('./routes/countries');
 const uploadRoutes = require('./routes/upload'); // NEW
+const uploadS3Routes = require('./routes/uploadS3'); // NEW - S3 upload/signed URLs
 const testImageRoutes = require('./routes/test-images'); // TEST
 const subscriptionPlansLegacy = require('./routes/subscription-plans-legacy');
 const subscriptionPlansNew = require('./routes/subscription-plans-new');
@@ -132,6 +133,7 @@ app.use('/api/s3', s3Routes);
 
 app.use('/api/upload', uploadRoutes); // NEW - image upload endpoint
 app.use('/api/uploads', uploadRoutes); // Alias to support admin-react '/uploads/payment-methods'
+app.use('/api/s3', uploadS3Routes); // NEW - S3 upload + signed URL endpoints
 app.use('/api/test-images', testImageRoutes); // TEST - image serving test
 app.use('/api', subscriptionPlansLegacy); // legacy paths /subscription-plans, /user-subscriptions
 app.use('/api', subscriptionPlansNew); // new CRUD under /subscription-plans-new

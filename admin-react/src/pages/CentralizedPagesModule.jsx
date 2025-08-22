@@ -87,6 +87,7 @@ const CentralizedPagesModule = () => {
   status: 'draft',
   metadata: {}
   });
+  const [previewLogoUrl, setPreviewLogoUrl] = useState('');
 
   // Page categories for centralized pages
   const centralizedCategories = {
@@ -167,6 +168,27 @@ const CentralizedPagesModule = () => {
     setSelectedPage(page);
     setDialogOpen(true);
   };
+
+  // When a logo URL is present, try to get a signed URL for preview
+  useEffect(() => {
+    const url = formData?.metadata?.logoUrl;
+    if (!url) {
+      setPreviewLogoUrl('');
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.post('/s3/signed-url', { url });
+        if (!cancelled) {
+          setPreviewLogoUrl(res.data?.signedUrl || url);
+        }
+      } catch (e) {
+        if (!cancelled) setPreviewLogoUrl(url);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [formData?.metadata?.logoUrl]);
 
   const handleSavePage = async () => {
     try {
@@ -639,7 +661,7 @@ const CentralizedPagesModule = () => {
                       />
                       <Box sx={{ display:'flex', alignItems:'center', gap:2, mt:1, flexWrap:'wrap' }}>
                         {formData.metadata?.logoUrl && (
-                          <Avatar src={formData.metadata.logoUrl} variant="rounded" sx={{ width:56, height:56 }} />
+                          <Avatar src={previewLogoUrl || formData.metadata.logoUrl} variant="rounded" sx={{ width:56, height:56 }} />
                         )}
                         <Button
                           variant="outlined"
