@@ -17,6 +17,7 @@ import '../../../services/rest_vehicle_type_service.dart';
 import '../../../services/chat_service.dart';
 import '../../chat/conversation_screen.dart';
 import '../../../services/user_registration_service.dart';
+import '../../../services/google_directions_service.dart';
 
 class ViewRideRequestScreen extends StatefulWidget {
   final String requestId;
@@ -275,21 +276,9 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
           ),
         );
         // Add route line when both ends exist
+        // Draw navigation route asynchronously using Google Directions API
         if (_request!.location != null) {
-          _polylines.add(
-            Polyline(
-              polylineId: const PolylineId('route'),
-              points: [
-                LatLng(_request!.location!.latitude,
-                    _request!.location!.longitude),
-                LatLng(_request!.destinationLocation!.latitude,
-                    _request!.destinationLocation!.longitude),
-              ],
-              color: const Color(0xFF2196F3),
-              width: 5,
-              patterns: [PatternItem.dash(20), PatternItem.gap(10)],
-            ),
-          );
+          _drawNavigationRoute();
         }
       }
     });
@@ -299,6 +288,52 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
       Future.delayed(const Duration(milliseconds: 100), () {
         _fitMarkersOnMap();
       });
+    }
+  }
+
+  Future<void> _drawNavigationRoute() async {
+    try {
+      final origin = LatLng(
+        _request!.location!.latitude,
+        _request!.location!.longitude,
+      );
+      final destination = LatLng(
+        _request!.destinationLocation!.latitude,
+        _request!.destinationLocation!.longitude,
+      );
+
+      final points = await GoogleDirectionsService.getDirections(
+        origin: origin,
+        destination: destination,
+        travelMode: 'driving',
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _polylines.removeWhere((p) => p.polylineId.value == 'route');
+        if (points.isNotEmpty) {
+          _polylines.add(
+            Polyline(
+              polylineId: const PolylineId('route'),
+              points: points,
+              color: const Color(0xFF2196F3),
+              width: 5,
+            ),
+          );
+        }
+      });
+
+      // Optionally refit camera to include the whole route
+      if (_mapController != null && points.length > 1) {
+        final bounds = _calculateBounds(points);
+        _mapController!.animateCamera(
+          CameraUpdate.newLatLngBounds(bounds, 60.0),
+        );
+      }
+    } catch (e) {
+      // Non-fatal: keep map usable even if directions fail
+      // print('Failed to draw navigation route: $e');
     }
   }
 
@@ -915,14 +950,6 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
             '')
         .toString()
         .trim();
-    final fallbackPhone = (meta['requester_phone'] ??
-            meta['user_phone'] ??
-            meta['phone'] ??
-            meta['requester_mobile'] ??
-            meta['mobile'] ??
-            '')
-        .toString()
-        .trim();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -968,26 +995,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  if ((_requesterUser?.phoneNumber?.isNotEmpty ?? false) ||
-                      fallbackPhone.isNotEmpty) ...[
-                    Row(
-                      children: [
-                        const Icon(Icons.phone, size: 16, color: Colors.grey),
-                        const SizedBox(width: 8),
-                        Text(
-                          (_requesterUser?.phoneNumber?.isNotEmpty ?? false)
-                              ? _requesterUser!.phoneNumber!
-                              : fallbackPhone,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Colors.blue,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                  ],
+                  // Intentionally hide raw phone number text; use call icon instead
                   if (_requesterUser?.isPhoneVerified == true)
                     Row(
                       children: [
