@@ -64,8 +64,6 @@ function formatPriceListing(row, includeBusiness = false) {
     listing.business = {
       name: row.business_name,
       category: row.business_category,
-      rating: parseFloat(row.business_rating) || 0,
-      reviewCount: row.business_review_count || 0,
       isVerified: row.business_verified || false
     };
   }
@@ -116,8 +114,6 @@ router.get('/', async (req, res) => {
         b.name as brand_name,
         bv.business_name,
         bv.business_category,
-        bv.rating as business_rating,
-        bv.review_count as business_review_count,
         bv.is_verified as business_verified,
         c.name as city_name
       FROM price_listings pl
@@ -198,7 +194,7 @@ router.get('/', async (req, res) => {
         orderBy = `pl.price ${sortOrder.toUpperCase()}`;
         break;
       case 'rating':
-        orderBy = `bv.rating ${sortOrder.toUpperCase()} NULLS LAST`;
+        orderBy = `bv.business_name ${sortOrder.toUpperCase()}`; // Sort by business name instead of rating
         break;
       case 'created_at':
         orderBy = `pl.created_at ${sortOrder.toUpperCase()}`;
@@ -387,7 +383,7 @@ router.get('/product/:productId', async (req, res) => {
     // Get price listings for this product
     let orderBy = 'pl.price ASC'; // Default: cheapest first
     if (sortBy === 'rating') {
-      orderBy = 'bv.rating DESC NULLS LAST, pl.price ASC';
+      orderBy = 'bv.business_name ASC, pl.price ASC'; // Sort by business name instead of rating
     } else if (sortBy === 'newest') {
       orderBy = 'pl.created_at DESC';
     }
@@ -397,8 +393,6 @@ router.get('/product/:productId', async (req, res) => {
         pl.*,
         bv.business_name,
         bv.business_category,
-        bv.rating as business_rating,
-        bv.review_count as business_review_count,
         bv.is_verified as business_verified,
         c.name as city_name
       FROM price_listings pl
@@ -458,8 +452,6 @@ router.get('/:id', async (req, res) => {
         b.name as brand_name,
         bv.business_name,
         bv.business_category,
-        bv.rating as business_rating,
-        bv.review_count as business_review_count,
         bv.is_verified as business_verified,
         c.name as city_name
       FROM price_listings pl
