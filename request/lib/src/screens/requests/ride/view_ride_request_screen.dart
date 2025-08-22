@@ -10,7 +10,6 @@ import '../../../models/request_model.dart';
 import '../../../models/enhanced_user_model.dart';
 import '../../../services/enhanced_request_service.dart';
 import '../../../services/enhanced_user_service.dart';
-import '../../../utils/currency_helper.dart';
 import '../../../utils/address_utils.dart';
 import 'edit_ride_request_screen.dart';
 import 'create_ride_response_screen.dart';
@@ -445,156 +444,27 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   }
 
   Widget _buildRideDetails() {
-    final rideData = _request!.rideData;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          _request!.title,
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 20),
+        // Enhanced Title with Route Information
+        _buildRouteTitle(),
+        const SizedBox(height: 24),
 
-        // Vehicle Type - Prominently displayed
-        if (rideData?.vehicleType != null) ...[
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.blue[50],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.directions_car, color: Colors.blue[700], size: 24),
-                const SizedBox(width: 12),
-                Text(
-                  'Vehicle Type: ${rideData!.vehicleType}',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.blue[700],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-        ],
-
-        // Location Details
+        // Location Details with Enhanced Design
         _buildLocationInfo(),
 
         const SizedBox(height: 20),
 
         // Distance and Route Info
-        if (_request!.location != null && _request!.destinationLocation != null) ...[
+        if (_request!.location != null &&
+            _request!.destinationLocation != null) ...[
           _buildDistanceInfo(),
           const SizedBox(height: 20),
         ],
 
-        // Ride Specific Details - Enhanced layout
-        if (rideData != null) ...[
-          Row(
-            children: [
-              // Passengers
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.blue[50],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(Icons.person, size: 24, color: Colors.blue[700]),
-                      const SizedBox(height: 8),
-                      Text(
-                        '${rideData.passengers}',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue[700],
-                        ),
-                      ),
-                      Text(
-                        'Passenger${rideData.passengers > 1 ? 's' : ''}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.blue[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              // Timing
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.orange[50],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(Icons.schedule, size: 24, color: Colors.orange[700]),
-                      const SizedBox(height: 8),
-                      Text(
-                        rideData.isFlexibleTime ? 'Flexible' : 'Scheduled',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.orange[700],
-                        ),
-                      ),
-                      if (!rideData.isFlexibleTime)
-                        Text(
-                          _formatDateTime(rideData.preferredTime),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.orange[600],
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-
-        if (_request!.budget != null) ...[
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.green[50],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.account_balance_wallet,
-                    color: Colors.green[600], size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  'Budget: ${CurrencyHelper.instance.getCurrencySymbol()}${_request!.budget?.toStringAsFixed(2)}',
-                  style: TextStyle(
-                    color: Colors.green[700],
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+        // Enhanced Ride Details Section
+        _buildRideDetailsSection(),
 
         const SizedBox(height: 16),
 
@@ -655,36 +525,213 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
     }
   }
 
+  Widget _buildRouteTitle() {
+    final pickupAddress =
+        _request!.location?.address ?? 'Pickup location not specified';
+    final dropoffAddress =
+        _request!.destinationLocation?.address ?? 'Destination not specified';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Ride Request',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Ride from ${AddressUtils.cleanAddress(pickupAddress)} to ${AddressUtils.cleanAddress(dropoffAddress)}',
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRideDetailsSection() {
+    final rideData = _request!.rideData;
+
+    return Column(
+      children: [
+        // Passengers, Vehicle Type, and Timing - Row Layout like in your screenshot
+        Row(
+          children: [
+            // Passengers
+            Expanded(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.person, size: 20, color: Colors.grey[600]),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${rideData?.passengers ?? 1} passenger(s)',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Vehicle Type Row
+        if (rideData?.vehicleType != null)
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.directions_car,
+                          size: 20, color: Colors.grey[600]),
+                      const SizedBox(width: 8),
+                      Text(
+                        rideData!.vehicleType!,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+        if (rideData?.vehicleType != null) const SizedBox(height: 12),
+
+        // Timing Row
+        if (rideData != null)
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.schedule, size: 20, color: Colors.grey[600]),
+                      const SizedBox(width: 8),
+                      Text(
+                        rideData.isFlexibleTime
+                            ? 'Flexible timing'
+                            : 'Scheduled timing',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+
   Widget _buildLocationInfo() {
     return Column(
       children: [
-        // Pickup Location - Enhanced clickable design
+        // Pickup Location - Enhanced with more prominence like in screenshot
         Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.green[50],
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.green[200]!, width: 1),
-          ),
-          child: InkWell(
-            onTap: () {
-              if (_request!.location != null) {
-                _openGoogleMaps(
-                  _request!.location!.latitude,
-                  _request!.location!.longitude,
-                  _request!.location!.address,
-                );
-              }
-            },
-            child: Row(
-              children: [
-                Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: Row(
+            children: [
+              // Green dot for pickup
+              Container(
+                width: 12,
+                height: 12,
+                decoration: const BoxDecoration(
+                  color: Colors.green,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AddressUtils.cleanAddress(_request!.location?.address ??
+                          'Pickup location not specified'),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Navigation arrow
+              InkWell(
+                onTap: () {
+                  if (_request!.location != null) {
+                    _openGoogleMaps(
+                      _request!.location!.latitude,
+                      _request!.location!.longitude,
+                      _request!.location!.address,
+                    );
+                  }
+                },
+                child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.green,
+                    color: Colors.grey[100],
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.my_location, color: Colors.white, size: 20),
+                  child:
+                      Icon(Icons.navigation, color: Colors.grey[600], size: 20),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        if (_request!.destinationLocation != null) ...[
+          // Destination Location - Red dot design
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: Row(
+              children: [
+                // Red dot for destination
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -692,86 +739,37 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Pickup Location',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.green[700],
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        AddressUtils.cleanAddress(_request!.location?.address ??
-                            'Pickup location not specified'),
+                        AddressUtils.cleanAddress(
+                            _request!.destinationLocation!.address),
                         style: const TextStyle(
-                          fontWeight: FontWeight.w500,
                           fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black87,
                         ),
                       ),
                     ],
                   ),
                 ),
-                Icon(Icons.navigation, color: Colors.green[700], size: 24),
-              ],
-            ),
-          ),
-        ),
-        
-        if (_request!.destinationLocation != null) ...[
-          const SizedBox(height: 16),
-          // Destination Location - Enhanced clickable design
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.red[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.red[200]!, width: 1),
-            ),
-            child: InkWell(
-              onTap: () {
-                _openGoogleMaps(
-                  _request!.destinationLocation!.latitude,
-                  _request!.destinationLocation!.longitude,
-                  _request!.destinationLocation!.address,
-                );
-              },
-              child: Row(
-                children: [
-                  Container(
+                // Navigation arrow
+                InkWell(
+                  onTap: () {
+                    _openGoogleMaps(
+                      _request!.destinationLocation!.latitude,
+                      _request!.destinationLocation!.longitude,
+                      _request!.destinationLocation!.address,
+                    );
+                  },
+                  child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.red,
+                      color: Colors.grey[100],
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.location_on, color: Colors.white, size: 20),
+                    child: Icon(Icons.navigation,
+                        color: Colors.grey[600], size: 20),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Drop-off Location',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Colors.red[700],
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          AddressUtils.cleanAddress(_request!.destinationLocation!.address),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w500,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.navigation, color: Colors.red[700], size: 24),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],
@@ -792,76 +790,48 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
     );
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
       decoration: BoxDecoration(
-        color: Colors.purple[50],
+        color: Colors.blue[50],
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue[100]!, width: 1),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Column(
-            children: [
-              Icon(Icons.straighten, color: Colors.purple[700], size: 24),
-              const SizedBox(height: 8),
-              Text(
-                '${distance.toStringAsFixed(1)} km',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.purple[700],
-                ),
-              ),
-              Text(
-                'Distance',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.purple[600],
-                ),
-              ),
-            ],
-          ),
-          Column(
-            children: [
-              Icon(Icons.access_time, color: Colors.purple[700], size: 24),
-              const SizedBox(height: 8),
-              Text(
-                '~${(distance * 2).toInt()} min',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.purple[700],
-                ),
-              ),
-              Text(
-                'Est. Time',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.purple[600],
-                ),
-              ),
-            ],
+          Icon(Icons.straighten, color: Colors.blue[700], size: 20),
+          const SizedBox(width: 8),
+          Text(
+            '${distance.toStringAsFixed(1)} km distance',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.blue[700],
+            ),
           ),
         ],
       ),
     );
   }
 
-  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+  double _calculateDistance(
+      double lat1, double lon1, double lat2, double lon2) {
     const double radiusOfEarth = 6371; // Earth's radius in kilometers
-    
+
     double dLat = _degreesToRadians(lat2 - lat1);
     double dLon = _degreesToRadians(lon2 - lon1);
-    
+
     double a = math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(_degreesToRadians(lat1)) * math.cos(_degreesToRadians(lat2)) *
-        math.sin(dLon / 2) * math.sin(dLon / 2);
-    
+        math.cos(_degreesToRadians(lat1)) *
+            math.cos(_degreesToRadians(lat2)) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+
     double c = 2 * math.asin(math.sqrt(a));
-    
+
     return radiusOfEarth * c;
   }
-  
+
   double _degreesToRadians(double degrees) {
     return degrees * (math.pi / 180);
   }
@@ -1216,10 +1186,6 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
     } else {
       return 'Just now';
     }
-  }
-
-  String _formatDateTime(DateTime dateTime) {
-    return '${dateTime.day}/${dateTime.month}/${dateTime.year} at ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 
   String _buildAppBarTitle() {
