@@ -262,13 +262,9 @@ router.get('/search', async (req, res) => {
       limit = 10
     } = req.query;
 
-    if (!query || query.trim().length < 2) {
-      return res.json({
-        success: true,
-        data: [],
-        message: 'Query too short'
-      });
-    }
+    // If no query or empty query, return popular products
+    const isPopularProductsRequest = !query || query.trim().length === 0;
+    const searchTerm = isPopularProductsRequest ? null : query.trim();
 
     let searchQuery = `
       SELECT DISTINCT
@@ -288,11 +284,17 @@ router.get('/search', async (req, res) => {
         AND pl.is_active = true 
         AND pl.country_code = $1
       WHERE mp.is_active = true
-        AND mp.name ILIKE $2
     `;
 
-    let queryParams = [country, `%${query.trim()}%`];
-    let paramIndex = 3;
+    let queryParams = [country];
+    let paramIndex = 2;
+
+    // Add search filter only if we have a search term
+    if (searchTerm && searchTerm.length >= 2) {
+      searchQuery += ` AND mp.name ILIKE $${paramIndex}`;
+      queryParams.push(`%${searchTerm}%`);
+      paramIndex++;
+    }
 
     if (categoryId) {
       searchQuery += ` AND EXISTS (
