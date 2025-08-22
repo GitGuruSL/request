@@ -158,9 +158,11 @@ app.use('*', (req, res) => {
 // Only start the HTTP listener when not running in test environment (so Jest / supertest can import app)
 if (process.env.NODE_ENV !== 'test') {
   const PORT = process.env.PORT || 3001;
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+  const HOST = process.env.HOST || '0.0.0.0'; // Allow connections from all interfaces including Android emulator
+  app.listen(PORT, HOST, () => {
+    console.log(`Server running on ${HOST}:${PORT}`);
     console.log(`Health check: http://localhost:${PORT}/health`);
+    console.log(`Android emulator can access via: http://10.0.2.2:${PORT}/health`);
   });
 }
 

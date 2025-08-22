@@ -109,16 +109,16 @@ router.get('/', async (req, res) => {
     let query = `
       SELECT 
         pl.*,
-        mp.name as product_name,
-        mp.base_unit,
+        cp.name as product_name,
+        cp.base_unit,
         b.name as brand_name,
         bv.business_name,
         bv.business_category,
         bv.is_verified as business_verified,
         c.name as city_name
       FROM price_listings pl
-      LEFT JOIN master_products mp ON pl.master_product_id = mp.id
-      LEFT JOIN brands b ON mp.brand_id = b.id
+      LEFT JOIN country_products cp ON pl.master_product_id = cp.id
+      LEFT JOIN brands b ON cp.brand_id = b.id
       LEFT JOIN business_verifications bv ON pl.business_id = bv.user_id
       LEFT JOIN cities c ON pl.city_id = c.id
     `;
@@ -177,7 +177,7 @@ router.get('/', async (req, res) => {
     }
 
     if (search) {
-      whereConditions.push(`(pl.title ILIKE $${paramIndex} OR pl.description ILIKE $${paramIndex} OR mp.name ILIKE $${paramIndex})`);
+      whereConditions.push(`(pl.title ILIKE $${paramIndex} OR pl.description ILIKE $${paramIndex} OR cp.name ILIKE $${paramIndex})`);
       queryParams.push(`%${search}%`);
       paramIndex++;
     }
@@ -268,22 +268,22 @@ router.get('/search', async (req, res) => {
 
     let searchQuery = `
       SELECT DISTINCT
-        mp.id,
-        mp.name,
-        mp.slug,
-        mp.base_unit,
-        b.name as brand_name,
-        b.id as brand_id,
+        cp.product_id as id,
+        cp.product_name as name,
+        LOWER(REPLACE(cp.product_name, ' ', '-')) as slug,
+        NULL as base_unit,
+        NULL as brand_name,
+        NULL as brand_id,
         COUNT(pl.id) as listing_count,
         MIN(pl.price) as min_price,
         MAX(pl.price) as max_price,
         AVG(pl.price) as avg_price
-      FROM master_products mp
-      LEFT JOIN brands b ON mp.brand_id = b.id
-      LEFT JOIN price_listings pl ON mp.id = pl.master_product_id 
+      FROM country_products cp
+      LEFT JOIN price_listings pl ON cp.product_id = pl.master_product_id 
         AND pl.is_active = true 
         AND pl.country_code = $1
-      WHERE mp.is_active = true
+      WHERE cp.is_active = true
+        AND cp.country_code = $1
     `;
 
     let queryParams = [country];
@@ -291,7 +291,7 @@ router.get('/search', async (req, res) => {
 
     // Add search filter only if we have a search term
     if (searchTerm && searchTerm.length >= 2) {
-      searchQuery += ` AND mp.name ILIKE $${paramIndex}`;
+      searchQuery += ` AND cp.product_name ILIKE $${paramIndex}`;
       queryParams.push(`%${searchTerm}%`);
       paramIndex++;
     }
@@ -299,28 +299,22 @@ router.get('/search', async (req, res) => {
     if (categoryId) {
       searchQuery += ` AND EXISTS (
         SELECT 1 FROM price_listings pl2 
-        WHERE pl2.master_product_id = mp.id 
+        WHERE pl2.master_product_id = cp.id 
         AND pl2.category_id = $${paramIndex}
       )`;
       queryParams.push(categoryId);
       paramIndex++;
     }
 
-    if (brandId) {
-      searchQuery += ` AND mp.brand_id = $${paramIndex}`;
-      queryParams.push(brandId);
-      paramIndex++;
-    }
-
     searchQuery += `
-      GROUP BY mp.id, mp.name, mp.slug, mp.base_unit, b.name, b.id
+      GROUP BY cp.product_id, cp.product_name
     `;
 
     // Order by listing count for popular products, or by name for search results
     if (isPopularProductsRequest) {
-      searchQuery += ` ORDER BY listing_count DESC, mp.name`;
+      searchQuery += ` ORDER BY listing_count DESC, cp.product_name`;
     } else {
-      searchQuery += ` ORDER BY mp.name, listing_count DESC`;
+      searchQuery += ` ORDER BY cp.product_name, listing_count DESC`;
     }
 
     searchQuery += ` LIMIT $${paramIndex}`;
@@ -373,13 +367,13 @@ router.get('/product/:productId', async (req, res) => {
 
     // Get product details first
     const productQuery = `
-      SELECT mp.*, b.name as brand_name
-      FROM master_products mp
-      LEFT JOIN brands b ON mp.brand_id = b.id
-      WHERE mp.id = $1 AND mp.is_active = true
+      SELECT cp.*, b.name as brand_name
+      FROM country_products cp
+      LEFT JOIN brands b ON cp.brand_id = b.id
+      WHERE cp.id = $1 AND cp.is_active = true AND cp.country_code = $2
     `;
     
-    const productResult = await database.query(productQuery, [productId]);
+    const productResult = await database.query(productQuery, [productId, country]);
     
     if (productResult.rows.length === 0) {
       return res.status(404).json({
@@ -457,16 +451,16 @@ router.get('/:id', async (req, res) => {
     const query = `
       SELECT 
         pl.*,
-        mp.name as product_name,
-        mp.base_unit,
+        cp.name as product_name,
+        cp.base_unit,
         b.name as brand_name,
         bv.business_name,
         bv.business_category,
         bv.is_verified as business_verified,
         c.name as city_name
       FROM price_listings pl
-      LEFT JOIN master_products mp ON pl.master_product_id = mp.id
-      LEFT JOIN brands b ON mp.brand_id = b.id
+      LEFT JOIN country_products cp ON pl.master_product_id = cp.id
+      LEFT JOIN brands b ON cp.brand_id = b.id
       LEFT JOIN business_verifications bv ON pl.business_id = bv.user_id
       LEFT JOIN cities c ON pl.city_id = c.id
       WHERE pl.id = $1
