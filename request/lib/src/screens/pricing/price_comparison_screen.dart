@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/price_listing.dart';
 import '../../services/pricing_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/image_url_helper.dart';
 
 class PriceComparisonScreen extends StatefulWidget {
   const PriceComparisonScreen({super.key});
@@ -839,24 +840,27 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                     const SizedBox(height: 12),
 
                     // Payment methods
-                    Text(
-                      'Payment methods',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[700],
-                        fontWeight: FontWeight.w600,
+                    if ((listing.paymentMethods).isNotEmpty) ...[
+                      Text(
+                        'Payment methods',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[700],
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        _buildPaymentMethod('Cash'),
-                        const SizedBox(width: 8),
-                        _buildPaymentMethod('Card'),
-                        const SizedBox(width: 8),
-                        _buildPaymentMethod('Transfer'),
-                      ],
-                    ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: listing.paymentMethods.take(8).map((pm) {
+                          final imgUrl = pm.imageUrl != null
+                              ? ImageUrlHelper.getFullImageUrl(pm.imageUrl!)
+                              : null;
+                          return _buildPaymentMethodChip(pm.name, imgUrl);
+                        }).toList(),
+                      ),
+                    ],
 
                     const SizedBox(height: 16),
                     Row(
@@ -942,20 +946,51 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
     );
   }
 
-  Widget _buildPaymentMethod(String method) {
+  Widget _buildPaymentMethodChip(String name, String? imageUrl) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: AppTheme.primaryColor.withOpacity(0.1),
+        color: AppTheme.primaryColor.withOpacity(0.08),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.primaryColor.withOpacity(0.15)),
       ),
-      child: Text(
-        method,
-        style: TextStyle(
-          color: AppTheme.primaryColor,
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (imageUrl != null && imageUrl.isNotEmpty) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.network(
+                imageUrl,
+                width: 18,
+                height: 18,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stack) => Icon(
+                  Icons.payment,
+                  size: 16,
+                  color: AppTheme.primaryColor,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+          ] else ...[
+            Icon(
+              Icons.payment,
+              size: 16,
+              color: AppTheme.primaryColor,
+            ),
+            const SizedBox(width: 6),
+          ],
+          Text(
+            name,
+            style: TextStyle(
+              color: AppTheme.primaryColor,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              height: 1,
+            ),
+          ),
+        ],
       ),
     );
   }
