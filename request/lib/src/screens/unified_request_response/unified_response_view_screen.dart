@@ -101,16 +101,26 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
     });
 
     try {
-      await _requestService.acceptResponse(widget.response.id);
+      final ok = await _requestService.acceptResponse(
+          widget.response.requestId, widget.response.id);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Response accepted successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context); // Go back to previous screen
+        if (ok) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Response accepted successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.pop(context);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to accept response'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {

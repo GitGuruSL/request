@@ -229,6 +229,7 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
                       Icons.message,
                       color: _getTypeColor(widget.request.type),
                     ),
+                    tooltip: 'Message',
                   ),
                 ],
               ),
@@ -407,14 +408,20 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
 
   void _acceptResponse(ResponseModel response) async {
     try {
-      await _requestService.acceptResponse(response.id);
+      final ok =
+          await _requestService.acceptResponse(response.requestId, response.id);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Response accepted successfully')),
-        );
-
-        _loadResponses(); // Refresh the list
+        if (ok) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Response accepted successfully')),
+          );
+          _loadResponses();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to accept response')),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {

@@ -149,9 +149,9 @@ class EnhancedRequestService {
   }
 
   // Methods for response management (accept / reject not yet backed by REST endpoints here)
-  Future<void> acceptResponse(String responseId) async {
-    // No-op placeholder
-    // Implement via dedicated endpoint in future
+  Future<bool> acceptResponse(String requestId, String responseId) async {
+    final res = await _rest.acceptResponse(requestId, responseId);
+    return res != null; // returns updated RequestModel on success
   }
 
   Future<void> rejectResponse(String responseId, String reason) async {
