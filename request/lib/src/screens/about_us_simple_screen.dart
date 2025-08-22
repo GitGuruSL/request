@@ -7,6 +7,7 @@ import '../services/content_service.dart';
 import '../services/api_client.dart';
 import 'content_page_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AboutUsSimpleScreen extends StatefulWidget {
   const AboutUsSimpleScreen({super.key});
@@ -125,20 +126,35 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                // Header logo (optional via metadata.logoUrl)
+                // Header logo + title (optional via metadata.logoUrl)
                 if ((_resolvedLogoUrl ?? _getMeta<String>('logoUrl'))
                         ?.isNotEmpty ==
                     true)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: Center(
-                      child: Image.network(
-                        _resolvedLogoUrl ?? _getMeta<String>('logoUrl')!,
-                        height: 48,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stack) =>
-                            const SizedBox.shrink(),
-                      ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Center(
+                          child: Image.network(
+                            _resolvedLogoUrl ?? _getMeta<String>('logoUrl')!,
+                            height: 72,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stack) =>
+                                const SizedBox.shrink(),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Request',
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
 
