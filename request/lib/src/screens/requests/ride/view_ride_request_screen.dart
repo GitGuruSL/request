@@ -534,13 +534,10 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                       const SizedBox(height: 24),
                       _buildResponsesSection(),
 
-                      // Respond Button for non-owners
+                      // Respond Area for non-owners (single entry point)
                       if (!_isOwner) ...[
                         const SizedBox(height: 24),
-                        if (_canUserRespond() && !_hasUserResponded())
-                          _buildQuickRespondSection(),
-                        // Keep full flow as an option
-                        _buildRespondButton(),
+                        if (_canUserRespond()) _buildQuickRespondSection(),
                       ],
 
                       const SizedBox(height: 80), // Space for FAB
@@ -1335,6 +1332,8 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
 
   Widget _buildQuickRespondSection() {
     final currencySymbol = CurrencyHelper.instance.getCurrencySymbol();
+    final hasResponded = _hasUserResponded();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1343,61 +1342,85 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _fareController,
-                keyboardType: const TextInputType.numberWithOptions(
-                    signed: false, decimal: true),
-                decoration: InputDecoration(
-                  hintText: 'Enter fare',
-                  prefixText: currencySymbol,
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  errorText: _fareError,
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        if (!hasResponded) ...[
+          TextField(
+            controller: _fareController,
+            keyboardType: const TextInputType.numberWithOptions(
+                signed: false, decimal: true),
+            decoration: InputDecoration(
+              hintText: 'Enter fare',
+              prefixText: currencySymbol,
+              filled: true,
+              fillColor: Colors.grey[50],
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              errorText: _fareError,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: ElevatedButton.icon(
+              onPressed: _isSubmittingResponse ? null : _submitQuickResponse,
+              icon: const Icon(Icons.reply, color: Colors.white),
+              label: _isSubmittingResponse
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text(
+                      'Respond to Request',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
+                elevation: 0,
               ),
             ),
-            const SizedBox(width: 12),
-            SizedBox(
-              height: 48,
-              child: ElevatedButton(
-                onPressed: _isSubmittingResponse ? null : _submitQuickResponse,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Quick submit. You can edit details later.',
+            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+          ),
+        ] else ...[
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: ElevatedButton.icon(
+              onPressed: _showResponseDialog,
+              icon: const Icon(Icons.edit, color: Colors.white),
+              label: const Text(
+                'Edit Response',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: _isSubmittingResponse
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
-                    : const Text('Respond'),
+                elevation: 0,
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Quick submit. You can edit details later.',
-          style: TextStyle(color: Colors.grey[600], fontSize: 12),
-        ),
+          ),
+        ],
       ],
     );
   }
@@ -1501,34 +1524,5 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
     return '$vehicleType: $pickup to $destination';
   }
 
-  Widget _buildRespondButton() {
-    if (_isOwner) return const SizedBox.shrink();
-
-    final hasResponded = _hasUserResponded();
-    final canRespond = _canUserRespond();
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: ElevatedButton(
-        onPressed: canRespond ? _showResponseDialog : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: hasResponded ? Colors.orange : Colors.blue,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 0,
-        ),
-        child: Text(
-          hasResponded ? 'Edit Response' : 'Respond to Request',
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
+  // Removed old _buildRespondButton in favor of a single inline respond flow
 }
