@@ -5,7 +5,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 // REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
 // REMOVED_FB_IMPORT: import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'dart:math' as math;
 import '../../../models/request_model.dart';
 import '../../../models/enhanced_user_model.dart';
 import '../../../services/enhanced_request_service.dart';
@@ -141,23 +140,6 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
     // For ride requests, user must have driver role and be approved
     return _currentUser!.hasRole(UserRole.driver) &&
         _currentUser!.isRoleVerified(UserRole.driver);
-  }
-
-  String? _getCannotRespondReason() {
-    if (_currentUser == null || _request == null) return null;
-    if (_isOwner) return null;
-
-    // Check if user has driver role
-    if (!_currentUser!.hasRole(UserRole.driver)) {
-      return 'You need to register as a driver to respond to ride requests';
-    }
-
-    // Check if driver role is approved
-    if (!_currentUser!.isRoleVerified(UserRole.driver)) {
-      return 'Your driver registration is pending approval. Please wait for verification.';
-    }
-
-    return null;
   }
 
   bool _hasUserResponded() {
@@ -351,7 +333,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
             mapToolbarEnabled: false,
           ),
 
-          // Top App Bar
+          // Top App Bar - Clean design without shadows
           Positioned(
             top: 0,
             left: 0,
@@ -361,15 +343,8 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
               child: Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
                 ),
                 child: Row(
                   children: [
@@ -377,14 +352,16 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                       onPressed: () => Navigator.pop(context),
                       icon: const Icon(Icons.arrow_back),
                     ),
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'Ride Request',
-                        style: TextStyle(
-                          fontSize: 18,
+                        _buildAppBarTitle(),
+                        style: const TextStyle(
+                          fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
                         textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     if (_isOwner) ...[
@@ -403,17 +380,13 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                           tooltip: 'Edit Response',
                         ),
                     ],
-                    IconButton(
-                      onPressed: () {}, // TODO: Add share functionality
-                      icon: const Icon(Icons.share),
-                    ),
                   ],
                 ),
               ),
             ),
           ),
 
-          // Bottom Sheet
+          // Bottom Sheet - Clean design without shadows
           DraggableScrollableSheet(
             initialChildSize: 0.4,
             minChildSize: 0.3,
@@ -426,13 +399,6 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                     topLeft: Radius.circular(20),
                     topRight: Radius.circular(20),
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 10,
-                      spreadRadius: 2,
-                    ),
-                  ],
                 ),
                 child: SingleChildScrollView(
                   controller: scrollController,
@@ -458,6 +424,13 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                       _buildRequesterInfo(),
                       const SizedBox(height: 24),
                       _buildResponsesSection(),
+
+                      // Respond Button for non-owners
+                      if (!_isOwner) ...[
+                        const SizedBox(height: 24),
+                        _buildRespondButton(),
+                      ],
+
                       const SizedBox(height: 80), // Space for FAB
                     ],
                   ),
@@ -467,7 +440,6 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
           ),
         ],
       ),
-      // Removed floatingActionButton since edit functionality is now in the top bar
     );
   }
 
@@ -480,63 +452,88 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
         Text(
           _request!.title,
           style: const TextStyle(
-            fontSize: 22,
+            fontSize: 24,
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
+
+        // Vehicle Type - Prominently displayed
+        if (rideData?.vehicleType != null) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.directions_car, color: Colors.blue[700], size: 24),
+                const SizedBox(width: 12),
+                Text(
+                  'Vehicle Type: ${rideData!.vehicleType}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.blue[700],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
 
         // Location Details
         _buildLocationInfo(),
 
         const SizedBox(height: 16),
 
-        // Ride Specific Details
+        // Ride Specific Details - Clean layout without borders
         if (rideData != null) ...[
           Row(
             children: [
-              const Icon(Icons.person, size: 16, color: Colors.grey),
-              const SizedBox(width: 8),
-              Text('${rideData.passengers} passenger(s)'),
-              const SizedBox(width: 24),
-              const Icon(Icons.directions_car, size: 16, color: Colors.grey),
-              const SizedBox(width: 8),
-              Text(rideData.vehicleType ?? 'Not specified'),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              const Icon(Icons.schedule, size: 16, color: Colors.grey),
+              const Icon(Icons.person, size: 18, color: Colors.grey),
               const SizedBox(width: 8),
               Text(
-                rideData.isFlexibleTime
-                    ? 'Flexible timing'
-                    : 'Scheduled: ${_formatDateTime(rideData.preferredTime)}',
+                '${rideData.passengers} passenger(s)',
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(width: 24),
+              const Icon(Icons.schedule, size: 18, color: Colors.grey),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  rideData.isFlexibleTime
+                      ? 'Flexible timing'
+                      : 'Scheduled: ${_formatDateTime(rideData.preferredTime)}',
+                  style: const TextStyle(fontSize: 16),
+                ),
               ),
             ],
           ),
         ],
 
         if (_request!.budget != null) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: Colors.green[50],
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.account_balance_wallet,
-                    color: Colors.green[600], size: 16),
+                    color: Colors.green[600], size: 20),
                 const SizedBox(width: 8),
                 Text(
                   'Budget: ${CurrencyHelper.instance.getCurrencySymbol()}${_request!.budget?.toStringAsFixed(2)}',
                   style: TextStyle(
-                    color: Colors.green[600],
-                    fontWeight: FontWeight.w500,
+                    color: Colors.green[700],
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
@@ -544,13 +541,13 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
           ),
         ],
 
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
 
         // Status and Date
         Row(
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: _getStatusColor(_request!.status).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
@@ -559,7 +556,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                 _request!.status.name.toUpperCase(),
                 style: TextStyle(
                   color: _getStatusColor(_request!.status),
-                  fontSize: 10,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.5,
                 ),
@@ -568,7 +565,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
             const Spacer(),
             Text(
               'Posted ${_formatDate(_request!.createdAt)}',
-              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+              style: TextStyle(color: Colors.grey[600], fontSize: 14),
             ),
           ],
         ),
@@ -603,148 +600,121 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
     }
   }
 
-  Future<void> _openDirectionsInGoogleMaps() async {
-    if (_request?.location == null || _request?.destinationLocation == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Route information not available')),
-      );
-      return;
-    }
-
-    final pickup = _request!.location!;
-    final destination = _request!.destinationLocation!;
-
-    // Google Maps directions URL
-    final directionsUrl = 'https://www.google.com/maps/dir/?api=1'
-        '&origin=${pickup.latitude},${pickup.longitude}'
-        '&destination=${destination.latitude},${destination.longitude}'
-        '&travelmode=driving';
-
-    // Google Maps app directions URL
-    final mapsAppUrl =
-        'google.navigation:q=${destination.latitude},${destination.longitude}';
-
-    try {
-      if (await canLaunchUrl(Uri.parse(mapsAppUrl))) {
-        await launchUrl(Uri.parse(mapsAppUrl));
-      } else if (await canLaunchUrl(Uri.parse(directionsUrl))) {
-        await launchUrl(Uri.parse(directionsUrl),
-            mode: LaunchMode.externalApplication);
-      } else {
-        throw 'Could not open maps';
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Could not open Google Maps directions')),
-        );
-      }
-    }
-  }
-
   Widget _buildLocationInfo() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
+    return Column(
+      children: [
+        // Pickup Location
+        GestureDetector(
+          onTap: () {
+            if (_request!.location != null) {
+              _openGoogleMaps(
+                _request!.location!.latitude,
+                _request!.location!.longitude,
+                _request!.location!.address,
+              );
+            }
+          },
+          child: Row(
+            children: [
+              Container(
+                width: 12,
+                height: 12,
+                decoration: const BoxDecoration(
+                  color: Colors.green,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 16),
+              const Text(
+                'Pickup:',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  AddressUtils.cleanAddress(_request!.location?.address ??
+                      'Pickup location not specified'),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              if (_request!.location != null)
+                const Icon(Icons.navigation, size: 20, color: Colors.grey),
+            ],
+          ),
+        ),
+        if (_request!.destinationLocation != null) ...[
+          const SizedBox(height: 16),
+          // Destination Location
           GestureDetector(
             onTap: () {
-              if (_request!.location != null) {
-                _openGoogleMaps(
-                  _request!.location!.latitude,
-                  _request!.location!.longitude,
-                  _request!.location!.address,
-                );
-              }
+              _openGoogleMaps(
+                _request!.destinationLocation!.latitude,
+                _request!.destinationLocation!.longitude,
+                _request!.destinationLocation!.address,
+              );
             },
             child: Row(
               children: [
                 Container(
-                  width: 8,
-                  height: 8,
+                  width: 12,
+                  height: 12,
                   decoration: const BoxDecoration(
-                    color: Colors.green,
+                    color: Colors.red,
                     shape: BoxShape.circle,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
+                const Text(
+                  'Destination:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    AddressUtils.cleanAddress(_request!.location?.address ??
-                        'Pickup location not specified'),
+                    AddressUtils.cleanAddress(
+                        _request!.destinationLocation!.address),
                     style: const TextStyle(
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFF1C1C1E), // Same color as title
+                      fontSize: 16,
                     ),
                   ),
                 ),
-                if (_request!.location != null)
-                  const Icon(Icons.navigation, size: 20, color: Colors.grey),
+                const Icon(Icons.navigation, size: 20, color: Colors.grey),
               ],
             ),
           ),
-          if (_request!.destinationLocation != null) ...[
-            const SizedBox(height: 12),
-            GestureDetector(
-              onTap: () {
-                _openGoogleMaps(
-                  _request!.destinationLocation!.latitude,
-                  _request!.destinationLocation!.longitude,
-                  _request!.destinationLocation!.address,
-                );
-              },
-              child: Row(
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      AddressUtils.cleanAddress(
-                          _request!.destinationLocation!.address),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF1C1C1E), // Same color as title
-                      ),
-                    ),
-                  ),
-                  const Icon(Icons.navigation, size: 20, color: Colors.grey),
-                ],
-              ),
-            ),
-          ],
         ],
-      ),
+      ],
     );
   }
 
   Widget _buildRequesterInfo() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () {
-              // TODO: Navigate to user profile screen
-              print('Navigate to profile: ${_requesterUser?.id}');
-            },
-            child: CircleAvatar(
-              radius: 20,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Requester Information',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            CircleAvatar(
+              radius: 24,
               backgroundColor: Colors.blue[100],
               child: Text(
                 _requesterUser?.name.isNotEmpty == true
@@ -753,49 +723,87 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                 style: TextStyle(
                   color: Colors.blue[700],
                   fontWeight: FontWeight.w600,
+                  fontSize: 18,
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _requesterUser?.name ?? 'Anonymous User',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _requesterUser?.name ?? 'Anonymous User',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
+                    ),
                   ),
-                ),
-                if (_requesterUser?.isPhoneVerified == true)
-                  Row(
-                    children: [
-                      Icon(Icons.verified, color: Colors.blue, size: 14),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Verified',
-                        style: TextStyle(
-                          color: Colors.blue,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                  const SizedBox(height: 4),
+                  if (_requesterUser?.phoneNumber != null) ...[
+                    Row(
+                      children: [
+                        const Icon(Icons.phone, size: 16, color: Colors.grey),
+                        const SizedBox(width: 8),
+                        Text(
+                          _requesterUser!.phoneNumber!,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.blue,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                  ],
+                  if (_requesterUser?.isPhoneVerified == true)
+                    Row(
+                      children: [
+                        Icon(Icons.verified, color: Colors.green, size: 16),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Phone Verified',
+                          style: TextStyle(
+                            color: Colors.green,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+            if (!_isOwner) // Hide contact options from requester/owner
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () async {
+                      // Call functionality
+                      if (_requesterUser?.phoneNumber != null) {
+                        final phone = _requesterUser!.phoneNumber!;
+                        final uri = Uri.parse('tel:$phone');
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri);
+                        }
+                      }
+                    },
+                    icon: const Icon(Icons.phone, color: Colors.green),
+                    tooltip: 'Call',
                   ),
-              ],
-            ),
-          ),
-          if (!_isOwner) // Hide message icon from requester/owner
-            IconButton(
-              onPressed: () {
-                // TODO: Implement contact functionality
-              },
-              icon: const Icon(Icons.message),
-            ),
-        ],
-      ),
+                  IconButton(
+                    onPressed: () {
+                      // TODO: Implement message functionality
+                    },
+                    icon: const Icon(Icons.message, color: Colors.blue),
+                    tooltip: 'Message',
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -990,109 +998,6 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
     );
   }
 
-  Widget _buildResponseCard(ResponseModel response) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: Colors.blue[100],
-                child: Text(
-                  'D', // TODO: Get actual driver name
-                  style: TextStyle(
-                    color: Colors.blue[700],
-                    fontWeight: FontWeight.w500,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Driver ${response.responderId.substring(0, 8)}...', // TODO: Get actual driver name
-                      style: const TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                    Row(
-                      children: [
-                        Icon(Icons.star, color: Colors.amber[600], size: 14),
-                        const SizedBox(width: 2),
-                        Text(
-                          '4.8', // TODO: Get actual rating
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _formatDate(response.createdAt),
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Text(
-                '${CurrencyHelper.instance.getCurrencySymbol()}${response.price?.toStringAsFixed(2) ?? 'Free'}',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(response.message),
-          if (_isOwner) ...[
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      // TODO: Implement decline response
-                    },
-                    child: const Text('Decline'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // TODO: Implement accept response
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text('Accept'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
   Color _getStatusColor(RequestStatus status) {
     switch (status) {
       case RequestStatus.draft:
@@ -1148,5 +1053,54 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
 
   String _formatDateTime(DateTime dateTime) {
     return '${dateTime.day}/${dateTime.month}/${dateTime.year} at ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
+  }
+
+  String _buildAppBarTitle() {
+    if (_request == null) return 'Ride Request';
+
+    final vehicleType = _request!.rideData?.vehicleType ?? 'Vehicle';
+    String pickup = 'Pickup';
+    String destination = 'Destination';
+
+    if (_request!.location?.address != null) {
+      pickup = _request!.location!.address.split(',').first;
+    }
+
+    if (_request!.destinationLocation?.address != null) {
+      destination = _request!.destinationLocation!.address.split(',').first;
+    }
+
+    return '$vehicleType: $pickup to $destination';
+  }
+
+  Widget _buildRespondButton() {
+    if (_isOwner) return const SizedBox.shrink();
+
+    final hasResponded = _hasUserResponded();
+    final canRespond = _canUserRespond();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: ElevatedButton(
+        onPressed: canRespond ? _showResponseDialog : null,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: hasResponded ? Colors.orange : Colors.blue,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: 0,
+        ),
+        child: Text(
+          hasResponded ? 'Edit Response' : 'Respond to Request',
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
   }
 }
