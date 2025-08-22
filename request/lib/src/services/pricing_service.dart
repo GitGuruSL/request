@@ -12,7 +12,7 @@ class PricingService {
       print(
           'DEBUG: Searching products with query: "$query", brand: $brand, limit: $limit');
 
-      final response = await _apiClient.get<List<dynamic>>(
+      final response = await _apiClient.get<Map<String, dynamic>>(
         '/api/price-listings/search',
         queryParameters: {
           'q': query,
@@ -22,15 +22,24 @@ class PricingService {
         },
       );
 
-      print(
-          'DEBUG: Search response - success: ${response.isSuccess}, data length: ${response.data?.length}');
+      print('DEBUG: Search response - success: ${response.isSuccess}');
       print('DEBUG: Full response: ${response.data}');
 
       if (response.isSuccess && response.data != null) {
-        final products =
-            response.data!.map((data) => MasterProduct.fromJson(data)).toList();
-        print('DEBUG: Parsed ${products.length} products successfully');
-        return products;
+        // Extract the data array from the backend response
+        final responseData = response.data!;
+        final dataArray = responseData['data'] as List<dynamic>?;
+
+        print('DEBUG: Data array length: ${dataArray?.length}');
+
+        if (dataArray != null) {
+          final products = dataArray
+              .map((data) =>
+                  MasterProduct.fromJson(data as Map<String, dynamic>))
+              .toList();
+          print('DEBUG: Parsed ${products.length} products successfully');
+          return products;
+        }
       }
       print('DEBUG: Response not successful or data is null');
       return [];

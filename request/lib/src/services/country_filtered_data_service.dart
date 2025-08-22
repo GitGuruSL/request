@@ -409,7 +409,8 @@ class CountryFilteredDataService {
         baseUrl = 'http://localhost:3001';
       }
 
-      final url = Uri.parse('$baseUrl/api/country-variable-types');
+      final url = Uri.parse(
+          '$baseUrl/api/country-variable-types?country=$currentCountry');
 
       final response = await http.get(
         url,
@@ -424,26 +425,25 @@ class CountryFilteredDataService {
         if (data['success'] == true && data['data'] is List) {
           final allVariableTypes = data['data'] as List;
 
-          // Filter by current country and active status
-          final filteredTypes = allVariableTypes
+          // Process the response data which now includes possibleValues
+          final variableTypes = allVariableTypes
               .where((vt) =>
                   vt['country_code'] == currentCountry &&
                   (vt['is_active'] == true || vt['is_active'] == 1))
               .map((vt) => {
-                    'id': vt['variable_id']?.toString() ??
-                        vt['id']?.toString() ??
-                        '',
-                    'name': vt['variable_name'] ?? vt['name'] ?? '',
-                    'type': vt['variable_type'] ?? vt['type'] ?? 'select',
-                    'required': vt['is_required'] ?? false,
-                    'custom_settings': vt['custom_settings'] ?? {},
+                    'id': vt['id']?.toString() ?? '',
+                    'name': vt['name'] ?? '',
+                    'type': vt['type'] ?? 'select',
+                    'required': vt['required'] ?? false,
+                    'possibleValues': vt['possibleValues'] ?? [],
+                    'description': vt['description'] ?? '',
                   })
               .toList();
 
           if (kDebugMode)
             print(
-                '✅ Loaded ${filteredTypes.length} active variable types for country $currentCountry');
-          return filteredTypes;
+                '✅ Loaded ${variableTypes.length} active variable types for country $currentCountry');
+          return variableTypes;
         }
       }
 

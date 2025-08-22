@@ -14,7 +14,7 @@ class ProductSearchScreen extends StatefulWidget {
 class _ProductSearchScreenState extends State<ProductSearchScreen> {
   final PricingService _pricingService = PricingService();
   final TextEditingController _searchController = TextEditingController();
-  
+
   List<MasterProduct> _products = [];
   bool _isLoading = false;
 
@@ -27,10 +27,18 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
   Future<void> _loadInitialData() async {
     print('DEBUG: Loading initial data for product search...');
     setState(() => _isLoading = true);
-    
+
     try {
       print('DEBUG: Starting initial product search...');
-      await _searchProducts();
+      // Load popular products (empty query)
+      final products =
+          await _pricingService.searchProducts(query: '', limit: 50);
+      print('DEBUG: Loaded ${products.length} initial products');
+
+      setState(() {
+        _products = products;
+        _isLoading = false;
+      });
     } catch (e) {
       print('DEBUG: Error in _loadInitialData: $e');
       setState(() => _isLoading = false);
@@ -45,45 +53,17 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
   Future<void> _searchProducts() async {
     print('DEBUG: Searching products with query: "${_searchController.text}"');
     setState(() => _isLoading = true);
-    
+
     try {
-      // Get all products first
-      final allProducts = await _pricingService.searchProducts(
-        query: '', // Get all products initially
+      final query = _searchController.text.trim();
+      final products = await _pricingService.searchProducts(
+        query: query,
+        limit: 50,
       );
-      
-      List<MasterProduct> filteredProducts = List.from(allProducts);
-      
-      // Apply enhanced search filter if query is not empty
-      if (_searchController.text.isNotEmpty) {
-        // Split search query by comma, period, and space to handle multiple terms
-        List<String> searchTerms = _searchController.text
-            .toLowerCase()
-            .split(RegExp(r'[,.\s]+'))
-            .where((term) => term.isNotEmpty)
-            .toList();
-        
-        filteredProducts = filteredProducts.where((product) {
-          // Create a searchable string with all product fields
-          String searchableContent = [
-            product.name,
-            product.brand,
-            product.category,
-            product.subcategory ?? '',
-            product.description,
-            // Add any additional fields you want to search
-          ].join(' ').toLowerCase();
-          
-          // Check if ALL search terms are found (AND logic)
-          return searchTerms.every((term) => 
-            searchableContent.contains(term)
-          );
-        }).toList();
-      }
-      
-      print('DEBUG: Search returned ${filteredProducts.length} products');
+
+      print('DEBUG: Search returned ${products.length} products');
       setState(() {
-        _products = filteredProducts;
+        _products = products;
         _isLoading = false;
       });
     } catch (e) {
@@ -104,7 +84,8 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
       backgroundColor: theme.colorScheme.background, // Use app theme background
       appBar: AppBar(
         backgroundColor: theme.colorScheme.background, // Match background
-        foregroundColor: theme.textTheme.bodyLarge?.color, // Use theme text color
+        foregroundColor:
+            theme.textTheme.bodyLarge?.color, // Use theme text color
         title: const Text('Search Products'),
         elevation: 0, // No shadow
         titleSpacing: 0,
@@ -201,23 +182,26 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
               flex: 3,
               child: Container(
                 decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(12)),
                   color: Colors.grey[100],
                 ),
                 child: product.images.isNotEmpty
                     ? ClipRRect(
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                        borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(12)),
                         child: Image.network(
                           product.images.first,
                           fit: BoxFit.cover,
                           width: double.infinity,
-                          errorBuilder: (context, error, stackTrace) => _buildPlaceholderImage(),
+                          errorBuilder: (context, error, stackTrace) =>
+                              _buildPlaceholderImage(),
                         ),
                       )
                     : _buildPlaceholderImage(),
               ),
             ),
-            
+
             // Product info
             Expanded(
               flex: 2,

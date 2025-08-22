@@ -26,12 +26,56 @@ router.get('/', async (req, res) => {
         
         const result = await dbService.query(query, queryParams);
 
-        console.log(`Found ${result.rows.length} country variable types`);
+        // Add predefined values for common variable types
+        const variableTypesWithValues = result.rows.map(row => {
+            let possibleValues = [];
+            let type = 'select';
+            let description = '';
+
+            switch (row.variable_type_name?.toLowerCase()) {
+                case 'ram':
+                    possibleValues = ['4GB', '8GB', '12GB', '16GB', '32GB', '64GB'];
+                    description = 'Memory capacity';
+                    break;
+                case 'storage_capacity':
+                    possibleValues = ['64GB', '128GB', '256GB', '512GB', '1TB', '2TB'];
+                    description = 'Device storage capacity';
+                    break;
+                case 'color':
+                    possibleValues = ['Black', 'White', 'Silver', 'Gold', 'Blue', 'Red', 'Green', 'Purple', 'Gray'];
+                    description = 'Product color options';
+                    break;
+                case 'size':
+                    possibleValues = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+                    description = 'Product size';
+                    break;
+                case 'screen_size':
+                    possibleValues = ['5.5"', '6.1"', '6.4"', '6.7"', '13"', '15"', '17"', '27"', '32"'];
+                    description = 'Screen or display size';
+                    break;
+                default:
+                    type = 'text';
+                    description = `Custom ${row.variable_type_name} value`;
+            }
+
+            return {
+                id: row.variable_type_id || row.id,
+                name: row.variable_type_name,
+                type: type,
+                required: false,
+                possibleValues: possibleValues,
+                description: description,
+                country_code: row.country_code,
+                is_active: row.is_active
+            };
+        });
+
+        console.log(`Found ${variableTypesWithValues.length} country variable types`);
         
         res.json({
             success: true,
-            data: result.rows,
-            count: result.rows.length
+            data: variableTypesWithValues,
+            count: variableTypesWithValues.length
         });
     } catch (error) {
         console.error('Error fetching country variable types:', error);

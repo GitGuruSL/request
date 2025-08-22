@@ -250,7 +250,25 @@ class _AddPriceListingScreenState extends State<AddPriceListingScreen> {
         countryName: userCountryName,
       );
 
-      await _pricingService.addOrUpdatePriceListing(priceListing);
+      // Create API payload that matches backend expectations
+      final apiPayload = {
+        'masterProductId': widget.masterProduct.id,
+        'title': widget.masterProduct.name,
+        'description': _modelNumberController.text.isEmpty
+            ? '${widget.masterProduct.brand} ${widget.masterProduct.name}'
+            : '${widget.masterProduct.brand} ${widget.masterProduct.name} (${_modelNumberController.text})',
+        'price': double.parse(_priceController.text),
+        'currency': _currency,
+        'deliveryCharge': 0, // Default delivery charge
+        'website': _productLinkController.text.isEmpty ? null : _productLinkController.text,
+        'whatsapp': _whatsappController.text.isEmpty ? null : _whatsappController.text,
+        'countryCode': userCountryCode,
+        'unit': 'piece', // Default unit
+        // Add selected variables if any
+        if (_selectedVariables.isNotEmpty) 'selectedVariables': _selectedVariables,
+      };
+
+      final success = await _pricingService.addOrUpdatePriceListing(apiPayload);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

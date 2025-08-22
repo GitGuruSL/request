@@ -210,4 +210,20 @@ class PriceListing {
       countryName: countryName ?? this.countryName,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'masterProductId': masterProductId,
+      'title': productName,
+      'description': modelNumber != null ? '$brand $productName ($modelNumber)' : '$brand $productName',
+      'price': price,
+      'currency': currency,
+      'deliveryCharge': 0, // Default delivery charge
+      'website': productLink,
+      'whatsapp': whatsappNumber,
+      'countryCode': country ?? 'LK',
+      'unit': 'piece', // Default unit
+      'selectedVariables': selectedVariables,
+    };
+  }
 }
