@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/rest_notification_service.dart';
 import '../models/notification_model.dart';
+import '../screens/unified_request_response/unified_request_view_screen.dart';
+import '../screens/requests/ride/view_ride_request_screen.dart';
+import '../screens/chat/conversation_screen.dart';
+import '../services/chat_service.dart';
+import '../models/chat_models.dart';
 // import '../services/comprehensive_notification_service.dart'; // Replaced with placeholder
 // import '../services/enhanced_user_service.dart'; // Replaced with placeholder
 
@@ -24,7 +29,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final userId = _auth.currentUser?.uid;
 
     if (userId == null) {
@@ -39,28 +43,17 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: theme.colorScheme.background,
-        foregroundColor: theme.textTheme.bodyLarge?.color,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
         title: const Text('Notifications'),
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.mark_email_read),
-            tooltip: 'Mark all as read',
-            onPressed: () async {
-              await _restNotifications.markAllRead();
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('All notifications marked as read'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-                await _refresh();
-              }
-            },
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Settings',
+            onPressed: () {},
           ),
         ],
       ),
@@ -126,12 +119,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
           return RefreshIndicator(
             onRefresh: _refresh,
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(vertical: 8),
               itemCount: notifications.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
               itemBuilder: (context, index) {
-                final notification = notifications[index];
-                return _buildNotificationCard(notification);
+                final n = notifications[index];
+                return _buildNotificationTile(n);
               },
             ),
           );
@@ -140,130 +134,96 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
-  Widget _buildNotificationCard(NotificationModel notification) {
-    final isUnread = notification.status == NotificationStatus.unread;
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: isUnread ? 2 : 1,
-      color: isUnread ? Colors.blue.withOpacity(0.05) : Colors.white,
-      child: InkWell(
-        onTap: () => _handleNotificationTap(notification),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              // Notification icon based on type
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: _getNotificationColor(notification.type)
-                      .withOpacity(0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  _getNotificationIcon(notification.type),
-                  color: _getNotificationColor(notification.type),
-                  size: 22,
-                ),
+  Widget _buildNotificationTile(NotificationModel n) {
+    final isUnread = n.status == NotificationStatus.unread;
+    final color = _getNotificationColor(n.type);
+    return InkWell(
+      onTap: () => _handleNotificationTap(n),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                shape: BoxShape.circle,
               ),
-              const SizedBox(width: 12),
-
-              // Notification content
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            notification.title,
-                            style: TextStyle(
-                              fontWeight:
-                                  isUnread ? FontWeight.w600 : FontWeight.w500,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                        if (isUnread)
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: Colors.blue,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      notification.message,
-                      style: TextStyle(
-                        color: Colors.grey[700],
-                        fontSize: 14,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          _formatTime(notification.createdAt),
+              child: Icon(_getNotificationIcon(n.type), color: color, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          n.title,
                           style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12,
+                            fontWeight:
+                                isUnread ? FontWeight.w600 : FontWeight.w500,
+                            fontSize: 15,
+                            color: Colors.black87,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        if (notification.senderName != null)
-                          Text(
-                            'From ${notification.senderName}',
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 12,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              // More options
-              PopupMenuButton<String>(
-                icon: Icon(Icons.more_vert, color: Colors.grey[600]),
-                onSelected: (value) => _handleMenuAction(value, notification),
-                itemBuilder: (context) => [
-                  if (isUnread)
-                    const PopupMenuItem(
-                      value: 'mark_read',
-                      child: Row(
-                        children: [
-                          Icon(Icons.mark_email_read, size: 16),
-                          SizedBox(width: 8),
-                          Text('Mark as read'),
-                        ],
                       ),
-                    ),
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(Icons.delete, size: 16, color: Colors.red),
-                        SizedBox(width: 8),
-                        Text('Delete', style: TextStyle(color: Colors.red)),
-                      ],
-                    ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _formatTime(n.createdAt),
+                        style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    n.message,
+                    style: TextStyle(color: Colors.grey[700], fontSize: 14),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 8),
+            if (isUnread)
+              Container(
+                margin: const EdgeInsets.only(top: 4),
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                    color: Colors.blue, shape: BoxShape.circle),
+              ),
+            PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert, color: Colors.grey[500], size: 20),
+              onSelected: (value) => _handleMenuAction(value, n),
+              itemBuilder: (context) => [
+                if (isUnread)
+                  const PopupMenuItem(
+                    value: 'mark_read',
+                    child: Row(children: [
+                      Icon(Icons.check, size: 16),
+                      SizedBox(width: 8),
+                      Text('Mark as read')
+                    ]),
+                  ),
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Row(children: [
+                    Icon(Icons.delete, size: 16, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Delete', style: TextStyle(color: Colors.red))
+                  ]),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -352,52 +312,82 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
-  void _navigateBasedOnNotification(NotificationModel notification) {
-    final data = notification.data;
-
-    switch (notification.type) {
+  Future<void> _navigateBasedOnNotification(NotificationModel n) async {
+    final data = n.data;
+    switch (n.type) {
       case NotificationType.newResponse:
       case NotificationType.requestEdited:
       case NotificationType.responseEdited:
       case NotificationType.responseAccepted:
       case NotificationType.responseRejected:
-        final requestId = data['requestId'] as String?;
+        final requestId = (data['requestId'] ?? data['request_id']) as String?;
         if (requestId != null) {
-          // Navigate to request details
-          Navigator.pushNamed(context, '/request-details',
-              arguments: requestId);
+          if (!mounted) return;
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => UnifiedRequestViewScreen(requestId: requestId),
+            ),
+          );
         }
         break;
 
       case NotificationType.newMessage:
-        final conversationId = data['conversationId'] as String?;
+        final conversationId =
+            (data['conversationId'] ?? data['conversation_id']) as String?;
+        final requestId = (data['requestId'] ?? data['request_id']) as String?;
         if (conversationId != null) {
-          // Navigate to conversation
-          Navigator.pushNamed(context, '/conversation',
-              arguments: conversationId);
+          try {
+            final msgs = await ChatService.instance
+                .getMessages(conversationId: conversationId);
+            // Minimal conversation model
+            final convo = Conversation(
+              id: conversationId,
+              requestId: requestId ?? '',
+              participantA: null,
+              participantB: null,
+              lastMessageText: msgs.isNotEmpty ? msgs.last.content : null,
+              lastMessageAt: msgs.isNotEmpty ? msgs.last.createdAt : null,
+              requestTitle: data['requestTitle'] as String?,
+            );
+            if (!mounted) return;
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ConversationScreen(
+                  conversation: convo,
+                  initialMessages: msgs,
+                ),
+              ),
+            );
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Unable to open conversation: $e')),
+              );
+            }
+          }
         }
         break;
 
       case NotificationType.newRideRequest:
       case NotificationType.rideResponseAccepted:
       case NotificationType.rideDetailsUpdated:
-        final requestId = data['requestId'] as String?;
+        final requestId = (data['requestId'] ?? data['request_id']) as String?;
         if (requestId != null) {
-          // Navigate to ride details
-          Navigator.pushNamed(context, '/ride-details', arguments: requestId);
+          if (!mounted) return;
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ViewRideRequestScreen(requestId: requestId),
+            ),
+          );
         }
         break;
 
       case NotificationType.productInquiry:
-        final productName = data['productName'] as String?;
-        if (productName != null) {
-          // Navigate to business dashboard or product details
-          Navigator.pushNamed(context, '/business-dashboard');
-        }
-        break;
-
       case NotificationType.systemMessage:
-        // Handle system messages if needed
+        // No-op or future mapping
         break;
     }
   }
