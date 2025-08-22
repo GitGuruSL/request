@@ -587,6 +587,10 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                       _buildRequesterInfo(),
                       const SizedBox(height: 24),
                       _buildResponsesSection(),
+                      if (!_isOwner && _getUserResponse() == null) ...[
+                        const SizedBox(height: 24),
+                        _buildRespondCTA(),
+                      ],
 
                       const SizedBox(height: 80), // Space for FAB
                     ],
@@ -1314,6 +1318,27 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
       case RequestStatus.expired:
         return Colors.brown;
     }
+  }
+
+  Widget _buildRespondCTA() {
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: ElevatedButton.icon(
+        onPressed: _showResponseDialog,
+        icon: const Icon(Icons.reply, color: Colors.white),
+        label: const Text(
+          'Respond to Request',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.amber[800],
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          elevation: 0,
+        ),
+      ),
+    );
   }
 
   // inline quick respond removed as per latest UI direction
