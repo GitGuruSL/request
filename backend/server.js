@@ -35,6 +35,7 @@ const contentPagesRoutes = require('./routes/content-pages');
 const globalResponsesRoutes = require('./routes/responses-global');
 const smsRoutes = require('./routes/sms');
 const notificationsRoutes = require('./routes/notifications');
+const contactRoutes = require('./routes/contact');
 
 // New country-specific routes
 const countryProductRoutes = require('./routes/country-products');
@@ -196,6 +197,7 @@ app.use('/api/business-verifications', businessVerificationRoutes); // NEW - Bus
 app.use('/api/unified-verification', unifiedVerificationRoutes); // Unified verification service
 app.use('/api/email-verification', emailVerificationRoutes); // Email OTP verification routes
 app.use('/api/temp-migration', tempMigrationRoutes); // Temporary migration routes
+app.use('/api/contact', contactRoutes);
 
 // Mount SMS admin routes
 try {
