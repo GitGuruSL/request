@@ -14,6 +14,8 @@ import '../../../utils/address_utils.dart';
 import 'edit_ride_request_screen.dart';
 import 'create_ride_response_screen.dart';
 import '../../../services/rest_vehicle_type_service.dart';
+import '../../../services/chat_service.dart';
+import '../../chat/conversation_screen.dart';
 
 class ViewRideRequestScreen extends StatefulWidget {
   final String requestId;
@@ -33,7 +35,6 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   bool _isLoading = true;
   bool _isOwner = false;
   UserModel? _requesterUser;
-  UserModel? _currentUser;
   String? _vehicleTypeName; // Resolved human-readable vehicle type name
 
   // Map related
@@ -89,11 +90,10 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
         if (currentUserId.isNotEmpty && request.requesterId.isNotEmpty) {
           isOwner = currentUserId == request.requesterId;
         } else {
-          // If we can't determine the current user, assume ownership to hide respond button
-          // This is a safety measure to prevent users from responding to their own requests
-          isOwner = true;
+          // If unknown, DON'T block responding; treat as not owner.
+          isOwner = false;
           print(
-              '⚠️ Warning: Could not determine current user, defaulting to owner=true for safety');
+              '⚠️ Warning: Could not determine current user, defaulting to owner=false to allow responding');
         }
 
         if (mounted) {
@@ -102,7 +102,6 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
             _responses = responses.cast<ResponseModel>();
             _isOwner = isOwner;
             _requesterUser = requesterUser;
-            _currentUser = currentUser;
             _isLoading = false;
           });
 
@@ -182,12 +181,9 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
 
   // Role-based validation methods
   bool _canUserRespond() {
-    if (_currentUser == null || _request == null) return false;
-    if (_isOwner) return false;
-
-    // For ride requests, user must have driver role and be approved
-    return _currentUser!.hasRole(UserRole.driver) &&
-        _currentUser!.isRoleVerified(UserRole.driver);
+    if (_request == null) return false;
+    // For now, allow any non-owner to respond (simplified gating)
+    return !_isOwner;
   }
 
   bool _hasUserResponded() {
@@ -850,7 +846,6 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
       decoration: BoxDecoration(
         color: Colors.blue[50],
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue[100]!, width: 1),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -893,6 +888,13 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   }
 
   Widget _buildRequesterInfo() {
+    // Fallback name/phone from request metadata if user lookup missing
+    final meta = _request?.typeSpecificData ?? const {};
+    final fallbackName =
+        (meta['requester_name'] ?? meta['user_name'] ?? '').toString().trim();
+    final fallbackPhone =
+        (meta['requester_phone'] ?? meta['user_phone'] ?? '').toString().trim();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -926,20 +928,27 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _requesterUser?.name ?? 'Anonymous User',
+                    ((_requesterUser?.name ?? '').trim().isNotEmpty)
+                        ? _requesterUser!.name
+                        : (fallbackName.isNotEmpty
+                            ? fallbackName
+                            : 'Anonymous User'),
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 18,
                     ),
                   ),
                   const SizedBox(height: 4),
-                  if (_requesterUser?.phoneNumber != null) ...[
+                  if ((_requesterUser?.phoneNumber?.isNotEmpty ?? false) ||
+                      fallbackPhone.isNotEmpty) ...[
                     Row(
                       children: [
                         const Icon(Icons.phone, size: 16, color: Colors.grey),
                         const SizedBox(width: 8),
                         Text(
-                          _requesterUser!.phoneNumber!,
+                          (_requesterUser?.phoneNumber?.isNotEmpty ?? false)
+                              ? _requesterUser!.phoneNumber!
+                              : fallbackPhone,
                           style: const TextStyle(
                             fontSize: 16,
                             color: Colors.blue,
@@ -973,21 +982,82 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                 children: [
                   IconButton(
                     onPressed: () async {
-                      // Call functionality
-                      if (_requesterUser?.phoneNumber != null) {
-                        final phone = _requesterUser!.phoneNumber!;
-                        final uri = Uri.parse('tel:$phone');
-                        if (await canLaunchUrl(uri)) {
-                          await launchUrl(uri);
-                        }
+                      // Prefer requester's user phone, fallback to metadata phone
+                      final meta = _request?.typeSpecificData ?? {};
+                      final fallbackPhone =
+                          (meta['requester_phone'] ?? meta['user_phone'] ?? '')
+                              .toString()
+                              .trim();
+                      final phone =
+                          (_requesterUser?.phoneNumber?.isNotEmpty ?? false)
+                              ? _requesterUser!.phoneNumber!
+                              : fallbackPhone;
+                      if (phone.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text('No phone number available')),
+                        );
+                        return;
+                      }
+                      final uri = Uri.parse('tel:$phone');
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text(
+                                  'Cannot start phone call on this device')),
+                        );
                       }
                     },
                     icon: const Icon(Icons.phone, color: Colors.green),
                     tooltip: 'Call',
                   ),
                   IconButton(
-                    onPressed: () {
-                      // TODO: Implement message functionality
+                    onPressed: () async {
+                      // In-app chat via ChatService (same as UnifiedRequestViewScreen)
+                      final request = _request;
+                      if (request == null) return;
+                      final currentUserId =
+                          RestAuthService.instance.currentUser?.uid;
+                      if (currentUserId == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text('You must be logged in to chat')),
+                        );
+                        return;
+                      }
+                      if (currentUserId == request.requesterId) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text(
+                                  'This is your own request. You cannot message yourself.')),
+                        );
+                        return;
+                      }
+                      try {
+                        final (convo, messages) =
+                            await ChatService.instance.openConversation(
+                          requestId: request.id,
+                          currentUserId: currentUserId,
+                          otherUserId: request.requesterId,
+                        );
+                        if (!mounted) return;
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ConversationScreen(
+                              conversation: convo,
+                              initialMessages: messages,
+                            ),
+                          ),
+                        );
+                      } catch (e) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to open chat: $e')),
+                        );
+                      }
                     },
                     icon: const Icon(Icons.message, color: Colors.blue),
                     tooltip: 'Message',

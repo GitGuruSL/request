@@ -129,11 +129,44 @@ class EnhancedUserService {
   /// Get user by ID
   Future<UserModel?> getUserById(String userId) async {
     try {
-      // For now, return current user if IDs match
-      // TODO: Implement REST API endpoint for getting user by ID
-      final currentUser = await getCurrentUserModel();
-      if (currentUser?.id == userId) {
-        return currentUser;
+      // Try cache first if it matches
+      if (_cachedUser?.id == userId) return _cachedUser;
+
+      // Fetch from REST API
+      final response = await ApiClient.instance.get('/api/users/$userId');
+      if (response.isSuccess && response.data != null) {
+        final userData = response.data['data'] ?? response.data;
+        return UserModel(
+          id: userData['id']?.toString() ?? userId,
+          name: userData['display_name'] ??
+              [userData['first_name'], userData['last_name']]
+                  .where((e) => (e ?? '').toString().isNotEmpty)
+                  .join(' '),
+          firstName: userData['first_name'],
+          lastName: userData['last_name'],
+          email: userData['email'],
+          phoneNumber: userData['phone'],
+          dateOfBirth: userData['date_of_birth'] != null
+              ? DateTime.tryParse(userData['date_of_birth'].toString())
+              : null,
+          gender: userData['gender'],
+          roles: const [UserRole.general],
+          activeRole: UserRole.general,
+          roleData: const {},
+          isEmailVerified: userData['email_verified'] ?? false,
+          isPhoneVerified: userData['phone_verified'] ?? false,
+          profileComplete: true,
+          countryCode: userData['country_code'],
+          countryName: null,
+          createdAt: userData['created_at'] != null
+              ? (DateTime.tryParse(userData['created_at'].toString()) ??
+                  DateTime.now())
+              : DateTime.now(),
+          updatedAt: userData['updated_at'] != null
+              ? (DateTime.tryParse(userData['updated_at'].toString()) ??
+                  DateTime.now())
+              : DateTime.now(),
+        );
       }
       return null;
     } catch (e) {
