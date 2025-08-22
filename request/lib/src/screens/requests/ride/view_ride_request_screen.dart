@@ -235,6 +235,17 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
     }
   }
 
+  double? _getCheapestFare() {
+    final fares = _responses
+        .map((r) => r.price)
+        .where((p) => p != null && p > 0)
+        .cast<double>()
+        .toList();
+    if (fares.isEmpty) return null;
+    fares.sort();
+    return fares.first;
+  }
+
   void _navigateToEditRideRequest() {
     if (_request == null) return;
 
@@ -1121,7 +1132,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   }
 
   Widget _buildResponsesSection() {
-    // For responders (drivers): Show minimal count only
+    // For responders (drivers)
     if (!_isOwner) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1139,22 +1150,39 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.blue[50],
+                  color: Colors.orange[50],
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '${_responses.length}',
+                  'Total ${_responses.length}',
                   style: TextStyle(
-                    color: Colors.blue[700],
+                    color: Colors.orange[700],
                     fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
+              const SizedBox(width: 8),
+              if (_getCheapestFare() != null)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'Cheapest ${CurrencyHelper.instance.getCurrencySymbol()}${_getCheapestFare()!.toStringAsFixed(0)}',
+                    style: TextStyle(
+                      color: Colors.red[700],
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: 16),
-          // Show simple message for non-owners
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -1195,7 +1223,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
       );
     }
 
-    // For requesters (owners): Show full responses with "View All" option
+    // For requesters (owners)
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1213,18 +1241,36 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.blue[50],
+                    color: Colors.orange[50],
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    '${_responses.length}',
+                    'Total ${_responses.length}',
                     style: TextStyle(
-                      color: Colors.blue[700],
+                      color: Colors.orange[700],
                       fontSize: 12,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
+                const SizedBox(width: 8),
+                if (_getCheapestFare() != null)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.red[50],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Cheapest ${CurrencyHelper.instance.getCurrencySymbol()}${_getCheapestFare()!.toStringAsFixed(0)}',
+                      style: TextStyle(
+                        color: Colors.red[700],
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
               ],
             ),
             if (_responses.isNotEmpty)
@@ -1270,7 +1316,6 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
             ),
           )
         else
-          // Show summary for requesters instead of full list
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -1308,6 +1353,133 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
             ),
           ),
       ],
+    );
+  }
+
+  void _showEditResponseSheet() {
+    final existing = _getUserResponse();
+    if (existing == null || _request == null) return;
+    final controller = TextEditingController(
+      text: (existing.price ?? 0).toStringAsFixed(0),
+    );
+    String? errorText;
+    final currencySymbol = CurrencyHelper.instance.getCurrencySymbol();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+            top: 16,
+            left: 16,
+            right: 16,
+          ),
+          child: StatefulBuilder(
+            builder: (context, setModalState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Edit your fare',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: controller,
+                    keyboardType: const TextInputType.numberWithOptions(
+                        signed: false, decimal: true),
+                    decoration: InputDecoration(
+                      hintText: 'Enter fare',
+                      prefixText: currencySymbol,
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      errorText: errorText,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                    ),
+                    onChanged: (_) {
+                      if (errorText != null) {
+                        setModalState(() => errorText = null);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final raw = controller.text.trim().replaceAll(',', '');
+                        final price = double.tryParse(raw);
+                        if (price == null || price <= 0) {
+                          setModalState(
+                              () => errorText = 'Enter a valid amount');
+                          return;
+                        }
+                        final currency = CurrencyHelper.instance.getCurrency();
+                        try {
+                          final updated = await rest.RestRequestService.instance
+                              .updateResponse(
+                            _request!.id,
+                            existing.id,
+                            {
+                              'price': price,
+                              if (currency.isNotEmpty) 'currency': currency,
+                            },
+                          );
+                          if (!mounted) return;
+                          if (updated != null) {
+                            Navigator.of(ctx).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Response updated')),
+                            );
+                            await _loadRequestData();
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Failed to update response')),
+                            );
+                          }
+                        } catch (e) {
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text('Failed to update response: $e')),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Save',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -1400,23 +1572,17 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
             style: TextStyle(color: Colors.grey[600], fontSize: 12),
           ),
         ] else ...[
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: ElevatedButton.icon(
-              onPressed: _showResponseDialog,
-              icon: const Icon(Icons.edit, color: Colors.white),
-              label: const Text(
-                'Edit Response',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 0,
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: _showEditResponseSheet,
+              icon: const Icon(Icons.edit, size: 18),
+              label: const Text('Edit Response'),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.blue[700],
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                minimumSize: const Size(0, 0),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
             ),
           ),
