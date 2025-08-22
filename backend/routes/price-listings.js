@@ -3,7 +3,6 @@ const database = require('../services/database');
 const auth = require('../services/auth');
 const multer = require('multer');
 const path = require('path');
-const { v4: uuidv4 } = require('uuid');
 
 const router = express.Router();
 

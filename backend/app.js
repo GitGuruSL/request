@@ -83,10 +83,10 @@ const countryProductsRoutes = require('./routes/country-products');
 const countryBrandsRoutes = require('./routes/country-brands');
 const countryCategoriesRoutes = require('./routes/country-categories');
 const countrySubcategoriesRoutes = require('./routes/country-subcategories');
+const countryVariableTypesRoutes = require('./routes/country-variable-types');
 
 // Import price comparison routes
-const priceListingsRoutes = require('./routes/price-listings');
-const countryVariableTypesRoutes = require('./routes/country-variable-types');
+const priceListingsRoutes = require('./routes/price-listings-test');
 
 console.log('🔧 About to register driver-verifications route');
 
