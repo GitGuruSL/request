@@ -6,6 +6,7 @@ class Conversation {
   final String? lastMessageText;
   final DateTime? lastMessageAt;
   final String? requestTitle;
+  final int? unreadCount;
 
   Conversation({
     required this.id,
@@ -15,6 +16,7 @@ class Conversation {
     this.lastMessageText,
     this.lastMessageAt,
     this.requestTitle,
+    this.unreadCount,
   });
 
   factory Conversation.fromJson(Map<String, dynamic> j) => Conversation(
@@ -27,6 +29,7 @@ class Conversation {
             ? DateTime.parse(j['last_message_at'] as String)
             : null,
         requestTitle: (j['requestTitle'] ?? j['request_title']) as String?,
+        unreadCount: (j['unread_count'] ?? j['unreadCount']) as int?,
       );
 }
 

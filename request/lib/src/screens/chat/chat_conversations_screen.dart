@@ -117,15 +117,16 @@ class _ChatConversationsScreenState extends State<ChatConversationsScreen> {
                             padding: const EdgeInsets.all(12),
                             child: Row(
                               children: [
-                                Container(
-                                  width: 42,
-                                  height: 42,
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue[50],
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Icon(Icons.person,
-                                      color: Colors.blue[600], size: 22),
+                                Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 21,
+                                      backgroundColor: Colors.grey[200],
+                                      child: const Icon(Icons.person,
+                                          color: Colors.grey, size: 22),
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
@@ -153,10 +154,38 @@ class _ChatConversationsScreenState extends State<ChatConversationsScreen> {
                                   ),
                                 ),
                                 const SizedBox(width: 8),
-                                Text(
-                                  _formatTime(c.lastMessageAt),
-                                  style: TextStyle(
-                                      color: Colors.grey[500], fontSize: 12),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      _formatTime(c.lastMessageAt),
+                                      style: TextStyle(
+                                        color: Colors.grey[500],
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    if ((c.unreadCount ?? 0) > 0)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.blue[600],
+                                          borderRadius:
+                                              BorderRadius.circular(999),
+                                        ),
+                                        child: Text(
+                                          (c.unreadCount ?? 0)
+                                              .toString()
+                                              .padLeft(2, '0'),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               ],
                             ),
