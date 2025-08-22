@@ -6,8 +6,10 @@ import '../../screens/requests/ride/create_ride_request_screen.dart';
 import '../../screens/requests/create_price_request_screen.dart';
 import '../../services/rest_support_services.dart'
     show CountryService, ModuleService, CountryModules; // Module gating
-import '../../services/module_management_service.dart';
 import '../../widgets/coming_soon_widget.dart';
+import '../../services/rest_notification_service.dart';
+import '../../screens/notification_screen.dart';
+import '../../screens/account/user_profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,11 +20,13 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   CountryModules? _modules;
   bool _loadingModules = false;
+  int _unreadNotifications = 0;
 
   @override
   void initState() {
     super.initState();
     _loadModules();
+    _loadUnreadCounts();
   }
 
   Future<void> _loadModules() async {
@@ -41,6 +45,17 @@ class _HomeScreenState extends State<HomeScreen> {
       // Silent; fallback logic in _moduleEnabled
     } finally {
       if (mounted) setState(() => _loadingModules = false);
+    }
+  }
+
+  Future<void> _loadUnreadCounts() async {
+    try {
+      final counts = await RestNotificationService.instance.unreadCounts();
+      if (!mounted) return;
+      setState(() => _unreadNotifications = counts.total);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _unreadNotifications = 0);
     }
   }
 
@@ -268,26 +283,78 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const SizedBox.shrink(),
         actions: [
-          IconButton(
-            tooltip: 'Notifications',
-            onPressed: () {},
-            icon: const Icon(Icons.notifications_none),
+          // Notifications with unread badge
+          Stack(
+            children: [
+              IconButton(
+                tooltip: 'Notifications',
+                icon: const Icon(Icons.notifications_none),
+                onPressed: () async {
+                  // Try named route first, fallback to direct screen
+                  try {
+                    await Navigator.pushNamed(context, '/notifications');
+                  } catch (_) {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationScreen(),
+                      ),
+                    );
+                  }
+                  await _loadUnreadCounts();
+                },
+              ),
+              if (_unreadNotifications > 0)
+                Positioned(
+                  right: 10,
+                  top: 10,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '$_unreadNotifications',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
+          // Profile avatar navigates to user profile
           Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: CircleAvatar(
-              radius: 18,
-              child: Text(
-                (user?.displayName?.isNotEmpty == true
-                        ? user!.displayName![0]
-                        : user?.email.isNotEmpty == true
-                            ? user!.email[0]
-                            : 'U')
-                    .toUpperCase(),
-                style: const TextStyle(fontWeight: FontWeight.bold),
+            padding: const EdgeInsets.only(right: 8),
+            child: IconButton(
+              splashRadius: 22,
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const UserProfileScreen(),
+                  ),
+                );
+                await _loadUnreadCounts();
+              },
+              icon: CircleAvatar(
+                radius: 16,
+                child: Text(
+                  (user?.displayName?.isNotEmpty == true
+                          ? user!.displayName![0]
+                          : user?.email.isNotEmpty == true
+                              ? user!.email[0]
+                              : 'U')
+                      .toUpperCase(),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
             ),
-          )
+          ),
         ],
       ),
       body: SafeArea(

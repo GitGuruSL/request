@@ -3,6 +3,8 @@ import '../models/enhanced_user_model.dart';
 import '../services/enhanced_user_service.dart';
 import '../services/rest_notification_service.dart';
 import 'modern_menu_screen.dart';
+import 'account/user_profile_screen.dart';
+import 'notification_screen.dart';
 
 class EnhancedMainDashboard extends StatefulWidget {
   const EnhancedMainDashboard({Key? key}) : super(key: key);
@@ -104,7 +106,16 @@ class _EnhancedMainDashboardState extends State<EnhancedMainDashboard> {
             IconButton(
               icon: const Icon(Icons.notifications_outlined),
               onPressed: () async {
-                await Navigator.pushNamed(context, '/notifications');
+                // Prefer named route; if missing, fallback to direct screen
+                try {
+                  await Navigator.pushNamed(context, '/notifications');
+                } catch (_) {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const NotificationScreen()),
+                  );
+                }
                 // refresh badge after returning
                 await _loadUserData();
               },
@@ -131,18 +142,19 @@ class _EnhancedMainDashboardState extends State<EnhancedMainDashboard> {
               ),
           ],
         ),
-        // Tap avatar to go directly to Menu/Profile
-        GestureDetector(
-          onTap: () async {
-            await Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ModernMenuScreen()),
-            );
-            await _loadUserData();
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: CircleAvatar(
+        // Tap avatar to go directly to User Profile page
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+          child: IconButton(
+            splashRadius: 20,
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const UserProfileScreen()),
+              );
+              await _loadUserData();
+            },
+            icon: CircleAvatar(
               radius: 16,
               backgroundColor: Colors.white,
               child: Text(
