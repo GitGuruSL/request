@@ -225,7 +225,8 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
   Widget _buildProductCard(dynamic product) {
     final name = product.name ?? 'Unknown Product';
     final brand = product.brand ?? '';
-    final listingCount = product.businessListingsCount ?? 0;
+    final listingCount =
+        product.listingCount ?? product.businessListingsCount ?? 0;
     final minPrice = product.minPrice;
     final maxPrice = product.maxPrice;
 

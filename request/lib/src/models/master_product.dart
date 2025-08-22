@@ -48,6 +48,15 @@ class MasterProduct {
   final DateTime updatedAt;
   final int businessListingsCount;
 
+  // Price comparison fields from API
+  final String? slug;
+  final String? baseUnit;
+  final String? brandName;
+  final int? listingCount;
+  final double? minPrice;
+  final double? maxPrice;
+  final double? avgPrice;
+
   MasterProduct({
     required this.id,
     required this.name,
@@ -61,6 +70,13 @@ class MasterProduct {
     required this.createdAt,
     required this.updatedAt,
     this.businessListingsCount = 0,
+    this.slug,
+    this.baseUnit,
+    this.brandName,
+    this.listingCount,
+    this.minPrice,
+    this.maxPrice,
+    this.avgPrice,
   });
 
   factory MasterProduct.fromFirestore(DocumentSnapshot doc) {
@@ -78,6 +94,14 @@ class MasterProduct {
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       businessListingsCount: data['businessListingsCount'] ?? 0,
+      // Price comparison fields (not available from Firestore)
+      slug: null,
+      baseUnit: null,
+      brandName: data['brand'],
+      listingCount: null,
+      minPrice: null,
+      maxPrice: null,
+      avgPrice: null,
     );
   }
 
@@ -98,6 +122,14 @@ class MasterProduct {
           DateTime.parse(json['updatedAt'] ?? DateTime.now().toIso8601String()),
       businessListingsCount:
           json['businessListingsCount'] ?? json['listingCount'] ?? 0,
+      // Price comparison fields
+      slug: json['slug'],
+      baseUnit: json['baseUnit'],
+      brandName: json['brandName'],
+      listingCount: json['listingCount'],
+      minPrice: json['minPrice']?.toDouble(),
+      maxPrice: json['maxPrice']?.toDouble(),
+      avgPrice: json['avgPrice']?.toDouble(),
     );
   }
 
