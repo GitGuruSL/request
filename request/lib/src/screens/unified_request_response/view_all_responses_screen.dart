@@ -123,6 +123,7 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
   }
 
   Widget _buildResponseItem(ResponseModel response, UserModel? responder) {
+    final anyAccepted = _responses.any((r) => r.isAccepted);
     // Fallbacks from additionalInfo (populated by REST layer)
     final addl = response.additionalInfo;
     final fallbackName = addl['responder_name']?.toString();
@@ -299,8 +300,10 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
                 const SizedBox(height: 8),
               ],
 
-              // Accept button (only for pending responses)
-              if (!response.isAccepted && response.rejectionReason == null) ...[
+              // Accept button hidden if any response is accepted for this request
+              if (!anyAccepted &&
+                  !response.isAccepted &&
+                  response.rejectionReason == null) ...[
                 const SizedBox(height: 8),
                 SizedBox(
                   width: double.infinity,

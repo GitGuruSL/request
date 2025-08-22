@@ -27,16 +27,21 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
   List<rest.RequestModel> _myRequests = [];
   // Removed Orders tab; only Requests and Responses are shown
   List<_ResponseSummary> _myResponses = [];
+  // New: Accepted and Completed request buckets for quick access
+  List<rest.RequestModel> _acceptedRequests = [];
+  List<rest.RequestModel> _completedRequests = [];
 
   // Loading states
   bool _loadingRequests = false;
   // Removed loading flag for Orders
   bool _loadingResponses = false;
+  bool _loadingAccepted = false;
+  bool _loadingCompleted = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _loadAll();
   }
 
@@ -82,6 +87,8 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
                 tabs: const [
                   Tab(text: 'Requests'),
                   Tab(text: 'Responses'),
+                  Tab(text: 'Accepted'),
+                  Tab(text: 'Completed'),
                 ],
               ),
             ),
@@ -93,6 +100,8 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
                 children: [
                   _buildRequestsTab(),
                   _buildResponsesTab(),
+                  _buildAcceptedTab(),
+                  _buildCompletedTab(),
                 ],
               ),
             ),
@@ -134,19 +143,53 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
     );
   }
 
+  Widget _buildAcceptedTab() {
+    return RefreshIndicator(
+      onRefresh: _loadAccepted,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _loadingAccepted ? 3 : _acceptedRequests.length,
+        itemBuilder: (context, index) {
+          if (_loadingAccepted) return _skeletonCard();
+          final r = _acceptedRequests[index];
+          return _requestCard(r,
+              statusLabel: 'Accepted', statusColor: Colors.blue);
+        },
+      ),
+    );
+  }
+
+  Widget _buildCompletedTab() {
+    return RefreshIndicator(
+      onRefresh: _loadCompleted,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _loadingCompleted ? 3 : _completedRequests.length,
+        itemBuilder: (context, index) {
+          if (_loadingCompleted) return _skeletonCard();
+          final r = _completedRequests[index];
+          return _requestCard(r,
+              statusLabel: 'Completed', statusColor: Colors.grey);
+        },
+      ),
+    );
+  }
+
   // Removed History tab
 
-  Widget _requestCard(rest.RequestModel r, {bool isOrder = false}) {
-    final statusColor = isOrder ? Colors.blue : Colors.green;
-    final statusText = isOrder ? 'Accepted' : 'Active';
+  Widget _requestCard(rest.RequestModel r,
+      {bool isOrder = false, String? statusLabel, Color? statusColor}) {
+    // Maintain backwards-compatibility but allow overrides for Accepted/Completed tabs
+    final color = statusColor ?? (isOrder ? Colors.blue : Colors.green);
+    final label = statusLabel ?? (isOrder ? 'Accepted' : 'Active');
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
         contentPadding: const EdgeInsets.all(16),
         leading: CircleAvatar(
-          backgroundColor: statusColor.withOpacity(0.1),
+          backgroundColor: color.withOpacity(0.1),
           child: Icon(isOrder ? Icons.shopping_bag : Icons.receipt_long,
-              color: statusColor),
+              color: color),
         ),
         title: Text(
           r.title,
@@ -164,11 +207,10 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.1),
+                color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(statusText,
-                  style: TextStyle(color: statusColor, fontSize: 11)),
+              child: Text(label, style: TextStyle(color: color, fontSize: 11)),
             ),
             const SizedBox(width: 6),
             PopupMenuButton<String>(
@@ -419,6 +461,8 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
     await Future.wait([
       _loadRequests(),
       _loadResponses(),
+      _loadAccepted(),
+      _loadCompleted(),
     ]);
   }
 
@@ -459,6 +503,34 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
       setState(() => _myResponses = []);
     } finally {
       if (mounted) setState(() => _loadingResponses = false);
+    }
+  }
+
+  Future<void> _loadAccepted() async {
+    setState(() => _loadingAccepted = true);
+    try {
+      final uid = AuthService.instance.currentUser?.uid;
+      final r =
+          await _rest.getRequests(userId: uid, hasAccepted: true, limit: 50);
+      setState(() => _acceptedRequests = r?.requests ?? []);
+    } catch (_) {
+      setState(() => _acceptedRequests = []);
+    } finally {
+      if (mounted) setState(() => _loadingAccepted = false);
+    }
+  }
+
+  Future<void> _loadCompleted() async {
+    setState(() => _loadingCompleted = true);
+    try {
+      final uid = AuthService.instance.currentUser?.uid;
+      final r =
+          await _rest.getRequests(userId: uid, status: 'completed', limit: 50);
+      setState(() => _completedRequests = r?.requests ?? []);
+    } catch (_) {
+      setState(() => _completedRequests = []);
+    } finally {
+      if (mounted) setState(() => _loadingCompleted = false);
     }
   }
 

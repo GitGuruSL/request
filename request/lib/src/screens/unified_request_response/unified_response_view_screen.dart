@@ -34,6 +34,7 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
   String? _responderPhoneFallback;
   bool _isLoading = true;
   bool _isProcessing = false;
+  bool _anyAcceptedForRequest = false;
 
   @override
   void initState() {
@@ -44,13 +45,27 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
   Future<void> _loadData() async {
     try {
       final currentUser = await _userService.getCurrentUserModel();
-      final responder =
-          await _userService.getUserById(widget.response.responderId);
+      // Avoid 403s on protected profiles; rely on fallbacks from additionalInfo
+      UserModel? responder;
+      try {
+        responder = await _userService.getUserById(widget.response.responderId);
+      } catch (_) {
+        responder = null;
+      }
       if (responder == null) {
         final info = widget.response.additionalInfo;
         _responderNameFallback = info['responder_name']?.toString();
         _responderEmailFallback = info['responder_email']?.toString();
         _responderPhoneFallback = info['responder_phone']?.toString();
+      }
+
+      // Fetch responses to determine if any has been accepted
+      try {
+        final page = await EnhancedRequestService()
+            .getResponsesForRequest(widget.request.id);
+        _anyAcceptedForRequest = page.any((r) => r.isAccepted);
+      } catch (_) {
+        _anyAcceptedForRequest = widget.response.isAccepted;
       }
 
       setState(() {
@@ -276,7 +291,8 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (isRequester && !widget.response.isAccepted) {
+    // Hide actions if any response is already accepted for this request
+    if (isRequester && !widget.response.isAccepted && !_anyAcceptedForRequest) {
       // Requester can accept or reject pending responses
       return Row(
         children: [
