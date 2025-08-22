@@ -723,7 +723,8 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
           ),
         ),
         child: _isLoading
-            ? const CircularProgressIndicator(color: Colors.black) // Changed to black for contrast
+            ? const CircularProgressIndicator(
+                color: Colors.black) // Changed to black for contrast
             : const Text(
                 'Update Ride Request',
                 style: TextStyle(

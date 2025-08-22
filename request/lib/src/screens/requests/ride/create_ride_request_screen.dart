@@ -869,14 +869,15 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
       child: ElevatedButton(
         onPressed: _isLoading ? null : _submitRequest,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.black,
-          foregroundColor: Colors.white,
+          backgroundColor: const Color(0xFFFFC107), // Yellow for ride requests
+          foregroundColor: Colors.black, // Better contrast on yellow
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
         ),
         child: _isLoading
-            ? const CircularProgressIndicator(color: Colors.white)
+            ? const CircularProgressIndicator(
+                color: Colors.black) // Changed to black for contrast
             : const Text(
                 'Request Ride',
                 style: TextStyle(

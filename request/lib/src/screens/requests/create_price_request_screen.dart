@@ -277,7 +277,8 @@ class _CreatePriceRequestScreenState extends State<CreatePriceRequestScreen> {
                   onPressed: _isLoading ? null : _submitRequest,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: Colors.teal[600],
+                    backgroundColor:
+                        const Color(0xFF9C27B0), // Purple for price requests
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),

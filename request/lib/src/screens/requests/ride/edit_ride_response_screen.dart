@@ -12,7 +12,7 @@ import '../../../utils/currency_helper.dart';
 class EditRideResponseScreen extends StatefulWidget {
   final ResponseModel response;
   final RequestModel? originalRequest;
-  
+
   const EditRideResponseScreen({
     super.key,
     required this.response,
@@ -35,7 +35,7 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
   final _locationController = TextEditingController();
   final _vehicleDetailsController = TextEditingController();
   final _drivingExperienceController = TextEditingController();
-  
+
   String _vehicleType = '';
   bool _smokingAllowed = false;
   bool _petsAllowed = true;
@@ -71,20 +71,22 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
     _priceController.text = widget.response.price?.toString() ?? '';
     _locationController.text = ''; // Response doesn't have location field
     _imageUrls = List<String>.from(widget.response.images);
-    
+
     // Use additionalInfo instead of metadata
     final additionalInfo = widget.response.additionalInfo;
     _vehicleDetailsController.text = additionalInfo['vehicleDetails'] ?? '';
-    _drivingExperienceController.text = additionalInfo['drivingExperience'] ?? '';
-    _vehicleType = additionalInfo['vehicleType'] ?? (_vehicleTypes.isNotEmpty ? _vehicleTypes.first.name : '');
+    _drivingExperienceController.text =
+        additionalInfo['drivingExperience'] ?? '';
+    _vehicleType = additionalInfo['vehicleType'] ??
+        (_vehicleTypes.isNotEmpty ? _vehicleTypes.first.name : '');
     _availableSeats = additionalInfo['availableSeats'] ?? 3;
     _smokingAllowed = additionalInfo['smokingAllowed'] ?? false;
     _petsAllowed = additionalInfo['petsAllowed'] ?? true;
-      
+
     if (additionalInfo['departureTime'] != null) {
-      _departureTime = additionalInfo['departureTime'] is DateTime 
-        ? additionalInfo['departureTime']
-        : DateTime.tryParse(additionalInfo['departureTime'].toString());
+      _departureTime = additionalInfo['departureTime'] is DateTime
+          ? additionalInfo['departureTime']
+          : DateTime.tryParse(additionalInfo['departureTime'].toString());
     }
   }
 
@@ -101,19 +103,20 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
   Future<void> _selectDepartureTime() async {
     final DateTime? pickedDate = await showDatePicker(
       context: context,
-      initialDate: _departureTime ?? DateTime.now().add(const Duration(hours: 1)),
+      initialDate:
+          _departureTime ?? DateTime.now().add(const Duration(hours: 1)),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 30)),
     );
-    
+
     if (pickedDate != null) {
       final TimeOfDay? pickedTime = await showTimePicker(
         context: context,
-        initialTime: _departureTime != null 
-          ? TimeOfDay.fromDateTime(_departureTime!)
-          : TimeOfDay.now(),
+        initialTime: _departureTime != null
+            ? TimeOfDay.fromDateTime(_departureTime!)
+            : TimeOfDay.now(),
       );
-      
+
       if (pickedTime != null) {
         setState(() {
           _departureTime = DateTime(
@@ -214,13 +217,13 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
         actions: [
           TextButton(
             onPressed: _isLoading ? null : _updateResponse,
-            child: _isLoading 
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Save', style: TextStyle(fontSize: 16)),
+            child: _isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Save', style: TextStyle(fontSize: 16)),
           ),
         ],
       ),
@@ -249,8 +252,8 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(widget.originalRequest!.title, 
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                    Text(widget.originalRequest!.title,
+                        style: const TextStyle(fontWeight: FontWeight.w600)),
                     if (widget.originalRequest!.description != null) ...[
                       const SizedBox(height: 4),
                       Text(widget.originalRequest!.description!),
@@ -260,10 +263,8 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
               ),
               const SizedBox(height: 24),
             ],
-
             _buildSectionTitle('Your Ride Offer'),
             const SizedBox(height: 12),
-            
             TextFormField(
               controller: _descriptionController,
               decoration: InputDecoration(
@@ -282,7 +283,6 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
               },
             ),
             const SizedBox(height: 16),
-
             TextFormField(
               controller: _drivingExperienceController,
               decoration: InputDecoration(
@@ -295,7 +295,6 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
               maxLines: 2,
             ),
             const SizedBox(height: 16),
-
             Row(
               children: [
                 Expanded(
@@ -335,7 +334,8 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
                     items: _vehicleTypes.map((vehicle) {
                       return DropdownMenuItem(
                         value: vehicle.name,
-                        child: Text('${vehicle.name} (${vehicle.passengerCapacity} passengers)'),
+                        child: Text(
+                            '${vehicle.name} (${vehicle.passengerCapacity} passengers)'),
                       );
                     }).toList(),
                     onChanged: (value) {
@@ -348,7 +348,6 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
               ],
             ),
             const SizedBox(height: 16),
-
             TextFormField(
               controller: _vehicleDetailsController,
               decoration: InputDecoration(
@@ -367,25 +366,22 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
               },
             ),
             const SizedBox(height: 24),
-
             _buildSectionTitle('Trip Details'),
             const SizedBox(height: 12),
-            
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: ListTile(
-                title: Text(_departureTime == null 
-                  ? 'Select Departure Time' 
-                  : 'Departure: ${_departureTime!.day}/${_departureTime!.month} at ${_departureTime!.hour}:${_departureTime!.minute.toString().padLeft(2, '0')}'),
+                title: Text(_departureTime == null
+                    ? 'Select Departure Time'
+                    : 'Departure: ${_departureTime!.day}/${_departureTime!.month} at ${_departureTime!.hour}:${_departureTime!.minute.toString().padLeft(2, '0')}'),
                 trailing: const Icon(Icons.access_time),
                 onTap: _selectDepartureTime,
               ),
             ),
             const SizedBox(height: 16),
-
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -414,10 +410,8 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
               ),
             ),
             const SizedBox(height: 24),
-
             _buildSectionTitle('Ride Preferences'),
             const SizedBox(height: 12),
-            
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -454,7 +448,6 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
               ),
             ),
             const SizedBox(height: 24),
-
             _buildSectionTitle('Vehicle & Driver Images'),
             const SizedBox(height: 12),
             ImageUploadWidget(
@@ -469,7 +462,6 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
               },
             ),
             const SizedBox(height: 24),
-
             _buildSectionTitle('Your Location'),
             const SizedBox(height: 12),
             AccurateLocationPickerWidget(
@@ -482,24 +474,26 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
               },
             ),
             const SizedBox(height: 32),
-
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _updateResponse,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Colors.orange[600],
-                  foregroundColor: Colors.white,
+                  backgroundColor:
+                      const Color(0xFFFFC107), // Yellow for ride requests
+                  foregroundColor: Colors.black, // Better contrast on yellow
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
                 child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
+                    ? const CircularProgressIndicator(
+                        color: Colors.black) // Changed to black for contrast
                     : const Text(
                         'Update Ride Offer',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
                       ),
               ),
             ),
