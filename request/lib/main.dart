@@ -12,6 +12,8 @@ import 'src/home/screens/browse_requests_screen.dart';
 import 'src/screens/browse_screen.dart';
 import 'src/screens/pricing/price_comparison_screen.dart';
 import 'src/screens/pricing/business_product_dashboard.dart';
+import 'src/screens/profile/business_profile_edit_screen.dart';
+import 'src/screens/settings/payment_methods_settings_screen.dart';
 import 'src/screens/requests/ride/create_ride_request_screen.dart';
 import 'src/screens/unified_request_response/unified_response_edit_screen.dart';
 import 'src/screens/driver_registration_screen.dart'; // Driver registration (was driver_verification)
@@ -163,6 +165,14 @@ class MyApp extends StatelessWidget {
           case '/business-pricing':
             return MaterialPageRoute(
               builder: (context) => const BusinessProductDashboard(),
+            );
+          case '/business-profile':
+            return MaterialPageRoute(
+              builder: (context) => const BusinessProfileEditScreen(),
+            );
+          case '/settings/payment-methods':
+            return MaterialPageRoute(
+              builder: (context) => const PaymentMethodsSettingsScreen(),
             );
           case '/create-ride-request':
             return MaterialPageRoute(

@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
-import 'src/utils/firebase_shim.dart'; // Added by migration script
-// REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../services/payment_methods_service.dart';
-import '../../services/country_service.dart';
-import '../../theme/app_theme.dart';
+import '../services/payment_methods_service.dart';
+import '../services/country_service.dart';
+import '../theme/app_theme.dart';
 
 class PaymentMethodSelector extends StatefulWidget {
   final List<String> selectedPaymentMethods;
   final Function(List<String>) onPaymentMethodsChanged;
   final bool multiSelect;
   final String? title;
-  
+
   const PaymentMethodSelector({
     Key? key,
     required this.selectedPaymentMethods,
@@ -29,8 +27,15 @@ class _PaymentMethodSelectorState extends State<PaymentMethodSelector> {
   bool _isLoading = true;
   String _searchQuery = '';
   String _selectedCategory = 'all';
-  
-  final List<String> _categories = ['all', 'digital', 'bank', 'card', 'cash', 'crypto'];
+
+  final List<String> _categories = [
+    'all',
+    'digital',
+    'bank',
+    'card',
+    'cash',
+    'crypto'
+  ];
 
   @override
   void initState() {
@@ -40,11 +45,12 @@ class _PaymentMethodSelectorState extends State<PaymentMethodSelector> {
 
   Future<void> _loadPaymentMethods() async {
     setState(() => _isLoading = true);
-    
+
     try {
-      final countryCode = await CountryService.getSelectedCountryCode() ?? 'US';
-      final methods = await PaymentMethodsService.getPaymentMethodsForCountry(countryCode);
-      
+      final countryCode = CountryService.instance.getCurrentCountryCode();
+      final methods =
+          await PaymentMethodsService.getPaymentMethodsForCountry(countryCode);
+
       setState(() {
         _paymentMethods = methods;
         _filteredMethods = methods;
@@ -61,11 +67,13 @@ class _PaymentMethodSelectorState extends State<PaymentMethodSelector> {
       _filteredMethods = _paymentMethods.where((method) {
         final matchesSearch = _searchQuery.isEmpty ||
             method.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-            method.description.toLowerCase().contains(_searchQuery.toLowerCase());
-        
-        final matchesCategory = _selectedCategory == 'all' ||
-            method.category == _selectedCategory;
-        
+            method.description
+                .toLowerCase()
+                .contains(_searchQuery.toLowerCase());
+
+        final matchesCategory =
+            _selectedCategory == 'all' || method.category == _selectedCategory;
+
         return matchesSearch && matchesCategory;
       }).toList();
     });
@@ -73,7 +81,7 @@ class _PaymentMethodSelectorState extends State<PaymentMethodSelector> {
 
   void _togglePaymentMethod(String methodId) {
     List<String> newSelection = List.from(widget.selectedPaymentMethods);
-    
+
     if (widget.multiSelect) {
       if (newSelection.contains(methodId)) {
         newSelection.remove(methodId);
@@ -83,7 +91,7 @@ class _PaymentMethodSelectorState extends State<PaymentMethodSelector> {
     } else {
       newSelection = [methodId];
     }
-    
+
     widget.onPaymentMethodsChanged(newSelection);
   }
 
@@ -100,7 +108,7 @@ class _PaymentMethodSelectorState extends State<PaymentMethodSelector> {
               style: Theme.of(context).textTheme.headlineSmall,
             ),
           ),
-        
+
         // Search and filter
         Card(
           child: Padding(
@@ -127,7 +135,9 @@ class _PaymentMethodSelectorState extends State<PaymentMethodSelector> {
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: FilterChip(
-                          label: Text(category == 'all' ? 'All' : category.toUpperCase()),
+                          label: Text(category == 'all'
+                              ? 'All'
+                              : category.toUpperCase()),
                           selected: isSelected,
                           onSelected: (selected) {
                             setState(() => _selectedCategory = category);
@@ -142,9 +152,9 @@ class _PaymentMethodSelectorState extends State<PaymentMethodSelector> {
             ),
           ),
         ),
-        
+
         const SizedBox(height: 16),
-        
+
         // Payment methods grid
         if (_isLoading)
           const Center(child: CircularProgressIndicator())
@@ -163,15 +173,15 @@ class _PaymentMethodSelectorState extends State<PaymentMethodSelector> {
                   Text(
                     'No payment methods found',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.grey[600],
-                    ),
+                          color: Colors.grey[600],
+                        ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Try adjusting your search or category filter',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[500],
-                    ),
+                          color: Colors.grey[500],
+                        ),
                   ),
                 ],
               ),
@@ -190,17 +200,22 @@ class _PaymentMethodSelectorState extends State<PaymentMethodSelector> {
             itemCount: _filteredMethods.length,
             itemBuilder: (context, index) {
               final method = _filteredMethods[index];
-              final isSelected = widget.selectedPaymentMethods.contains(method.id);
-              
+              final isSelected =
+                  widget.selectedPaymentMethods.contains(method.id);
+
               return GestureDetector(
                 onTap: () => _togglePaymentMethod(method.id),
                 child: Card(
                   elevation: isSelected ? 4 : 1,
-                  color: isSelected ? AppTheme.primaryLight.withOpacity(0.1) : null,
+                  color: isSelected
+                      ? AppTheme.primaryLight.withOpacity(0.1)
+                      : null,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                     side: BorderSide(
-                      color: isSelected ? AppTheme.primaryColor : Colors.grey.shade300,
+                      color: isSelected
+                          ? AppTheme.primaryColor
+                          : Colors.grey.shade300,
                       width: isSelected ? 2 : 1,
                     ),
                   ),
@@ -219,12 +234,14 @@ class _PaymentMethodSelectorState extends State<PaymentMethodSelector> {
                                         method.imageUrl,
                                         height: 40,
                                         fit: BoxFit.contain,
-                                        errorBuilder: (context, error, stackTrace) {
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
                                           return Container(
                                             height: 40,
                                             decoration: BoxDecoration(
                                               color: Colors.grey.shade200,
-                                              borderRadius: BorderRadius.circular(8),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
                                             ),
                                             child: const Icon(
                                               Icons.payment,
@@ -257,34 +274,39 @@ class _PaymentMethodSelectorState extends State<PaymentMethodSelector> {
                         const Spacer(),
                         Text(
                           method.name,
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         if (method.fees.isNotEmpty)
                           Text(
                             'Fees: ${method.fees}',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[600],
-                            ),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Colors.grey[600],
+                                    ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: _getCategoryColor(method.category).withOpacity(0.2),
+                            color: _getCategoryColor(method.category)
+                                .withOpacity(0.2),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
                             method.category.toUpperCase(),
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: _getCategoryColor(method.category),
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: _getCategoryColor(method.category),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                           ),
                         ),
                       ],
@@ -294,15 +316,15 @@ class _PaymentMethodSelectorState extends State<PaymentMethodSelector> {
               );
             },
           ),
-        
+
         if (widget.selectedPaymentMethods.isNotEmpty) ...[
           const SizedBox(height: 16),
           Text(
             'Selected: ${widget.selectedPaymentMethods.length} payment method${widget.selectedPaymentMethods.length != 1 ? 's' : ''}',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppTheme.primaryColor,
-              fontWeight: FontWeight.bold,
-            ),
+                  color: AppTheme.primaryColor,
+                  fontWeight: FontWeight.bold,
+                ),
           ),
         ],
       ],

@@ -957,30 +957,17 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (imageUrl != null && imageUrl.isNotEmpty) ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Image.network(
-                imageUrl,
-                width: 18,
-                height: 18,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stack) => Icon(
-                  Icons.payment,
-                  size: 16,
-                  color: AppTheme.primaryColor,
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-          ] else ...[
-            Icon(
-              Icons.payment,
-              size: 16,
-              color: AppTheme.primaryColor,
-            ),
-            const SizedBox(width: 6),
-          ],
+          CircleAvatar(
+            radius: 10,
+            backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+            backgroundImage: (imageUrl != null && imageUrl.isNotEmpty)
+                ? NetworkImage(imageUrl)
+                : null,
+            child: (imageUrl == null || imageUrl.isEmpty)
+                ? Icon(Icons.payment, size: 12, color: AppTheme.primaryColor)
+                : null,
+          ),
+          const SizedBox(width: 6),
           Text(
             name,
             style: TextStyle(

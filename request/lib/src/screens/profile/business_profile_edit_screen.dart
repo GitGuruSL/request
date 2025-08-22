@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'src/utils/firebase_shim.dart'; // Added by migration script
-// REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
-// REMOVED_FB_IMPORT: import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/auth_service.dart';
 import '../../services/payment_methods_service.dart';
 import '../../widgets/payment_method_selector.dart';
 import '../../theme/app_theme.dart';
+import '../../services/business_verification_service.dart';
 
 class BusinessProfileEditScreen extends StatefulWidget {
   const BusinessProfileEditScreen({Key? key}) : super(key: key);
@@ -25,7 +23,6 @@ class _BusinessProfileEditScreenState extends State<BusinessProfileEditScreen> {
   final _websiteController = TextEditingController();
 
   List<String> _selectedPaymentMethods = [];
-  List<PaymentMethod> _availablePaymentMethods = [];
   bool _isLoading = false;
   bool _isInitialLoading = true;
 
@@ -42,6 +39,40 @@ class _BusinessProfileEditScreenState extends State<BusinessProfileEditScreen> {
     'entertainment',
     'other'
   ];
+
+  String _normalizeCategory(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return 'general';
+    final v = raw.trim().toLowerCase();
+    // Direct match
+    if (_businessCategories.contains(v)) return v;
+    // Synonyms mapping
+    const Map<String, String> synonyms = {
+      'food': 'restaurant',
+      'cafe': 'restaurant',
+      'coffee': 'restaurant',
+      'shop': 'retail',
+      'store': 'retail',
+      'market': 'retail',
+      'service': 'services',
+      'tech': 'technology',
+      'it': 'technology',
+      'auto': 'automotive',
+      'car': 'automotive',
+      'vehicle': 'automotive',
+      'health': 'healthcare',
+      'medical': 'healthcare',
+      'hospital': 'healthcare',
+      'education': 'education',
+      'school': 'education',
+      'training': 'education',
+      'entertain': 'entertainment',
+      'media': 'entertainment',
+    };
+    for (final entry in synonyms.entries) {
+      if (v.contains(entry.key)) return entry.value;
+    }
+    return 'other';
+  }
 
   @override
   void initState() {
@@ -66,6 +97,17 @@ class _BusinessProfileEditScreenState extends State<BusinessProfileEditScreen> {
     try {
       final user = AuthService.instance.currentUser;
       if (user == null) return;
+      // Prefill from business_verifications
+      final bv = await BusinessVerificationService.getForUser(user.uid);
+      if (bv != null) {
+        _businessNameController.text = bv.businessName;
+        _descriptionController.text = bv.businessDescription;
+        _addressController.text = bv.businessAddress;
+        _phoneController.text = bv.businessPhone;
+        _emailController.text = bv.businessEmail;
+        // Normalize category to supported set
+        _businessCategory = _normalizeCategory(bv.businessCategory);
+      }
       // Load selected payment methods mapping for this business
       final selected =
           await PaymentMethodsService.getSelectedForBusiness(user.uid);
@@ -93,14 +135,14 @@ class _BusinessProfileEditScreenState extends State<BusinessProfileEditScreen> {
       await PaymentMethodsService.setSelectedForBusiness(
           user.uid, _selectedPaymentMethods);
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Business profile updated successfully!'),
+          content: Text('Saved'),
           backgroundColor: Colors.green,
+          duration: Duration(milliseconds: 1200),
         ),
       );
-
-      Navigator.pop(context, true);
     } catch (e) {
       print('Error saving business profile: $e');
       ScaffoldMessenger.of(context).showSnackBar(

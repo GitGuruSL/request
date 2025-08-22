@@ -9,7 +9,6 @@ import 'help_support_screen.dart';
 import 'about_request_screen.dart';
 import 'notification_screen.dart';
 import 'driver_subscription_screen.dart';
-import 'api_test_screen.dart';
 import 'account/user_profile_screen.dart';
 
 class ModernMenuScreen extends StatefulWidget {
@@ -153,36 +152,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
     );
   }
 
-  Widget _buildUserProfile() {
-    return Center(
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 25,
-            backgroundColor: Colors.blue.withOpacity(0.3),
-            child: Icon(Icons.person, color: Colors.blue, size: 28),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _currentUser?['name'] ??
-                _currentUser?['displayName'] ??
-                'Fathima Nusra',
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          Text(
-            'View your profile',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // Note: User profile header is rendered via _buildUserProfileCard()
 
   Widget _buildUserProfileCard() {
     return Container(
@@ -476,14 +446,11 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
       child: Column(
         children: [
           _buildActionTile(
-            icon: Icons.developer_mode,
-            title: 'API Test Screen',
-            subtitle: 'Test REST API connectivity',
-            color: Colors.purple,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const ApiTestScreen()),
-            ),
+            icon: Icons.workspace_premium_outlined,
+            title: 'Membership',
+            subtitle: 'Manage your membership',
+            color: Colors.blueGrey,
+            onTap: () => Navigator.pushNamed(context, '/membership'),
           ),
           _buildActionTile(
             icon: Icons.help_outline,
@@ -495,6 +462,14 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
               MaterialPageRoute(
                   builder: (context) => const HelpSupportScreen()),
             ),
+          ),
+          _buildActionTile(
+            icon: Icons.payment_outlined,
+            title: 'Payment',
+            subtitle: 'Accepted payment methods',
+            color: Colors.indigo,
+            onTap: () =>
+                Navigator.pushNamed(context, '/settings/payment-methods'),
           ),
           _buildActionTile(
             icon: Icons.settings,
@@ -509,7 +484,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
           ),
           _buildActionTile(
             icon: Icons.info_outline,
-            title: 'About Request',
+            title: 'About Us',
             subtitle: 'Learn more about the app',
             color: Colors.grey,
             onTap: () => Navigator.push(
