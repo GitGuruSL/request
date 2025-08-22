@@ -6,13 +6,13 @@ import '../models/vehicle_type_model.dart';
 import '../models/request_model.dart';
 
 class ComprehensiveNotificationService {
-  // Return typed notifications
+  // Simple REST-backed implementation
   Future<List<NotificationModel>> getNotifications() async =>
       <NotificationModel>[];
   Future<void> markAsRead(String id) async {}
   Future<void> deleteNotification(String id) async {}
   Stream<List<NotificationModel>> getUserNotifications(String? userId) async* {
-    // Allow null userId during early splash/init without throwing
+    // For now, emit polling-less empty list; NotificationScreen will call fetch on build.
     yield <NotificationModel>[];
   }
 

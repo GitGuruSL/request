@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:request_marketplace/src/services/placeholder_services.dart';
+import '../services/rest_notification_service.dart';
 import '../models/notification_model.dart';
 // import '../services/comprehensive_notification_service.dart'; // Replaced with placeholder
 // import '../services/enhanced_user_service.dart'; // Replaced with placeholder
-import '../theme/app_theme.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -15,6 +15,8 @@ class NotificationScreen extends StatefulWidget {
 class _NotificationScreenState extends State<NotificationScreen> {
   final ComprehensiveNotificationService _notificationService =
       ComprehensiveNotificationService();
+  final RestNotificationService _restNotifications =
+      RestNotificationService.instance;
   final EnhancedUserService _userService = EnhancedUserService();
 
   @override
@@ -45,7 +47,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
             icon: const Icon(Icons.mark_email_read),
             tooltip: 'Mark all as read',
             onPressed: () async {
-              await _notificationService.markAllAsRead(userId);
+              await _restNotifications.markAllRead();
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -58,8 +60,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
           ),
         ],
       ),
-      body: StreamBuilder<List<NotificationModel>>(
-        stream: _notificationService.getUserNotifications(userId),
+      body: FutureBuilder<List<NotificationModel>>(
+        future: _restNotifications.fetchMyNotifications(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -73,18 +75,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   Icon(
                     Icons.error_outline,
                     size: 64,
-                    color: Colors.red[400],
+                    color: Colors.red[300],
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Error loading notifications',
-                    style: theme.textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    snapshot.error.toString(),
-                    style: theme.textTheme.bodyMedium,
+                    'Error: ${snapshot.error}',
                     textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 16),
                   ),
                 ],
               ),

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 // database.js exports a singleton instance already
 const db = require('../services/database');
+const notify = require('../services/notification-helper');
 
 async function ensureSchema() {
   // Enable pgcrypto for gen_random_uuid (ignore error if not permitted)
@@ -123,6 +124,20 @@ router.post('/messages', async (req, res) => {
     if (!convo) return res.status(404).json({ success: false, error: 'Conversation not found' });
     const msg = await db.queryOne(`INSERT INTO messages (conversation_id, sender_id, content) VALUES ($1,$2,$3) RETURNING *`, [conversationId, senderId, content]);
     await db.query(`UPDATE conversations SET last_message_text=$1, last_message_at=NOW() WHERE id=$2`, [content.substring(0, 500), conversationId]);
+      // notify the other participant (if known)
+      try {
+        const otherId = (convo.participant_a === senderId) ? convo.participant_b : convo.participant_a;
+        if (otherId) {
+          await notify.createNotification({
+            recipientId: otherId,
+            senderId,
+            type: 'newMessage',
+            title: 'New message',
+            message: content.substring(0, 120),
+            data: { conversationId, requestId: convo.request_id }
+          });
+        }
+      } catch (e) { console.warn('notify newMessage failed', e?.message || e); }
     res.json({ success: true, message: msg });
   } catch (e) {
     console.error('Chat send error', e);

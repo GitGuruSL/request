@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router({ mergeParams: true });
 const db = require('../services/database');
 const auth = require('../services/auth');
+const notify = require('../services/notification-helper');
 
 // Dev-friendly optional auth (copied pattern from master-products)
 function optionalAuth(handler){
@@ -140,7 +141,18 @@ router.post('/', optionalAuth(async (req, res) => {
     `, [requestId, userId, message.trim(), price ?? null, currency || request.currency, metadata || null, finalImages, location_address || null, location_latitude || null, location_longitude || null, country_code || request.country_code || null]);
 
     console.log('[responses][create] inserted', { id: insert.id, requestId });
-  res.status(201).json({ success: true, message: 'Response created', data: insert });
+    // Notify request owner about new response
+    try {
+      await notify.createNotification({
+        recipientId: request.user_id,
+        senderId: userId,
+        type: 'newResponse',
+        title: 'New response to your request',
+        message: (message || '').slice(0, 120),
+        data: { requestId, responseId: insert.id }
+      });
+    } catch (e) { console.warn('notify newResponse failed', e?.message || e); }
+    res.status(201).json({ success: true, message: 'Response created', data: insert });
   } catch (error) {
     if (error.code === '23505') { // unique violation
       return res.status(400).json({ success: false, message: 'You have already responded to this request' });

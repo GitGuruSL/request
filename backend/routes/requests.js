@@ -3,6 +3,7 @@ const router = express.Router();
 const database = require('../services/database');
 const auth = require('../services/auth');
 const responsesRouter = require('./responses');
+const notify = require('../services/notification-helper');
 
 // Get requests with optional filtering
 router.get('/', async (req, res) => {
@@ -623,6 +624,16 @@ router.put('/:id/accept-response', auth.authMiddleware(), async (req, res) => {
     if (!resp) return res.status(404).json({ success: false, message: 'Response not found for this request' });
   // Auto-close if currently active
   const updated = await database.queryOne("UPDATE requests SET accepted_response_id=$1, status=CASE WHEN status='active' THEN 'closed' ELSE status END, updated_at=NOW() WHERE id=$2 RETURNING *", [response_id, requestId]);
+    try {
+      await notify.createNotification({
+        recipientId: resp.user_id,
+        senderId: userId,
+        type: 'responseAccepted',
+        title: 'Your response was accepted',
+        message: 'A requester accepted your response',
+        data: { requestId, responseId: response_id }
+      });
+    } catch (e) { console.warn('notify responseAccepted failed', e?.message || e); }
     return res.json({ success: true, message: 'Response accepted', data: updated });
   } catch (error) {
     console.error('Error accepting response:', error);
