@@ -504,14 +504,24 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
   }
 
   void _startConversation() async {
-    if (_responder == null) return;
-
     try {
+      // Fallback to response.responderId if user lookup failed
+      final responderId = _responder?.id ?? widget.response.responderId;
+      if (responderId.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Unable to start chat: missing responder')),
+          );
+        }
+        return;
+      }
+
       final conversation = await MessagingService().getOrCreateConversation(
         requestId: widget.request.id,
         requestTitle: widget.request.title,
         requesterId: widget.request.requesterId,
-        responderId: _responder!.id,
+        responderId: responderId,
       );
 
       if (mounted) {
