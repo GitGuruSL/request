@@ -88,19 +88,72 @@ async function autoActivateCountryData(countryCode, countryName, adminUserId, ad
   try {
     // Define the collections and their table mappings
     const collections = [
-      { name: 'variable_types', activationTable: 'country_variable_types', nameField: 'name' },
-      { name: 'categories', activationTable: 'country_categories', nameField: 'category' },
-      { name: 'subcategories', activationTable: 'country_subcategories', nameField: 'subcategory' },
-      { name: 'brands', activationTable: 'country_brands', nameField: 'name' },
-      { name: 'products', activationTable: 'country_products', nameField: 'name' },
-      { name: 'vehicle_types', activationTable: 'country_vehicle_types', nameField: 'name' }
+      { 
+        name: 'variables', 
+        activationTable: 'country_variable_types', 
+        nameField: 'key', 
+        idField: 'variable_type_id', 
+        nameColumn: 'variable_type_name',
+        hasCountryName: true,
+        hasItemName: true
+      },
+      { 
+        name: 'categories', 
+        activationTable: 'country_categories', 
+        nameField: 'name', 
+        idField: 'category_id', 
+        nameColumn: 'category_name',
+        hasCountryName: true,
+        hasItemName: true
+      },
+      { 
+        name: 'sub_categories', 
+        activationTable: 'country_subcategories', 
+        nameField: 'name', 
+        idField: 'subcategory_id', 
+        nameColumn: 'subcategory_name',
+        hasCountryName: false,
+        hasItemName: false
+      },
+      { 
+        name: 'brands', 
+        activationTable: 'country_brands', 
+        nameField: 'name', 
+        idField: 'brand_id', 
+        nameColumn: 'brand_name',
+        hasCountryName: false,
+        hasItemName: false
+      },
+      { 
+        name: 'master_products', 
+        activationTable: 'country_products', 
+        nameField: 'name', 
+        idField: 'product_id', 
+        nameColumn: 'product_name',
+        hasCountryName: true,
+        hasItemName: true
+      },
+      { 
+        name: 'vehicle_types', 
+        activationTable: 'country_vehicle_types', 
+        nameField: 'name', 
+        idField: 'vehicle_type_id', 
+        nameColumn: 'vehicle_type_name',
+        hasCountryName: true,
+        hasItemName: true
+      }
     ];
     
     for (const collection of collections) {
       console.log(`   📋 Processing ${collection.name}...`);
       
-      // Get all items from the main table
-      const items = await dbService.query(`SELECT id, ${collection.nameField} FROM ${collection.name} WHERE is_active = true`);
+      let items;
+      // Special handling for variables table which stores name in JSON
+      if (collection.name === 'variables') {
+        items = await dbService.query(`SELECT id, key, value FROM ${collection.name} WHERE is_active = true`);
+      } else {
+        items = await dbService.query(`SELECT id, ${collection.nameField} FROM ${collection.name} WHERE is_active = true`);
+      }
       
       let activatedCount = 0;
       let skippedCount = 0;
@@ -108,34 +161,54 @@ async function autoActivateCountryData(countryCode, countryName, adminUserId, ad
       for (const item of items.rows) {
         // Check if activation already exists
         const existing = await dbService.query(
-          `SELECT id FROM ${collection.activationTable} WHERE country = $1 AND ${collection.name.slice(0, -1)}_id = $2`,
+          `SELECT id FROM ${collection.activationTable} WHERE country_code = $1 AND ${collection.idField} = $2`,
           [countryCode, item.id]
         );
         
         if (existing.rows.length === 0) {
-          // Create activation record
-          await dbService.query(
-            `INSERT INTO ${collection.activationTable} (
-              country, 
+          let displayName;
+          
+          // Special handling for variables table
+          if (collection.name === 'variables') {
+            try {
+              const valueJson = JSON.parse(item.value);
+              displayName = valueJson.name || item.key;
+            } catch (e) {
+              displayName = item.key;
+            }
+          } else {
+            displayName = item[collection.nameField];
+          }
+          
+          // Create activation record with appropriate columns
+          let insertQuery, values;
+          
+          if (collection.hasCountryName && collection.hasItemName) {
+            // Full structure with country_name and item_name
+            insertQuery = `INSERT INTO ${collection.activationTable} (
+              country_code, 
               country_name, 
-              ${collection.name.slice(0, -1)}_id, 
-              ${collection.name.slice(0, -1)}_name, 
+              ${collection.idField}, 
+              ${collection.nameColumn}, 
               is_active, 
               created_at, 
               updated_at, 
-              created_by, 
-              created_by_name
-            ) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $6, $7)`,
-            [
-              countryCode,
-              countryName,
-              item.id,
-              item[collection.nameField],
-              true,
-              adminUserId,
-              adminUserName
-            ]
-          );
+              updated_by
+            ) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $6)`;
+            values = [countryCode, countryName, item.id, displayName, true, adminUserId];
+          } else {
+            // Basic structure without name columns
+            insertQuery = `INSERT INTO ${collection.activationTable} (
+              country_code, 
+              ${collection.idField}, 
+              is_active, 
+              created_at, 
+              updated_at
+            ) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`;
+            values = [countryCode, item.id, true];
+          }
+          
+          await dbService.query(insertQuery, values);
           activatedCount++;
         } else {
           skippedCount++;

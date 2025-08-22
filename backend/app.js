@@ -71,6 +71,20 @@ const driverVerificationRoutes = require('./routes/driver-verifications'); // NE
 console.log('🔧 About to require business-verifications route');
 const businessVerificationRoutes = require('./routes/business-verifications-simple'); // Use the simple working version
 const modulesRoutes = require('./routes/modules'); // NEW - module management
+
+// Import centralized data routes
+const masterProductsRoutes = require('./routes/master-products');
+const brandsRoutes = require('./routes/brands');
+const subcategoriesRoutes = require('./routes/subcategories');
+const variableTypesRoutes = require('./routes/variable-types');
+
+// Import country-specific routes
+const countryProductsRoutes = require('./routes/country-products');
+const countryBrandsRoutes = require('./routes/country-brands');
+const countryCategoriesRoutes = require('./routes/country-categories');
+const countrySubcategoriesRoutes = require('./routes/country-subcategories');
+const countryVariableTypesRoutes = require('./routes/country-variable-types');
+
 console.log('🔧 About to register driver-verifications route');
 
 // Serve static files (uploaded images)
@@ -92,6 +106,20 @@ app.use('/api/cities', cityRoutes);
 app.use('/api/vehicle-types', vehicleTypeRoutes);
 app.use('/api/requests', requestRoutes);
 app.use('/api/countries', countryRoutes);
+
+// Centralized data routes (Super Admin)
+app.use('/api/master-products', masterProductsRoutes);
+app.use('/api/brands', brandsRoutes);
+app.use('/api/subcategories', subcategoriesRoutes);
+app.use('/api/variable-types', variableTypesRoutes);
+
+// Country-specific routes
+app.use('/api/country-products', countryProductsRoutes);
+app.use('/api/country-brands', countryBrandsRoutes);
+app.use('/api/country-categories', countryCategoriesRoutes);
+app.use('/api/country-subcategories', countrySubcategoriesRoutes);
+app.use('/api/country-variable-types', countryVariableTypesRoutes);
+
 app.use('/api/upload', uploadRoutes); // NEW - image upload endpoint
 app.use('/api/test-images', testImageRoutes); // TEST - image serving test
 app.use('/api', subscriptionPlansLegacy); // legacy paths /subscription-plans, /user-subscriptions

@@ -1,74 +1,88 @@
 const express = require('express');
 const router = express.Router();
-const dbService = require('../services/database');
-const authService = require('../services/auth');
+const database = require('../services/database');
+const auth = require('../services/auth');
 
-// Get all country products
+// Get all products for a country (similar to vehicle-types pattern)
 router.get('/', async (req, res) => {
-    try {
-        console.log('Fetching country products...');
-        
-        const result = await dbService.query(`
-            SELECT 
-                cp.*,
-                mp.name as master_product_name,
-                c.name as country_name
-            FROM country_products cp
-            LEFT JOIN master_products mp ON cp.master_product_id = mp.id
-            LEFT JOIN countries c ON cp.country_code = c.code
-            ORDER BY c.name, mp.name
-        `);
+  try {
+    const countryCode = (req.query.country || 'LK').toUpperCase();
+    const includeInactive = req.query.includeInactive === 'true';
 
-        console.log(`Found ${result.rows.length} country products`);
-        
-        res.json({
-            success: true,
-            data: result.rows,
-            count: result.rows.length
-        });
-    } catch (error) {
-        console.error('Error fetching country products:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to fetch country products'
-        });
-    }
+    const result = await database.query(`
+      SELECT 
+        mp.id,
+        mp.name,
+        mp.description,
+        mp.image_url,
+        mp.is_active,
+        mp.created_at,
+        mp.updated_at,
+        cp.is_active AS country_specific_active,
+        COALESCE(cp.is_active, mp.is_active) AS country_enabled,
+        cp.id AS country_product_id
+      FROM master_products mp
+      LEFT JOIN country_products cp 
+        ON mp.id = cp.product_id 
+       AND cp.country_code = $1
+      WHERE ($2 OR mp.is_active = true)
+      ORDER BY mp.name
+    `, [countryCode, includeInactive]);
+
+    // Adapt to frontend expected camelCase keys
+    const data = result.rows.map(r => ({
+      id: r.id,
+      name: r.name,
+      description: r.description,
+      imageUrl: r.image_url,
+      isActive: r.is_active,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+      countryEnabled: r.country_enabled,
+      countrySpecificActive: r.country_specific_active,
+      countryProductId: r.country_product_id
+    }));
+
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    res.status(500).json({ success: false, message: 'Error fetching products', error: error.message });
+  }
 });
 
-// Get country product by ID
-router.get('/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        
-        const result = await dbService.query(`
-            SELECT 
-                cp.*,
-                mp.name as master_product_name,
-                c.name as country_name
-            FROM country_products cp
-            LEFT JOIN master_products mp ON cp.master_product_id = mp.id
-            LEFT JOIN countries c ON cp.country_code = c.code
-            WHERE cp.id = $1
-        `, [id]);
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                error: 'Country product not found'
-            });
-        }
-
-        res.json({
-            success: true,
-            data: result.rows[0]
-        });
-    } catch (error) {
-        console.error('Error fetching country product:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to fetch country product'
-        });
+// Toggle product status for a specific country (country admin only)
+router.post('/:id/toggle-country', auth.authMiddleware(), async (req, res) => {
+  try {
+    const productId = req.params.id;
+    const { isActive } = req.body;
+    
+    // Get user's country
+    const countryCode = (req.user.country_code || req.user.country || 'LK').toUpperCase();
+    
+    // Check if product exists
+    const product = await database.queryOne('SELECT * FROM master_products WHERE id = $1', [productId]);
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
     }
+    
+    // Upsert country_products record
+    const result = await database.query(`
+      INSERT INTO country_products (product_id, country_code, is_active)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (product_id, country_code)
+      DO UPDATE SET is_active = EXCLUDED.is_active, updated_at = CURRENT_TIMESTAMP
+      RETURNING *
+    `, [productId, countryCode, isActive]);
+    
+    res.json({ 
+      success: true, 
+      message: `Product ${isActive ? 'enabled' : 'disabled'} for ${countryCode}`,
+      data: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error toggling product for country:', error);
+    res.status(500).json({ success: false, message: 'Error updating product status', error: error.message });
+  }
 });
 
 // Create new country product
