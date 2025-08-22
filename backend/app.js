@@ -83,6 +83,9 @@ const countryProductsRoutes = require('./routes/country-products');
 const countryBrandsRoutes = require('./routes/country-brands');
 const countryCategoriesRoutes = require('./routes/country-categories');
 const countrySubcategoriesRoutes = require('./routes/country-subcategories');
+
+// Import price comparison routes
+const priceListingsRoutes = require('./routes/price-listings');
 const countryVariableTypesRoutes = require('./routes/country-variable-types');
 
 console.log('🔧 About to register driver-verifications route');
@@ -119,6 +122,10 @@ app.use('/api/country-brands', countryBrandsRoutes);
 app.use('/api/country-categories', countryCategoriesRoutes);
 app.use('/api/country-subcategories', countrySubcategoriesRoutes);
 app.use('/api/country-variable-types', countryVariableTypesRoutes);
+
+// Price comparison routes  
+app.use('/api/price-listings', priceListingsRoutes);
+app.use('/api/business-products', businessProductsRoutes);
 
 app.use('/api/upload', uploadRoutes); // NEW - image upload endpoint
 app.use('/api/test-images', testImageRoutes); // TEST - image serving test
