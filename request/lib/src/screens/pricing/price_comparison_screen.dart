@@ -467,9 +467,9 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
             const SizedBox(height: 12),
             
             // Product details
-            if (listing.description.isNotEmpty) ...[
+            if (listing.modelNumber?.isNotEmpty == true) ...[
               Text(
-                listing.description,
+                'Model: ${listing.modelNumber}',
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey[600],
@@ -478,35 +478,33 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
               const SizedBox(height: 8),
             ],
             
-            // Delivery info
-            if (listing.deliveryCharge > 0) ...[
-              Row(
-                children: [
-                  Icon(
-                    Icons.local_shipping,
-                    size: 14,
+            // Contact info
+            Row(
+              children: [
+                Icon(
+                  Icons.business,
+                  size: 14,
+                  color: Colors.grey[600],
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  listing.businessName,
+                  style: TextStyle(
+                    fontSize: 12,
                     color: Colors.grey[600],
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Delivery: ${listing.currency} ${listing.deliveryCharge.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-            ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
             
             // Contact buttons
             Row(
               children: [
-                if (listing.whatsapp?.isNotEmpty == true) ...[
+                if (listing.whatsappNumber?.isNotEmpty == true) ...[
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: () => _contactBusiness('whatsapp', listing.whatsapp!),
+                      onPressed: () => _contactBusiness('whatsapp', listing.whatsappNumber!),
                       icon: const Icon(Icons.phone, size: 16),
                       label: const Text('WhatsApp'),
                       style: ElevatedButton.styleFrom(
@@ -518,10 +516,10 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                   ),
                   const SizedBox(width: 8),
                 ],
-                if (listing.website?.isNotEmpty == true) ...[
+                if (listing.productLink?.isNotEmpty == true) ...[
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () => _contactBusiness('website', listing.website!),
+                      onPressed: () => _contactBusiness('website', listing.productLink!),
                       icon: const Icon(Icons.web, size: 16),
                       label: const Text('Website'),
                       style: OutlinedButton.styleFrom(

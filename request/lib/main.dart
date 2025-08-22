@@ -11,8 +11,7 @@ import 'src/navigation/main_navigation_screen.dart';
 import 'src/home/screens/browse_requests_screen.dart';
 import 'src/screens/browse_screen.dart';
 import 'src/screens/pricing/price_comparison_screen.dart';
-import 'src/screens/pricing/product_search_screen.dart';
-import 'src/screens/pricing/business_pricing_dashboard.dart';
+import 'src/screens/pricing/business_product_dashboard.dart';
 import 'src/screens/requests/ride/create_ride_request_screen.dart';
 import 'src/screens/unified_request_response/unified_response_edit_screen.dart';
 import 'src/screens/driver_registration_screen.dart'; // Driver registration (was driver_verification)
@@ -26,7 +25,6 @@ import 'src/screens/modern_menu_screen.dart';
 import 'src/screens/content_page_screen.dart';
 import 'src/screens/content_test_screen.dart';
 import 'src/screens/api_test_screen.dart'; // API test screen
-import 'src/models/master_product.dart';
 import 'src/theme/app_theme.dart';
 
 void main() async {
@@ -150,30 +148,21 @@ class MyApp extends StatelessWidget {
               builder: (context) => const BrowseScreen(),
             );
           case '/price':
-            // Redirect to product search since price comparison needs a specific product
+            // Redirect to price comparison screen
             return MaterialPageRoute(
-              builder: (context) => const ProductSearchScreen(),
+              builder: (context) => const PriceComparisonScreen(),
             );
           case '/pricing-search':
             return MaterialPageRoute(
-              builder: (context) => const ProductSearchScreen(),
+              builder: (context) => const PriceComparisonScreen(),
             );
           case '/pricing-comparison':
-            final args = settings.arguments as Map<String, dynamic>?;
-            final product = args?['product'] as MasterProduct?;
-            if (product != null) {
-              return MaterialPageRoute(
-                builder: (context) => PriceComparisonScreen(product: product),
-              );
-            } else {
-              // Redirect to search if no product provided
-              return MaterialPageRoute(
-                builder: (context) => const ProductSearchScreen(),
-              );
-            }
+            return MaterialPageRoute(
+              builder: (context) => const PriceComparisonScreen(),
+            );
           case '/business-pricing':
             return MaterialPageRoute(
-              builder: (context) => const BusinessPricingDashboard(),
+              builder: (context) => const BusinessProductDashboard(),
             );
           case '/create-ride-request':
             return MaterialPageRoute(
