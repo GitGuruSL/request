@@ -1,6 +1,7 @@
 // REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'src/utils/firebase_shim.dart'; // Added by migration script
+
 class ProductVariable {
   final String name;
   final String type;
@@ -80,11 +81,31 @@ class MasterProduct {
     );
   }
 
+  factory MasterProduct.fromJson(Map<String, dynamic> json) {
+    return MasterProduct(
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      brand: json['brand']?.toString() ?? '',
+      category: json['category']?.toString() ?? '',
+      subcategory: json['subcategory']?.toString() ?? '',
+      description: json['description'] ?? '',
+      images: List<String>.from(json['images'] ?? []),
+      availableVariables: _parseAvailableVariables(json['availableVariables']),
+      isActive: json['isActive'] ?? true,
+      createdAt:
+          DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
+      updatedAt:
+          DateTime.parse(json['updatedAt'] ?? DateTime.now().toIso8601String()),
+      businessListingsCount:
+          json['businessListingsCount'] ?? json['listingCount'] ?? 0,
+    );
+  }
+
   static Map<String, ProductVariable> _parseAvailableVariables(dynamic data) {
     if (data == null) return {};
-    
+
     final Map<String, ProductVariable> variables = {};
-    
+
     if (data is Map<String, dynamic>) {
       data.forEach((key, value) {
         if (value is Map<String, dynamic>) {
@@ -101,7 +122,7 @@ class MasterProduct {
         }
       });
     }
-    
+
     return variables;
   }
 

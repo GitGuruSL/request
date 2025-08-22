@@ -1,6 +1,7 @@
 // REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'src/utils/firebase_shim.dart'; // Added by migration script
+
 class PriceListing {
   final String id;
   final String businessId;
@@ -71,7 +72,8 @@ class PriceListing {
       price: (data['price'] ?? 0.0).toDouble(),
       currency: data['currency'] ?? 'LKR',
       modelNumber: data['modelNumber'],
-      selectedVariables: Map<String, String>.from(data['selectedVariables'] ?? {}),
+      selectedVariables:
+          Map<String, String>.from(data['selectedVariables'] ?? {}),
       productImages: List<String>.from(data['productImages'] ?? []),
       productLink: data['productLink'],
       whatsappNumber: data['whatsappNumber'],
@@ -84,6 +86,43 @@ class PriceListing {
       reviewCount: data['reviewCount'] ?? 0,
       country: data['country'],
       countryName: data['countryName'],
+    );
+  }
+
+  factory PriceListing.fromJson(Map<String, dynamic> json) {
+    return PriceListing(
+      id: json['id'] ?? '',
+      businessId: json['business_id'] ?? json['businessId'] ?? '',
+      businessName: json['business']?['name'] ?? json['businessName'] ?? '',
+      businessLogo: json['business']?['logo'] ?? json['businessLogo'] ?? '',
+      masterProductId:
+          json['master_product_id'] ?? json['masterProductId'] ?? '',
+      productName: json['title'] ?? json['productName'] ?? '',
+      brand: json['brand'] ?? '',
+      category: json['category'] ?? '',
+      subcategory: json['subcategory'] ?? '',
+      price: (json['price'] ?? 0.0).toDouble(),
+      currency: json['currency'] ?? 'LKR',
+      modelNumber: json['model_number'] ?? json['modelNumber'],
+      selectedVariables: Map<String, String>.from(
+          json['selected_variables'] ?? json['selectedVariables'] ?? {}),
+      productImages:
+          List<String>.from(json['images'] ?? json['productImages'] ?? []),
+      productLink: json['website'] ?? json['productLink'],
+      whatsappNumber: json['whatsapp'] ?? json['whatsappNumber'],
+      isAvailable: json['is_active'] ?? json['isAvailable'] ?? true,
+      stockQuantity: json['stock_quantity'] ?? json['stockQuantity'] ?? 0,
+      createdAt: DateTime.parse(json['created_at'] ??
+          json['createdAt'] ??
+          DateTime.now().toIso8601String()),
+      updatedAt: DateTime.parse(json['updated_at'] ??
+          json['updatedAt'] ??
+          DateTime.now().toIso8601String()),
+      clickCount: json['contact_count'] ?? json['clickCount'] ?? 0,
+      rating: (json['rating'] ?? 0.0).toDouble(),
+      reviewCount: json['review_count'] ?? json['reviewCount'] ?? 0,
+      country: json['country_code'] ?? json['country'],
+      countryName: json['countryName'],
     );
   }
 

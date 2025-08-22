@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../home/screens/home_screen.dart';
 import '../home/screens/browse_requests_screen.dart';
-import '../screens/pricing/product_search_screen.dart';
+import '../screens/pricing/flutter_product_search_screen.dart';
 import '../screens/modern_menu_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
