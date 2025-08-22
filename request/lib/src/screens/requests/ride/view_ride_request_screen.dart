@@ -70,56 +70,40 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
     });
 
     try {
-      // Check Firebase Auth state first
+      // Check Auth state first
       final firebaseUser = RestAuthService.instance.currentUser;
-      print(
-          '🔍 Debug Ride Auth - Firebase User: ${firebaseUser?.uid ?? "NULL"}');
-      print(
-          '🔍 Debug Ride Auth - Firebase User Email: ${firebaseUser?.email ?? "NULL"}');
-      print(
-          '🔍 Debug Ride Auth - Firebase User Phone: ${firebaseUser?.phoneNumber ?? "NULL"}');
 
       final request = await _requestService.getRequestById(widget.requestId);
       final responses =
           await _requestService.getResponsesForRequest(widget.requestId);
       final currentUser = await _userService.getCurrentUserModel();
+
       // Fetch driver registration status for current user
       bool isApprovedDriver = false;
       try {
         final regs =
             await UserRegistrationService.instance.getUserRegistrations();
         isApprovedDriver = regs?.isApprovedDriver == true;
-        print('🚗 Driver approved? $isApprovedDriver');
-      } catch (e) {
-        print('ℹ️ Could not fetch driver registrations: $e');
-      }
+      } catch (_) {}
 
       if (request != null) {
         final requesterUser =
             await _userService.getUserById(request.requesterId);
 
-        // More robust owner check using both current user model and Firebase Auth
+        // Owner check
         bool isOwner = false;
         String currentUserId = '';
 
-        // Try Firebase Auth first
         if (firebaseUser?.uid != null) {
           currentUserId = firebaseUser!.uid;
         }
-
-        // If Firebase Auth doesn't work, try user service
         if (currentUserId.isEmpty && currentUser?.id != null) {
           currentUserId = currentUser!.id;
         }
-
-        // Check ownership with additional safety checks
         if (currentUserId.isNotEmpty && request.requesterId.isNotEmpty) {
           isOwner = currentUserId == request.requesterId;
         } else {
-          // If unknown, DON'T block responding; treat as not owner.
-          isOwner = false;
-          print(
-              '⚠️ Warning: Could not determine current user, defaulting to owner=false to allow responding');
+          isOwner = false; // default to allow responding
         }
 
         if (mounted) {
@@ -132,19 +116,12 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
             _isLoading = false;
           });
 
-          // Enhanced debug information
-          print(
-              '🔍 Debug Ride - Firebase User ID: ${firebaseUser?.uid ?? "NULL"}');
-          print(
-              '🔍 Debug Ride - Current User Model ID: ${currentUser?.id ?? "NULL"}');
-          print('🔍 Debug Ride - Final Current User ID: $currentUserId');
-          print('🔍 Debug Ride - Request Owner ID: ${request.requesterId}');
-          print('🔍 Debug Ride - Is Owner: $isOwner');
-          print(
-              '🔍 Debug Ride - Will Show Respond Button: ${!isOwner && isApprovedDriver}');
-
           _setupMapMarkers();
           _resolveVehicleTypeName();
+        }
+      } else {
+        if (mounted) {
+          setState(() => _isLoading = false);
         }
       }
     } catch (e) {
@@ -197,8 +174,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
           });
         }
       }
-    } catch (e) {
-      // Non-fatal
+    } catch (_) {
       if (mounted) {
         setState(() {
           _vehicleTypeName = _request?.rideData?.vehicleType;
@@ -218,7 +194,6 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   bool _hasUserResponded() {
     final currentUser = RestAuthService.instance.currentUser;
     if (currentUser == null) return false;
-
     return _responses
         .any((response) => response.responderId == currentUser.uid);
   }
@@ -226,7 +201,6 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   ResponseModel? _getUserResponse() {
     final currentUser = RestAuthService.instance.currentUser;
     if (currentUser == null) return null;
-
     try {
       return _responses
           .firstWhere((response) => response.responderId == currentUser.uid);
@@ -244,6 +218,93 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
     if (fares.isEmpty) return null;
     fares.sort();
     return fares.first;
+  }
+
+  Widget _buildResponsesSection() {
+    final isDriverView = !_isOwner;
+    final canEdit = isDriverView && _hasUserResponded();
+    final currencySymbol = CurrencyHelper.instance.getCurrencySymbol();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF2EE), // soft pink card
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                'Responses',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.grey,
+                ),
+              ),
+              const Spacer(),
+              if (canEdit)
+                TextButton.icon(
+                  onPressed: _showEditResponseSheet,
+                  icon: const Icon(Icons.edit, size: 16),
+                  label: const Text('Edit Response'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.blue,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    minimumSize: const Size(0, 0),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              IconButton(
+                onPressed: _loadRequestData,
+                icon: const Icon(Icons.refresh, color: Colors.black87),
+                tooltip: 'Refresh',
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  'Total ${_responses.length}',
+                  style: TextStyle(
+                    color: Colors.orange[700],
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              if (_getCheapestFare() != null)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.orange[50],
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    'Cheapest  $currencySymbol${_getCheapestFare()!.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      color: Colors.deepOrange,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   void _navigateToEditRideRequest() {
