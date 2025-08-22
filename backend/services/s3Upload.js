@@ -136,6 +136,10 @@ const uploadToS3 = async (file, uploadType, userId, imageIndex) => {
       const imgIndex = imageIndex || '1';
       keyPath = `vehicles/${userId}/${imgIndex}_${timestamp}.jpg`;
       break;
+    case 'about-us':
+      // Public company assets used in content pages
+      keyPath = `public/about/logo_${timestamp}_${randomString}${ext || '.png'}`;
+      break;
     default:
       keyPath = `uploads/${userId}/${file.fieldname}_${timestamp}_${randomString}${ext}`;
   }
