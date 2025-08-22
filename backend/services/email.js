@@ -1,10 +1,15 @@
-const AWS = require('aws-sdk');
+const { SESClient, SendEmailCommand } = require('@aws-sdk/client-ses');
 
-// Configure AWS SES
-const ses = new AWS.SES({
-    region: process.env.AWS_REGION || 'us-east-1',
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+// Configure AWS SES v3
+const SES_REGION = process.env.AWS_REGION || process.env.AWS_SES_REGION || 'us-east-1';
+const ses = new SESClient({
+        region: SES_REGION,
+        credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+                ? {
+                        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+                        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+                    }
+                : undefined,
 });
 
 class EmailService {
@@ -56,7 +61,7 @@ class EmailService {
         console.log(`📤 Sending email via AWS SES...`);
         
         try {
-            const result = await ses.sendEmail(params).promise();
+            const result = await ses.send(new SendEmailCommand(params));
             console.log(`✅ Email sent successfully to ${email} - MessageId: ${result.MessageId}`);
             return {
                 success: true,

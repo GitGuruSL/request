@@ -16,6 +16,7 @@ import 'create_ride_response_screen.dart';
 import '../../../services/rest_vehicle_type_service.dart';
 import '../../../services/chat_service.dart';
 import '../../chat/conversation_screen.dart';
+import '../../../services/user_registration_service.dart';
 import '../../../services/google_directions_service.dart';
 import '../../../services/rest_request_service.dart' as rest;
 import '../../../utils/currency_helper.dart';
@@ -39,13 +40,17 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   bool _isOwner = false;
   UserModel? _requesterUser;
   String? _vehicleTypeName; // Resolved human-readable vehicle type name
+  bool _isApprovedDriver = false; // From driver_verifications table
 
   // Map related
   GoogleMapController? _mapController;
   Set<Marker> _markers = {};
   Set<Polyline> _polylines = {};
 
-  // Quick respond removed: kept no inline fare controls
+  // Quick respond (inline fare)
+  final TextEditingController _fareController = TextEditingController();
+  bool _isSubmittingResponse = false;
+  String? _fareError;
 
   @override
   void initState() {
@@ -55,6 +60,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
 
   @override
   void dispose() {
+    _fareController.dispose();
     super.dispose();
   }
 
@@ -72,7 +78,13 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
           await _requestService.getResponsesForRequest(widget.requestId);
       final currentUser = await _userService.getCurrentUserModel();
 
-      // Driver approval not needed here (inline respond removed)
+      // Fetch driver registration status for current user
+      bool isApprovedDriver = false;
+      try {
+        final regs =
+            await UserRegistrationService.instance.getUserRegistrations();
+        isApprovedDriver = regs?.isApprovedDriver == true;
+      } catch (_) {}
 
       if (request != null) {
         final requesterUser =
@@ -100,6 +112,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
             _responses = responses.cast<ResponseModel>();
             _isOwner = isOwner;
             _requesterUser = requesterUser;
+            _isApprovedDriver = isApprovedDriver;
             _isLoading = false;
           });
 
@@ -171,7 +184,12 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   }
 
   // Role-based validation methods
-  // _canUserRespond removed with inline respond
+  bool _canUserRespond() {
+    if (_request == null) return false;
+    if (_isOwner) return false;
+    // Only approved drivers (driver_verifications.status == approved)
+    return _isApprovedDriver;
+  }
 
   bool _hasUserResponded() {
     final currentUser = RestAuthService.instance.currentUser;
@@ -587,9 +605,11 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                       _buildRequesterInfo(),
                       const SizedBox(height: 24),
                       _buildResponsesSection(),
-                      if (!_isOwner && _getUserResponse() == null) ...[
+
+                      // Respond Area for non-owners (single entry point)
+                      if (!_isOwner) ...[
                         const SizedBox(height: 24),
-                        _buildRespondCTA(),
+                        if (_canUserRespond()) _buildQuickRespondSection(),
                       ],
 
                       const SizedBox(height: 80), // Space for FAB
@@ -959,20 +979,20 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
       decoration: BoxDecoration(
-        color: Colors.amber[50],
+        color: Colors.blue[50],
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.straighten, color: Colors.amber[800], size: 20),
+          Icon(Icons.straighten, color: Colors.blue[700], size: 20),
           const SizedBox(width: 8),
           Text(
             '${distance.toStringAsFixed(1)} km distance',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: Colors.amber[800],
+              color: Colors.blue[700],
             ),
           ),
         ],
@@ -1112,7 +1132,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                         );
                       }
                     },
-                    icon: Icon(Icons.phone, color: Colors.amber[800]),
+                    icon: const Icon(Icons.phone, color: Colors.green),
                     tooltip: 'Call',
                   ),
                   IconButton(
@@ -1161,7 +1181,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                         );
                       }
                     },
-                    icon: Icon(Icons.message, color: Colors.amber[800]),
+                    icon: const Icon(Icons.message, color: Colors.blue),
                     tooltip: 'Message',
                   ),
                 ],
@@ -1172,7 +1192,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
     );
   }
 
-  // old _buildResponsesSection removed in favor of unified soft-card version above
+  // Removed duplicate _buildResponsesSection (retaining the earlier version defined above)
 
   void _showEditResponseSheet() {
     final existing = _getUserResponse();
@@ -1277,7 +1297,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.amber[800],
+                        backgroundColor: Colors.green,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -1320,28 +1340,140 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
     }
   }
 
-  Widget _buildRespondCTA() {
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton.icon(
-        onPressed: _showResponseDialog,
-        icon: const Icon(Icons.reply, color: Colors.white),
-        label: const Text(
-          'Respond to Request',
+  Widget _buildQuickRespondSection() {
+    final currencySymbol = CurrencyHelper.instance.getCurrencySymbol();
+    final hasResponded = _hasUserResponded();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Offer your fare',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.amber[800],
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          elevation: 0,
-        ),
-      ),
+        const SizedBox(height: 12),
+        if (!hasResponded) ...[
+          TextField(
+            controller: _fareController,
+            keyboardType: const TextInputType.numberWithOptions(
+                signed: false, decimal: true),
+            decoration: InputDecoration(
+              hintText: 'Enter fare',
+              prefixText: currencySymbol,
+              filled: true,
+              fillColor: Colors.grey[50],
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              errorText: _fareError,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: ElevatedButton.icon(
+              onPressed: _isSubmittingResponse ? null : _submitQuickResponse,
+              icon: const Icon(Icons.reply, color: Colors.white),
+              label: _isSubmittingResponse
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text(
+                      'Respond to Request',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 0,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Quick submit. You can edit details later.',
+            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+          ),
+        ] else ...[
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: _showEditResponseSheet,
+              icon: const Icon(Icons.edit, size: 18),
+              label: const Text('Edit Response'),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.blue[700],
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                minimumSize: const Size(0, 0),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 
-  // inline quick respond removed as per latest UI direction
+  Future<void> _submitQuickResponse() async {
+    if (!_canUserRespond() || _request == null) return;
+    final raw = _fareController.text.trim().replaceAll(',', '');
+    final price = double.tryParse(raw);
+    if (price == null || price <= 0) {
+      setState(() => _fareError = 'Enter a valid amount');
+      return;
+    }
+    setState(() {
+      _fareError = null;
+      _isSubmittingResponse = true;
+    });
+    try {
+      final currency = CurrencyHelper.instance.getCurrency();
+      final data = rest.CreateResponseData(
+        message: 'Ride offer',
+        price: price,
+        currency: currency,
+      );
+      final created = await rest.RestRequestService.instance
+          .createResponse(_request!.id, data);
+      if (created != null) {
+        if (!mounted) return;
+        _fareController.clear();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Response submitted')),
+        );
+        await _loadRequestData();
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to submit response')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to submit response: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmittingResponse = false);
+      }
+    }
+  }
 
   void _showResponseDialog() {
     // Navigate to the comprehensive ride response screen

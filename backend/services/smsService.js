@@ -1,5 +1,5 @@
 const twilio = require('twilio');
-const AWS = require('aws-sdk');
+const { SNSClient, PublishCommand } = require('@aws-sdk/client-sns');
 const axios = require('axios');
 const database = require('./database');
 const crypto = require('crypto');
@@ -330,10 +330,12 @@ class AWSSNSProvider {
       throw new Error('AWS SNS configuration not found');
     }
 
-    this.sns = new AWS.SNS({
-      accessKeyId: awsConfig.accessKeyId,
-      secretAccessKey: awsConfig.secretAccessKey,
-      region: awsConfig.region
+    this.sns = new SNSClient({
+      region: awsConfig.region,
+      credentials: awsConfig.accessKeyId && awsConfig.secretAccessKey ? {
+        accessKeyId: awsConfig.accessKeyId,
+        secretAccessKey: awsConfig.secretAccessKey,
+      } : undefined,
     });
   }
 
@@ -350,7 +352,7 @@ class AWSSNSProvider {
         }
       };
 
-      const result = await this.sns.publish(params).promise();
+      const result = await this.sns.send(new PublishCommand(params));
 
       return {
         success: true,

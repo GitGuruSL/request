@@ -1,12 +1,19 @@
-const AWS = require('aws-sdk');
+const { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand, ListBucketsCommand } = require('@aws-sdk/client-s3');
+const { getSignedUrl: presignGet } = require('@aws-sdk/s3-request-presigner');
 const multer = require('multer');
 const path = require('path');
 
-// Configure AWS SDK
-const s3 = new AWS.S3({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION || 'us-east-1'
+// Configure AWS SDK v3 client
+const REGION = process.env.AWS_REGION || process.env.AWS_S3_REGION || 'us-east-1';
+const s3Client = new S3Client({
+  region: REGION,
+  // Credentials are automatically read from env vars and shared config; explicit pass-through for clarity
+  credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+    ? {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      }
+    : undefined,
 });
 
 // S3 bucket configuration
@@ -60,6 +67,36 @@ const uploadToMemory = multer({
   }
 });
 
+// Helper to construct a public-style URL (even if object is private) for consistent storage
+function buildObjectUrl(bucket, key) {
+  const safeKey = encodeURI(key).replace(/%5B/g, '[').replace(/%5D/g, ']').replace(/%2F/g, '/');
+  if (REGION === 'us-east-1') {
+    return `https://${bucket}.s3.amazonaws.com/${safeKey}`;
+  }
+  return `https://${bucket}.s3.${REGION}.amazonaws.com/${safeKey}`;
+}
+
+function extractKeyFromUrl(fileUrl, bucketName) {
+  try {
+    const url = new URL(fileUrl);
+    const host = url.hostname; // e.g., bucket.s3.region.amazonaws.com or s3.amazonaws.com
+    const path = url.pathname; // e.g., /key or /bucket/key
+    if (host.startsWith(`${bucketName}.`)) {
+      // Virtual-hosted-style: bucket in subdomain, key in path
+      return decodeURIComponent(path.replace(/^\//, ''));
+    }
+    // Path-style: host doesn't include bucket, path starts with /bucket/
+    const prefix = `/${bucketName}/`;
+    if (path.startsWith(prefix)) {
+      return decodeURIComponent(path.substring(prefix.length));
+    }
+    // Fallback to previous naive approach
+    return fileUrl.split('/').slice(3).join('/');
+  } catch (_) {
+    return fileUrl.split('/').slice(3).join('/');
+  }
+}
+
 // Manual S3 upload function
 const uploadToS3 = async (file, uploadType, userId, imageIndex) => {
   const timestamp = Date.now();
@@ -107,15 +144,15 @@ const uploadToS3 = async (file, uploadType, userId, imageIndex) => {
     Bucket: BUCKET_NAME,
     Key: keyPath,
     Body: file.buffer,
-    ContentType: file.mimetype
-    // Removed ACL: 'public-read' because bucket doesn't allow ACLs
+    ContentType: file.mimetype,
   };
 
   try {
-    console.log('🚀 Uploading to S3:', keyPath);
-    const result = await s3.upload(params).promise();
-    console.log('✅ S3 upload successful:', result.Location);
-    return result.Location;
+    console.log('🚀 Uploading to S3 (v3):', keyPath);
+    await s3Client.send(new PutObjectCommand(params));
+    const location = buildObjectUrl(BUCKET_NAME, keyPath);
+    console.log('✅ S3 upload successful:', location);
+    return location;
   } catch (error) {
     console.error('❌ S3 upload failed:', error);
     throw error;
@@ -125,16 +162,9 @@ const uploadToS3 = async (file, uploadType, userId, imageIndex) => {
 // Helper function to delete file from S3
 const deleteFromS3 = async (fileUrl) => {
   try {
-    // Extract key from URL
-    const urlParts = fileUrl.split('/');
-    const key = urlParts.slice(3).join('/'); // Remove protocol and domain
-    
-    const params = {
-      Bucket: BUCKET_NAME,
-      Key: key
-    };
-    
-    await s3.deleteObject(params).promise();
+    const key = extractKeyFromUrl(fileUrl, BUCKET_NAME);
+    const params = { Bucket: BUCKET_NAME, Key: key };
+    await s3Client.send(new DeleteObjectCommand(params));
     console.log('✅ File deleted from S3:', key);
     return true;
   } catch (error) {
@@ -146,17 +176,9 @@ const deleteFromS3 = async (fileUrl) => {
 // Helper function to generate pre-signed URL for viewing
 const getSignedUrl = async (fileUrl, expiresIn = 3600) => {
   try {
-    // Extract key from URL
-    const urlParts = fileUrl.split('/');
-    const key = urlParts.slice(3).join('/'); // Remove protocol and domain
-    
-    const params = {
-      Bucket: BUCKET_NAME,
-      Key: key,
-      Expires: expiresIn // URL expires in 1 hour by default
-    };
-    
-    const signedUrl = await s3.getSignedUrlPromise('getObject', params);
+    const key = extractKeyFromUrl(fileUrl, BUCKET_NAME);
+    const command = new GetObjectCommand({ Bucket: BUCKET_NAME, Key: key });
+    const signedUrl = await presignGet(s3Client, command, { expiresIn });
     console.log('✅ Generated signed URL for:', key);
     return signedUrl;
   } catch (error) {
@@ -165,10 +187,18 @@ const getSignedUrl = async (fileUrl, expiresIn = 3600) => {
   }
 };
 
+// Simple connectivity test used by the /api/s3/test route
+async function testS3Connection() {
+  const result = await s3Client.send(new ListBucketsCommand({}));
+  return { buckets: result.Buckets || [] };
+}
+
 module.exports = {
   uploadToMemory,
   uploadToS3,
   deleteFromS3,
   getSignedUrl,
-  s3
+  testS3Connection,
+  // Export client for advanced callers (avoid using raw client in routes)
+  s3Client,
 };

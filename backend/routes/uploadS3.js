@@ -68,15 +68,12 @@ router.delete('/delete', async (req, res) => {
 // Test S3 connection
 router.get('/test', async (req, res) => {
   try {
-    const { s3 } = require('../services/s3Upload');
-    
-    // Test S3 connection by listing buckets
-    const result = await s3.listBuckets().promise();
-    
+    const { testS3Connection } = require('../services/s3Upload');
+    const result = await testS3Connection();
     res.json({
       success: true,
       message: 'S3 connection successful',
-      buckets: result.Buckets?.length || 0
+      buckets: result.buckets.length
     });
   } catch (error) {
     console.error('❌ S3 connection test failed:', error);

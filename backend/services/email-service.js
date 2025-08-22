@@ -1,13 +1,18 @@
-const AWS = require('aws-sdk');
+const { SESClient, SendEmailCommand } = require('@aws-sdk/client-ses');
 const database = require('./database');
 
 class EmailService {
   constructor() {
-    // Configure AWS SES
-    this.ses = new AWS.SES({
-      region: process.env.AWS_REGION || 'us-east-1',
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+    // Configure AWS SES v3
+    const region = process.env.AWS_REGION || process.env.AWS_SES_REGION || 'us-east-1';
+    this.ses = new SESClient({
+      region,
+      credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+        ? {
+            accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+          }
+        : undefined,
     });
     
     this.fromEmail = process.env.AWS_SES_FROM_EMAIL || 'noreply@requestmarketplace.com';
@@ -61,8 +66,8 @@ class EmailService {
         }
       };
       
-      const result = await this.ses.sendEmail(params).promise();
-      console.log(`✅ Email sent successfully: ${result.MessageId}`);
+  const result = await this.ses.send(new SendEmailCommand(params));
+  console.log(`✅ Email sent successfully: ${result.MessageId}`);
       
       // Store OTP in database
       const otpId = await this.storeOTP(email, otp, purpose);
