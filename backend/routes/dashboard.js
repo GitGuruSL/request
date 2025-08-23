@@ -9,6 +9,28 @@ async function countTable(table, whereSql = '', params = []) {
   return res.rows[0]?.count || 0;
 }
 
+// Check if a table exists without throwing/logging noisy errors
+async function tableExists(table) {
+  try {
+    // to_regclass returns null if relation does not exist
+    const res = await db.query('SELECT to_regclass($1) as reg', [table]);
+    return !!res.rows?.[0]?.reg;
+  } catch (e) {
+    return false;
+  }
+}
+
+// Safe counter that returns 0 when table is missing
+async function safeCount(table, whereSql = '', params = []) {
+  const exists = await tableExists(table);
+  if (!exists) return 0;
+  try {
+    return await countTable(table, whereSql, params);
+  } catch {
+    return 0;
+  }
+}
+
 // Legacy dashboard expectation: /api/products/master/count
 router.get('/products/master/count', auth.authMiddleware(), async (req, res) => {
   try {
@@ -61,11 +83,11 @@ router.get('/dashboard/stats', auth.authMiddleware(), async (req, res) => {
     // If later we introduce per-country tables or columns, adjust filters accordingly.
 
     const [businesses, drivers, requests, responses, users] = await Promise.all([
-      countTable('businesses').catch(()=>0),
-      countTable('drivers').catch(()=>0),
-      countTable('requests').catch(()=>0),
-      countTable('responses').catch(()=>0),
-      countTable('users').catch(()=>0)
+      safeCount('businesses'),
+      safeCount('drivers'),
+      safeCount('requests'),
+      safeCount('responses'),
+      safeCount('users')
     ]);
 
     res.json({

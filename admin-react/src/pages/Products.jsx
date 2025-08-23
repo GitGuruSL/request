@@ -256,6 +256,7 @@ const Products = () => {
         const s3Form = new FormData();
         s3Form.append('file', f);
         s3Form.append('uploadType', 'master-products');
+        if (adminData?.id) s3Form.append('userId', adminData.id);
         s3Form.append('imageIndex', String(i));
         const { data } = await api.post('/s3/upload', s3Form, {
           headers: { 'Content-Type': 'multipart/form-data' }
@@ -305,12 +306,24 @@ const Products = () => {
 
   const handleSave = async () => {
     try {
+      // Parse availableVariables if it's a JSON string
+      let availableVariables = formData.availableVariables;
+      if (typeof availableVariables === 'string') {
+        try {
+          availableVariables = availableVariables.trim() ? JSON.parse(availableVariables) : {};
+        } catch (e) {
+          alert('Available Variables must be valid JSON. Please fix and try again.');
+          return;
+        }
+      }
+
       // Ensure images from uploads are included
       const productData = {
         ...formData,
+        availableVariables,
         images: formData.images || [],
-  // updatedBy is optional; guard if adminData not yet loaded
-  ...(adminData?.email ? { updatedBy: adminData.email } : {})
+        // updatedBy is optional; guard if adminData not yet loaded
+        ...(adminData?.email ? { updatedBy: adminData.email } : {})
       };
 
       console.log('Saving product with data:', productData);
@@ -318,7 +331,7 @@ const Products = () => {
       if (editingProduct) {
         await api.put(`/master-products/${editingProduct}`, productData);
       } else {
-        await api.post('/master-products', { ...productData, createdBy: adminData.email });
+        await api.post('/master-products', { ...productData, createdBy: adminData?.email || 'system' });
       }
 
       handleCloseDialog();
@@ -469,6 +482,7 @@ const Products = () => {
                     {product.images && product.images.length > 0 ? (
                       <Avatar 
                         src={product.images[0]} 
+                        imgProps={{ crossOrigin: 'anonymous' }}
                         variant="rounded"
                         sx={{ width: 48, height: 48 }}
                       />
@@ -704,8 +718,16 @@ const Products = () => {
               multiline
               rows={4}
               label="Available Variables (JSON)"
-              value={formData.availableVariables}
-              onChange={(e) => setFormData(prev => ({ ...prev, availableVariables: e.target.value }))}
+              value={
+                typeof formData.availableVariables === 'string'
+                  ? formData.availableVariables
+                  : JSON.stringify(formData.availableVariables || {}, null, 2)
+              }
+              onChange={(e) => {
+                const text = e.target.value;
+                // Keep text as-is for edit experience; parse on save
+                setFormData(prev => ({ ...prev, availableVariables: text }));
+              }}
               placeholder='{"color": ["Red", "Blue", "Green"], "size": ["Small", "Medium", "Large"]}'
               helperText="Define product variations in JSON format for mobile app variable selection"
             />

@@ -140,8 +140,13 @@ const uploadToS3 = async (file, uploadType, userId, imageIndex) => {
       // Public company assets used in content pages
       keyPath = `public/about/logo_${timestamp}_${randomString}${ext || '.png'}`;
       break;
+    case 'master-products':
+      // Centralized master product images (do not depend on userId)
+      keyPath = `public/master-products/file_${timestamp}_${randomString}${ext || '.jpg'}`;
+      break;
     default:
-      keyPath = `uploads/${userId}/${file.fieldname}_${timestamp}_${randomString}${ext}`;
+      // Fallback path; ensure we don't write to 'undefined'
+      keyPath = `uploads/${userId || 'public'}/${file.fieldname || 'file'}_${timestamp}_${randomString}${ext || '.bin'}`;
   }
 
   const params = {
