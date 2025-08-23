@@ -131,8 +131,8 @@ flutter_launcher_icons:
   remove_alpha_ios: true
   adaptive_icon_background: "#ffffff"
   adaptive_icon_foreground: "assets/icons/Logo.png"
-  # Provide a monochrome asset for Android 13+ themed icons to avoid poor auto-conversion
-  adaptive_icon_monochrome: "assets/icons/Logo.png"
+  # Remove monochrome to prevent Android 13+ from theming/tinting the launcher icon
+  # If you later want a themed icon, add a single-color asset via `adaptive_icon_monochrome`
   remove_existing_icons: true
   # web:
   #   generate: true
