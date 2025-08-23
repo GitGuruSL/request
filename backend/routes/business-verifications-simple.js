@@ -115,6 +115,32 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       });
     }
 
+    // Resolve a non-null business_category for backward compatibility (DB has NOT NULL)
+    let resolvedBusinessCategory = business_category;
+    if (!resolvedBusinessCategory) {
+      try {
+        if (business_type_id) {
+          const bt = await database.query('SELECT name FROM business_types WHERE id = $1', [business_type_id]);
+          if (bt.rows.length > 0) {
+            resolvedBusinessCategory = bt.rows[0].name || null;
+          }
+        }
+      } catch (e) {
+        console.warn('⚠️ Could not resolve business_category from business_type_id:', e.message);
+      }
+      // Additional back-compat fallbacks
+      if (!resolvedBusinessCategory && (description || business_description)) {
+        resolvedBusinessCategory = (business_description || description) || null;
+      }
+      if (!resolvedBusinessCategory && business_type) {
+        resolvedBusinessCategory = business_type;
+      }
+      if (!resolvedBusinessCategory) {
+        resolvedBusinessCategory = 'general';
+      }
+    }
+    console.log('🧭 Resolved business_category:', resolvedBusinessCategory, 'from type_id:', business_type_id);
+
     // Check if user already has a business verification
     const existingQuery = 'SELECT id FROM business_verifications WHERE user_id = $1';
     const existingResult = await database.query(existingQuery, [userId]);
@@ -179,7 +205,7 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       
       const updateValues = [
         business_name, business_email, business_phone, business_address,
-        business_type_id, business_category,
+        business_type_id, resolvedBusinessCategory,
         categories ? JSON.stringify(categories) : JSON.stringify([]),
         registration_number, tax_number, finalCountryValue, 
         business_description || description, business_license_url, tax_certificate_url,
@@ -213,7 +239,7 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       
       const result = await database.query(insertQuery, [
         userId, business_name, business_email, business_phone, business_address,
-        business_type_id, business_category,
+        business_type_id, resolvedBusinessCategory,
         categories ? JSON.stringify(categories) : JSON.stringify([]),
         registration_number, tax_number, finalCountryValue, 
         business_description || description, business_license_url, tax_certificate_url,
