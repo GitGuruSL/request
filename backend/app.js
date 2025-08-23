@@ -71,6 +71,9 @@ console.log('🔧 About to require driver-verifications route');
 const driverVerificationRoutes = require('./routes/driver-verifications'); // NEW
 console.log('🔧 About to require business-verifications route');
 const businessVerificationRoutes = require('./routes/business-verifications-simple'); // Use the simple working version
+const businessTypesRoutes = require('./routes/business-types'); // NEW - admin business types management
+const businessCategoriesRoutes = require('./routes/business-categories'); // NEW - business categories management
+const businessRegistrationFormRoutes = require('./routes/business-registration-form'); // NEW - form data for business registration
 const modulesRoutes = require('./routes/modules'); // NEW - module management
 
 // Import centralized data routes
@@ -140,9 +143,15 @@ app.use('/api', subscriptionPlansNew); // new CRUD under /subscription-plans-new
 app.use('/api/content-pages', contentPagesRoutes); // content pages management
 app.use('/api/driver-verifications', driverVerificationRoutes); // NEW - driver verification management
 app.use('/api/business-verifications', businessVerificationRoutes); // NEW - business verification management
+app.use('/api/business-types', businessTypesRoutes); // NEW - admin business types management
+app.use('/api/business-categories', businessCategoriesRoutes); // NEW - business categories management  
+app.use('/api/business-registration', businessRegistrationFormRoutes); // NEW - business registration form data
 app.use('/api/modules', modulesRoutes); // NEW - module management
 console.log('🔧 Driver-verifications route registered at /api/driver-verifications');
 console.log('🔧 Business-verifications route registered at /api/business-verifications');
+console.log('🔧 Business-types route registered at /api/business-types');
+console.log('🔧 Business-categories route registered at /api/business-categories');
+console.log('🔧 Business-registration route registered at /api/business-registration');
 
 // Error handling middleware
 app.use((err, req, res, next) => {

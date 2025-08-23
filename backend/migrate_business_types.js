@@ -19,7 +19,7 @@ async function runBusinessTypeMigration() {
     console.log('🔄 Starting business type migration...');
     
     // Read migration file
-    const migrationPath = path.join(__dirname, 'database', 'migrations', 'add_business_type_and_categories.sql');
+    const migrationPath = path.join(__dirname, 'database', 'migrations', 'create_business_types_system.sql');
     const migrationSQL = await fs.readFile(migrationPath, 'utf8');
     
     // Run migration

@@ -65,9 +65,10 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       business_email,
       business_phone,
       business_address,
-      business_type, // New: product_selling, delivery_service, or both
+      business_type_id, // NEW: Reference to business_types table
+      business_type, // Keep for backward compatibility
       business_category, // Accept business_category from Flutter (deprecated)
-      categories, // New: array of category IDs for notifications
+      categories, // Array of category IDs for notifications
       registration_number,
       tax_number,
       country_id,
@@ -163,20 +164,20 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       const updateQuery = `
         UPDATE business_verifications 
         SET business_name = $1, business_email = $2, business_phone = $3, 
-            business_address = $4, business_type = $5, business_category = $6, 
-            categories = $7, license_number = $8, 
-            tax_id = $9, country = $10, business_description = $11,
-            business_license_url = $12, tax_certificate_url = $13,
-            insurance_document_url = $14, business_logo_url = $15,
-            phone_verified = $16, email_verified = $17,
+            business_address = $4, business_type_id = $5, business_type = $6, business_category = $7, 
+            categories = $8, license_number = $9, 
+            tax_id = $10, country = $11, business_description = $12,
+            business_license_url = $13, tax_certificate_url = $14,
+            insurance_document_url = $15, business_logo_url = $16,
+            phone_verified = $17, email_verified = $18,
             updated_at = CURRENT_TIMESTAMP${statusUpdateClause}
-        WHERE user_id = $18
+        WHERE user_id = $19
         RETURNING *
       `;
       
       const updateValues = [
         business_name, business_email, business_phone, business_address,
-        business_type, business_category, 
+        business_type_id, business_type, business_category, 
         categories ? JSON.stringify(categories) : JSON.stringify([]),
         registration_number, tax_number, finalCountryValue, 
         business_description || description, business_license_url, tax_certificate_url,
@@ -200,17 +201,17 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       const insertQuery = `
         INSERT INTO business_verifications 
         (user_id, business_name, business_email, business_phone, business_address, 
-         business_type, business_category, categories, license_number, tax_id, country, 
+         business_type_id, business_type, business_category, categories, license_number, tax_id, country, 
          business_description, business_license_url, tax_certificate_url,
          insurance_document_url, business_logo_url, phone_verified, email_verified, 
          status, submitted_at, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         RETURNING *
       `;
       
       const result = await database.query(insertQuery, [
         userId, business_name, business_email, business_phone, business_address,
-        business_type, business_category, 
+        business_type_id, business_type, business_category, 
         categories ? JSON.stringify(categories) : JSON.stringify([]),
         registration_number, tax_number, finalCountryValue, 
         business_description || description, business_license_url, tax_certificate_url,

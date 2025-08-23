@@ -80,15 +80,21 @@ The existing `/api/business-verifications` endpoints now accept:
 
 ## Notification Targeting Logic
 
-### For Product/Service Requests
-1. Find verified businesses with `business_type` = 'product_selling' or 'both'
-2. Check if business categories include the request's category or subcategory
-3. Filter by country
+### For Item/Service/Rent Requests
+1. Find all verified businesses (any type)
+2. Prioritize businesses with matching categories for product sellers
+3. All businesses can respond regardless of category match
+4. Filter by country
 
 ### For Delivery Requests
 1. Find verified businesses with `business_type` = 'delivery_service' or 'both'
-2. No category matching required - all delivery businesses get notified
-3. Filter by country
+2. Filter by country
+3. Only these businesses can respond
+
+### For Ride Requests
+1. No business notifications sent
+2. Only individual registered drivers can respond
+3. Handled through driver system, not business system
 
 ## Integration Points
 
@@ -100,10 +106,12 @@ When a new request is created (`POST /api/requests`), the system automatically:
 
 ### Business Access Control
 The `BusinessNotificationService.getBusinessAccessRights()` method provides granular access control for:
-- Adding price listings
-- Responding to delivery requests  
-- Responding to product requests
-- Category-specific permissions
+- Adding price listings (product sellers only)
+- Sending item/service/rent requests (product sellers only)
+- Sending delivery requests (anyone)
+- Responding to delivery requests (delivery services only)
+- Responding to item/service/rent requests (anyone)
+- Ride requests are excluded from business system
 
 ## Usage Examples
 

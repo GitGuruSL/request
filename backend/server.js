@@ -48,6 +48,8 @@ const adminUserRoutes = require('./routes/admin-users');
 const driverVerificationRoutes = require('./routes/driver-verifications');
 const businessVerificationRoutes = require('./routes/business-verifications-simple'); // Use the simple working version
 const businessCategoriesRoutes = require('./routes/business-categories'); // NEW - Business categories management
+const businessTypesRoutes = require('./routes/business-types'); // NEW - Admin business types management
+const businessRegistrationFormRoutes = require('./routes/business-registration-form'); // NEW - Business registration form data
 const unifiedVerificationRoutes = require('./routes/unified-verification'); // Unified verification service
 const adminSMSRoutes = require('./routes/admin-sms');
 const emailVerificationRoutes = require('./routes/email-verification');
@@ -196,6 +198,8 @@ app.use('/api/admin-users', adminUserRoutes);
 app.use('/api/driver-verifications', driverVerificationRoutes);
 app.use('/api/business-verifications', businessVerificationRoutes); // NEW - Business verification routes
 app.use('/api/business-categories', businessCategoriesRoutes); // NEW - Business categories management
+app.use('/api/business-types', businessTypesRoutes); // NEW - Admin business types management
+app.use('/api/business-registration', businessRegistrationFormRoutes); // NEW - Business registration form data
 app.use('/api/unified-verification', unifiedVerificationRoutes); // Unified verification service
 app.use('/api/email-verification', emailVerificationRoutes); // Email OTP verification routes
 app.use('/api/temp-migration', tempMigrationRoutes); // Temporary migration routes
