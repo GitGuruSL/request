@@ -226,24 +226,19 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                 borderSide: const BorderSide(color: AppTheme.primaryColor),
               ),
             ),
-            onChanged: (value) => setState(() {}),
-            onSubmitted: (value) => _searchProducts(),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _searchProducts,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text('Search Products'),
-            ),
+            onChanged: (value) {
+              setState(() {});
+              // Live search with debounce
+              if (value.length >= 2) {
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  if (_searchController.text == value) {
+                    _searchProducts();
+                  }
+                });
+              } else if (value.isEmpty) {
+                _loadCountryProducts();
+              }
+            },
           ),
         ],
       ),
@@ -528,202 +523,414 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
     final TextEditingController websiteController = TextEditingController(
       text: isEditing ? existingListing.productLink ?? '' : '',
     );
+    final TextEditingController qtyController = TextEditingController(
+      text: isEditing ? existingListing.stockQuantity?.toString() ?? '1' : '1',
+    );
+    final TextEditingController modelController = TextEditingController(
+      text: isEditing ? existingListing.modelNumber ?? '' : '',
+    );
 
     List<File> selectedImages = [];
     List<String> existingImageUrls =
         isEditing ? List<String>.from(existingListing.productImages ?? []) : [];
 
-    showDialog(
+    // Get product variables
+    Map<String, dynamic> productVariables = {};
+    Map<String, String> selectedVariables = isEditing
+        ? Map<String, String>.from(existingListing.selectedVariables ?? {})
+        : {};
+
+    if (product != null && product.availableVariables != null) {
+      productVariables = Map<String, dynamic>.from(product.availableVariables);
+    }
+
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(isEditing ? 'Edit Price' : 'Add Price'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Product name
-                  Text(
-                    isEditing
-                        ? existingListing.productName ?? 'Product'
-                        : product.name ?? 'Product',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+        builder: (context, setDialogState) => DraggableScrollableSheet(
+          initialChildSize: 0.85,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          builder: (context, scrollController) => Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
+              children: [
+                // Handle bar
+                Container(
+                  margin: const EdgeInsets.only(top: 12),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                  const SizedBox(height: 16),
+                ),
 
-                  // Price input
-                  TextField(
-                    controller: priceController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Price (LKR)',
-                      border: OutlineInputBorder(),
-                    ),
+                // Header
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          isEditing ? 'Edit Price' : 'Add Price',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
+                ),
 
-                  // WhatsApp number
-                  TextField(
-                    controller: whatsappController,
-                    keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(
-                      labelText: 'WhatsApp Number (Optional)',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+                // Content
+                Expanded(
+                  child: ListView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    children: [
+                      // Product name
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          isEditing
+                              ? existingListing.productName ?? 'Product'
+                              : product?.name ?? 'Product',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
 
-                  // Website/Product link
-                  TextField(
-                    controller: websiteController,
-                    decoration: const InputDecoration(
-                      labelText: 'Website/Product Link (Optional)',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+                      // Price and Quantity Row
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: TextField(
+                              controller: priceController,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'Price (LKR) *',
+                                border: OutlineInputBorder(),
+                                prefixIcon: Icon(Icons.attach_money),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: qtyController,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'Quantity',
+                                border: OutlineInputBorder(),
+                                prefixIcon: Icon(Icons.inventory),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
 
-                  // Images section
-                  const Text(
-                    'Product Images',
-                    style: TextStyle(fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 8),
+                      // Model Number
+                      TextField(
+                        controller: modelController,
+                        decoration: const InputDecoration(
+                          labelText: 'Model Number (Optional)',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.model_training),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
 
-                  // Show existing images
-                  if (existingImageUrls.isNotEmpty) ...[
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: existingImageUrls
-                          .map((url) => Stack(
-                                children: [
-                                  Container(
-                                    width: 60,
-                                    height: 60,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(8),
-                                      image: DecorationImage(
-                                        image: NetworkImage(url),
-                                        fit: BoxFit.cover,
+                      // Product Variables
+                      if (productVariables.isNotEmpty) ...[
+                        const Text(
+                          'Product Variables',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        ...productVariables.entries.map((entry) {
+                          final variableName = entry.key;
+                          final variableOptions = entry.value;
+
+                          if (variableOptions is List) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: DropdownButtonFormField<String>(
+                                value: selectedVariables[variableName],
+                                decoration: InputDecoration(
+                                  labelText: variableName,
+                                  border: const OutlineInputBorder(),
+                                ),
+                                items: variableOptions
+                                    .map<DropdownMenuItem<String>>((option) {
+                                  return DropdownMenuItem<String>(
+                                    value: option.toString(),
+                                    child: Text(option.toString()),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  setDialogState(() {
+                                    if (value != null) {
+                                      selectedVariables[variableName] = value;
+                                    }
+                                  });
+                                },
+                              ),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        }).toList(),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // Contact Information Section
+                      const Text(
+                        'Contact Information',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // WhatsApp number
+                      TextField(
+                        controller: whatsappController,
+                        keyboardType: TextInputType.phone,
+                        decoration: const InputDecoration(
+                          labelText: 'WhatsApp Number (Optional)',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.phone),
+                          hintText: '+94xxxxxxxxx',
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Website/Product link
+                      TextField(
+                        controller: websiteController,
+                        decoration: const InputDecoration(
+                          labelText: 'Website/Product Link (Optional)',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.link),
+                          hintText: 'https://...',
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Images section
+                      const Text(
+                        'Product Images',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Show existing images
+                      if (existingImageUrls.isNotEmpty) ...[
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: existingImageUrls
+                              .map((url) => Stack(
+                                    children: [
+                                      Container(
+                                        width: 80,
+                                        height: 80,
+                                        decoration: BoxDecoration(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          image: DecorationImage(
+                                            image: NetworkImage(url),
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ),
-                                  Positioned(
-                                    top: -4,
-                                    right: -4,
-                                    child: IconButton(
-                                      icon: const Icon(Icons.close, size: 16),
-                                      onPressed: () {
-                                        setDialogState(() {
-                                          existingImageUrls.remove(url);
-                                        });
-                                      },
-                                      style: IconButton.styleFrom(
-                                        backgroundColor: Colors.red,
-                                        foregroundColor: Colors.white,
+                                      Positioned(
+                                        top: 4,
+                                        right: 4,
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            setDialogState(() {
+                                              existingImageUrls.remove(url);
+                                            });
+                                          },
+                                          child: Container(
+                                            decoration: const BoxDecoration(
+                                              color: Colors.red,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(
+                                              Icons.close,
+                                              size: 16,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ),
-                                ],
-                              ))
-                          .toList(),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
+                                    ],
+                                  ))
+                              .toList(),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
 
-                  // Show selected new images
-                  if (selectedImages.isNotEmpty) ...[
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: selectedImages
-                          .map((file) => Stack(
-                                children: [
-                                  Container(
-                                    width: 60,
-                                    height: 60,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(8),
-                                      image: DecorationImage(
-                                        image: FileImage(file),
-                                        fit: BoxFit.cover,
+                      // Show selected new images
+                      if (selectedImages.isNotEmpty) ...[
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: selectedImages
+                              .map((file) => Stack(
+                                    children: [
+                                      Container(
+                                        width: 80,
+                                        height: 80,
+                                        decoration: BoxDecoration(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          image: DecorationImage(
+                                            image: FileImage(file),
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ),
-                                  Positioned(
-                                    top: -4,
-                                    right: -4,
-                                    child: IconButton(
-                                      icon: const Icon(Icons.close, size: 16),
-                                      onPressed: () {
-                                        setDialogState(() {
-                                          selectedImages.remove(file);
-                                        });
-                                      },
-                                      style: IconButton.styleFrom(
-                                        backgroundColor: Colors.red,
-                                        foregroundColor: Colors.white,
+                                      Positioned(
+                                        top: 4,
+                                        right: 4,
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            setDialogState(() {
+                                              selectedImages.remove(file);
+                                            });
+                                          },
+                                          child: Container(
+                                            decoration: const BoxDecoration(
+                                              color: Colors.red,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(
+                                              Icons.close,
+                                              size: 16,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ),
-                                ],
-                              ))
-                          .toList(),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
+                                    ],
+                                  ))
+                              .toList(),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
 
-                  // Add image button
-                  OutlinedButton.icon(
-                    onPressed: () async {
-                      final ImagePicker picker = ImagePicker();
-                      final XFile? image =
-                          await picker.pickImage(source: ImageSource.gallery);
-                      if (image != null) {
-                        setDialogState(() {
-                          selectedImages.add(File(image.path));
-                        });
-                      }
-                    },
-                    icon: const Icon(Icons.add_photo_alternate),
-                    label: const Text('Add Image'),
+                      // Add image button
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          final ImagePicker picker = ImagePicker();
+                          final XFile? image = await picker.pickImage(
+                              source: ImageSource.gallery);
+                          if (image != null) {
+                            setDialogState(() {
+                              selectedImages.add(File(image.path));
+                            });
+                          }
+                        },
+                        icon: const Icon(Icons.add_photo_alternate),
+                        label: const Text('Add Image'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+                    ],
                   ),
-                ],
-              ),
+                ),
+
+                // Bottom buttons
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.1),
+                        spreadRadius: 1,
+                        blurRadius: 3,
+                        offset: const Offset(0, -1),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: const Text('Cancel'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            await _savePrice(
+                              product: product,
+                              existingListing: existingListing,
+                              price: priceController.text,
+                              whatsapp: whatsappController.text,
+                              website: websiteController.text,
+                              quantity: qtyController.text,
+                              modelNumber: modelController.text,
+                              variables: selectedVariables,
+                              newImages: selectedImages,
+                              existingImages: existingImageUrls,
+                            );
+                            if (context.mounted) Navigator.pop(context);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child:
+                              Text(isEditing ? 'Update Price' : 'Save Price'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                await _savePrice(
-                  product: product,
-                  existingListing: existingListing,
-                  price: priceController.text,
-                  whatsapp: whatsappController.text,
-                  website: websiteController.text,
-                  newImages: selectedImages,
-                  existingImages: existingImageUrls,
-                );
-                if (context.mounted) Navigator.pop(context);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
-                foregroundColor: Colors.white,
-              ),
-              child: Text(isEditing ? 'Update' : 'Save'),
-            ),
-          ],
         ),
       ),
     );
@@ -735,6 +942,9 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
     required String price,
     required String whatsapp,
     required String website,
+    required String quantity,
+    required String modelNumber,
+    required Map<String, String> variables,
     required List<File> newImages,
     required List<String> existingImages,
   }) async {
@@ -768,6 +978,9 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
         'countryCode': 'LK',
         'categoryId': '732f29d3-637b-4c20-9c6d-e90f472143f7', // Electronics
         'images': imageUrls,
+        'stockQuantity': int.tryParse(quantity) ?? 1,
+        if (modelNumber.isNotEmpty) 'modelNumber': modelNumber,
+        if (variables.isNotEmpty) 'selectedVariables': variables,
         if (whatsapp.isNotEmpty) 'whatsapp': whatsapp,
         if (website.isNotEmpty) 'website': website,
       };
