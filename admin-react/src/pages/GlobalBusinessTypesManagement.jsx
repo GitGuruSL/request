@@ -41,6 +41,7 @@ const GlobalBusinessTypesManagement = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingType, setEditingType] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [migrationStatus, setMigrationStatus] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -56,8 +57,28 @@ const GlobalBusinessTypesManagement = () => {
   ];
 
   useEffect(() => {
+    checkMigrationStatus();
     fetchGlobalBusinessTypes();
   }, []);
+
+  const checkMigrationStatus = async () => {
+    try {
+      const response = await fetch('/api/business-types/migration-status', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setMigrationStatus(data.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking migration status:', error);
+    }
+  };
 
   const fetchGlobalBusinessTypes = async () => {
     try {
@@ -67,15 +88,39 @@ const GlobalBusinessTypesManagement = () => {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Server returned non-JSON response');
+      }
+      
       const data = await response.json();
       if (data.success) {
         setBusinessTypes(data.data);
       } else {
-        setSnackbar({ open: true, message: data.message || 'Failed to fetch global business types', severity: 'error' });
+        setSnackbar({ 
+          open: true, 
+          message: data.message || 'Failed to fetch global business types', 
+          severity: 'error' 
+        });
       }
     } catch (error) {
       console.error('Error fetching global business types:', error);
-      setSnackbar({ open: true, message: 'Failed to fetch global business types', severity: 'error' });
+      let errorMessage = 'Failed to fetch global business types';
+      
+      if (error.message.includes('non-JSON response')) {
+        errorMessage = 'Server error: Please check if the database migration has been run. The system may need to be updated to support global business types.';
+      }
+      
+      setSnackbar({ 
+        open: true, 
+        message: errorMessage, 
+        severity: 'error' 
+      });
     } finally {
       setLoading(false);
     }
@@ -213,6 +258,15 @@ const GlobalBusinessTypesManagement = () => {
               <strong>Super Admin Only:</strong> These global business types serve as templates that country admins can adopt and customize for their regions.
             </Typography>
           </Alert>
+          
+          {migrationStatus && migrationStatus.needsMigration && (
+            <Alert severity="warning" sx={{ mt: 1 }}>
+              <Typography variant="body2">
+                <strong>Migration Required:</strong> The database needs to be updated to support the new global business types system. 
+                Please run the migration script: <code>node {migrationStatus.migrationFile}</code>
+              </Typography>
+            </Alert>
+          )}
         </Box>
         
         <Button

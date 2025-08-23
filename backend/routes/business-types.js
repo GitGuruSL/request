@@ -3,6 +3,88 @@ const router = express.Router();
 const database = require('../services/database');
 const auth = require('../services/auth');
 
+// Check migration status endpoint
+router.get('/migration-status', auth.authMiddleware(), async (req, res) => {
+  try {
+    // Check if user is super admin
+    if (req.user.role !== 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Super admin access required'
+      });
+    }
+
+    // Check if migration has been run
+    const checkTableQuery = `
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_schema = 'public' 
+      AND table_name = 'business_types'
+      AND column_name = 'country_code'
+    `;
+    
+    const hasCountryCode = await database.query(checkTableQuery, []);
+    const needsMigration = hasCountryCode.rows.length > 0;
+    
+    // Check if country_business_types table exists
+    const checkCountryTableQuery = `
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name = 'country_business_types'
+    `;
+    
+    const hasCountryTable = await database.query(checkCountryTableQuery, []);
+    
+    res.json({
+      success: true,
+      data: {
+        needsMigration,
+        hasOldStructure: needsMigration,
+        hasCountryBusinessTypesTable: hasCountryTable.rows.length > 0,
+        migrationFile: 'migrate_business_types_restructure.js'
+      }
+    });
+  } catch (error) {
+    console.error('Error checking migration status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error checking migration status',
+      error: error.message
+    });
+  }
+});
+
+// Run migration endpoint (super admin only)
+router.post('/run-migration', auth.authMiddleware(), async (req, res) => {
+  try {
+    // Check if user is super admin
+    if (req.user.role !== 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Super admin access required'
+      });
+    }
+
+    // Import and run the migration
+    const { runBusinessTypesRestructuring } = require('../migrate_business_types_restructure');
+    
+    await runBusinessTypesRestructuring();
+    
+    res.json({
+      success: true,
+      message: 'Business types migration completed successfully!'
+    });
+  } catch (error) {
+    console.error('Error running migration:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error running migration: ' + error.message,
+      error: error.message
+    });
+  }
+});
+
 // Global business types management (super admin only)
 
 // Get all global business types (super admin only)
@@ -16,24 +98,58 @@ router.get('/global', auth.authMiddleware(), async (req, res) => {
       });
     }
 
-    const query = `
-      SELECT 
-        bt.id, 
-        bt.name, 
-        bt.description, 
-        bt.icon, 
-        bt.display_order,
-        bt.is_active,
-        bt.created_at,
-        bt.updated_at,
-        COUNT(cbt.id) as country_usage
-      FROM business_types bt
-      LEFT JOIN country_business_types cbt ON cbt.global_business_type_id = bt.id
-      GROUP BY bt.id, bt.name, bt.description, bt.icon, bt.display_order, bt.is_active, bt.created_at, bt.updated_at
-      ORDER BY bt.display_order, bt.name
+    // Check current table structure to determine if migration has been run
+    const checkTableQuery = `
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_schema = 'public' 
+      AND table_name = 'business_types'
+      AND column_name = 'country_code'
     `;
+    
+    const hasCountryCode = await database.query(checkTableQuery, []);
+    
+    let query, result;
+    
+    if (hasCountryCode.rows.length > 0) {
+      // Old structure - return unique business types as "global" templates
+      query = `
+        SELECT DISTINCT
+          ROW_NUMBER() OVER (ORDER BY name) as id,
+          name, 
+          description, 
+          icon, 
+          display_order,
+          true as is_active,
+          MIN(created_at) as created_at,
+          MAX(updated_at) as updated_at,
+          COUNT(*) as country_usage
+        FROM business_types bt
+        WHERE is_active = true
+        GROUP BY name, description, icon, display_order
+        ORDER BY display_order, name
+      `;
+    } else {
+      // New structure - query global business types table
+      query = `
+        SELECT 
+          bt.id, 
+          bt.name, 
+          bt.description, 
+          bt.icon, 
+          bt.display_order,
+          bt.is_active,
+          bt.created_at,
+          bt.updated_at,
+          COUNT(cbt.id) as country_usage
+        FROM business_types bt
+        LEFT JOIN country_business_types cbt ON cbt.global_business_type_id = bt.id
+        GROUP BY bt.id, bt.name, bt.description, bt.icon, bt.display_order, bt.is_active, bt.created_at, bt.updated_at
+        ORDER BY bt.display_order, bt.name
+      `;
+    }
 
-    const result = await database.query(query, []);
+    result = await database.query(query, []);
 
     res.json({
       success: true,
@@ -57,6 +173,24 @@ router.post('/global', auth.authMiddleware(), async (req, res) => {
       return res.status(403).json({
         success: false,
         message: 'Super admin access required'
+      });
+    }
+
+    // Check if migration has been run
+    const checkTableQuery = `
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_schema = 'public' 
+      AND table_name = 'business_types'
+      AND column_name = 'country_code'
+    `;
+    
+    const hasCountryCode = await database.query(checkTableQuery, []);
+    
+    if (hasCountryCode.rows.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please run the business types migration first. The system needs to be updated to support global business types.'
       });
     }
 
