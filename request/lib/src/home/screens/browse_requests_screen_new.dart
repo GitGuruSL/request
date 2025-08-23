@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../models/request_model.dart' as models;
 import '../../models/enhanced_user_model.dart';
 import '../../services/rest_request_service.dart';
 import '../../services/country_service.dart';
@@ -360,14 +359,51 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     );
   }
 
+  // Derive enum RequestType from REST model fields
+  RequestType _typeOf(RequestModel r) {
+    final raw = (r.requestType ?? r.categoryType ?? '').trim().toLowerCase();
+    switch (raw) {
+      case 'item':
+      case 'items':
+      case 'product':
+      case 'products':
+        return RequestType.item;
+      case 'service':
+      case 'services':
+        return RequestType.service;
+      case 'rental':
+      case 'rent':
+      case 'rentals':
+        return RequestType.rental;
+      case 'delivery':
+      case 'deliver':
+      case 'courier':
+      case 'parcel':
+        return RequestType.delivery;
+      case 'ride':
+      case 'rides':
+      case 'transport':
+      case 'trip':
+        return RequestType.ride;
+      case 'price':
+      case 'price_comparison':
+      case 'pricing':
+        return RequestType.price;
+      default:
+        return RequestType.item;
+    }
+  }
+
+  String? _cityOf(RequestModel r) => r.cityName;
+
   Widget _buildRequestCard(RequestModel request) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: _getLightTypeColor(request.type),
+        color: _getLightTypeColor(_typeOf(request)),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: _getTypeColor(request.type).withOpacity(0.2),
+          color: _getTypeColor(_typeOf(request)).withOpacity(0.2),
           width: 1,
         ),
       ),
@@ -386,11 +422,11 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: _getTypeColor(request.type),
+                      color: _getTypeColor(_typeOf(request)),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      _getTypeDisplayName(request.type),
+                      _getTypeDisplayName(_typeOf(request)),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 12,
@@ -462,12 +498,13 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: _getTypeColor(request.type),
+                        color: _getTypeColor(_typeOf(request)),
                       ),
                     ),
                   ],
                   const Spacer(),
-                  if (request.location?.city != null) ...[
+                  if (_cityOf(request) != null &&
+                      _cityOf(request)!.isNotEmpty) ...[
                     Icon(
                       Icons.location_on,
                       size: 16,
@@ -476,7 +513,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                     const SizedBox(width: 4),
                     Flexible(
                       child: Text(
-                        request.location!.city!,
+                        _cityOf(request)!,
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey[600],
@@ -554,7 +591,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     if (_countryModules != null) {
       filtered = filtered.where((request) {
         // Get the module ID for this request type
-        String moduleId = _getModuleIdFromRequestType(request.type);
+        String moduleId = _getModuleIdFromRequestType(_typeOf(request));
 
         // Check if this module is enabled for the user's country
         return _countryModules!.isModuleEnabled(moduleId);
@@ -563,8 +600,9 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
 
     // Filter by type
     if (_selectedType != null) {
-      filtered =
-          filtered.where((request) => request.type == _selectedType).toList();
+      filtered = filtered
+          .where((request) => _typeOf(request) == _selectedType)
+          .toList();
     }
 
     // Filter by search query with comma support
@@ -578,8 +616,8 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
       filtered = filtered.where((request) {
         final title = request.title.toLowerCase();
         final description = request.description.toLowerCase();
-        final location = request.location?.city?.toLowerCase() ?? '';
-        final type = _getTypeDisplayName(request.type).toLowerCase();
+        final location = _cityOf(request)?.toLowerCase() ?? '';
+        final type = _getTypeDisplayName(_typeOf(request)).toLowerCase();
 
         return searchTerms.any((term) =>
             title.contains(term) ||
