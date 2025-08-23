@@ -37,10 +37,9 @@ import {
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon
 } from '@mui/icons-material';
-import { useAuth } from '../contexts/AuthContext';
+import api from '../services/apiClient';
 
 const CountryBusinessTypesManagement = () => {
-  const { user } = useAuth();
   const [businessTypes, setBusinessTypes] = useState([]);
   const [countries, setCountries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -70,15 +69,8 @@ const CountryBusinessTypesManagement = () => {
 
   const fetchCountries = async () => {
     try {
-      const response = await fetch('/api/countries', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      const data = await response.json();
-      if (data.success) {
-        setCountries(data.data);
-      }
+      const { data } = await api.get('/countries');
+      if (data?.success) setCountries(data.data || []);
     } catch (error) {
       console.error('Error fetching countries:', error);
     }
@@ -87,16 +79,11 @@ const CountryBusinessTypesManagement = () => {
   const fetchBusinessTypes = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/business-types?country_code=${selectedCountry}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      const data = await response.json();
-      if (data.success) {
-        setBusinessTypes(data.data);
+      const { data } = await api.get(`/business-types`, { params: { country_code: selectedCountry } });
+      if (data?.success) {
+        setBusinessTypes(data.data || []);
       } else {
-        setSnackbar({ open: true, message: data.message || 'Failed to fetch business types', severity: 'error' });
+        setSnackbar({ open: true, message: data?.message || 'Failed to fetch business types', severity: 'error' });
       }
     } catch (error) {
       console.error('Error fetching business types:', error);
@@ -111,26 +98,14 @@ const CountryBusinessTypesManagement = () => {
     
     try {
       const url = editingType 
-        ? `/api/business-types/admin/${editingType.id}`
-        : '/api/business-types/admin';
+        ? `/business-types/admin/${editingType.id}`
+        : '/business-types/admin';
+      const payload = { ...formData, country_code: selectedCountry };
+      const { data } = editingType
+        ? await api.put(url, payload)
+        : await api.post(url, payload);
       
-      const method = editingType ? 'PUT' : 'POST';
-      
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          ...formData,
-          country_code: selectedCountry
-        })
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
+      if (data?.success) {
         setSnackbar({ open: true, message: editingType ? 'Business type updated successfully' : 'Business type created successfully', severity: 'success' });
         setIsDialogOpen(false);
         setEditingType(null);
@@ -144,7 +119,7 @@ const CountryBusinessTypesManagement = () => {
         });
         fetchBusinessTypes();
       } else {
-        setSnackbar({ open: true, message: data.message || 'Operation failed', severity: 'error' });
+        setSnackbar({ open: true, message: data?.message || 'Operation failed', severity: 'error' });
       }
     } catch (error) {
       console.error('Error saving business type:', error);
@@ -171,20 +146,13 @@ const CountryBusinessTypesManagement = () => {
     }
 
     try {
-      const response = await fetch(`/api/business-types/admin/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      const data = await response.json();
+      const { data } = await api.delete(`/business-types/admin/${id}`);
       
-      if (data.success) {
+      if (data?.success) {
         setSnackbar({ open: true, message: 'Business type deleted successfully', severity: 'success' });
         fetchBusinessTypes();
       } else {
-        setSnackbar({ open: true, message: data.message || 'Failed to delete business type', severity: 'error' });
+        setSnackbar({ open: true, message: data?.message || 'Failed to delete business type', severity: 'error' });
       }
     } catch (error) {
       console.error('Error deleting business type:', error);
@@ -194,24 +162,15 @@ const CountryBusinessTypesManagement = () => {
 
   const toggleStatus = async (id, currentStatus) => {
     try {
-      const response = await fetch(`/api/business-types/admin/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          is_active: !currentStatus
-        })
+      const { data } = await api.put(`/business-types/admin/${id}`, {
+        is_active: !currentStatus
       });
-
-      const data = await response.json();
       
-      if (data.success) {
+      if (data?.success) {
         setSnackbar({ open: true, message: 'Business type status updated successfully', severity: 'success' });
         fetchBusinessTypes();
       } else {
-        setSnackbar({ open: true, message: data.message || 'Failed to update status', severity: 'error' });
+        setSnackbar({ open: true, message: data?.message || 'Failed to update status', severity: 'error' });
       }
     } catch (error) {
       console.error('Error updating status:', error);
