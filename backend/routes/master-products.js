@@ -44,7 +44,14 @@ function adapt(row){
     id: row.id,
     name: row.name,
     slug: row.slug,
+    brand: row.brand || null, // For compatibility with frontend
     brandId: row.brand_id || null,
+    categoryId: row.category_id || null,
+    subcategoryId: row.subcategory_id || null,
+    description: row.description || '',
+    keywords: row.keywords || [],
+    images: row.images || [],
+    availableVariables: row.available_variables || {},
     baseUnit: row.base_unit || null,
     // Normalize possible representations (boolean, int, char)
     isActive: typeof row.is_active === 'boolean'
@@ -71,25 +78,77 @@ router.get('/:id', async (req,res)=>{ try{ const row=await db.findById('master_p
 
 router.post('/', optionalAuth(async (req,res)=>{
   try {
-    const { name, slug, brandId, baseUnit, isActive = true } = req.body;
+    const { 
+      name, 
+      slug, 
+      brand, 
+      brandId, 
+      categoryId, 
+      subcategoryId, 
+      description, 
+      keywords, 
+      images, 
+      availableVariables, 
+      baseUnit, 
+      isActive = true 
+    } = req.body;
+    
     if(!name) return res.status(400).json({ success:false, error:'Name required' });
+    
     const exists = slug ? await db.findMany('master_products', { slug }) : [];
     if (exists.length) return res.status(400).json({ success:false, error:'Slug exists' });
-    const row = await db.insert('master_products', { name, slug, brand_id: brandId || null, base_unit: baseUnit || null, is_active: isActive });
+    
+    const insertData = { 
+      name, 
+      slug, 
+      brand_id: brandId || null, 
+      category_id: categoryId || null,
+      subcategory_id: subcategoryId || null,
+      description: description || '',
+      keywords: keywords || [],
+      images: images || [],
+      available_variables: availableVariables || {},
+      base_unit: baseUnit || null, 
+      is_active: isActive 
+    };
+    
+    const row = await db.insert('master_products', insertData);
     res.status(201).json({ success:true, message:'Product created', data: adapt(row) });
   } catch(e){ console.error('Create master product error',e); res.status(400).json({success:false,error:e.message}); }
 }));
 
 router.put('/:id', optionalAuth(async (req,res)=>{
   try {
-    const { name, slug, brandId, baseUnit, isActive } = req.body;
+    const { 
+      name, 
+      slug, 
+      brand, 
+      brandId, 
+      categoryId, 
+      subcategoryId, 
+      description, 
+      keywords, 
+      images, 
+      availableVariables, 
+      baseUnit, 
+      isActive 
+    } = req.body;
+    
     const update = {};
     if (name !== undefined) update.name = name;
     if (slug !== undefined) update.slug = slug;
     if (brandId !== undefined) update.brand_id = brandId;
+    if (categoryId !== undefined) update.category_id = categoryId;
+    if (subcategoryId !== undefined) update.subcategory_id = subcategoryId;
+    if (description !== undefined) update.description = description;
+    if (keywords !== undefined) update.keywords = keywords;
+    if (images !== undefined) update.images = images;
+    if (availableVariables !== undefined) update.available_variables = availableVariables;
     if (baseUnit !== undefined) update.base_unit = baseUnit;
     if (isActive !== undefined) update.is_active = isActive;
+    
     if (!Object.keys(update).length) return res.status(400).json({ success:false, error:'No fields to update'});
+    
     const row = await db.update('master_products', req.params.id, update);
     if (!row) return res.status(404).json({ success:false, error:'Not found'});
     res.json({ success:true, message:'Product updated', data: adapt(row) });

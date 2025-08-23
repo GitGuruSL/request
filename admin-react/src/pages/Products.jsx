@@ -317,11 +317,27 @@ const Products = () => {
         }
       }
 
+      // Find brandId from brand name
+      let brandId = null;
+      if (formData.brand) {
+        const selectedBrand = brands.find(b => 
+          (b.name || b.brandName) === formData.brand
+        );
+        brandId = selectedBrand?.id || null;
+      }
+
       // Ensure images from uploads are included
       const productData = {
-        ...formData,
-        availableVariables,
+        name: formData.name,
+        brand: formData.brand, // Keep for compatibility
+        brandId: brandId,
+        categoryId: formData.categoryId,
+        subcategoryId: formData.subcategoryId,
+        description: formData.description,
+        keywords: formData.keywords,
         images: formData.images || [],
+        availableVariables,
+        isActive: formData.isActive,
         // updatedBy is optional; guard if adminData not yet loaded
         ...(adminData?.email ? { updatedBy: adminData.email } : {})
       };
@@ -693,6 +709,11 @@ const Products = () => {
                         alt={`Product ${index + 1}`}
                         loading="lazy"
                         style={{ objectFit: 'cover' }}
+                        crossOrigin="anonymous"
+                        onError={(e) => {
+                          console.warn('Image load failed:', image);
+                          // Optionally set a placeholder or hide the image
+                        }}
                       />
                       <IconButton
                         sx={{
