@@ -70,6 +70,7 @@ const AdminUsers = () => {
       // Business Management
       productManagement: true,
       businessManagement: true,
+  countryBusinessTypeManagement: false,
       driverVerification: true,
       
       // Vehicle Management
@@ -214,6 +215,7 @@ const AdminUsers = () => {
             // Business Management
             productManagement: formData.permissions?.productManagement !== undefined ? formData.permissions.productManagement : true,
             businessManagement: formData.permissions?.businessManagement !== undefined ? formData.permissions.businessManagement : true,
+            countryBusinessTypeManagement: formData.permissions?.countryBusinessTypeManagement !== undefined ? formData.permissions.countryBusinessTypeManagement : false,
             driverVerification: formData.permissions?.driverVerification !== undefined ? formData.permissions.driverVerification : true,
             
             // Vehicle Management
@@ -285,6 +287,7 @@ const AdminUsers = () => {
             // Business Management
             productManagement: formData.permissions?.productManagement !== undefined ? formData.permissions.productManagement : true,
             businessManagement: formData.permissions?.businessManagement !== undefined ? formData.permissions.businessManagement : true,
+            countryBusinessTypeManagement: formData.permissions?.countryBusinessTypeManagement !== undefined ? formData.permissions.countryBusinessTypeManagement : false,
             driverVerification: formData.permissions?.driverVerification !== undefined ? formData.permissions.driverVerification : true,
             
             // Vehicle Management
@@ -401,6 +404,7 @@ const AdminUsers = () => {
         // Business Management
         productManagement: user.permissions?.productManagement !== undefined ? user.permissions.productManagement : true,
         businessManagement: user.permissions?.businessManagement !== undefined ? user.permissions.businessManagement : true,
+  countryBusinessTypeManagement: user.permissions?.countryBusinessTypeManagement !== undefined ? user.permissions.countryBusinessTypeManagement : false,
         driverVerification: user.permissions?.driverVerification !== undefined ? user.permissions.driverVerification : (user.permissions?.driverManagement !== undefined ? user.permissions.driverManagement : true),
         
         // Vehicle Management
@@ -889,6 +893,18 @@ const AdminUsers = () => {
                       />
                     }
                     label="Businesses"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={formData.permissions?.countryBusinessTypeManagement || false}
+                        onChange={(e) => handlePermissionChange('countryBusinessTypeManagement', e.target.checked)}
+                      />
+                    }
+                    label="Business Types"
                   />
                 </Grid>
                 <Grid item xs={12} sm={6} md={4}>

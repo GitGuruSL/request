@@ -159,7 +159,7 @@ const Layout = () => {
     { text: 'Products', icon: <ShoppingCart />, path: '/products', access: 'super_admin', permission: 'productManagement' },
     { text: 'Businesses', icon: <Business />, path: '/businesses', access: 'all', permission: 'businessManagement' },
     { text: 'Global Business Types', icon: <BusinessCenter />, path: '/business-types', access: 'super_admin', permission: 'businessManagement' },
-    { text: 'Business Types', icon: <BusinessCenter />, path: '/country-business-types', access: 'country_admin', permission: 'businessManagement' },
+  { text: 'Business Types', icon: <BusinessCenter />, path: '/country-business-types', access: 'country_admin', permission: 'countryBusinessTypeManagement' },
     { text: 'Drivers', icon: <Gavel />, path: '/driver-verification', access: 'all', permission: 'driverVerification' },
     { text: 'Divider' },
     { text: 'Vehicle Types', icon: <Settings />, path: '/vehicles', access: 'super_admin', permission: 'vehicleManagement' },
