@@ -181,81 +181,7 @@ class _HomeScreenState extends State<HomeScreen> {
       : s.length == 1
           ? s.toUpperCase()
           : s[0].toUpperCase() + s.substring(1);
-
-  void _openCreateSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        final items = _requestTypes;
-        final loading = _loadingModules && _modules == null;
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(ctx).size.height * 0.8,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      'Create New Request',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                    ),
-                    const SizedBox(height: 24),
-                    if (loading)
-                      const Padding(
-                        padding: EdgeInsets.only(bottom: 12),
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    Flexible(
-                      child: SingleChildScrollView(
-                        child: Column(
-                          children: items
-                              .map(
-                                (it) => _RequestTypeTile(
-                                  icon: it.icon,
-                                  iconColor: it.color,
-                                  title: it.title,
-                                  subtitle: it.subtitle,
-                                  disabled: !_moduleEnabled(it.type),
-                                  onTap: () => _handleTap(it),
-                                ),
-                              )
-                              .toList(),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
+  // Quick create bottom sheet removed from Home.
 
   bool _moduleEnabled(String type) {
     final key = switch (type) {
@@ -509,11 +435,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openCreateSheet,
-        tooltip: 'New Request',
-        child: const Icon(Icons.add),
-      ),
     );
   }
 }
@@ -607,7 +528,11 @@ class _QuickActionsGrid extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(it.icon, color: disabled ? Colors.grey : it.color),
+                Icon(
+                  it.icon,
+                  color: disabled ? Colors.grey : it.color,
+                  size: 18,
+                ),
                 const SizedBox(height: 8),
                 Text(
                   it.title.split(' ').first,
@@ -702,93 +627,7 @@ class _ProductCard extends StatelessWidget {
   }
 }
 
-class _RequestTypeTile extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final String subtitle;
-  final bool disabled;
-  final VoidCallback onTap;
-  const _RequestTypeTile({
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    required this.subtitle,
-    required this.disabled,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: disabled ? null : onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                color: disabled ? Colors.grey.withOpacity(0.05) : null,
-              ),
-              child: Icon(
-                icon,
-                color: disabled ? Colors.grey : iconColor,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: disabled ? Colors.grey[400] : Colors.grey[600],
-                      height: 1.2,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (disabled)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.orange.withOpacity(0.4)),
-                ),
-                child: const Text(
-                  'Coming Soon',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.orange,
-                    letterSpacing: 0.2,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+// Removed _RequestTypeTile (legacy bottom sheet entry).
 
 class _RequestType {
   final String type;
