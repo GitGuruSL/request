@@ -3,6 +3,11 @@ const axios = require('axios');
 
 async function testRegistration() {
   try {
+    // Safety guard to avoid accidental data creation
+    if (process.env.ALLOW_TEST_SCRIPTS !== 'true') {
+      console.error('Refusing to run test_registration: set ALLOW_TEST_SCRIPTS=true to enable.');
+      process.exit(1);
+    }
     console.log('Testing user registration...');
     
     const response = await axios.post('http://localhost:3001/api/auth/register', {

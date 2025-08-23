@@ -2,6 +2,11 @@ const dbService = require('./services/database');
 
 async function testUserCreation() {
     try {
+        // Safety guard to avoid accidental data creation
+        if (process.env.ALLOW_TEST_SCRIPTS !== 'true') {
+            console.error('Refusing to run test_user_creation: set ALLOW_TEST_SCRIPTS=true to enable.');
+            process.exit(1);
+        }
         console.log('Testing user creation with the exact data from Flutter...');
         
         const userData = {

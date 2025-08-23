@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/country_filtered_data_service.dart';
 import '../../services/user_registration_service.dart';
+import '../../services/country_service.dart';
 import '../../models/request_model.dart' as models;
 import '../../screens/unified_request_response/unified_request_view_screen.dart';
 import '../../screens/requests/ride/view_ride_request_screen.dart';
@@ -19,6 +20,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
   bool _hasMore = true;
   int _page = 1;
   String? _error;
+  bool _needsCountrySelection = false;
 
   String _selectedCategory = 'All';
   List<String> _allowedRequestTypes = ['item', 'service', 'rent'];
@@ -46,6 +48,17 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
       _hasMore = true;
       _requests.clear();
     });
+    // Ensure country is set or restored; if missing, prompt selection
+    if (CountryService.instance.countryCode == null) {
+      await CountryService.instance.loadPersistedCountry();
+    }
+    if (CountryService.instance.countryCode == null) {
+      setState(() {
+        _needsCountrySelection = true;
+        _initialLoading = false;
+      });
+      return;
+    }
     // Load allowed request types based on user registrations (driver/delivery)
     try {
       final allowed =
@@ -147,109 +160,142 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          // Modern header without AppBar
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(24),
-                bottomRight: Radius.circular(24),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  spreadRadius: 1,
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: SafeArea(
+      body: _needsCountrySelection
+          ? Center(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+                padding: const EdgeInsets.all(24.0),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Row(
-                      children: [
-                        const Text(
-                          'Discover Requests',
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        const Spacer(),
-                        IconButton(
-                          icon: const Icon(Icons.refresh),
-                          onPressed: _loadInitial,
-                          tooltip: 'Refresh',
-                        ),
-                      ],
+                    const Icon(Icons.flag_outlined,
+                        size: 72, color: Colors.blueGrey),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Select your country',
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
                     ),
-                    const SizedBox(height: 12),
-                    // Search bar (moved up to replace subtitle)
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: TextField(
-                        decoration: InputDecoration(
-                          hintText: 'Find requests that match your skills',
-                          hintStyle: TextStyle(color: Colors.grey[500]),
-                          prefixIcon: Icon(Icons.search_outlined,
-                              color: Colors.grey[500]),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
-                        ),
-                        onChanged: (value) {
-                          // Add search functionality here
-                        },
-                      ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Choose your country to browse requests near you.',
+                      style: TextStyle(color: Colors.grey[600]),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pushNamed(context, '/welcome'),
+                      child: const Text('Select Country'),
                     ),
                   ],
                 ),
               ),
-            ),
-          ),
-          _buildCategoryChips(),
-          _buildResultCount(),
-          Expanded(
-            child: _initialLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _error != null
-                    ? _buildErrorState()
-                    : _filteredRequests.isEmpty
-                        ? _buildEmptyState()
-                        : RefreshIndicator(
-                            onRefresh: _loadInitial,
-                            child: ListView.builder(
-                              controller: _scrollController,
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 16),
-                              itemCount: _filteredRequests.length +
-                                  (_fetchingMore ? 1 : 0),
-                              itemBuilder: (context, index) {
-                                if (index == _filteredRequests.length) {
-                                  return const Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 16),
-                                    child: Center(
-                                        child: CircularProgressIndicator()),
-                                  );
-                                }
-                                final request = _filteredRequests[index];
-                                return _buildRequestCard(request);
+            )
+          : Column(
+              children: [
+                // Modern header without AppBar
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(24),
+                      bottomRight: Radius.circular(24),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.1),
+                        spreadRadius: 1,
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Text(
+                                'Discover Requests',
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              const Spacer(),
+                              IconButton(
+                                icon: const Icon(Icons.refresh),
+                                onPressed: _loadInitial,
+                                tooltip: 'Refresh',
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          // Search bar (moved up to replace subtitle)
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.grey[50],
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: TextField(
+                              decoration: InputDecoration(
+                                hintText:
+                                    'Find requests that match your skills',
+                                hintStyle: TextStyle(color: Colors.grey[500]),
+                                prefixIcon: Icon(Icons.search_outlined,
+                                    color: Colors.grey[500]),
+                                border: InputBorder.none,
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 12),
+                              ),
+                              onChanged: (value) {
+                                // Add search functionality here
                               },
                             ),
                           ),
-          ),
-        ],
-      ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                _buildCategoryChips(),
+                _buildResultCount(),
+                Expanded(
+                  child: _initialLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _error != null
+                          ? _buildErrorState()
+                          : _filteredRequests.isEmpty
+                              ? _buildEmptyState()
+                              : RefreshIndicator(
+                                  onRefresh: _loadInitial,
+                                  child: ListView.builder(
+                                    controller: _scrollController,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16),
+                                    itemCount: _filteredRequests.length +
+                                        (_fetchingMore ? 1 : 0),
+                                    itemBuilder: (context, index) {
+                                      if (index == _filteredRequests.length) {
+                                        return const Padding(
+                                          padding: EdgeInsets.symmetric(
+                                              vertical: 16),
+                                          child: Center(
+                                              child:
+                                                  CircularProgressIndicator()),
+                                        );
+                                      }
+                                      final request = _filteredRequests[index];
+                                      return _buildRequestCard(request);
+                                    },
+                                  ),
+                                ),
+                ),
+              ],
+            ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           // TODO: Navigate to create request

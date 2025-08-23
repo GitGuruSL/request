@@ -1,6 +1,11 @@
 const axios = require('axios');
 
 async function testDriverVerificationFlow() {
+  // Safety guard to avoid accidental data changes
+  if (process.env.ALLOW_TEST_SCRIPTS !== 'true') {
+    console.error('Refusing to run test_driver_email_verification: set ALLOW_TEST_SCRIPTS=true to enable.');
+    process.exit(1);
+  }
   const baseURL = 'http://localhost:3001';
   
   // Test data - using the verified user

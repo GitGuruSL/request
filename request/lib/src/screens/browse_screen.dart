@@ -30,6 +30,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
   CountryModules? _countryModules;
   List<RequestType> _enabledRequestTypes = [];
   List<String> _allowedTypes = ['item', 'service', 'rent'];
+  bool _needsCountrySelection = false;
 
   @override
   void initState() {
@@ -40,6 +41,21 @@ class _BrowseScreenState extends State<BrowseScreen> {
   Future<void> _loadData() async {
     try {
       _currencySymbol = CountryService.instance.getCurrencySymbol();
+
+      // Ensure country is loaded from persisted storage if missing
+      if (CountryService.instance.countryCode == null) {
+        await CountryService.instance.loadPersistedCountry();
+      }
+
+      if (CountryService.instance.countryCode == null) {
+        if (mounted) {
+          setState(() {
+            _needsCountrySelection = true;
+            _isLoading = false;
+          });
+        }
+        return;
+      }
 
       // Load user's allowed request types based on registrations
       final allowedRequestTypeStrings =
@@ -229,6 +245,39 @@ class _BrowseScreenState extends State<BrowseScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_needsCountrySelection) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8F9FA),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.flag_outlined,
+                    size: 72, color: Colors.blueGrey),
+                const SizedBox(height: 16),
+                const Text(
+                  'Select your country',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Choose your country to browse requests near you.',
+                  style: TextStyle(color: Colors.grey[600]),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => Navigator.pushNamed(context, '/welcome'),
+                  child: const Text('Select Country'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA), // Light gray background
       body: SafeArea(

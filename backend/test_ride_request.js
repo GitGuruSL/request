@@ -2,6 +2,11 @@ const axios = require('axios');
 
 async function testRideRequestCreation() {
   try {
+    // Safety guard to avoid accidental data creation
+    if (process.env.ALLOW_TEST_SCRIPTS !== 'true') {
+      console.error('Refusing to run test_ride_request: set ALLOW_TEST_SCRIPTS=true to enable.');
+      process.exit(1);
+    }
     console.log('🚗 Testing ride request creation...\n');
 
     // Test data for a ride request (matches what Flutter will send)

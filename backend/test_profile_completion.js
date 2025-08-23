@@ -3,6 +3,11 @@ const axios = require('axios');
 
 async function testProfileCompletion() {
   try {
+    // Safety guard to avoid accidental data creation
+    if (process.env.ALLOW_TEST_SCRIPTS !== 'true') {
+      console.error('Refusing to run test_profile_completion: set ALLOW_TEST_SCRIPTS=true to enable.');
+      process.exit(1);
+    }
     // First register a user
     console.log('1. Registering test user...');
     const registerResponse = await axios.post('http://localhost:3001/api/auth/register', {

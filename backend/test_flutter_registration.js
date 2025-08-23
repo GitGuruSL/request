@@ -3,6 +3,11 @@ const bcrypt = require('bcryptjs');
 
 async function testFlutterRegistration() {
     try {
+        // Safety guard to avoid accidental data creation
+        if (process.env.ALLOW_TEST_SCRIPTS !== 'true') {
+            console.error('Refusing to run test_flutter_registration: set ALLOW_TEST_SCRIPTS=true to enable.');
+            process.exit(1);
+        }
         console.log('Testing Flutter registration endpoint...');
         
         // Test the actual registration with same data as Flutter app
