@@ -1268,6 +1268,8 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
         if (variables.isNotEmpty) 'selectedVariables': variables,
         if (whatsapp.isNotEmpty) 'whatsapp': whatsapp,
         if (website.isNotEmpty) 'website': website,
+        // Add listing ID for updates
+        if (existingListing != null) 'id': existingListing.id,
       };
 
       print('DEBUG: API payload: $apiPayload');

@@ -269,10 +269,33 @@ class PricingService {
         data = listing.toJson();
       }
 
-      final response = await _apiClient.post(
-        '/api/price-listings',
-        data: data,
-      );
+      // Check if this is an update (has ID) or create (no ID)
+      final listingId = data['id'];
+      final bool isUpdate = listingId != null;
+
+      print(
+          'DEBUG: ${isUpdate ? 'UPDATING' : 'CREATING'} price listing${isUpdate ? ' with ID: $listingId' : ''}');
+      print('DEBUG: API payload: $data');
+
+      late ApiResponse response;
+
+      if (isUpdate) {
+        // Remove ID from data payload for PUT request
+        final updateData = Map<String, dynamic>.from(data);
+        updateData.remove('id');
+
+        // Use PUT for updates
+        response = await _apiClient.put(
+          '/api/price-listings/$listingId',
+          data: updateData,
+        );
+      } else {
+        // Use POST for new creations
+        response = await _apiClient.post(
+          '/api/price-listings',
+          data: data,
+        );
+      }
 
       return response.isSuccess;
     } catch (e) {

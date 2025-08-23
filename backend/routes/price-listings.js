@@ -73,7 +73,11 @@ async function formatPriceListing(row, includeBusiness = false) {
     viewCount: row.view_count || 0,
     contactCount: row.contact_count || 0,
     createdAt: row.created_at,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
+    // Add selectedVariables and subcategory fields
+    selectedVariables: row.selected_variables ? (typeof row.selected_variables === 'string' ? JSON.parse(row.selected_variables) : row.selected_variables) : {},
+    subcategoryId: row.subcategory_id,
+    categoryId: row.category_id
   };
   
   // Add business details if included in query
@@ -564,8 +568,11 @@ router.post('/', authService.authMiddleware(), upload.array('images', 5), async 
       whatsapp,
       cityId,
       countryCode = 'LK',
-      images: bodyImages // Images from request body (S3 URLs)
+      images: bodyImages, // Images from request body (S3 URLs)
+      selectedVariables = {} // Add selectedVariables from request body
     } = req.body;
+
+    console.log('DEBUG: CREATE - selectedVariables from request:', selectedVariables);
 
     // Validate required fields
     if (!masterProductId || !title || !price) {
@@ -609,15 +616,15 @@ router.post('/', authService.authMiddleware(), upload.array('images', 5), async 
       INSERT INTO price_listings (
         business_id, master_product_id, category_id, subcategory_id,
         title, description, price, currency, unit, delivery_charge,
-        images, website, whatsapp, city_id, country_code
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        images, website, whatsapp, city_id, country_code, selected_variables
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *
     `;
 
     const values = [
       userId, masterProductId, categoryId, subcategoryId,
       title, description, parseFloat(price), currency, unit, parseFloat(deliveryCharge),
-      JSON.stringify(images), website, whatsapp, cityId, countryCode
+      JSON.stringify(images), website, whatsapp, cityId, countryCode, JSON.stringify(selectedVariables)
     ];
 
   const result = await database.query(insertQuery, values);
@@ -642,7 +649,7 @@ router.post('/', authService.authMiddleware(), upload.array('images', 5), async 
 // PUT /api/price-listings/:id - Update a price listing (Business owner only)
 router.put('/:id', authService.authMiddleware(), upload.array('images', 5), async (req, res) => {
   try {
-    const userId = req.user.uid;
+    const userId = req.user.id; // Fixed: use 'id' instead of 'uid' for consistency
     const { id } = req.params;
 
     // Check if listing exists and belongs to the user
@@ -668,8 +675,11 @@ router.put('/:id', authService.authMiddleware(), upload.array('images', 5), asyn
       website,
       whatsapp,
       cityId,
-      isActive
+      isActive,
+      selectedVariables // Add selectedVariables to UPDATE request
     } = req.body;
+
+    console.log('DEBUG: UPDATE - selectedVariables from request:', selectedVariables);
 
     // Handle uploaded images
     let images = existingListing.rows[0].images || [];
@@ -750,6 +760,12 @@ router.put('/:id', authService.authMiddleware(), upload.array('images', 5), asyn
     if (images !== existingListing.rows[0].images) {
       updateFields.push(`images = $${paramIndex}`);
       updateValues.push(JSON.stringify(images));
+      paramIndex++;
+    }
+
+    if (selectedVariables !== undefined) {
+      updateFields.push(`selected_variables = $${paramIndex}`);
+      updateValues.push(JSON.stringify(selectedVariables));
       paramIndex++;
     }
 
