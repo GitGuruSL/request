@@ -104,19 +104,40 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     if (_fetchingMore || (!_hasMore && !reset)) return;
     setState(() => _fetchingMore = true);
     try {
+      // Map selected UI category to backend request_type
+      String? selectedBackendType;
+      switch (_selectedCategory) {
+        case 'Items':
+          selectedBackendType = 'item';
+          break;
+        case 'Service':
+          selectedBackendType = 'service';
+          break;
+        case 'Rent':
+          selectedBackendType = 'rent';
+          break;
+        case 'Delivery':
+          selectedBackendType = 'delivery';
+          break;
+        case 'Ride':
+          selectedBackendType = 'ride';
+          break;
+        default:
+          selectedBackendType = null; // All
+      }
+
       final response = await CountryFilteredDataService.instance.getRequests(
         page: _page,
         limit: 20,
-        categoryId: _selectedCategory != 'All'
-            ? _selectedCategory
-            : null, // TODO map to categoryId
+        // Do not pass UI label as categoryId; use request_type for server filtering
+        requestType: selectedBackendType,
       );
       if (response != null) {
         if (reset) _requests.clear();
 
-        // Use the stream to get properly converted RequestModel objects
+        // Use the stream to get properly converted RequestModel objects, with same type filter
         await for (final modelRequests in CountryFilteredDataService.instance
-            .getCountryRequestsStream(limit: 20)) {
+            .getCountryRequestsStream(limit: 20, type: selectedBackendType)) {
           _requests.addAll(modelRequests);
           break; // Only take the first emission since we're not subscribing
         }
