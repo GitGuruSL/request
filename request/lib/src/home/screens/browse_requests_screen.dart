@@ -211,6 +211,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: _Palette.screenBackground,
       body: _needsCountrySelection
           ? Center(
               child: Padding(
@@ -322,8 +323,8 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                 });
                 _loadInitial();
               },
-              backgroundColor: _Palette.chipBackground,
-              selectedColor: _Palette.primaryBlue.withOpacity(0.1),
+              backgroundColor: _Palette.screenBackground,
+              selectedColor: _Palette.primaryBlue.withOpacity(0.08),
               checkmarkColor: _Palette.primaryBlue,
               labelStyle: TextStyle(
                 color:
@@ -331,12 +332,8 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
               ),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-                side: BorderSide(
-                    color: isSelected
-                        ? _Palette.primaryBlue.withOpacity(0.3)
-                        : Colors.transparent,
-                    width: 1),
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide.none,
               ),
               elevation: 0,
               pressElevation: 0,
@@ -465,19 +462,12 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         color: _Palette.cardBackground,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          )
-        ],
       ),
       child: InkWell(
         onTap: () => _showRequestDetails(request),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -486,11 +476,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    style.icon,
-                    color: _Palette.secondaryText,
-                    size: 22,
-                  ),
+                  Icon(style.icon, color: style.bg, size: 18),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -499,8 +485,8 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                         Text(
                           request.title,
                           style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                             color: _Palette.primaryText,
                           ),
                           maxLines: 1,
@@ -513,13 +499,13 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: style.bg.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(8),
+                                color: style.bg.withOpacity(0.10),
+                                borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
                                 '$requestType Request',
                                 style: TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 10,
                                   fontWeight: FontWeight.w600,
                                   color: style.bg,
                                 ),
@@ -544,39 +530,31 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
               Text(
                 request.description,
                 style: TextStyle(
-                  fontSize: 14.5,
+                  fontSize: 14,
                   color: _Palette.secondaryText,
-                  height: 1.4,
+                  height: 1.45,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Icon(Icons.chat_bubble_outline,
-                      size: 18, color: _Palette.secondaryText),
-                  const SizedBox(width: 16),
-                  Icon(Icons.favorite_border,
-                      size: 18, color: _Palette.secondaryText),
-                  const Spacer(),
-                  if (request.location?.city != null)
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.location_on_outlined,
-                            size: 16, color: _Palette.secondaryText),
-                        const SizedBox(width: 4),
-                        Text(
-                          request.location!.city!,
-                          style: TextStyle(
-                              fontSize: 13, color: _Palette.secondaryText),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+              const SizedBox(height: 14),
+              if (request.location?.city != null)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.location_on_outlined,
+                        size: 16, color: _Palette.secondaryText),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        request.location!.city!,
+                        style: TextStyle(
+                            fontSize: 13, color: _Palette.secondaryText),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                ],
-              ),
+                  ],
+                ),
             ],
           ),
         ),
@@ -675,20 +653,18 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     switch (type) {
       case 'Delivery':
         return _TypeStyle(
-            Icons.local_shipping_outlined, _Palette.vibrantTeal, Colors.white);
+            Icons.local_shipping, _Palette.vibrantTeal, Colors.white);
       case 'Ride':
         return _TypeStyle(
-            Icons.directions_car_outlined, _Palette.primaryBlue, Colors.white);
+            Icons.directions_car, _Palette.primaryBlue, Colors.white);
       case 'Service':
-        return _TypeStyle(
-            Icons.build_outlined, _Palette.deepPurple, Colors.white);
+        return _TypeStyle(Icons.build, _Palette.deepPurple, Colors.white);
       case 'Rent':
-        return _TypeStyle(
-            Icons.weekend_outlined, _Palette.warmOrange, Colors.white);
+        return _TypeStyle(Icons.weekend, _Palette.warmOrange, Colors.white);
       case 'Items':
       default:
         return _TypeStyle(
-            Icons.widgets_outlined, _Palette.sunnyYellow, _Palette.primaryText);
+            Icons.shopping_bag, _Palette.sunnyYellow, _Palette.primaryText);
     }
   }
 }
@@ -708,13 +684,6 @@ class _Header extends StatelessWidget {
           bottomLeft: Radius.circular(28),
           bottomRight: Radius.circular(28),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          )
-        ],
       ),
       child: SafeArea(
         child: Padding(
@@ -727,8 +696,8 @@ class _Header extends StatelessWidget {
                   Text(
                     'Discover',
                     style: TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w600,
                       color: _Palette.primaryText,
                     ),
                   ),
@@ -796,5 +765,4 @@ class _Palette {
   static const screenBackground = Color(0xFFF2F2F7);
   static const primaryText = Color(0xFF1C1C1E);
   static const secondaryText = Color(0xFF6E6E73);
-  static const chipBackground = Color(0xFFE9E9EB);
 }
