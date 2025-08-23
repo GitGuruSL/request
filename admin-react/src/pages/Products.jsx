@@ -41,10 +41,13 @@ import {
   Visibility,
   VisibilityOff,
   PhotoCamera,
-  Close
+  Close,
+  Public,
+  Language
 } from '@mui/icons-material';
 import api from '../services/apiClient';
 import useCountryFilter from '../hooks/useCountryFilter';
+import CountryProductManager from '../components/CountryProductManager';
 
 const Products = () => {
   const { getFilteredData, adminData, isSuperAdmin, userCountry } = useCountryFilter();
@@ -52,6 +55,8 @@ const Products = () => {
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
+  const [openCountryManager, setOpenCountryManager] = useState(false);
+  const [selectedProductForCountry, setSelectedProductForCountry] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -387,6 +392,16 @@ const Products = () => {
     return category?.name || category?.category || categoryId || 'Unknown Category';
   };
 
+  const handleOpenCountryManager = (product) => {
+    setSelectedProductForCountry(product);
+    setOpenCountryManager(true);
+  };
+
+  const handleCloseCountryManager = () => {
+    setOpenCountryManager(false);
+    setSelectedProductForCountry(null);
+  };
+
   return (
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
@@ -554,13 +569,23 @@ const Products = () => {
                     size="small" 
                     onClick={() => handleOpenDialog(product)}
                     color="primary"
+                    title="Edit Product"
                   >
                     <Edit />
                   </IconButton>
                   <IconButton 
                     size="small" 
+                    onClick={() => handleOpenCountryManager(product)}
+                    color="info"
+                    title="Manage Country Variations"
+                  >
+                    <Language />
+                  </IconButton>
+                  <IconButton 
+                    size="small" 
                     onClick={() => handleDelete(product.id)}
                     color="error"
+                    title="Delete Product"
                   >
                     <Delete />
                   </IconButton>
@@ -775,6 +800,13 @@ const Products = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Country Product Manager */}
+      <CountryProductManager
+        open={openCountryManager}
+        onClose={handleCloseCountryManager}
+        masterProduct={selectedProductForCountry}
+      />
     </Box>
   );
 };
