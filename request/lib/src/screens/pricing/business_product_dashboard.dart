@@ -631,6 +631,9 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
   }
 
   void _editPrice(dynamic listing) {
+    print('DEBUG: Editing price listing: ${listing.id}');
+    print('DEBUG: Existing selectedVariables: ${listing.selectedVariables}');
+    print('DEBUG: Existing subcategory: ${listing.subcategory}');
     _showPriceDialog(existingListing: listing);
   }
 
@@ -667,13 +670,20 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
         ? Map<String, String>.from(existingListing.selectedVariables ?? {})
         : {};
 
+    print('DEBUG: selectedVariableValues loaded: $selectedVariableValues');
+
     // Initialize enabled variables based on existing selections
     if (isEditing && selectedVariableValues.isNotEmpty) {
+      print('DEBUG: Initializing enabled variables from existing data');
       for (var variable in _countryVariables) {
         final variableName = variable['name'];
         enabledVariables[variableName] =
             selectedVariableValues.containsKey(variableName);
+        print(
+            'DEBUG: Variable $variableName enabled: ${enabledVariables[variableName]}');
       }
+    } else {
+      print('DEBUG: No existing variable values to load');
     }
 
     showModalBottomSheet(
@@ -1249,6 +1259,9 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
         'currency': 'LKR',
         'countryCode': 'LK',
         'categoryId': '732f29d3-637b-4c20-9c6d-e90f472143f7', // Electronics
+        'subCategoryId': existingListing?.subcategory ??
+            product.subcategory ??
+            '6a8b9c2d-e3f4-5678-9abc-def123456789', // Default subcategory
         'images': imageUrls,
         'stockQuantity': int.tryParse(quantity) ?? 1,
         if (modelNumber.isNotEmpty) 'modelNumber': modelNumber,
@@ -1256,6 +1269,8 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
         if (whatsapp.isNotEmpty) 'whatsapp': whatsapp,
         if (website.isNotEmpty) 'website': website,
       };
+
+      print('DEBUG: API payload: $apiPayload');
 
       final success = await _pricingService.addOrUpdatePriceListing(apiPayload);
 
