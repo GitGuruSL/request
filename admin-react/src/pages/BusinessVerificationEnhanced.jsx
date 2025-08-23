@@ -225,6 +225,77 @@ const BusinessVerificationEnhanced = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('submissionDate');
 
+  // Form-data lookups (business types + item subcategory names)
+  const [formDataLoading, setFormDataLoading] = useState(false);
+  const [businessTypes, setBusinessTypes] = useState([]); // raw array from API
+  const [subcategoryNameById, setSubcategoryNameById] = useState({}); // id -> name
+
+  useEffect(() => {
+    // Load country-aware business types and item subcategories for label rendering
+    const loadFormData = async () => {
+      try {
+        setFormDataLoading(true);
+        const code = (userCountry && (userCountry.code || userCountry.country || userCountry.countryCode)) || adminData?.country || 'LK';
+        const resp = await fetch(`/api/business-registration/form-data?country_code=${encodeURIComponent(code)}`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const json = await resp.json();
+        const data = json?.data || json || {};
+        const types = Array.isArray(data.businessTypes) ? data.businessTypes : [];
+        const grouped = Array.isArray(data.itemSubcategoriesByCategory) ? data.itemSubcategoriesByCategory : [];
+        const nameMap = {};
+        grouped.forEach(cat => {
+          const subs = Array.isArray(cat?.subcategories) ? cat.subcategories : [];
+          subs.forEach(s => {
+            const id = (s?.id ?? '').toString();
+            const name = (s?.name ?? '').toString();
+            if (id) nameMap[id] = name || `Subcategory ${id}`;
+          });
+        });
+        setBusinessTypes(types);
+        setSubcategoryNameById(nameMap);
+      } catch (e) {
+        console.warn('Failed to load form-data for labels:', e);
+        setBusinessTypes([]);
+        setSubcategoryNameById({});
+      } finally {
+        setFormDataLoading(false);
+      }
+    };
+    loadFormData();
+  }, [userCountry, adminData?.country]);
+
+  // Helpers for business type and item subcategories
+  const getBusinessTypeObject = (idLike) => {
+    if (!idLike) return null;
+    const selectedId = String(idLike);
+    return businessTypes.find(bt => String(bt.global_business_type_id ?? bt.id) === selectedId) || null;
+  };
+
+  const getBusinessTypeLabel = (selectedBusiness) => {
+    const id = selectedBusiness.businessTypeId || selectedBusiness.business_type_id || selectedBusiness.businessType || selectedBusiness.business_category_id;
+    const bt = getBusinessTypeObject(id);
+    if (bt && bt.name) return bt.name;
+    // Fallback to any legacy text field
+    return selectedBusiness.businessCategory || selectedBusiness.business_category || 'Not provided';
+  };
+
+  const isProductBusinessType = (selectedBusiness) => {
+    const id = selectedBusiness.businessTypeId || selectedBusiness.business_type_id || selectedBusiness.businessType || selectedBusiness.business_category_id;
+    const bt = getBusinessTypeObject(id);
+    if (!bt) return false;
+    const typeRaw = String(bt.type ?? bt.business_type ?? '').toLowerCase();
+    const nameRaw = String(bt.name ?? '').toLowerCase();
+    if (['product', 'products', 'item', 'items'].includes(typeRaw)) return true;
+    if (nameRaw.includes('product')) return true;
+    return false;
+  };
+
+  const getSelectedItemSubcategories = (selectedBusiness) => {
+    const list = selectedBusiness.categories || selectedBusiness.itemCategories || selectedBusiness.item_categories || [];
+    if (!Array.isArray(list)) return [];
+    return list.map(x => String(x)).map(id => ({ id, name: subcategoryNameById[id] || id }));
+  };
+
   useEffect(() => {
     loadBusinesses();
   }, [filterStatus]);
@@ -862,6 +933,40 @@ const BusinessVerificationEnhanced = () => {
                   </Typography>
                 </Box>
               </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Box mb={2}>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Business Type
+                  </Typography>
+                  <Typography variant="body1">
+                    {getBusinessTypeLabel(selectedBusiness)}
+                  </Typography>
+                </Box>
+              </Grid>
+
+              {isProductBusinessType(selectedBusiness) && (
+                <Grid item xs={12}>
+                  <Box mb={2}>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      Item Subcategories
+                    </Typography>
+                    {formDataLoading ? (
+                      <Typography variant="body2" color="text.secondary">Loading…</Typography>
+                    ) : (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                        {getSelectedItemSubcategories(selectedBusiness).length === 0 ? (
+                          <Typography variant="body1">None selected</Typography>
+                        ) : (
+                          getSelectedItemSubcategories(selectedBusiness).map(s => (
+                            <Chip key={s.id} label={s.name} size="small" />
+                          ))
+                        )}
+                      </Box>
+                    )}
+                  </Box>
+                </Grid>
+              )}
               
               <Grid item xs={12}>
                 <Box mb={2}>

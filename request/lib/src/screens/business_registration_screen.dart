@@ -37,6 +37,7 @@ class _BusinessRegistrationScreenState
   List<dynamic> _itemSubcategoriesByCategory = [];
   final Set<String> _selectedSubcategoryIds = <String>{};
   final Map<String, String> _subcategoryNameById = <String, String>{};
+  bool _isProductBusinessType = false; // controls visibility of subcategories
   bool _loadingFormData = false;
   String? _formDataError;
 
@@ -195,10 +196,7 @@ class _BusinessRegistrationScreenState
           const SizedBox(height: 8),
           const Text(
             'Complete your business registration to start offering services on our platform.',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppTheme.textSecondary,
-            ),
+            style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
           ),
         ],
       ),
@@ -215,8 +213,11 @@ class _BusinessRegistrationScreenState
         children: [
           Row(
             children: [
-              Icon(Icons.business_center,
-                  color: AppTheme.primaryColor, size: 24),
+              Icon(
+                Icons.business_center,
+                color: AppTheme.primaryColor,
+                size: 24,
+              ),
               const SizedBox(width: 12),
               const Text(
                 'Business Information',
@@ -279,7 +280,7 @@ class _BusinessRegistrationScreenState
           ),
           _buildBusinessTypeDropdown(),
           const SizedBox(height: 8),
-          _buildItemSubcategoriesField(),
+          if (_isProductBusinessType) _buildItemSubcategoriesField(),
           _buildTextField(
             controller: _licenseNumberController,
             label: 'Business License Number',
@@ -329,13 +330,18 @@ class _BusinessRegistrationScreenState
               onTap: _openSubcategoryPicker,
               child: InputDecorator(
                 decoration: InputDecoration(
-                  prefixIcon: Icon(Icons.list_alt,
-                      color: AppTheme.primaryColor, size: 20),
+                  prefixIcon: Icon(
+                    Icons.list_alt,
+                    color: AppTheme.primaryColor,
+                    size: 20,
+                  ),
                   suffixIcon: const Icon(Icons.keyboard_arrow_down),
                   filled: true,
                   fillColor: Colors.white,
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   enabledBorder: OutlineInputBorder(
                     borderSide: BorderSide.none,
                     borderRadius: BorderRadius.circular(8),
@@ -348,7 +354,9 @@ class _BusinessRegistrationScreenState
                 child: Text(
                   _selectedSubcategorySummary(),
                   style: const TextStyle(
-                      fontSize: 14, color: AppTheme.textPrimary),
+                    fontSize: 14,
+                    color: AppTheme.textPrimary,
+                  ),
                 ),
               ),
             ),
@@ -389,10 +397,11 @@ class _BusinessRegistrationScreenState
                   final filteredSubs = query.isEmpty
                       ? subs
                       : subs
-                          .where((s) =>
-                              (s['name']?.toString().toLowerCase() ?? '')
-                                  .contains(query.toLowerCase()))
-                          .toList();
+                            .where(
+                              (s) => (s['name']?.toString().toLowerCase() ?? '')
+                                  .contains(query.toLowerCase()),
+                            )
+                            .toList();
                   return {
                     'category_name': cat['category_name'],
                     'subcategories': filteredSubs,
@@ -444,7 +453,9 @@ class _BusinessRegistrationScreenState
                           borderRadius: BorderRadius.circular(8),
                         ),
                         contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 10),
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
                       ),
                       onChanged: (v) => setModalState(() => query = v),
                     ),
@@ -470,13 +481,17 @@ class _BusinessRegistrationScreenState
                           final List subs =
                               (cat['subcategories'] as List?) ?? [];
                           return Theme(
-                            data: Theme.of(context)
-                                .copyWith(dividerColor: Colors.transparent),
+                            data: Theme.of(
+                              context,
+                            ).copyWith(dividerColor: Colors.transparent),
                             child: ExpansionTile(
-                              title: Text(name,
-                                  style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600)),
+                              title: Text(
+                                name,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                               children: subs.map<Widget>((s) {
                                 final id = s['id'].toString();
                                 final checked = initial.contains(id);
@@ -492,7 +507,8 @@ class _BusinessRegistrationScreenState
                                     });
                                   },
                                   title: Text(
-                                      s['name']?.toString() ?? 'Subcategory'),
+                                    s['name']?.toString() ?? 'Subcategory',
+                                  ),
                                   controlAffinity:
                                       ListTileControlAffinity.leading,
                                   dense: true,
@@ -643,22 +659,24 @@ class _BusinessRegistrationScreenState
             validator: validator,
             keyboardType: keyboardType,
             maxLines: maxLines ?? 1,
-            style: const TextStyle(
-              color: AppTheme.textPrimary,
-              fontSize: 14,
-            ),
+            style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: TextStyle(
                 color: AppTheme.textSecondary.withOpacity(0.5),
                 fontSize: 14,
               ),
-              prefixIcon:
-                  Icon(prefixIcon, color: AppTheme.primaryColor, size: 20),
+              prefixIcon: Icon(
+                prefixIcon,
+                color: AppTheme.primaryColor,
+                size: 20,
+              ),
               filled: true,
               fillColor: Colors.white,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
               enabledBorder: OutlineInputBorder(
                 borderSide: BorderSide.none,
                 borderRadius: BorderRadius.circular(8),
@@ -711,12 +729,17 @@ class _BusinessRegistrationScreenState
               validator: (value) =>
                   value == null ? 'Business type is required' : null,
               decoration: InputDecoration(
-                prefixIcon: Icon(Icons.category,
-                    color: AppTheme.primaryColor, size: 20),
+                prefixIcon: Icon(
+                  Icons.category,
+                  color: AppTheme.primaryColor,
+                  size: 20,
+                ),
                 filled: true,
                 fillColor: Colors.white,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 enabledBorder: OutlineInputBorder(
                   borderSide: BorderSide.none,
                   borderRadius: BorderRadius.circular(8),
@@ -735,23 +758,48 @@ class _BusinessRegistrationScreenState
                 ),
               ),
               items: _businessTypes.map((bt) {
-                final id =
-                    (bt['global_business_type_id'] ?? bt['id']).toString();
+                final id = (bt['global_business_type_id'] ?? bt['id'])
+                    .toString();
                 final name = bt['name']?.toString() ?? 'Unknown';
-                return DropdownMenuItem<String>(
-                  value: id,
-                  child: Text(name),
-                );
+                return DropdownMenuItem<String>(value: id, child: Text(name));
               }).toList(),
               onChanged: (value) {
                 setState(() {
                   _selectedBusinessTypeGlobalId = value;
+                  _isProductBusinessType = _detectIsProductType(value);
+                  if (!_isProductBusinessType) {
+                    _selectedSubcategoryIds.clear();
+                  }
                 });
               },
             ),
         ],
       ),
     );
+  }
+
+  // Tries to determine whether the selected business type is "Product".
+  // Prefers an explicit 'type' field if present, otherwise falls back to name match.
+  bool _detectIsProductType(String? selectedId) {
+    if (selectedId == null) return false;
+    for (final bt in _businessTypes) {
+      final id = (bt['global_business_type_id'] ?? bt['id']).toString();
+      if (id == selectedId) {
+        final typeRaw = (bt['type'] ?? bt['business_type'] ?? '')
+            .toString()
+            .toLowerCase();
+        if (typeRaw == 'product' ||
+            typeRaw == 'products' ||
+            typeRaw == 'item' ||
+            typeRaw == 'items') {
+          return true;
+        }
+        final name = (bt['name'] ?? '').toString().toLowerCase();
+        if (name.contains('product')) return true;
+        return false;
+      }
+    }
+    return false;
   }
 
   Widget _buildDocumentUpload({
@@ -788,8 +836,10 @@ class _BusinessRegistrationScreenState
               ),
               if (isRequired)
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.red.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
@@ -808,10 +858,7 @@ class _BusinessRegistrationScreenState
           const SizedBox(height: 8),
           Text(
             description,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppTheme.textSecondary,
-            ),
+            style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
           ),
           const SizedBox(height: 12),
           if (file != null) ...[
@@ -881,10 +928,7 @@ class _BusinessRegistrationScreenState
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.file(
-                  _businessLogoFile!,
-                  fit: BoxFit.cover,
-                ),
+                child: Image.file(_businessLogoFile!, fit: BoxFit.cover),
               ),
             ),
             const SizedBox(height: 12),
@@ -896,19 +940,12 @@ class _BusinessRegistrationScreenState
                 color: Colors.grey[100],
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(
-                Icons.business,
-                size: 40,
-                color: Colors.grey[400],
-              ),
+              child: Icon(Icons.business, size: 40, color: Colors.grey[400]),
             ),
             const SizedBox(height: 12),
             const Text(
               'No logo selected',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppTheme.textSecondary,
-              ),
+              style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 12),
           ],
@@ -921,7 +958,8 @@ class _BusinessRegistrationScreenState
                 size: 16,
               ),
               label: Text(
-                  _businessLogoFile != null ? 'Change Logo' : 'Choose Logo'),
+                _businessLogoFile != null ? 'Change Logo' : 'Choose Logo',
+              ),
               style: OutlinedButton.styleFrom(
                 side: BorderSide.none,
                 backgroundColor: Colors.white,
@@ -945,22 +983,20 @@ class _BusinessRegistrationScreenState
                 width: 18,
                 height: 18,
                 child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Colors.white),
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
               )
             : const Icon(Icons.business_center),
-        label:
-            Text(_isSubmitting ? 'Submitting...' : 'Submit for Verification'),
+        label: Text(
+          _isSubmitting ? 'Submitting...' : 'Submit for Verification',
+        ),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppTheme.primaryColor,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16),
-          textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
     );
@@ -1037,11 +1073,14 @@ class _BusinessRegistrationScreenState
         // Try to get default country if none is set
         try {
           final countries = await CountryService.instance.getAllCountries();
-          final defaultCountry = countries.firstWhere((c) => c.isEnabled,
-              orElse: () => countries.first);
+          final defaultCountry = countries.firstWhere(
+            (c) => c.isEnabled,
+            orElse: () => countries.first,
+          );
           await CountryService.instance.setCountryFromObject(defaultCountry);
           print(
-              '✅ Set default country: ${defaultCountry.name} (${defaultCountry.code})');
+            '✅ Set default country: ${defaultCountry.name} (${defaultCountry.code})',
+          );
 
           // Get the values again after setting
           countryCode = CountryService.instance.countryCode;
@@ -1049,7 +1088,8 @@ class _BusinessRegistrationScreenState
         } catch (e) {
           print('❌ Failed to set default country: $e');
           throw Exception(
-              'Country information not available. Please restart the app and select your country.');
+            'Country information not available. Please restart the app and select your country.',
+          );
         }
       }
 
@@ -1103,7 +1143,9 @@ class _BusinessRegistrationScreenState
         'businessDescription': _businessDescriptionController.text.trim(),
         // Use new server-backed fields
         'businessTypeId': _selectedBusinessTypeGlobalId,
-        'categories': _selectedSubcategoryIds.toList(),
+        'categories': _isProductBusinessType
+            ? _selectedSubcategoryIds.toList()
+            : null,
         'licenseNumber': _licenseNumberController.text.trim(),
         'taxId': _taxIdController.text.trim().isEmpty
             ? null
@@ -1120,8 +1162,9 @@ class _BusinessRegistrationScreenState
         // Document status tracking
         'businessLicenseStatus': 'pending',
         'taxCertificateStatus': taxCertificateUrl != null ? 'pending' : null,
-        'insuranceDocumentStatus':
-            insuranceDocumentUrl != null ? 'pending' : null,
+        'insuranceDocumentStatus': insuranceDocumentUrl != null
+            ? 'pending'
+            : null,
         'businessLogoStatus': businessLogoUrl != null ? 'pending' : null,
         // Document verification nested structure
         'documentVerification': {
@@ -1135,15 +1178,9 @@ class _BusinessRegistrationScreenState
               'submittedAt': DateTime.now(),
             },
           if (insuranceDocumentUrl != null)
-            'insurance': {
-              'status': 'pending',
-              'submittedAt': DateTime.now(),
-            },
+            'insurance': {'status': 'pending', 'submittedAt': DateTime.now()},
           if (businessLogoUrl != null)
-            'businessLogo': {
-              'status': 'pending',
-              'uploadedAt': DateTime.now(),
-            },
+            'businessLogo': {'status': 'pending', 'uploadedAt': DateTime.now()},
         },
       };
 
@@ -1154,7 +1191,8 @@ class _BusinessRegistrationScreenState
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-                'Business registration submitted successfully! We\'ll review your information and get back to you within 2-5 business days.'),
+              'Business registration submitted successfully! We\'ll review your information and get back to you within 2-5 business days.',
+            ),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 4),
           ),
