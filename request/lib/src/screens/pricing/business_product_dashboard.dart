@@ -5,6 +5,7 @@ import '../../services/pricing_service.dart';
 import '../../services/enhanced_user_service.dart';
 import '../../services/file_upload_service.dart';
 import '../../services/api_client.dart';
+import '../../services/rest_auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../../services/user_registration_service.dart';
 
@@ -37,23 +38,39 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
   }
 
   Future<void> _loadData() async {
+    print('DEBUG: Starting _loadData()...');
+
     // Determine if user is an approved business (seller)
     try {
+      print('DEBUG: Checking user business registration...');
       final regs =
           await UserRegistrationService.instance.getUserRegistrations();
       _isSeller = regs?.isApprovedBusiness == true;
-    } catch (_) {}
+      print('DEBUG: User is seller: $_isSeller');
+    } catch (e) {
+      print('DEBUG: Error checking business registration: $e');
+      _isSeller = false;
+    }
 
     if (!_isSeller) {
+      print(
+          'DEBUG: User is not an approved business, showing registration prompt');
       setState(() {});
       return;
     }
 
-    await Future.wait([
-      _loadCountryProducts(),
-      _loadMyPriceListings(),
-      _loadCountryVariables(),
-    ]);
+    print('DEBUG: Loading data for approved business...');
+    try {
+      await Future.wait([
+        _loadCountryProducts(),
+        _loadMyPriceListings(),
+        _loadCountryVariables(),
+      ]).timeout(const Duration(seconds: 30));
+      print('DEBUG: All data loaded successfully');
+    } catch (e) {
+      print('DEBUG: Error loading data: $e');
+      // Continue anyway, individual methods have their own error handling
+    }
   }
 
   Future<void> _loadCountryProducts() async {
@@ -74,11 +91,26 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
   Future<void> _loadMyPriceListings() async {
     setState(() => _isLoadingMyPrices = true);
     try {
-      final userId = _userService.currentUser?.uid;
-      if (userId == null) return;
+      // Try multiple ways to get the user ID
+      String? userId = _userService.currentUser?.uid;
 
+      if (userId == null) {
+        // Try getting from auth service
+        final authUser = RestAuthService.instance.currentUser;
+        userId = authUser?.id;
+        print('DEBUG: Got user ID from auth service: $userId');
+      }
+
+      if (userId == null) {
+        print('DEBUG: No user logged in, skipping price listings load');
+        setState(() => _isLoadingMyPrices = false);
+        return;
+      }
+
+      print('DEBUG: Loading price listings for user: $userId');
       await for (final listings
           in _pricingService.getBusinessPriceListings(userId).take(1)) {
+        print('DEBUG: Loaded ${listings.length} price listings');
         setState(() {
           _myPriceListings = listings;
           _isLoadingMyPrices = false;
