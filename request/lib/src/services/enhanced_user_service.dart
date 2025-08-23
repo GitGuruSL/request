@@ -428,11 +428,16 @@ class EnhancedUserService {
         'business_email': businessData['businessEmail'],
         'business_phone': businessData['businessPhone'],
         'business_address': businessData['businessAddress'],
-        'business_type': businessData['businessCategory'],
+        // Prefer new ID-based field; keep legacy string fallback for backward compat
+        if (businessData['businessTypeId'] != null)
+          'business_type_id': businessData['businessTypeId'],
+        if (businessData['businessCategory'] != null)
+          'business_type': businessData['businessCategory'],
+        if (businessData['categories'] != null)
+          'categories': businessData['categories'],
         'registration_number': businessData['licenseNumber'],
         'tax_number': businessData['taxId'],
-        'country_code': businessData[
-            'country'], // Send country code, backend will convert to ID
+        'country_code': businessData['country'], // ISO code
         'description': businessData['businessDescription'],
         // Add document URLs if available
         'business_license_url': businessData['businessLicenseUrl'],

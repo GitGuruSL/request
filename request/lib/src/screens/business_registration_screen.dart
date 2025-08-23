@@ -5,8 +5,8 @@ import '../theme/app_theme.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/file_upload_service.dart';
 import '../widgets/simple_phone_field.dart';
-import '../services/feature_gate_service.dart';
 import 'dart:io';
+import '../services/api_client.dart';
 
 class BusinessRegistrationScreen extends StatefulWidget {
   const BusinessRegistrationScreen({Key? key}) : super(key: key);
@@ -31,20 +31,14 @@ class _BusinessRegistrationScreenState
   final _licenseNumberController = TextEditingController();
   final _taxIdController = TextEditingController();
 
-  // Business Category
-  String? _selectedCategory;
-  final List<String> _businessCategories = [
-    'Delivery Service',
-    'Restaurant',
-    'Retail Store',
-    'Grocery',
-    'Pharmacy',
-    'Electronics',
-    'Clothing',
-    'Hardware',
-    'Services',
-    'Other',
-  ];
+  // Dynamic Business Type and Item Subcategories (from backend)
+  List<dynamic> _businessTypes = [];
+  String? _selectedBusinessTypeGlobalId; // use global_business_type_id for POST
+  List<dynamic> _itemSubcategoriesByCategory = [];
+  final Set<String> _selectedSubcategoryIds = <String>{};
+  final Map<String, String> _subcategoryNameById = <String, String>{};
+  bool _loadingFormData = false;
+  String? _formDataError;
 
   // Business Documents
   File? _businessLicenseFile;
@@ -55,7 +49,7 @@ class _BusinessRegistrationScreenState
   String? _businessLicenseUrl;
   String? _taxCertificateUrl;
   String? _insuranceDocumentUrl;
-  String? _businessLogoUrl;
+  // Removed unused _businessLogoUrl
 
   bool _isSubmitting = false;
 
@@ -63,6 +57,7 @@ class _BusinessRegistrationScreenState
   void initState() {
     super.initState();
     _loadCurrentUserData();
+    _loadFormData();
   }
 
   Future<void> _loadCurrentUserData() async {
@@ -70,7 +65,7 @@ class _BusinessRegistrationScreenState
       final currentUser = await _userService.getCurrentUser();
       if (currentUser != null) {
         setState(() {
-          _businessEmailController.text = currentUser.email ?? '';
+          _businessEmailController.text = currentUser.email;
         });
       }
     } catch (e) {
@@ -88,6 +83,57 @@ class _BusinessRegistrationScreenState
     _licenseNumberController.dispose();
     _taxIdController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadFormData() async {
+    setState(() {
+      _loadingFormData = true;
+      _formDataError = null;
+    });
+
+    try {
+      // Ensure country is loaded
+      await CountryService.instance.loadPersistedCountry();
+      final countryCode = CountryService.instance.countryCode ?? 'LK';
+
+      final resp = await ApiClient.instance.get<dynamic>(
+        '/api/business-registration/form-data',
+        queryParameters: {'country_code': countryCode},
+      );
+
+      if (resp.success && resp.data is Map<String, dynamic>) {
+        final map = resp.data as Map<String, dynamic>;
+        final data = map['data'] ?? map; // handle both wrapped and raw
+        setState(() {
+          _businessTypes = (data['businessTypes'] as List?) ?? [];
+          _itemSubcategoriesByCategory =
+              (data['itemSubcategoriesByCategory'] as List?) ?? [];
+          _subcategoryNameById.clear();
+          for (final cat in _itemSubcategoriesByCategory) {
+            final subs = (cat['subcategories'] as List?) ?? [];
+            for (final s in subs) {
+              final id = s['id']?.toString();
+              final name = s['name']?.toString() ?? '';
+              if (id != null) _subcategoryNameById[id] = name;
+            }
+          }
+        });
+      } else {
+        setState(() {
+          _formDataError = resp.error ?? 'Failed to load form data';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _formDataError = e.toString();
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loadingFormData = false;
+        });
+      }
+    }
   }
 
   @override
@@ -231,7 +277,9 @@ class _BusinessRegistrationScreenState
                 ? 'Business description is required'
                 : null,
           ),
-          _buildDropdownField(),
+          _buildBusinessTypeDropdown(),
+          const SizedBox(height: 8),
+          _buildItemSubcategoriesField(),
           _buildTextField(
             controller: _licenseNumberController,
             label: 'Business License Number',
@@ -246,6 +294,243 @@ class _BusinessRegistrationScreenState
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildItemSubcategoriesField() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Item Subcategories (multi-select)',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (_loadingFormData)
+            const LinearProgressIndicator(minHeight: 2)
+          else if (_formDataError != null)
+            Text(
+              _formDataError!,
+              style: const TextStyle(color: Colors.red, fontSize: 12),
+            )
+          else if (_itemSubcategoriesByCategory.isEmpty)
+            const Text(
+              'No item subcategories available for your country.',
+              style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+            )
+          else
+            GestureDetector(
+              onTap: _openSubcategoryPicker,
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  prefixIcon: Icon(Icons.list_alt,
+                      color: AppTheme.primaryColor, size: 20),
+                  suffixIcon: const Icon(Icons.keyboard_arrow_down),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide.none,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide.none,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text(
+                  _selectedSubcategorySummary(),
+                  style: const TextStyle(
+                      fontSize: 14, color: AppTheme.textPrimary),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _selectedSubcategorySummary() {
+    if (_selectedSubcategoryIds.isEmpty) return 'Select subcategories';
+    final names = _selectedSubcategoryIds
+        .map((id) => _subcategoryNameById[id] ?? 'Sub')
+        .take(3)
+        .toList();
+    final extra = _selectedSubcategoryIds.length - names.length;
+    if (extra > 0) {
+      return '${names.join(', ')} + $extra more';
+    }
+    return names.join(', ');
+  }
+
+  void _openSubcategoryPicker() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        final initial = Set<String>.from(_selectedSubcategoryIds);
+        String query = '';
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            List<dynamic> filteredCats = _itemSubcategoriesByCategory
+                .map((cat) {
+                  final List subs = (cat['subcategories'] as List?) ?? [];
+                  final filteredSubs = query.isEmpty
+                      ? subs
+                      : subs
+                          .where((s) =>
+                              (s['name']?.toString().toLowerCase() ?? '')
+                                  .contains(query.toLowerCase()))
+                          .toList();
+                  return {
+                    'category_name': cat['category_name'],
+                    'subcategories': filteredSubs,
+                  };
+                })
+                .where((cat) => (cat['subcategories'] as List).isNotEmpty)
+                .toList();
+
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                  left: 16,
+                  right: 16,
+                  top: 8,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const Text(
+                      'Select Subcategories',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.search),
+                        hintText: 'Search subcategories',
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide.none,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                      ),
+                      onChanged: (v) => setModalState(() => query = v),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        TextButton(
+                          onPressed: () => setModalState(initial.clear),
+                          child: const Text('Clear all'),
+                        ),
+                        const Spacer(),
+                        Text('${initial.length} selected'),
+                      ],
+                    ),
+                    Flexible(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: filteredCats.length,
+                        itemBuilder: (context, index) {
+                          final cat = filteredCats[index];
+                          final String name =
+                              cat['category_name']?.toString() ?? 'Category';
+                          final List subs =
+                              (cat['subcategories'] as List?) ?? [];
+                          return Theme(
+                            data: Theme.of(context)
+                                .copyWith(dividerColor: Colors.transparent),
+                            child: ExpansionTile(
+                              title: Text(name,
+                                  style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600)),
+                              children: subs.map<Widget>((s) {
+                                final id = s['id'].toString();
+                                final checked = initial.contains(id);
+                                return CheckboxListTile(
+                                  value: checked,
+                                  onChanged: (val) {
+                                    setModalState(() {
+                                      if (val == true) {
+                                        initial.add(id);
+                                      } else {
+                                        initial.remove(id);
+                                      }
+                                    });
+                                  },
+                                  title: Text(
+                                      s['name']?.toString() ?? 'Subcategory'),
+                                  controlAffinity:
+                                      ListTileControlAffinity.leading,
+                                  dense: true,
+                                );
+                              }).toList(),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            _selectedSubcategoryIds
+                              ..clear()
+                              ..addAll(initial);
+                          });
+                          Navigator.pop(context);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: const Text('Apply Selection'),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -271,50 +556,26 @@ class _BusinessRegistrationScreenState
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, color: Colors.blue, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Please upload clear, high-quality photos of your documents. Supported formats: JPG, PNG, PDF.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.blue[800],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
           const SizedBox(height: 16),
           _buildDocumentUpload(
             title: 'Business License',
-            description:
-                'Official business registration/license document (optional)',
+            description: 'Upload your valid business license.',
             file: _businessLicenseFile,
             url: _businessLicenseUrl,
             onTap: () => _pickDocument('business_license'),
-            isRequired: false,
+            isRequired: true,
           ),
           _buildDocumentUpload(
-            title: 'Tax Certificate',
-            description: 'Tax registration certificate (if applicable)',
+            title: 'Tax Certificate (optional)',
+            description: 'Provide a tax/VAT certificate if available.',
             file: _taxCertificateFile,
             url: _taxCertificateUrl,
             onTap: () => _pickDocument('tax_certificate'),
             isRequired: false,
           ),
           _buildDocumentUpload(
-            title: 'Insurance Document',
-            description: 'Business insurance certificate (if applicable)',
+            title: 'Insurance Document (optional)',
+            description: 'Upload insurance proof if applicable.',
             file: _insuranceDocumentFile,
             url: _insuranceDocumentUrl,
             onTap: () => _pickDocument('insurance'),
@@ -421,14 +682,14 @@ class _BusinessRegistrationScreenState
     );
   }
 
-  Widget _buildDropdownField() {
+  Widget _buildBusinessTypeDropdown() {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Business Category *',
+            'Business Type *',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
@@ -436,47 +697,58 @@ class _BusinessRegistrationScreenState
             ),
           ),
           const SizedBox(height: 8),
-          DropdownButtonFormField<String>(
-            value: _selectedCategory,
-            hint: const Text('Select business category'),
-            validator: (value) =>
-                value == null ? 'Business category is required' : null,
-            decoration: InputDecoration(
-              prefixIcon:
-                  Icon(Icons.category, color: AppTheme.primaryColor, size: 20),
-              filled: true,
-              fillColor: Colors.white,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              enabledBorder: OutlineInputBorder(
-                borderSide: BorderSide.none,
-                borderRadius: BorderRadius.circular(8),
+          if (_loadingFormData)
+            const LinearProgressIndicator(minHeight: 2)
+          else if (_formDataError != null)
+            Text(
+              _formDataError!,
+              style: const TextStyle(color: Colors.red, fontSize: 12),
+            )
+          else
+            DropdownButtonFormField<String>(
+              value: _selectedBusinessTypeGlobalId,
+              hint: const Text('Select business type'),
+              validator: (value) =>
+                  value == null ? 'Business type is required' : null,
+              decoration: InputDecoration(
+                prefixIcon: Icon(Icons.category,
+                    color: AppTheme.primaryColor, size: 20),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide.none,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide.none,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                errorBorder: OutlineInputBorder(
+                  borderSide: BorderSide.none,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                focusedErrorBorder: OutlineInputBorder(
+                  borderSide: BorderSide.none,
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
-              focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide.none,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              errorBorder: OutlineInputBorder(
-                borderSide: BorderSide.none,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              focusedErrorBorder: OutlineInputBorder(
-                borderSide: BorderSide.none,
-                borderRadius: BorderRadius.circular(8),
-              ),
+              items: _businessTypes.map((bt) {
+                final id =
+                    (bt['global_business_type_id'] ?? bt['id']).toString();
+                final name = bt['name']?.toString() ?? 'Unknown';
+                return DropdownMenuItem<String>(
+                  value: id,
+                  child: Text(name),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedBusinessTypeGlobalId = value;
+                });
+              },
             ),
-            items: _businessCategories.map((category) {
-              return DropdownMenuItem(
-                value: category,
-                child: Text(category),
-              );
-            }).toList(),
-            onChanged: (value) {
-              setState(() {
-                _selectedCategory = value;
-              });
-            },
-          ),
         ],
       ),
     );
@@ -739,6 +1011,16 @@ class _BusinessRegistrationScreenState
       return;
     }
 
+    if (_selectedBusinessTypeGlobalId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a business type'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSubmitting = true);
 
     try {
@@ -749,9 +1031,9 @@ class _BusinessRegistrationScreenState
       await CountryService.instance.loadPersistedCountry();
 
       String? countryCode = CountryService.instance.countryCode;
-      String? countryName = CountryService.instance.countryName;
+      String countryName = CountryService.instance.countryName; // non-nullable
 
-      if (countryCode == null || countryName == null) {
+      if (countryCode == null || countryName.isEmpty) {
         // Try to get default country if none is set
         try {
           final countries = await CountryService.instance.getAllCountries();
@@ -819,7 +1101,9 @@ class _BusinessRegistrationScreenState
         'businessPhone': _businessPhoneController.text.trim(),
         'businessAddress': _businessAddressController.text.trim(),
         'businessDescription': _businessDescriptionController.text.trim(),
-        'businessCategory': _selectedCategory,
+        // Use new server-backed fields
+        'businessTypeId': _selectedBusinessTypeGlobalId,
+        'categories': _selectedSubcategoryIds.toList(),
         'licenseNumber': _licenseNumberController.text.trim(),
         'taxId': _taxIdController.text.trim().isEmpty
             ? null
