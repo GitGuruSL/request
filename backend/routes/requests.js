@@ -296,6 +296,29 @@ router.get('/:id', async (req, res) => {
 // Create new request (requires authentication)
 router.post('/', auth.authMiddleware(), async (req, res) => {
   try {
+    // Helper to normalize various enum/string forms to allowed DB values
+    const normalizeRequestType = (val) => {
+      if (!val) return null;
+      if (typeof val !== 'string') {
+        try { val = String(val); } catch (_) { return null; }
+      }
+      let s = val.trim();
+      // Handle Dart enum toString: 'RequestType.item' or similar
+      if (/^requesttype\./i.test(s)) s = s.split('.')?.pop() || s;
+      s = s.toLowerCase();
+      // Map alternate forms
+      const map = {
+        'item_request': 'item',
+        'service_request': 'service',
+        'ride_request': 'ride',
+        'rent_request': 'rent',
+        'delivery_request': 'delivery'
+      };
+      if (map[s]) s = map[s];
+      const allowed = new Set(['item', 'service', 'ride', 'rent', 'delivery']);
+      return allowed.has(s) ? s : null;
+    };
+
     const {
       title,
       description,
@@ -311,7 +334,7 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       currency,
       deadline,
       image_urls,
-      request_type // Add request_type field
+  request_type // Add request_type field (may come as e.g. 'RequestType.item')
     } = req.body;
 
     const user_id = req.user.id;
@@ -322,7 +345,7 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
     console.log('metadata field exists?', 'metadata' in req.body);
     console.log('metadata value:', req.body.metadata);
     console.log('metadata type:', typeof req.body.metadata);
-    console.log('request_type field:', request_type);
+  console.log('request_type field:', request_type);
     console.log('=== LOCATION DATA DEBUG ===');
     console.log('location_address:', location_address);
     console.log('location_latitude:', location_latitude);
@@ -343,13 +366,23 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       metadata: metadata ? JSON.stringify(metadata) : null
     });
 
+    // Normalize request_type from body or metadata to satisfy DB constraint
+    let normalizedRequestType = normalizeRequestType(request_type) || normalizeRequestType(metadata && metadata.request_type);
+
+    // Determine if it's a ride request using normalized type or metadata shape
+    const looksLikeRideByMetadata = !!(metadata && metadata.pickup && metadata.destination);
+    const isRideRequest = normalizedRequestType === 'ride' || looksLikeRideByMetadata;
+
+    // If normalization failed and it's clearly a ride request, set to 'ride';
+    // Otherwise leave null to allow DB trigger to derive from category.
+    if (!normalizedRequestType) {
+      if (isRideRequest) normalizedRequestType = 'ride';
+    }
+
+    console.log('Normalized request_type:', normalizedRequestType);
+
     // Validate required fields
-    // For ride requests (identified by request_type or metadata), category_id is optional
-    const isRideRequest = request_type === 'ride' || 
-                          (metadata && 
-                           metadata.request_type === 'ride' && 
-                           metadata.pickup && 
-                           metadata.destination);
+    // For ride requests (identified by type or metadata), category_id is optional
     
     if (!title || !description || !city_id) {
       return res.status(400).json({
@@ -379,7 +412,7 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
     `, [
       user_id, title, description, category_id, subcategory_id, city_id,
       location_address, location_latitude, location_longitude,
-      budget, currency, deadline, image_urls, country_code, metadata ? JSON.stringify(metadata) : null, request_type
+      budget, currency, deadline, image_urls, country_code, metadata ? JSON.stringify(metadata) : null, normalizedRequestType
     ]);
 
     res.status(201).json({
