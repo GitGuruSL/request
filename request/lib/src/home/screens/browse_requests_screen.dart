@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import '../../services/country_filtered_data_service.dart';
 import '../../services/user_registration_service.dart';
 import '../../services/country_service.dart';
@@ -192,80 +193,12 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
             )
           : Column(
               children: [
-                // Modern header without AppBar
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(24),
-                      bottomRight: Radius.circular(24),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.1),
-                        spreadRadius: 1,
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Text(
-                                'Discover Requests',
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              const Spacer(),
-                              IconButton(
-                                icon: const Icon(Icons.refresh),
-                                onPressed: _loadInitial,
-                                tooltip: 'Refresh',
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          // Search bar (moved up to replace subtitle)
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.grey[50],
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: TextField(
-                              decoration: InputDecoration(
-                                hintText:
-                                    'Find requests that match your skills',
-                                hintStyle: TextStyle(color: Colors.grey[500]),
-                                prefixIcon: Icon(Icons.search_outlined,
-                                    color: Colors.grey[500]),
-                                border: InputBorder.none,
-                                contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 12),
-                              ),
-                              onChanged: (value) {
-                                // Add search functionality here
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+                _Header(onRefresh: _loadInitial),
                 _buildCategoryChips(),
                 _buildResultCount(),
                 Expanded(
                   child: _initialLoading
-                      ? const Center(child: CircularProgressIndicator())
+                      ? _buildLoadingSkeleton()
                       : _error != null
                           ? _buildErrorState()
                           : _filteredRequests.isEmpty
@@ -311,7 +244,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     final base = <String>['All'];
     if (_allowedRequestTypes.contains('item')) base.add('Items');
     if (_allowedRequestTypes.contains('service')) base.add('Service');
-    if (_allowedRequestTypes.contains('rent')) base.add('Rental');
+    if (_allowedRequestTypes.contains('rent')) base.add('Rent');
     if (_allowedRequestTypes.contains('delivery')) base.add('Delivery');
     if (_allowedRequestTypes.contains('ride')) base.add('Ride');
     final categories = base;
@@ -339,16 +272,20 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                 });
                 _loadInitial();
               },
-              backgroundColor: Colors.grey[100],
-              selectedColor: Colors.blue[50],
-              checkmarkColor: Colors.blue[600],
+              backgroundColor: _Palette.lightBeige,
+              selectedColor: _Palette.pastelViolet.withOpacity(0.35),
+              checkmarkColor: _Palette.darkViolet,
               labelStyle: TextStyle(
-                color: isSelected ? Colors.blue[600] : Colors.grey[700],
+                color: isSelected ? _Palette.darkViolet : Colors.grey[700],
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
               ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
-                side: const BorderSide(color: Colors.transparent, width: 0),
+                side: BorderSide(
+                    color: isSelected
+                        ? _Palette.darkViolet.withOpacity(0.25)
+                        : Colors.transparent,
+                    width: 0.5),
               ),
               elevation: 0,
               pressElevation: 0,
@@ -408,10 +345,25 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.search_off,
-            size: 64,
-            color: Colors.grey[400],
+          Container(
+            width: 96,
+            height: 96,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  _Palette.pastelViolet.withOpacity(0.25),
+                  _Palette.lightOrange.withOpacity(0.25),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Icon(
+              Icons.search_off_rounded,
+              size: 40,
+              color: _Palette.saturatedOrange,
+            ),
           ),
           const SizedBox(height: 16),
           Text(
@@ -437,142 +389,115 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
   }
 
   Widget _buildRequestCard(models.RequestModel request) {
-    // Map request types to colors based on content
-    String requestType = _getRequestTypeFromCategory(
+    // Map request types to a richer style
+    final requestType = _getRequestTypeFromCategory(
         request.type.name, request.title, request.description);
-
-    // Request TYPE colors
-    final typeColors = {
-      'Items': const Color(0xFFFF6B35).withOpacity(0.1), // Orange
-      'Service': const Color(0xFF00BCD4).withOpacity(0.1), // Teal
-      'Rent': const Color(0xFF2196F3).withOpacity(0.1), // Blue
-      'Delivery': const Color(0xFF4CAF50).withOpacity(0.1), // Green
-      'Ride': const Color(0xFFFFC107).withOpacity(0.1), // Yellow
-    };
-
-    final typeTagColors = {
-      'Items': const Color(0xFFFF6B35), // Orange
-      'Service': const Color(0xFF00BCD4), // Teal
-      'Rent': const Color(0xFF2196F3), // Blue
-      'Delivery': const Color(0xFF4CAF50), // Green
-      'Ride': const Color(0xFFFFC107), // Yellow
-    };
-
-    final cardColor = typeColors[requestType] ?? Colors.grey[50]!;
-    final tagColor = typeTagColors[requestType] ?? Colors.grey[400]!;
+    final style = _typeStyle(requestType);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        color: _Palette.darkViolet, // Solid dark card background
       ),
       child: InkWell(
         onTap: () => _showRequestDetails(request),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Category chip with modern design
               Row(
                 children: [
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
+                      color: style.bg,
+                      shape: BoxShape.circle,
                     ),
-                    child: Text(
-                      '${request.type.name.replaceFirst(request.type.name[0], request.type.name[0].toUpperCase())} Request',
-                      style: TextStyle(
-                        color: tagColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    child: Icon(style.icon, color: style.fg, size: 20),
                   ),
-                  const Spacer(),
-                  Text(
-                    _relativeTime(request.createdAt),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[500],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          request.title,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.white12,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.white24),
+                              ),
+                              child: const Text(
+                                'Request',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _relativeTime(request.createdAt),
+                              style: const TextStyle(
+                                  fontSize: 11, color: Colors.white70),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-
-              const SizedBox(height: 12),
-
-              // Title
-              Text(
-                request.title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-
-              const SizedBox(height: 6),
-
-              // Description
+              const SizedBox(height: 10),
               Text(
                 request.description,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 14,
-                  color: Colors.grey[600],
-                  height: 1.3,
+                  color: Colors.white70,
+                  height: 1.35,
                 ),
-                maxLines: 2,
+                maxLines: 3,
                 overflow: TextOverflow.ellipsis,
               ),
-
               const SizedBox(height: 12),
-
-              // Bottom row with responses/likes on left and location on right
               Row(
                 children: [
-                  // Left side - responses and likes icons
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.chat_bubble_outline,
-                        size: 16,
-                        color: Colors.grey[500],
-                      ),
-                      const SizedBox(width: 12),
-                      Icon(
-                        Icons.favorite_border,
-                        size: 16,
-                        color: Colors.grey[500],
-                      ),
-                    ],
-                  ),
+                  const Icon(Icons.chat_bubble_outline,
+                      size: 16, color: Colors.white70),
+                  const SizedBox(width: 12),
+                  const Icon(Icons.favorite_border,
+                      size: 16, color: Colors.white70),
                   const Spacer(),
-                  // Right side - location
                   if (request.location?.city != null)
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.location_on_outlined,
-                          size: 14,
-                          color: Colors.grey[500],
-                        ),
+                        const Icon(Icons.location_on_outlined,
+                            size: 14, color: Colors.white70),
                         const SizedBox(width: 4),
                         Text(
                           request.location!.city!,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[500],
-                          ),
-                          maxLines: 1,
+                          style: const TextStyle(
+                              fontSize: 12, color: Colors.white70),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
@@ -653,4 +578,152 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
       ).then((_) => _loadInitial()); // Refresh list when returning
     }
   }
+
+  // Loading skeleton shimmer-like blocks
+  Widget _buildLoadingSkeleton() {
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      itemCount: 6,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        return Container(
+          height: 110,
+          decoration: BoxDecoration(
+            color: _Palette.lightBeige,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 0.5, sigmaY: 0.5),
+              child: const SizedBox.expand(),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  _TypeStyle _typeStyle(String type) {
+    switch (type) {
+      case 'Delivery':
+        return _TypeStyle(
+            Icons.local_shipping_outlined, _Palette.lightGreen, Colors.white);
+      case 'Ride':
+        return _TypeStyle(
+            Icons.directions_car_outlined, _Palette.darkViolet, Colors.white);
+      case 'Service':
+        return _TypeStyle(
+            Icons.build_outlined, _Palette.pastelViolet, _Palette.darkViolet);
+      case 'Rent':
+        return _TypeStyle(Icons.apartment_outlined, _Palette.lightOrange,
+            _Palette.darkViolet);
+      case 'Items':
+      default:
+        return _TypeStyle(Icons.shopping_bag_outlined, _Palette.saturatedOrange,
+            Colors.white);
+    }
+  }
+}
+
+// Gradient header with search, Android 16-inspired
+class _Header extends StatelessWidget {
+  final VoidCallback onRefresh;
+  const _Header({required this.onRefresh});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            _Palette.saturatedOrange.withOpacity(0.20),
+            _Palette.pastelViolet.withOpacity(0.20),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Text(
+                    'Discover Requests',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: onRefresh,
+                    tooltip: 'Refresh',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const _SearchBar(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SearchBar extends StatelessWidget {
+  const _SearchBar();
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: TextField(
+        decoration: InputDecoration(
+          hintText: 'Find requests that match your skills',
+          hintStyle: TextStyle(color: Colors.grey[500]),
+          prefixIcon: Icon(Icons.search_outlined, color: Colors.grey[500]),
+          border: InputBorder.none,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
+      ),
+    );
+  }
+}
+
+class _TypeStyle {
+  final IconData icon;
+  final Color bg;
+  final Color fg;
+  _TypeStyle(this.icon, this.bg, this.fg);
+}
+
+// Bright palette based on provided swatches
+class _Palette {
+  static const pastelViolet = Color(0xFFC4C3E3); // #C4C3E3
+  static const darkViolet = Color(0xFF504E76); // #504E76
+  static const lightBeige = Color(0xFFFDF8E2); // #FDF8E2
+  static const lightGreen = Color(0xFFA3B565); // #A3B565
+  static const lightOrange = Color(0xFFFCDD9D); // #FCDD9D
+  static const saturatedOrange = Color(0xFFF1642E); // #F1642E
 }
