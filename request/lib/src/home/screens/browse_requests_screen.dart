@@ -398,7 +398,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: _Palette.darkViolet, // Solid dark card background
+        color: style.bg, // Solid card color per request type
       ),
       child: InkWell(
         onTap: () => _showRequestDetails(request),
@@ -414,7 +414,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: style.bg,
+                      color: Colors.white, // white icon circle
                       shape: BoxShape.circle,
                     ),
                     child: Icon(style.icon, color: style.fg, size: 20),
@@ -426,10 +426,10 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                       children: [
                         Text(
                           request.title,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                            color: _onColor(style.bg),
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -441,15 +441,17 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
-                                color: Colors.white12,
+                                color: _onColor(style.bg).withOpacity(0.12),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.white24),
+                                border: Border.all(
+                                    color:
+                                        _onColor(style.bg).withOpacity(0.24)),
                               ),
-                              child: const Text(
-                                'Request',
+                              child: Text(
+                                '$requestType Request',
                                 style: TextStyle(
                                   fontSize: 11,
-                                  color: Colors.white,
+                                  color: _onColor(style.bg),
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -457,8 +459,9 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                             const SizedBox(width: 8),
                             Text(
                               _relativeTime(request.createdAt),
-                              style: const TextStyle(
-                                  fontSize: 11, color: Colors.white70),
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  color: _onColor(style.bg).withOpacity(0.75)),
                             ),
                           ],
                         ),
@@ -470,9 +473,9 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
               const SizedBox(height: 10),
               Text(
                 request.description,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
-                  color: Colors.white70,
+                  color: _onColor(style.bg).withOpacity(0.72),
                   height: 1.35,
                 ),
                 maxLines: 3,
@@ -481,23 +484,25 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  const Icon(Icons.chat_bubble_outline,
-                      size: 16, color: Colors.white70),
+                  Icon(Icons.chat_bubble_outline,
+                      size: 16, color: _onColor(style.bg).withOpacity(0.72)),
                   const SizedBox(width: 12),
-                  const Icon(Icons.favorite_border,
-                      size: 16, color: Colors.white70),
+                  Icon(Icons.favorite_border,
+                      size: 16, color: _onColor(style.bg).withOpacity(0.72)),
                   const Spacer(),
                   if (request.location?.city != null)
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.location_on_outlined,
-                            size: 14, color: Colors.white70),
+                        Icon(Icons.location_on_outlined,
+                            size: 14,
+                            color: _onColor(style.bg).withOpacity(0.72)),
                         const SizedBox(width: 4),
                         Text(
                           request.location!.city!,
-                          style: const TextStyle(
-                              fontSize: 12, color: Colors.white70),
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: _onColor(style.bg).withOpacity(0.72)),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
@@ -623,6 +628,11 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
         return _TypeStyle(Icons.shopping_bag_outlined, _Palette.saturatedOrange,
             Colors.white);
     }
+  }
+
+  // Pick readable foreground (white/black) based on background luminance
+  Color _onColor(Color background) {
+    return background.computeLuminance() < 0.5 ? Colors.white : Colors.black87;
   }
 }
 
