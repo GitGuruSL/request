@@ -13,12 +13,6 @@ import {
   CardContent,
   Box,
   IconButton,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Chip,
-  Alert,
   Table,
   TableBody,
   TableCell,
@@ -26,8 +20,8 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Switch,
-  FormControlLabel,
+  Chip,
+  Alert,
   Snackbar
 } from '@mui/material';
 import {
@@ -35,16 +29,15 @@ import {
   Edit as EditIcon,
   Add as AddIcon,
   Visibility as VisibilityIcon,
-  VisibilityOff as VisibilityOffIcon
+  VisibilityOff as VisibilityOffIcon,
+  ContentCopy as CopyIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 
-const CountryBusinessTypesManagement = () => {
+const GlobalBusinessTypesManagement = () => {
   const { user } = useAuth();
   const [businessTypes, setBusinessTypes] = useState([]);
-  const [countries, setCountries] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCountry, setSelectedCountry] = useState('LK');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingType, setEditingType] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
@@ -53,7 +46,6 @@ const CountryBusinessTypesManagement = () => {
     description: '',
     icon: '',
     display_order: 0,
-    country_code: 'LK',
     is_active: true
   });
 
@@ -64,30 +56,13 @@ const CountryBusinessTypesManagement = () => {
   ];
 
   useEffect(() => {
-    fetchCountries();
-    fetchBusinessTypes();
-  }, [selectedCountry]);
+    fetchGlobalBusinessTypes();
+  }, []);
 
-  const fetchCountries = async () => {
-    try {
-      const response = await fetch('/api/countries', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      const data = await response.json();
-      if (data.success) {
-        setCountries(data.data);
-      }
-    } catch (error) {
-      console.error('Error fetching countries:', error);
-    }
-  };
-
-  const fetchBusinessTypes = async () => {
+  const fetchGlobalBusinessTypes = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/business-types?country_code=${selectedCountry}`, {
+      const response = await fetch('/api/business-types/global', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -96,11 +71,11 @@ const CountryBusinessTypesManagement = () => {
       if (data.success) {
         setBusinessTypes(data.data);
       } else {
-        setSnackbar({ open: true, message: data.message || 'Failed to fetch business types', severity: 'error' });
+        setSnackbar({ open: true, message: data.message || 'Failed to fetch global business types', severity: 'error' });
       }
     } catch (error) {
-      console.error('Error fetching business types:', error);
-      setSnackbar({ open: true, message: 'Failed to fetch business types', severity: 'error' });
+      console.error('Error fetching global business types:', error);
+      setSnackbar({ open: true, message: 'Failed to fetch global business types', severity: 'error' });
     } finally {
       setLoading(false);
     }
@@ -111,8 +86,8 @@ const CountryBusinessTypesManagement = () => {
     
     try {
       const url = editingType 
-        ? `/api/business-types/admin/${editingType.id}`
-        : '/api/business-types/admin';
+        ? `/api/business-types/global/${editingType.id}`
+        : '/api/business-types/global';
       
       const method = editingType ? 'PUT' : 'POST';
       
@@ -122,33 +97,27 @@ const CountryBusinessTypesManagement = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({
-          ...formData,
-          country_code: selectedCountry
-        })
+        body: JSON.stringify(formData)
       });
 
       const data = await response.json();
       
       if (data.success) {
-        setSnackbar({ open: true, message: editingType ? 'Business type updated successfully' : 'Business type created successfully', severity: 'success' });
+        setSnackbar({ 
+          open: true, 
+          message: editingType ? 'Global business type updated successfully' : 'Global business type created successfully', 
+          severity: 'success' 
+        });
         setIsDialogOpen(false);
         setEditingType(null);
-        setFormData({
-          name: '',
-          description: '',
-          icon: '',
-          display_order: 0,
-          country_code: selectedCountry,
-          is_active: true
-        });
-        fetchBusinessTypes();
+        resetForm();
+        fetchGlobalBusinessTypes();
       } else {
         setSnackbar({ open: true, message: data.message || 'Operation failed', severity: 'error' });
       }
     } catch (error) {
-      console.error('Error saving business type:', error);
-      setSnackbar({ open: true, message: 'Failed to save business type', severity: 'error' });
+      console.error('Error saving global business type:', error);
+      setSnackbar({ open: true, message: 'Failed to save global business type', severity: 'error' });
     }
   };
 
@@ -159,19 +128,18 @@ const CountryBusinessTypesManagement = () => {
       description: businessType.description || '',
       icon: businessType.icon || '',
       display_order: businessType.display_order || 0,
-      country_code: businessType.country_code,
       is_active: businessType.is_active
     });
     setIsDialogOpen(true);
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this business type?')) {
+    if (!confirm('Are you sure you want to delete this global business type? This will affect all countries.')) {
       return;
     }
 
     try {
-      const response = await fetch(`/api/business-types/admin/${id}`, {
+      const response = await fetch(`/api/business-types/global/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -181,20 +149,20 @@ const CountryBusinessTypesManagement = () => {
       const data = await response.json();
       
       if (data.success) {
-        setSnackbar({ open: true, message: 'Business type deleted successfully', severity: 'success' });
-        fetchBusinessTypes();
+        setSnackbar({ open: true, message: 'Global business type deleted successfully', severity: 'success' });
+        fetchGlobalBusinessTypes();
       } else {
-        setSnackbar({ open: true, message: data.message || 'Failed to delete business type', severity: 'error' });
+        setSnackbar({ open: true, message: data.message || 'Failed to delete global business type', severity: 'error' });
       }
     } catch (error) {
-      console.error('Error deleting business type:', error);
-      setSnackbar({ open: true, message: 'Failed to delete business type', severity: 'error' });
+      console.error('Error deleting global business type:', error);
+      setSnackbar({ open: true, message: 'Failed to delete global business type', severity: 'error' });
     }
   };
 
   const toggleStatus = async (id, currentStatus) => {
     try {
-      const response = await fetch(`/api/business-types/admin/${id}`, {
+      const response = await fetch(`/api/business-types/global/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -208,8 +176,8 @@ const CountryBusinessTypesManagement = () => {
       const data = await response.json();
       
       if (data.success) {
-        setSnackbar({ open: true, message: 'Business type status updated successfully', severity: 'success' });
-        fetchBusinessTypes();
+        setSnackbar({ open: true, message: 'Global business type status updated successfully', severity: 'success' });
+        fetchGlobalBusinessTypes();
       } else {
         setSnackbar({ open: true, message: data.message || 'Failed to update status', severity: 'error' });
       }
@@ -226,7 +194,6 @@ const CountryBusinessTypesManagement = () => {
       description: '',
       icon: '',
       display_order: 0,
-      country_code: selectedCountry,
       is_active: true
     });
   };
@@ -236,43 +203,31 @@ const CountryBusinessTypesManagement = () => {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
           <Typography variant="h4" component="h1" gutterBottom>
-            Country Business Types Management
+            Global Business Types Management
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Manage business types for your country
+            Manage global business types that countries can use as templates
           </Typography>
+          <Alert severity="info" sx={{ mt: 2 }}>
+            <Typography variant="body2">
+              <strong>Super Admin Only:</strong> These global business types serve as templates that country admins can adopt and customize for their regions.
+            </Typography>
+          </Alert>
         </Box>
         
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <FormControl sx={{ minWidth: 200 }}>
-            <InputLabel>Country</InputLabel>
-            <Select
-              value={selectedCountry}
-              label="Country"
-              onChange={(e) => setSelectedCountry(e.target.value)}
-            >
-              {countries.map((country) => (
-                <MenuItem key={country.code} value={country.code}>
-                  {country.name} ({country.code})
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setIsDialogOpen(true)}
-          >
-            Add Business Type
-          </Button>
-        </Box>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => setIsDialogOpen(true)}
+        >
+          Add Global Business Type
+        </Button>
       </Box>
 
       <Card>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            Business Types for {countries.find(c => c.code === selectedCountry)?.name || selectedCountry}
+            Global Business Types Templates
           </Typography>
           
           {loading ? (
@@ -289,6 +244,7 @@ const CountryBusinessTypesManagement = () => {
                     <TableCell>Description</TableCell>
                     <TableCell>Order</TableCell>
                     <TableCell>Status</TableCell>
+                    <TableCell>Usage</TableCell>
                     <TableCell>Actions</TableCell>
                   </TableRow>
                 </TableHead>
@@ -308,6 +264,14 @@ const CountryBusinessTypesManagement = () => {
                           label={type.is_active ? 'Active' : 'Inactive'}
                           color={type.is_active ? 'success' : 'default'}
                           size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={`${type.country_usage || 0} countries`}
+                          color="primary"
+                          size="small"
+                          variant="outlined"
                         />
                       </TableCell>
                       <TableCell>
@@ -339,9 +303,9 @@ const CountryBusinessTypesManagement = () => {
                   ))}
                   {businessTypes.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4 }}>
+                      <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
                         <Typography color="text.secondary">
-                          No business types found for this country
+                          No global business types found
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -364,7 +328,7 @@ const CountryBusinessTypesManagement = () => {
         fullWidth
       >
         <DialogTitle>
-          {editingType ? 'Edit Business Type' : 'Add New Business Type'}
+          {editingType ? 'Edit Global Business Type' : 'Add New Global Business Type'}
         </DialogTitle>
         <form onSubmit={handleSubmit}>
           <DialogContent>
@@ -486,4 +450,4 @@ const CountryBusinessTypesManagement = () => {
   );
 };
 
-export default CountryBusinessTypesManagement;
+export default GlobalBusinessTypesManagement;

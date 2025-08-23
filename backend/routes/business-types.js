@@ -3,6 +3,265 @@ const router = express.Router();
 const database = require('../services/database');
 const auth = require('../services/auth');
 
+// Global business types management (super admin only)
+
+// Get all global business types (super admin only)
+router.get('/global', auth.authMiddleware(), async (req, res) => {
+  try {
+    // Check if user is super admin
+    if (req.user.role !== 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Super admin access required'
+      });
+    }
+
+    const query = `
+      SELECT 
+        bt.id, 
+        bt.name, 
+        bt.description, 
+        bt.icon, 
+        bt.display_order,
+        bt.is_active,
+        bt.created_at,
+        bt.updated_at,
+        COUNT(cbt.id) as country_usage
+      FROM business_types bt
+      LEFT JOIN country_business_types cbt ON cbt.global_business_type_id = bt.id
+      GROUP BY bt.id, bt.name, bt.description, bt.icon, bt.display_order, bt.is_active, bt.created_at, bt.updated_at
+      ORDER BY bt.display_order, bt.name
+    `;
+
+    const result = await database.query(query, []);
+
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching global business types:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching global business types',
+      error: error.message
+    });
+  }
+});
+
+// Create global business type (super admin only)
+router.post('/global', auth.authMiddleware(), async (req, res) => {
+  try {
+    // Check if user is super admin
+    if (req.user.role !== 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Super admin access required'
+      });
+    }
+
+    const { name, description, icon, display_order = 0 } = req.body;
+    
+    // Validate required fields
+    if (!name) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name is required'
+      });
+    }
+
+    // Check if name already exists
+    const existingType = await database.queryOne(
+      'SELECT id FROM business_types WHERE LOWER(name) = LOWER($1)',
+      [name]
+    );
+
+    if (existingType) {
+      return res.status(400).json({
+        success: false,
+        message: 'A global business type with this name already exists'
+      });
+    }
+
+    const query = `
+      INSERT INTO business_types (name, description, icon, display_order, created_by)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `;
+
+    const result = await database.queryOne(query, [
+      name,
+      description || null,
+      icon || null,
+      display_order,
+      req.user.id
+    ]);
+
+    res.json({
+      success: true,
+      message: 'Global business type created successfully',
+      data: result
+    });
+  } catch (error) {
+    console.error('Error creating global business type:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error creating global business type',
+      error: error.message
+    });
+  }
+});
+
+// Update global business type (super admin only)
+router.put('/global/:id', auth.authMiddleware(), async (req, res) => {
+  try {
+    // Check if user is super admin
+    if (req.user.role !== 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Super admin access required'
+      });
+    }
+
+    const { id } = req.params;
+    const { name, description, icon, display_order, is_active } = req.body;
+
+    // Check if global business type exists
+    const existingType = await database.queryOne(
+      'SELECT * FROM business_types WHERE id = $1',
+      [id]
+    );
+
+    if (!existingType) {
+      return res.status(404).json({
+        success: false,
+        message: 'Global business type not found'
+      });
+    }
+
+    // If name is being updated, check for duplicates
+    if (name && name.toLowerCase() !== existingType.name.toLowerCase()) {
+      const duplicate = await database.queryOne(
+        'SELECT id FROM business_types WHERE LOWER(name) = LOWER($1) AND id != $2',
+        [name, id]
+      );
+
+      if (duplicate) {
+        return res.status(400).json({
+          success: false,
+          message: 'A global business type with this name already exists'
+        });
+      }
+    }
+
+    const query = `
+      UPDATE business_types 
+      SET 
+        name = COALESCE($1, name),
+        description = COALESCE($2, description),
+        icon = COALESCE($3, icon),
+        display_order = COALESCE($4, display_order),
+        is_active = COALESCE($5, is_active),
+        updated_at = CURRENT_TIMESTAMP,
+        updated_by = $6
+      WHERE id = $7
+      RETURNING *
+    `;
+
+    const result = await database.queryOne(query, [
+      name || null,
+      description || null,
+      icon || null,
+      display_order !== undefined ? display_order : null,
+      is_active !== undefined ? is_active : null,
+      req.user.id,
+      id
+    ]);
+
+    res.json({
+      success: true,
+      message: 'Global business type updated successfully',
+      data: result
+    });
+  } catch (error) {
+    console.error('Error updating global business type:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating global business type',
+      error: error.message
+    });
+  }
+});
+
+// Delete global business type (super admin only)
+router.delete('/global/:id', auth.authMiddleware(), async (req, res) => {
+  try {
+    // Check if user is super admin
+    if (req.user.role !== 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Super admin access required'
+      });
+    }
+
+    const { id } = req.params;
+
+    // Check if global business type exists
+    const existingType = await database.queryOne(
+      'SELECT * FROM business_types WHERE id = $1',
+      [id]
+    );
+
+    if (!existingType) {
+      return res.status(404).json({
+        success: false,
+        message: 'Global business type not found'
+      });
+    }
+
+    // Check if this global type is being used by any countries
+    const usageCount = await database.queryOne(
+      'SELECT COUNT(*) as count FROM country_business_types WHERE global_business_type_id = $1',
+      [id]
+    );
+
+    if (parseInt(usageCount.count) > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot delete this global business type as it is being used by ${usageCount.count} country business type(s)`
+      });
+    }
+
+    // Soft delete - set as inactive
+    const query = `
+      UPDATE business_types 
+      SET 
+        is_active = false,
+        updated_at = CURRENT_TIMESTAMP,
+        updated_by = $1
+      WHERE id = $2
+      RETURNING *
+    `;
+
+    const result = await database.queryOne(query, [req.user.id, id]);
+
+    res.json({
+      success: true,
+      message: 'Global business type deleted successfully',
+      data: result
+    });
+  } catch (error) {
+    console.error('Error deleting global business type:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting global business type',
+      error: error.message
+    });
+  }
+});
+
+// Country-specific business types management
+
 // Get all business types for a country (public endpoint for registration form)
 router.get('/', async (req, res) => {
   try {
@@ -10,7 +269,7 @@ router.get('/', async (req, res) => {
 
     const query = `
       SELECT id, name, description, icon, display_order
-      FROM business_types 
+      FROM country_business_types 
       WHERE country_code = $1 AND is_active = true
       ORDER BY display_order, name
     `;
@@ -58,6 +317,32 @@ const checkAdminPermission = (req, res, next) => {
 
 router.use(checkAdminPermission);
 
+// Get available global business types for reference
+router.get('/global-templates', async (req, res) => {
+  try {
+    const query = `
+      SELECT id, name, description, icon, display_order
+      FROM business_types 
+      WHERE is_active = true
+      ORDER BY display_order, name
+    `;
+
+    const result = await database.query(query, []);
+
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching global business type templates:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching global business type templates',
+      error: error.message
+    });
+  }
+});
+
 // Get all business types (admin view with all details)
 router.get('/admin', async (req, res) => {
   try {
@@ -65,12 +350,16 @@ router.get('/admin', async (req, res) => {
     const userRole = req.user.role;
     
     let query = `
-      SELECT bt.*, 
+      SELECT cbt.*, 
+             bt.name as global_name,
+             bt.description as global_description,
+             bt.icon as global_icon,
              cb.display_name as created_by_name,
              ub.display_name as updated_by_name
-      FROM business_types bt
-      LEFT JOIN admin_users cb ON bt.created_by = cb.id
-      LEFT JOIN admin_users ub ON bt.updated_by = ub.id
+      FROM country_business_types cbt
+      LEFT JOIN business_types bt ON cbt.global_business_type_id = bt.id
+      LEFT JOIN admin_users cb ON cbt.created_by = cb.id
+      LEFT JOIN admin_users ub ON cbt.updated_by = ub.id
     `;
     
     const params = [];
@@ -78,10 +367,10 @@ router.get('/admin', async (req, res) => {
     
     // Super admins see all countries, others see only their country
     if (userRole !== 'super_admin') {
-      conditions.push('bt.country_code = $1');
+      conditions.push('cbt.country_code = $1');
       params.push(req.adminCountry || req.user.country_code);
     } else if (country_code) {
-      conditions.push('bt.country_code = $1');
+      conditions.push('cbt.country_code = $1');
       params.push(country_code);
     }
     
@@ -89,7 +378,7 @@ router.get('/admin', async (req, res) => {
       query += ' WHERE ' + conditions.join(' AND ');
     }
     
-    query += ' ORDER BY bt.country_code, bt.display_order, bt.name';
+    query += ' ORDER BY cbt.country_code, cbt.display_order, cbt.name';
 
     const result = await database.query(query, params);
 
@@ -110,7 +399,7 @@ router.get('/admin', async (req, res) => {
 // Create new business type
 router.post('/admin', auth.authMiddleware(), async (req, res) => {
   try {
-    const { name, description, icon, country_code, display_order = 0 } = req.body;
+    const { name, description, icon, country_code, display_order = 0, global_business_type_id } = req.body;
     const userId = req.user.id;
     
     // Validate required fields
@@ -130,13 +419,13 @@ router.post('/admin', auth.authMiddleware(), async (req, res) => {
     }
 
     const insertQuery = `
-      INSERT INTO business_types (name, description, icon, country_code, display_order, created_by, updated_by)
-      VALUES ($1, $2, $3, $4, $5, $6, $6)
+      INSERT INTO country_business_types (name, description, icon, country_code, display_order, global_business_type_id, created_by, updated_by)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $7)
       RETURNING *
     `;
 
     const result = await database.queryOne(insertQuery, [
-      name, description, icon, country_code, display_order, userId
+      name, description, icon, country_code, display_order, global_business_type_id || null, userId
     ]);
 
     res.status(201).json({
@@ -166,12 +455,12 @@ router.post('/admin', auth.authMiddleware(), async (req, res) => {
 router.put('/admin/:id', auth.authMiddleware(), async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, icon, is_active, display_order } = req.body;
+    const { name, description, icon, is_active, display_order, global_business_type_id } = req.body;
     const userId = req.user.id;
 
     // Check if business type exists and user can manage it
     const checkQuery = `
-      SELECT * FROM business_types WHERE id = $1
+      SELECT * FROM country_business_types WHERE id = $1
     `;
     
     const existingType = await database.queryOne(checkQuery, [id]);
@@ -192,20 +481,21 @@ router.put('/admin/:id', auth.authMiddleware(), async (req, res) => {
     }
 
     const updateQuery = `
-      UPDATE business_types 
+      UPDATE country_business_types 
       SET name = COALESCE($2, name),
           description = COALESCE($3, description),
           icon = COALESCE($4, icon),
           is_active = COALESCE($5, is_active),
           display_order = COALESCE($6, display_order),
-          updated_by = $7,
+          global_business_type_id = COALESCE($7, global_business_type_id),
+          updated_by = $8,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = $1
       RETURNING *
     `;
 
     const result = await database.queryOne(updateQuery, [
-      id, name, description, icon, is_active, display_order, userId
+      id, name, description, icon, is_active, display_order, global_business_type_id, userId
     ]);
 
     res.json({
@@ -231,7 +521,7 @@ router.delete('/admin/:id', auth.authMiddleware(), async (req, res) => {
 
     // Check if business type exists and user can manage it
     const checkQuery = `
-      SELECT * FROM business_types WHERE id = $1
+      SELECT * FROM country_business_types WHERE id = $1
     `;
     
     const existingType = await database.queryOne(checkQuery, [id]);
@@ -253,14 +543,14 @@ router.delete('/admin/:id', auth.authMiddleware(), async (req, res) => {
 
     // Check if any businesses are using this type
     const usageCheck = await database.query(
-      'SELECT COUNT(*) as count FROM business_verifications WHERE business_type_id = $1',
+      'SELECT COUNT(*) as count FROM business_verification WHERE country_business_type_id = $1',
       [id]
     );
 
     if (parseInt(usageCheck.rows[0].count) > 0) {
       // Soft delete - deactivate instead of deleting
       const deactivateQuery = `
-        UPDATE business_types 
+        UPDATE country_business_types 
         SET is_active = false, updated_by = $2, updated_at = CURRENT_TIMESTAMP
         WHERE id = $1
         RETURNING *
@@ -275,7 +565,7 @@ router.delete('/admin/:id', auth.authMiddleware(), async (req, res) => {
       });
     } else {
       // Hard delete if no usage
-      await database.query('DELETE FROM business_types WHERE id = $1', [id]);
+      await database.query('DELETE FROM country_business_types WHERE id = $1', [id]);
 
       res.json({
         success: true,
@@ -314,9 +604,9 @@ router.post('/admin/copy', auth.authMiddleware(), async (req, res) => {
 
     // Copy business types
     const copyQuery = `
-      INSERT INTO business_types (name, description, icon, country_code, display_order, created_by, updated_by)
-      SELECT name, description, icon, $2, display_order, $3, $3
-      FROM business_types 
+      INSERT INTO country_business_types (name, description, icon, country_code, display_order, global_business_type_id, created_by, updated_by)
+      SELECT name, description, icon, $2, display_order, global_business_type_id, $3, $3
+      FROM country_business_types 
       WHERE country_code = $1 AND is_active = true
       ON CONFLICT (name, country_code) DO NOTHING
       RETURNING *
