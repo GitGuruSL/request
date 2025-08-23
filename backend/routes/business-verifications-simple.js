@@ -65,8 +65,9 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       business_email,
       business_phone,
       business_address,
-      business_type,
-      business_category, // Accept business_category from Flutter
+      business_type, // New: product_selling, delivery_service, or both
+      business_category, // Accept business_category from Flutter (deprecated)
+      categories, // New: array of category IDs for notifications
       registration_number,
       tax_number,
       country_id,
@@ -162,19 +163,22 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       const updateQuery = `
         UPDATE business_verifications 
         SET business_name = $1, business_email = $2, business_phone = $3, 
-            business_address = $4, business_category = $5, license_number = $6, 
-            tax_id = $7, country = $8, business_description = $9,
-            business_license_url = $10, tax_certificate_url = $11,
-            insurance_document_url = $12, business_logo_url = $13,
-            phone_verified = $14, email_verified = $15,
+            business_address = $4, business_type = $5, business_category = $6, 
+            categories = $7, license_number = $8, 
+            tax_id = $9, country = $10, business_description = $11,
+            business_license_url = $12, tax_certificate_url = $13,
+            insurance_document_url = $14, business_logo_url = $15,
+            phone_verified = $16, email_verified = $17,
             updated_at = CURRENT_TIMESTAMP${statusUpdateClause}
-        WHERE user_id = $16
+        WHERE user_id = $18
         RETURNING *
       `;
       
       const updateValues = [
         business_name, business_email, business_phone, business_address,
-        business_category || business_type, registration_number, tax_number, finalCountryValue, 
+        business_type, business_category, 
+        categories ? JSON.stringify(categories) : JSON.stringify([]),
+        registration_number, tax_number, finalCountryValue, 
         business_description || description, business_license_url, tax_certificate_url,
         insurance_document_url, business_logo_url, phoneVerification.phoneVerified, emailVerification.emailVerified, userId,
         ...statusValues
@@ -196,17 +200,19 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       const insertQuery = `
         INSERT INTO business_verifications 
         (user_id, business_name, business_email, business_phone, business_address, 
-         business_category, license_number, tax_id, country, 
+         business_type, business_category, categories, license_number, tax_id, country, 
          business_description, business_license_url, tax_certificate_url,
          insurance_document_url, business_logo_url, phone_verified, email_verified, 
          status, submitted_at, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         RETURNING *
       `;
       
       const result = await database.query(insertQuery, [
         userId, business_name, business_email, business_phone, business_address,
-        business_category || business_type, registration_number, tax_number, finalCountryValue, 
+        business_type, business_category, 
+        categories ? JSON.stringify(categories) : JSON.stringify([]),
+        registration_number, tax_number, finalCountryValue, 
         business_description || description, business_license_url, tax_certificate_url,
         insurance_document_url, business_logo_url, phoneVerification.phoneVerified, emailVerification.emailVerified
       ]);
@@ -271,7 +277,9 @@ router.get('/user/:userId', auth.authMiddleware(), async (req, res) => {
       businessEmail: row.business_email,
       businessPhone: row.business_phone,
       businessAddress: row.business_address,
-      businessCategory: row.business_category,
+      businessType: row.business_type, // New field
+      businessCategory: row.business_category, // Keep for backward compatibility
+      categories: row.categories, // New field - array of category IDs
       businessDescription: row.business_description,
       licenseNumber: row.license_number,
       taxId: row.tax_id,

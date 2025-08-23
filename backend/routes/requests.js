@@ -4,6 +4,7 @@ const database = require('../services/database');
 const auth = require('../services/auth');
 const responsesRouter = require('./responses');
 const notify = require('../services/notification-helper');
+const BusinessNotificationService = require('../services/business-notification-service'); // NEW
 
 // Get requests with optional filtering
 router.get('/', async (req, res) => {
@@ -414,6 +415,34 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       location_address, location_latitude, location_longitude,
       budget, currency, deadline, image_urls, country_code, metadata ? JSON.stringify(metadata) : null, normalizedRequestType
     ]);
+
+    // After successful request creation, notify relevant businesses
+    try {
+      console.log('🔔 Finding businesses to notify for new request...');
+      const businessesToNotify = await BusinessNotificationService.getBusinessesToNotify(
+        request.id,
+        category_id,
+        subcategory_id,
+        normalizedRequestType || 'item',
+        country_code
+      );
+
+      if (businessesToNotify.length > 0) {
+        console.log(`📢 Notifying ${businessesToNotify.length} businesses about new request`);
+        
+        // Send notifications to businesses (implement as needed)
+        for (const business of businessesToNotify) {
+          console.log(`  📨 Would notify: ${business.businessName} (${business.userId})`);
+          // TODO: Implement actual notification sending (email, push, SMS, etc.)
+          // await notify.sendBusinessNotification(business.userId, request, business.notificationReason);
+        }
+      } else {
+        console.log('📭 No businesses found to notify for this request');
+      }
+    } catch (notificationError) {
+      console.error('⚠️ Failed to send business notifications (request still created):', notificationError);
+      // Don't fail the request creation if notifications fail
+    }
 
     res.status(201).json({
       success: true,
