@@ -32,10 +32,9 @@ import {
   VisibilityOff as VisibilityOffIcon,
   ContentCopy as CopyIcon
 } from '@mui/icons-material';
-import { useAuth } from '../contexts/AuthContext';
+import api from '../services/apiClient';
 
 const GlobalBusinessTypesManagement = () => {
-  const { user } = useAuth();
   const [businessTypes, setBusinessTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -63,18 +62,8 @@ const GlobalBusinessTypesManagement = () => {
 
   const checkMigrationStatus = async () => {
     try {
-      const response = await fetch('/api/business-types/migration-status', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setMigrationStatus(data.data);
-        }
-      }
+      const { data } = await api.get('/business-types/migration-status');
+      if (data?.success) setMigrationStatus(data.data);
     } catch (error) {
       console.error('Error checking migration status:', error);
     }
@@ -83,36 +72,17 @@ const GlobalBusinessTypesManagement = () => {
   const fetchGlobalBusinessTypes = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/business-types/global', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('Server returned non-JSON response');
-      }
-      
-      const data = await response.json();
-      if (data.success) {
-        setBusinessTypes(data.data);
+      const { data } = await api.get('/business-types/global');
+      if (data?.success) {
+        setBusinessTypes(data.data || []);
       } else {
-        setSnackbar({ 
-          open: true, 
-          message: data.message || 'Failed to fetch global business types', 
-          severity: 'error' 
-        });
+        setSnackbar({ open: true, message: data?.message || 'Failed to fetch global business types', severity: 'error' });
       }
     } catch (error) {
       console.error('Error fetching global business types:', error);
       let errorMessage = 'Failed to fetch global business types';
       
-      if (error.message.includes('non-JSON response')) {
+      if (error?.message?.includes('non-JSON response')) {
         errorMessage = 'Server error: Please check if the database migration has been run. The system may need to be updated to support global business types.';
       }
       
@@ -131,23 +101,13 @@ const GlobalBusinessTypesManagement = () => {
     
     try {
       const url = editingType 
-        ? `/api/business-types/global/${editingType.id}`
-        : '/api/business-types/global';
+        ? `/business-types/global/${editingType.id}`
+        : '/business-types/global';
+      const { data } = editingType
+        ? await api.put(url, formData)
+        : await api.post(url, formData);
       
-      const method = editingType ? 'PUT' : 'POST';
-      
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(formData)
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
+      if (data?.success) {
         setSnackbar({ 
           open: true, 
           message: editingType ? 'Global business type updated successfully' : 'Global business type created successfully', 
@@ -158,7 +118,7 @@ const GlobalBusinessTypesManagement = () => {
         resetForm();
         fetchGlobalBusinessTypes();
       } else {
-        setSnackbar({ open: true, message: data.message || 'Operation failed', severity: 'error' });
+        setSnackbar({ open: true, message: data?.message || 'Operation failed', severity: 'error' });
       }
     } catch (error) {
       console.error('Error saving global business type:', error);
@@ -184,20 +144,13 @@ const GlobalBusinessTypesManagement = () => {
     }
 
     try {
-      const response = await fetch(`/api/business-types/global/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      const data = await response.json();
+      const { data } = await api.delete(`/business-types/global/${id}`);
       
-      if (data.success) {
+      if (data?.success) {
         setSnackbar({ open: true, message: 'Global business type deleted successfully', severity: 'success' });
         fetchGlobalBusinessTypes();
       } else {
-        setSnackbar({ open: true, message: data.message || 'Failed to delete global business type', severity: 'error' });
+        setSnackbar({ open: true, message: data?.message || 'Failed to delete global business type', severity: 'error' });
       }
     } catch (error) {
       console.error('Error deleting global business type:', error);
@@ -207,24 +160,15 @@ const GlobalBusinessTypesManagement = () => {
 
   const toggleStatus = async (id, currentStatus) => {
     try {
-      const response = await fetch(`/api/business-types/global/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          is_active: !currentStatus
-        })
+      const { data } = await api.put(`/business-types/global/${id}`, {
+        is_active: !currentStatus
       });
-
-      const data = await response.json();
       
-      if (data.success) {
+      if (data?.success) {
         setSnackbar({ open: true, message: 'Global business type status updated successfully', severity: 'success' });
         fetchGlobalBusinessTypes();
       } else {
-        setSnackbar({ open: true, message: data.message || 'Failed to update status', severity: 'error' });
+        setSnackbar({ open: true, message: data?.message || 'Failed to update status', severity: 'error' });
       }
     } catch (error) {
       console.error('Error updating status:', error);

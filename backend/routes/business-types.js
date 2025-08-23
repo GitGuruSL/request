@@ -6,13 +6,18 @@ const auth = require('../services/auth');
 // Check migration status endpoint
 router.get('/migration-status', auth.authMiddleware(), async (req, res) => {
   try {
+    console.log('🔍 Migration status endpoint called by user:', req.user.id, 'role:', req.user.role);
+    
     // Check if user is super admin
     if (req.user.role !== 'super_admin') {
+      console.log('❌ Access denied - not super admin');
       return res.status(403).json({
         success: false,
         message: 'Super admin access required'
       });
     }
+
+    console.log('✅ Super admin access verified, checking migration status...');
 
     // Check if migration has been run
     const checkTableQuery = `
@@ -23,8 +28,10 @@ router.get('/migration-status', auth.authMiddleware(), async (req, res) => {
       AND column_name = 'country_code'
     `;
     
+    console.log('🔍 Checking for country_code column in business_types...');
     const hasCountryCode = await database.query(checkTableQuery, []);
     const needsMigration = hasCountryCode.rows.length > 0;
+    console.log('📊 Migration needed:', needsMigration);
     
     // Check if country_business_types table exists
     const checkCountryTableQuery = `
@@ -34,19 +41,26 @@ router.get('/migration-status', auth.authMiddleware(), async (req, res) => {
       AND table_name = 'country_business_types'
     `;
     
+    console.log('🔍 Checking for country_business_types table...');
     const hasCountryTable = await database.query(checkCountryTableQuery, []);
+    const hasCountryBusinessTypesTable = hasCountryTable.rows.length > 0;
+    console.log('📊 Country business types table exists:', hasCountryBusinessTypesTable);
+    
+    const migrationStatus = {
+      needsMigration,
+      hasOldStructure: needsMigration,
+      hasCountryBusinessTypesTable,
+      migrationFile: 'migrate_business_types_restructure.js'
+    };
+    
+    console.log('📋 Migration status result:', migrationStatus);
     
     res.json({
       success: true,
-      data: {
-        needsMigration,
-        hasOldStructure: needsMigration,
-        hasCountryBusinessTypesTable: hasCountryTable.rows.length > 0,
-        migrationFile: 'migrate_business_types_restructure.js'
-      }
+      data: migrationStatus
     });
   } catch (error) {
-    console.error('Error checking migration status:', error);
+    console.error('❌ Error checking migration status:', error);
     res.status(500).json({
       success: false,
       message: 'Error checking migration status',
@@ -90,14 +104,19 @@ router.post('/run-migration', auth.authMiddleware(), async (req, res) => {
 // Get all global business types (super admin only)
 router.get('/global', auth.authMiddleware(), async (req, res) => {
   try {
+    console.log('🔍 Global business types endpoint called by user:', req.user.id, 'role:', req.user.role);
+    
     // Check if user is super admin
     if (req.user.role !== 'super_admin') {
+      console.log('❌ Access denied - not super admin');
       return res.status(403).json({
         success: false,
         message: 'Super admin access required'
       });
     }
 
+    console.log('✅ Super admin access verified, checking table structure...');
+    
     // Check current table structure to determine if migration has been run
     const checkTableQuery = `
       SELECT column_name 
@@ -107,11 +126,14 @@ router.get('/global', auth.authMiddleware(), async (req, res) => {
       AND column_name = 'country_code'
     `;
     
+    console.log('🔍 Executing table structure check query...');
     const hasCountryCode = await database.query(checkTableQuery, []);
+    console.log('📊 Table structure check result:', hasCountryCode.rows.length > 0 ? 'Old structure (has country_code)' : 'New structure (no country_code)');
     
     let query, result;
     
     if (hasCountryCode.rows.length > 0) {
+      console.log('📋 Using old structure query - showing unique business types as global templates');
       // Old structure - return unique business types as "global" templates
       query = `
         SELECT DISTINCT
@@ -130,6 +152,7 @@ router.get('/global', auth.authMiddleware(), async (req, res) => {
         ORDER BY display_order, name
       `;
     } else {
+      console.log('🌍 Using new structure query - querying global business types table');
       // New structure - query global business types table
       query = `
         SELECT 
@@ -141,7 +164,7 @@ router.get('/global', auth.authMiddleware(), async (req, res) => {
           bt.is_active,
           bt.created_at,
           bt.updated_at,
-          COUNT(cbt.id) as country_usage
+          COALESCE(COUNT(cbt.id), 0) as country_usage
         FROM business_types bt
         LEFT JOIN country_business_types cbt ON cbt.global_business_type_id = bt.id
         GROUP BY bt.id, bt.name, bt.description, bt.icon, bt.display_order, bt.is_active, bt.created_at, bt.updated_at
@@ -149,14 +172,16 @@ router.get('/global', auth.authMiddleware(), async (req, res) => {
       `;
     }
 
+    console.log('🚀 Executing main query...');
     result = await database.query(query, []);
+    console.log('📊 Query result:', result.rows.length, 'business types found');
 
     res.json({
       success: true,
       data: result.rows
     });
   } catch (error) {
-    console.error('Error fetching global business types:', error);
+    console.error('❌ Error fetching global business types:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching global business types',
