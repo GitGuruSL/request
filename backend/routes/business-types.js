@@ -565,12 +565,12 @@ router.get('/admin', async (req, res) => {
     
     if (hasCountry) {
       query = `
-        SELECT cbt.*, 
-               bt.name as global_name,
-               bt.description as global_description,
-               bt.icon as global_icon,
-               cb.display_name as created_by_name,
-               ub.display_name as updated_by_name
+  SELECT cbt.*, 
+         bt.name as global_name,
+         bt.description as global_description,
+         bt.icon as global_icon,
+         cb.name as created_by_name,
+         ub.name as updated_by_name
         FROM country_business_types cbt
         LEFT JOIN business_types bt ON cbt.global_business_type_id = bt.id
         LEFT JOIN admin_users cb ON cbt.created_by = cb.id

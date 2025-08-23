@@ -230,8 +230,26 @@ async function autoActivateCountryData(countryCode, countryName, adminUserId, ad
         console.warn('   ⚠️ Skipping business types seeding: country_business_types table not found');
       } else {
         const globalTypes = await dbService.query(`SELECT id, name, description, icon, display_order, is_active FROM business_types WHERE is_active = true`);
+
+        // If no global types exist, seed from a safe built-in default list
+        let typesToSeed = globalTypes.rows;
+        if (!typesToSeed || typesToSeed.length === 0) {
+          console.warn('   ⚠️ No active rows found in business_types. Seeding from built-in defaults.');
+          typesToSeed = [
+            { id: null, name: 'Product Seller', description: 'Businesses that sell physical products (electronics, food, clothing, etc.)', icon: '🛍️', display_order: 1, is_active: true },
+            { id: null, name: 'Service Provider', description: 'Businesses that provide services (repairs, consultations, etc.)', icon: '🔧', display_order: 2, is_active: true },
+            { id: null, name: 'Rental Business', description: 'Businesses that rent out items (vehicles, equipment, etc.)', icon: '🏠', display_order: 3, is_active: true },
+            { id: null, name: 'Restaurant/Food', description: 'Restaurants, cafes, food delivery businesses', icon: '🍽️', display_order: 4, is_active: true },
+            { id: null, name: 'Delivery Service', description: 'Courier, logistics, and delivery companies', icon: '🚚', display_order: 5, is_active: true },
+            { id: null, name: 'Other Business', description: "Businesses that don't fit into other categories", icon: '🏢', display_order: 6, is_active: true }
+          ];
+        }
+
+        // Validate admin id for FK (nullable if not a UUID)
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        const createdBySafe = uuidRegex.test(adminUserId || '') ? adminUserId : null;
         let btActivated = 0, btSkipped = 0;
-        for (const t of globalTypes.rows) {
+        for (const t of typesToSeed) {
           const exists = await dbService.query(
             `SELECT id FROM country_business_types WHERE country_code = $1 AND (global_business_type_id = $2 OR name = $3)`,
             [countryCode, t.id, t.name]
@@ -240,7 +258,7 @@ async function autoActivateCountryData(countryCode, countryName, adminUserId, ad
             await dbService.query(
               `INSERT INTO country_business_types (name, description, icon, is_active, display_order, country_code, global_business_type_id, created_by, updated_by, created_at, updated_at)
                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$8,NOW(),NOW())`,
-              [t.name, t.description, t.icon, true, t.display_order || 0, countryCode, t.id, adminUserId]
+              [t.name, t.description || null, t.icon || null, true, t.display_order || 0, countryCode, t.id, createdBySafe]
             );
             btActivated++;
           } else {

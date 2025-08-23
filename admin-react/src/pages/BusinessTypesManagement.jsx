@@ -98,7 +98,6 @@ const CountryBusinessTypesManagement = () => {
       const { data } = await api.get(`/business-types/admin`, { params });
       if (data?.success) {
         setBusinessTypes(data.data || []);
-  import { useAuth } from '../contexts/AuthContext';
       } else {
         setSnackbar({ open: true, message: data?.message || 'Failed to fetch business types', severity: 'error' });
       }
