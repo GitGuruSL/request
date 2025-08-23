@@ -32,8 +32,11 @@ async function testBusinessCategorization() {
           const rights = await BusinessNotificationService.getBusinessAccessRights(userId.id);
           console.log(`  ${biz.business_name} (${userId.id}):`);
           console.log(`    Can Add Prices: ${rights.canAddPrices}`);
+          console.log(`    Can Send Item Requests: ${rights.canSendItemRequests}`);
+          console.log(`    Can Send Service Requests: ${rights.canSendServiceRequests}`);
+          console.log(`    Can Send Delivery Requests: ${rights.canSendDeliveryRequests}`);
           console.log(`    Can Respond to Delivery: ${rights.canRespondToDelivery}`);
-          console.log(`    Can Respond to Products: ${rights.canRespondToProducts}`);
+          console.log(`    Can Respond to Other: ${rights.canRespondToOther}`);
           console.log(`    Categories: ${JSON.stringify(rights.categories)}`);
           console.log('');
         }
@@ -51,31 +54,48 @@ async function testBusinessCategorization() {
     if (electronicsCategory) {
       console.log(`Testing with Electronics category: ${electronicsCategory.id}`);
       
+      // Test delivery request notifications
       const deliveryBusinesses = await BusinessNotificationService.getDeliveryBusinesses('LK');
-      console.log(`  Delivery businesses: ${deliveryBusinesses.length}`);
+      console.log(`  Delivery request notifications: ${deliveryBusinesses.length} businesses`);
       deliveryBusinesses.forEach(b => console.log(`    - ${b.businessName}`));
 
-      const productBusinesses = await BusinessNotificationService.getCategoryMatchingBusinesses(
+      // Test item request notifications (open to all)
+      const itemBusinesses = await BusinessNotificationService.getAllBusinessesWithCategoryPreference(
         electronicsCategory.id, null, 'LK'
       );
-      console.log(`  Product businesses for electronics: ${productBusinesses.length}`);
-      productBusinesses.forEach(b => console.log(`    - ${b.businessName}`));
+      console.log(`  Item request notifications: ${itemBusinesses.length} businesses (all can respond)`);
+      itemBusinesses.forEach(b => console.log(`    - ${b.businessName} (${b.notificationReason})`));
+      
+      // Test ride request (should be empty)
+      console.log(`  Ride request notifications: 0 businesses (drivers only)`);
     }
 
     // 4. Suggest improvements
-    console.log('\n💡 Suggestions:');
+    console.log('\n💡 Business Logic Summary:');
+    console.log('  📱 Item/Service/Rent requests: Anyone can respond');
+    console.log('  🚚 Delivery requests: Only delivery service businesses');  
+    console.log('  🚗 Ride requests: Only individual drivers (not businesses)');
+    console.log('  💰 Price listings: Only product selling businesses');
+    console.log('  📤 Send requests: Product sellers (except ride/delivery)');
+    
+    console.log('\n📊 Current Status:');
     const unverifiedCount = businesses.rows.filter(b => !b.is_verified || b.status !== 'approved').length;
     if (unverifiedCount > 0) {
-      console.log(`  - ${unverifiedCount} businesses need verification to receive notifications`);
+      console.log(`  - ${unverifiedCount} businesses need verification to participate`);
     }
 
-    const emptyCategories = businesses.rows.filter(b => 
-      b.business_type === 'product_selling' && 
-      (!b.categories || b.categories.length === 0)
+    const productSellers = businesses.rows.filter(b => 
+      (b.business_type === 'product_selling' || b.business_type === 'both') &&
+      b.is_verified && b.status === 'approved'
     ).length;
-    if (emptyCategories > 0) {
-      console.log(`  - ${emptyCategories} product-selling businesses need category assignments`);
-    }
+    const deliveryServices = businesses.rows.filter(b => 
+      (b.business_type === 'delivery_service' || b.business_type === 'both') &&
+      b.is_verified && b.status === 'approved'
+    ).length;
+    
+    console.log(`  - ${productSellers} businesses can add prices and send most requests`);
+    console.log(`  - ${deliveryServices} businesses can handle delivery requests`);
+    console.log(`  - ${businesses.rows.filter(b => b.is_verified && b.status === 'approved').length} businesses can respond to item/service/rent requests`);
 
     console.log('\n✅ Test completed successfully!');
 
