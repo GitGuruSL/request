@@ -29,6 +29,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
   String? _currencySymbol;
   CountryModules? _countryModules;
   List<RequestType> _enabledRequestTypes = [];
+  List<String> _allowedTypes = ['item', 'service', 'rent'];
 
   @override
   void initState() {
@@ -43,6 +44,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
       // Load user's allowed request types based on registrations
       final allowedRequestTypeStrings =
           await _registrationService.getAllowedRequestTypes();
+      _allowedTypes = allowedRequestTypeStrings;
 
       if (kDebugMode) {
         print(
@@ -636,6 +638,12 @@ class _BrowseScreenState extends State<BrowseScreen> {
         return _countryModules!.isModuleEnabled(moduleId);
       }).toList();
     }
+
+    // Apply role-based gating: only show types allowed for this user
+    filtered = filtered.where((request) {
+      final typeKey = _getModuleIdFromRequestType(request.type);
+      return _allowedTypes.contains(typeKey);
+    }).toList();
 
     // Filter by type
     if (_selectedType != null) {

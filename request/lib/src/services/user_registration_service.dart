@@ -109,6 +109,7 @@ class UserRegistrationService {
             // Check if business category includes delivery
             final businessCategory =
                 businessData['business_category']?.toString().toLowerCase();
+            registrations.businessCategory = businessCategory;
             if (kDebugMode)
               print(
                   '🏢 UserRegistrationService: Business category: $businessCategory');
@@ -123,6 +124,24 @@ class UserRegistrationService {
               if (kDebugMode)
                 print(
                     'ℹ️ UserRegistrationService: User is approved business but no delivery capabilities: $businessCategory');
+            }
+
+            // Determine if this is a product seller business
+            if (businessCategory != null) {
+              final productKeywords = [
+                'retail',
+                'wholesale',
+                'ecommerce',
+                'product',
+                'shop',
+                'store'
+              ];
+              registrations.isProductSeller =
+                  productKeywords.any((kw) => businessCategory.contains(kw));
+              if (kDebugMode) {
+                print(
+                    '🛒 UserRegistrationService: isProductSeller=${registrations.isProductSeller} based on category "$businessCategory"');
+              }
             }
           } else if (businessData['status'] == 'pending') {
             registrations.hasPendingBusinessApplication = true;
@@ -205,12 +224,15 @@ class UserRegistrations {
   bool hasPendingDriverApplication = false;
   bool hasPendingBusinessApplication = false;
   bool canHandleDeliveryRequests = false;
+  bool isProductSeller = false;
+  String? businessCategory;
   List<String> driverVehicleTypes = [];
   List<String> driverVehicleTypeIds = [];
 
   @override
   String toString() {
     return 'UserRegistrations(driver: $isApprovedDriver, business: $isApprovedBusiness, '
-        'vehicleTypes: $driverVehicleTypes, deliveryCapable: $canHandleDeliveryRequests)';
+        'vehicleTypes: $driverVehicleTypes, deliveryCapable: $canHandleDeliveryRequests, '
+        'productSeller: $isProductSeller, businessCategory: $businessCategory)';
   }
 }

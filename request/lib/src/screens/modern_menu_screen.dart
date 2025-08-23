@@ -10,6 +10,8 @@ import 'notification_screen.dart';
 import 'driver_subscription_screen.dart';
 import 'account/user_profile_screen.dart';
 import 'about_us_simple_screen.dart';
+import 'pricing/price_comparison_screen.dart';
+import 'pricing/business_product_dashboard.dart';
 
 class ModernMenuScreen extends StatefulWidget {
   const ModernMenuScreen({super.key});
@@ -27,6 +29,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
   bool _isLoading = true;
   String? _profileImageUrl;
   bool _isDriver = false;
+  bool _isProductSeller = false; // approved business with non-delivery category
   int _unreadTotal = 0;
   int _unreadMessages = 0;
   // Removed admin/business gating; keep Ride Alerts gated by driver status only.
@@ -54,12 +57,14 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
       // Determine role flags from REST auth user
       // Roles/Products are now always visible; no role gating needed here.
 
-      // Check driver registration to gate Ride Alerts
+      // Check driver registration to gate Ride Alerts and product seller status
       bool isDriver = false;
+      bool isProductSeller = false;
       try {
         final regs =
             await UserRegistrationService.instance.getUserRegistrations();
         isDriver = regs?.isApprovedDriver == true;
+        isProductSeller = regs?.isProductSeller == true;
       } catch (_) {}
 
       // Fetch unread counts
@@ -75,6 +80,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
         setState(() {
           _isLoading = false;
           _isDriver = isDriver;
+          _isProductSeller = isProductSeller;
           _unreadTotal = unreadTotal;
           _unreadMessages = unreadMessages;
         });
@@ -250,7 +256,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
         title: 'Products',
         icon: Icons.inventory_2_outlined,
         color: Colors.orange,
-        route: '/price',
+        route: 'products', // handled specially
       ),
       _MenuItem(
         title: 'Messages',
@@ -326,6 +332,30 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                               builder: (context) =>
                                   const DriverSubscriptionScreen()),
                         );
+                      } else if (item.route == 'products') {
+                        // Gate: product sellers go to dashboard; others go to read-only comparison
+                        if (_isProductSeller) {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) =>
+                                    const BusinessProductDashboard()),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  'Register and get approved as a business to add prices'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) =>
+                                    const PriceComparisonScreen()),
+                          );
+                        }
                       } else {
                         await Navigator.pushNamed(context, item.route!);
                       }

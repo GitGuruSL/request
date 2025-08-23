@@ -5,6 +5,7 @@ import '../../services/pricing_service.dart';
 import '../../services/enhanced_user_service.dart';
 import '../../services/file_upload_service.dart';
 import '../../theme/app_theme.dart';
+import '../../services/user_registration_service.dart';
 
 class BusinessProductDashboard extends StatefulWidget {
   const BusinessProductDashboard({super.key});
@@ -24,6 +25,7 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
   List<dynamic> _myPriceListings = [];
   bool _isSearching = false;
   bool _isLoadingMyPrices = false;
+  bool _isSeller = true; // gated after registration check
 
   @override
   void initState() {
@@ -32,6 +34,18 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
   }
 
   Future<void> _loadData() async {
+    // Determine if user is an approved business (seller)
+    try {
+      final regs =
+          await UserRegistrationService.instance.getUserRegistrations();
+      _isSeller = regs?.isApprovedBusiness == true;
+    } catch (_) {}
+
+    if (!_isSeller) {
+      setState(() {});
+      return;
+    }
+
     await Future.wait([
       _loadCountryProducts(),
       _loadMyPriceListings(),
@@ -97,6 +111,48 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_isSeller) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Product Dashboard'),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.verified_outlined,
+                    size: 72, color: Colors.orange),
+                const SizedBox(height: 16),
+                const Text(
+                  'Become a verified business to add prices',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Submit your business verification. Once approved, you can add and manage your product prices.',
+                  style: TextStyle(color: Colors.grey[600]),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () =>
+                      Navigator.pushNamed(context, '/business-registration'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Register Business'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return DefaultTabController(
       length: 2,
       child: Scaffold(
