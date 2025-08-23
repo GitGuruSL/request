@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/country_filtered_data_service.dart';
+import '../../services/user_registration_service.dart';
 import '../../models/request_model.dart' as models;
 import '../../screens/unified_request_response/unified_request_view_screen.dart';
 import '../../screens/requests/ride/view_ride_request_screen.dart';
@@ -20,14 +21,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
   String? _error;
 
   String _selectedCategory = 'All';
-  final List<String> _categories = [
-    'All',
-    'Items',
-    'Service',
-    'Rental',
-    'Delivery',
-    'Ride',
-  ];
+  List<String> _allowedRequestTypes = ['item', 'service', 'rent'];
 
   final ScrollController _scrollController = ScrollController();
 
@@ -52,6 +46,13 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
       _hasMore = true;
       _requests.clear();
     });
+    // Load allowed request types based on user registrations (driver/delivery)
+    try {
+      final allowed =
+          await UserRegistrationService.instance.getAllowedRequestTypes();
+      _allowedRequestTypes = allowed;
+    } catch (_) {}
+
     await _fetchPage(reset: true);
   }
 
@@ -99,12 +100,39 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
   }
 
   List<models.RequestModel> get _filteredRequests {
-    if (_selectedCategory == 'All') return _requests;
-    return _requests.where((r) {
+    // First, enforce role-based gating
+    final gated = _requests.where((r) {
+      final mapped = _mapRequestModelToTypeKey(r);
+      return _allowedRequestTypes.contains(mapped);
+    }).toList();
+
+    if (_selectedCategory == 'All') return gated;
+    return gated.where((r) {
       String requestType =
           _getRequestTypeFromCategory(r.type.name, r.title, r.description);
       return requestType == _selectedCategory;
     }).toList();
+  }
+
+  // Map RequestModel to a backend type key used by allowed types list
+  String _mapRequestModelToTypeKey(models.RequestModel r) {
+    switch (r.type.name.toLowerCase()) {
+      case 'item':
+        return 'item';
+      case 'service':
+        return 'service';
+      case 'rental':
+      case 'rent':
+        return 'rent';
+      case 'delivery':
+        return 'delivery';
+      case 'ride':
+        return 'ride';
+      case 'price':
+        return 'price';
+      default:
+        return r.type.name.toLowerCase();
+    }
   }
 
   String _relativeTime(DateTime dt) {
@@ -233,15 +261,24 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
   }
 
   Widget _buildCategoryChips() {
+    // Build categories dynamically from allowed types
+    final base = <String>['All'];
+    if (_allowedRequestTypes.contains('item')) base.add('Items');
+    if (_allowedRequestTypes.contains('service')) base.add('Service');
+    if (_allowedRequestTypes.contains('rent')) base.add('Rental');
+    if (_allowedRequestTypes.contains('delivery')) base.add('Delivery');
+    if (_allowedRequestTypes.contains('ride')) base.add('Ride');
+    final categories = base;
+
     return Container(
       height: 60,
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: _categories.length,
+        itemCount: categories.length,
         itemBuilder: (context, index) {
-          final category = _categories[index];
+          final category = categories[index];
           final isSelected = category == _selectedCategory;
           return Padding(
             padding: const EdgeInsets.only(right: 12),
