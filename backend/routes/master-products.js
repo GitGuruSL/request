@@ -151,6 +151,35 @@ router.put('/:id', optionalAuth(async (req,res)=>{
     
     const row = await db.update('master_products', req.params.id, update);
     if (!row) return res.status(404).json({ success:false, error:'Not found'});
+
+    // Auto-sync changes to country products and price listings
+    try {
+      // Update country products name
+      if (name !== undefined) {
+        await db.query(`
+          UPDATE country_products 
+          SET product_name = $1, updated_at = NOW() 
+          WHERE product_id = $2
+        `, [name, req.params.id]);
+      }
+
+      // Update price listings category if changed
+      if (categoryId !== undefined || subcategoryId !== undefined) {
+        await db.query(`
+          UPDATE price_listings 
+          SET category_id = COALESCE($2, category_id),
+              subcategory_id = COALESCE($3, subcategory_id),
+              updated_at = NOW()
+          WHERE master_product_id = $1
+        `, [req.params.id, categoryId, subcategoryId]);
+      }
+
+      console.log(`✅ Auto-synced master product ${req.params.id} changes to related tables`);
+    } catch (syncError) {
+      console.warn('⚠️ Warning: Failed to sync changes to related tables:', syncError.message);
+      // Don't fail the main update for sync errors
+    }
+
     res.json({ success:true, message:'Product updated', data: adapt(row) });
   } catch(e){ console.error('Update master product error',e); res.status(400).json({success:false,error:e.message}); }
 }));

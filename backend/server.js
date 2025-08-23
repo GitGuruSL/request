@@ -26,6 +26,7 @@ const uploadS3Routes = require('./routes/uploadS3'); // S3 upload routes
 const chatRoutes = require('./routes/chat'); // Chat routes
 const brandRoutes = require('./routes/brands');
 const masterProductRoutes = require('./routes/master-products');
+const productSyncRoutes = require('./routes/product-sync');
 const entityActivationRoutes = require('./routes/entity-activations');
 const subscriptionPlansNewRoutes = require('./routes/subscription-plans-new');
 const subscriptionPlansLegacyRoutes = require('./routes/subscription-plans-legacy');
@@ -175,6 +176,7 @@ app.use('/api/country-modules', countryModuleRoutes);
 app.use('/api/countries', countriesRoutes);
 app.use('/api/brands', brandRoutes);
 app.use('/api/master-products', masterProductRoutes);
+app.use('/api/product-sync', productSyncRoutes);
 app.use('/api/entity-activations', entityActivationRoutes);
 app.use('/api/subscription-plans-new', subscriptionPlansNewRoutes);
 app.use('/api', subscriptionPlansLegacyRoutes);
