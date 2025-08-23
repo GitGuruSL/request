@@ -18,6 +18,7 @@ import PaymentMethods from './pages/PaymentMethods';
 import AdminUsers from './pages/AdminUsers';
 import ModuleManagement from './pages/ModuleManagement';
 import BusinessVerificationEnhanced from './pages/BusinessVerificationEnhanced';
+import BusinessTypesManagement from './pages/BusinessTypesManagement';
 import DriverVerificationEnhanced from './pages/DriverVerificationEnhanced';
 import Vehicles from './pages/Vehicles';
 import RequestsModule from './pages/RequestsModule';
@@ -90,6 +91,7 @@ function App() {
               <Route path="users" element={<AdminUsers />} />
               <Route path="businesses" element={<BusinessVerificationEnhanced />} />
               <Route path="business-management" element={<BusinessVerificationEnhanced />} />
+              <Route path="business-types" element={<BusinessTypesManagement />} />
               <Route path="drivers" element={<DriverVerificationEnhanced />} />
               <Route path="vehicles" element={<Vehicles />} />
               <Route path="country-vehicle-types" element={<Vehicles />} />

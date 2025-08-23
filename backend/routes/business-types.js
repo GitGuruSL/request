@@ -108,7 +108,7 @@ router.get('/admin', async (req, res) => {
 });
 
 // Create new business type
-router.post('/admin', async (req, res) => {
+router.post('/admin', auth.authMiddleware(), async (req, res) => {
   try {
     const { name, description, icon, country_code, display_order = 0 } = req.body;
     const userId = req.user.id;
@@ -163,7 +163,7 @@ router.post('/admin', async (req, res) => {
 });
 
 // Update business type
-router.put('/admin/:id', async (req, res) => {
+router.put('/admin/:id', auth.authMiddleware(), async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description, icon, is_active, display_order } = req.body;
@@ -224,7 +224,7 @@ router.put('/admin/:id', async (req, res) => {
 });
 
 // Delete business type (soft delete by setting inactive)
-router.delete('/admin/:id', async (req, res) => {
+router.delete('/admin/:id', auth.authMiddleware(), async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
@@ -293,7 +293,7 @@ router.delete('/admin/:id', async (req, res) => {
 });
 
 // Copy business types from one country to another (super admin only)
-router.post('/admin/copy', async (req, res) => {
+router.post('/admin/copy', auth.authMiddleware(), async (req, res) => {
   try {
     if (req.user.role !== 'super_admin') {
       return res.status(403).json({
