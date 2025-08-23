@@ -6,6 +6,9 @@ import '../../screens/requests/ride/create_ride_request_screen.dart';
 import '../../screens/requests/create_price_request_screen.dart';
 import '../../services/rest_support_services.dart'
     show CountryService, ModuleService, CountryModules; // Module gating
+import '../../services/pricing_service.dart';
+import '../../models/master_product.dart';
+import '../../screens/pricing/price_comparison_screen.dart';
 import '../../widgets/coming_soon_widget.dart';
 import '../../services/rest_notification_service.dart';
 import '../../screens/notification_screen.dart';
@@ -22,11 +25,47 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _loadingModules = false;
   int _unreadNotifications = 0;
 
+  // UI: banners & popular products
+  final PageController _bannerController =
+      PageController(viewportFraction: 0.9);
+  int _currentBanner = 0;
+  final List<_BannerItem> _banners = const [
+    _BannerItem(
+      title: 'Find what you need',
+      subtitle: 'Post a request and let others help',
+      color: Color(0xFFEEF5FF),
+      icon: Icons.search,
+    ),
+    _BannerItem(
+      title: 'Compare prices',
+      subtitle: 'See best offers from verified sellers',
+      color: Color(0xFFFFF3E7),
+      icon: Icons.trending_up,
+    ),
+    _BannerItem(
+      title: 'Quick delivery',
+      subtitle: 'Send or receive anything fast',
+      color: Color(0xFFEFFAF0),
+      icon: Icons.local_shipping,
+    ),
+  ];
+
+  final PricingService _pricing = PricingService();
+  List<MasterProduct> _popularProducts = const [];
+  bool _loadingPopular = false;
+
   @override
   void initState() {
     super.initState();
     _loadModules();
     _loadUnreadCounts();
+    _loadPopularProducts();
+  }
+
+  @override
+  void dispose() {
+    _bannerController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadModules() async {
@@ -45,6 +84,20 @@ class _HomeScreenState extends State<HomeScreen> {
       // Silent; fallback logic in _moduleEnabled
     } finally {
       if (mounted) setState(() => _loadingModules = false);
+    }
+  }
+
+  Future<void> _loadPopularProducts() async {
+    setState(() => _loadingPopular = true);
+    try {
+      // Use empty query to get popular/top products from backend
+      final products = await _pricing.searchProducts(query: '', limit: 16);
+      if (!mounted) return;
+      setState(() => _popularProducts = products);
+    } catch (_) {
+      if (!mounted) return;
+    } finally {
+      if (mounted) setState(() => _loadingPopular = false);
     }
   }
 
@@ -347,13 +400,112 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Text(
-            'Hello, ${_greetingName()}!',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
+        child: RefreshIndicator(
+          onRefresh: () async {
+            await _loadModules();
+            await _loadPopularProducts();
+          },
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Text(
+                'Hello, ${_greetingName()}!',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 16),
+
+              // Banners carousel
+              SizedBox(
+                height: 140,
+                child: PageView.builder(
+                  controller: _bannerController,
+                  itemCount: _banners.length,
+                  onPageChanged: (i) => setState(() => _currentBanner = i),
+                  itemBuilder: (ctx, i) => _BannerCard(item: _banners[i]),
                 ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  _banners.length,
+                  (i) => AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    width: _currentBanner == i ? 18 : 6,
+                    height: 6,
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    decoration: BoxDecoration(
+                      color: _currentBanner == i
+                          ? Colors.black87
+                          : Colors.grey.shade400,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // Quick actions
+              Text('Quick actions',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 12),
+              _QuickActionsGrid(
+                items: _requestTypes,
+                moduleEnabled: _moduleEnabled,
+                onTap: _handleTap,
+              ),
+
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Text('Popular products',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w600)),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const PriceComparisonScreen(),
+                        ),
+                      );
+                    },
+                    child: const Text('See all'),
+                  ),
+                ],
+              ),
+              SizedBox(
+                height: 210,
+                child: _loadingPopular
+                    ? const Center(child: CircularProgressIndicator())
+                    : ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemBuilder: (ctx, i) => _ProductCard(
+                          product: _popularProducts[i],
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const PriceComparisonScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                        separatorBuilder: (_, __) => const SizedBox(width: 12),
+                        itemCount: _popularProducts.length,
+                      ),
+              ),
+              const SizedBox(height: 24),
+            ],
           ),
         ),
       ),
@@ -363,6 +515,190 @@ class _HomeScreenState extends State<HomeScreen> {
         child: const Icon(Icons.add),
       ),
     );
+  }
+}
+
+class _BannerItem {
+  final String title;
+  final String subtitle;
+  final Color color;
+  final IconData icon;
+  const _BannerItem(
+      {required this.title,
+      required this.subtitle,
+      required this.color,
+      required this.icon});
+}
+
+class _BannerCard extends StatelessWidget {
+  final _BannerItem item;
+  const _BannerCard({required this.item});
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 10),
+      child: Container(
+        decoration: BoxDecoration(
+          color: item.color,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(item.title,
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 6),
+                  Text(item.subtitle,
+                      style: TextStyle(color: Colors.grey.shade700)),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Icon(item.icon, size: 36, color: Colors.black54),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickActionsGrid extends StatelessWidget {
+  final List<_RequestType> items;
+  final bool Function(String) moduleEnabled;
+  final void Function(_RequestType) onTap;
+  const _QuickActionsGrid({
+    required this.items,
+    required this.moduleEnabled,
+    required this.onTap,
+  });
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
+      itemCount: items.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        childAspectRatio: 1.05,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+      ),
+      itemBuilder: (ctx, i) {
+        final it = items[i];
+        final disabled = !moduleEnabled(it.type);
+        return InkWell(
+          onTap: disabled ? null : () => onTap(it),
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              color:
+                  disabled ? Colors.grey.shade100 : it.color.withOpacity(0.08),
+            ),
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(it.icon, color: disabled ? Colors.grey : it.color),
+                const SizedBox(height: 8),
+                Text(
+                  it.title.split(' ').first,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: disabled ? Colors.grey : Colors.black87,
+                  ),
+                )
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ProductCard extends StatelessWidget {
+  final MasterProduct product;
+  final VoidCallback onTap;
+  const _ProductCard({required this.product, required this.onTap});
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 160,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.inventory_2,
+                        size: 36, color: Colors.black38),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                product.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                product.brandName ?? product.brand,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _formatPriceRange(context, product),
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatPriceRange(BuildContext context, MasterProduct p) {
+    final cs = CountryService.instance;
+    final min = p.minPrice ?? p.avgPrice ?? 0;
+    final max = p.maxPrice ?? p.avgPrice ?? 0;
+    if (min == 0 && max == 0) return '—';
+    if (min == max) return cs.formatPrice(min);
+    return '${cs.formatPrice(min)} - ${cs.formatPrice(max)}';
   }
 }
 

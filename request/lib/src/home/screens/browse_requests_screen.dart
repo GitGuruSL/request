@@ -34,6 +34,12 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
   final Set<String> _selectedSubcategories =
       {}; // dynamic strings collected from data
 
+  // Extra filters & sorting
+  String _sortBy = 'relevance'; // relevance | recent | price_high | price_low
+  double? _minPrice;
+  double? _maxPrice;
+  bool _deliveryOnly = false;
+
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -185,7 +191,44 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
       });
     }
 
-    return current.toList();
+    // Delivery-only filter
+    if (_deliveryOnly) {
+      current =
+          current.where((r) => _mapRequestModelToTypeKey(r) == 'delivery');
+    }
+
+    // Price range
+    if (_minPrice != null || _maxPrice != null) {
+      final min = _minPrice ?? double.negativeInfinity;
+      final max = _maxPrice ?? double.infinity;
+      current = current.where((r) {
+        final b = r.budget;
+        if (b == null) return false;
+        return b >= min && b <= max;
+      });
+    }
+
+    // Sorting
+    final list = current.toList();
+    switch (_sortBy) {
+      case 'recent':
+        list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        break;
+      case 'price_high':
+        list.sort((a, b) => (b.budget ?? double.negativeInfinity)
+            .compareTo(a.budget ?? double.negativeInfinity));
+        break;
+      case 'price_low':
+        list.sort((a, b) => (a.budget ?? double.infinity)
+            .compareTo(b.budget ?? double.infinity));
+        break;
+      case 'relevance':
+      default:
+        // Keep server order
+        break;
+    }
+
+    return list;
   }
 
   // Map RequestModel to a backend type key used by allowed types list
@@ -259,7 +302,11 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                     onOpenFilter: _openFilterSheet,
                     hasActiveFilters: _selectedTypes.isNotEmpty ||
                         _selectedCategories.isNotEmpty ||
-                        _selectedSubcategories.isNotEmpty),
+                        _selectedSubcategories.isNotEmpty ||
+                        _deliveryOnly ||
+                        _minPrice != null ||
+                        _maxPrice != null ||
+                        _sortBy != 'relevance'),
                 _buildResultCount(),
                 Expanded(
                   child: _initialLoading
@@ -361,6 +408,10 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     final tmpTypes = Set<String>.from(_selectedTypes);
     final tmpCats = Set<String>.from(_selectedCategories);
     final tmpSubs = Set<String>.from(_selectedSubcategories);
+    String tmpSort = _sortBy;
+    double? tmpMin = _minPrice;
+    double? tmpMax = _maxPrice;
+    bool tmpDeliveryOnly = _deliveryOnly;
 
     await showModalBottomSheet(
       context: context,
@@ -380,8 +431,9 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
               builder: (context, setSheetState) {
                 return Column(
                   children: [
+                    // Grabber
                     Padding(
-                      padding: const EdgeInsets.only(top: 12),
+                      padding: const EdgeInsets.only(top: 8),
                       child: Container(
                         width: 40,
                         height: 4,
@@ -391,26 +443,35 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                         ),
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                    // Header with Reset
+                    SizedBox(
+                      height: 48,
                       child: Row(
                         children: [
-                          const Text(
-                            'Filters',
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.w600),
+                          const SizedBox(width: 16),
+                          const Expanded(
+                            child: Center(
+                              child: Text('Filters',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600)),
+                            ),
                           ),
-                          const Spacer(),
                           TextButton(
                             onPressed: () {
                               setSheetState(() {
                                 tmpTypes.clear();
                                 tmpCats.clear();
                                 tmpSubs.clear();
+                                tmpSort = 'relevance';
+                                tmpMin = null;
+                                tmpMax = null;
+                                tmpDeliveryOnly = false;
                               });
                             },
-                            child: const Text('Clear'),
+                            child: const Text('Reset'),
                           ),
+                          const SizedBox(width: 8),
                         ],
                       ),
                     ),
@@ -419,57 +480,164 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                         controller: scrollController,
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                         children: [
-                          _sectionTitle('Request type'),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: typesAvailable.map((t) {
-                              final sel = tmpTypes.contains(t);
-                              return FilterChip(
-                                label: Text(_displayNameForTypeKey(t)),
-                                selected: sel,
-                                onSelected: (_) => setSheetState(() {
-                                  if (sel)
-                                    tmpTypes.remove(t);
-                                  else
-                                    tmpTypes.add(t);
-                                }),
-                                backgroundColor: _Palette.screenBackground,
-                                selectedColor:
-                                    _Palette.primaryBlue.withOpacity(0.08),
-                                checkmarkColor: _Palette.primaryBlue,
-                                labelStyle: TextStyle(
-                                  color: sel
-                                      ? _Palette.primaryBlue
-                                      : _Palette.secondaryText,
-                                  fontWeight:
-                                      sel ? FontWeight.w600 : FontWeight.normal,
+                          _sectionTitle('Sort by'),
+                          Card(
+                            color: _Palette.cardBackground,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                            child: Column(
+                              children: [
+                                RadioListTile<String>(
+                                  value: 'relevance',
+                                  groupValue: tmpSort,
+                                  onChanged: (v) =>
+                                      setSheetState(() => tmpSort = v!),
+                                  title: const Text('Relevance'),
+                                  dense: true,
                                 ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  side: BorderSide.none,
+                                RadioListTile<String>(
+                                  value: 'recent',
+                                  groupValue: tmpSort,
+                                  onChanged: (v) =>
+                                      setSheetState(() => tmpSort = v!),
+                                  title: const Text('Most recent'),
+                                  dense: true,
                                 ),
-                              );
-                            }).toList(),
+                                RadioListTile<String>(
+                                  value: 'price_high',
+                                  groupValue: tmpSort,
+                                  onChanged: (v) =>
+                                      setSheetState(() => tmpSort = v!),
+                                  title: const Text('Highest priced'),
+                                  dense: true,
+                                ),
+                                RadioListTile<String>(
+                                  value: 'price_low',
+                                  groupValue: tmpSort,
+                                  onChanged: (v) =>
+                                      setSheetState(() => tmpSort = v!),
+                                  title: const Text('Lowest priced'),
+                                  dense: true,
+                                ),
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 16),
-                          _sectionTitle('Categories'),
-                          if (availableCategories.isEmpty)
-                            _emptyHint('No categories available yet')
-                          else
-                            Wrap(
+                          const SizedBox(height: 12),
+
+                          _buildAccordion(
+                            title: 'Categories',
+                            subtitle: tmpCats.isEmpty
+                                ? 'All categories'
+                                : tmpCats.map(_capitalize).join(', '),
+                            child: availableCategories.isEmpty
+                                ? _emptyHint('No categories available yet')
+                                : Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: availableCategories.map((c) {
+                                      final sel = tmpCats.contains(c);
+                                      return FilterChip(
+                                        label: Text(_capitalize(c)),
+                                        selected: sel,
+                                        onSelected: (_) => setSheetState(() {
+                                          if (sel) {
+                                            tmpCats.remove(c);
+                                          } else {
+                                            tmpCats.add(c);
+                                          }
+                                        }),
+                                        backgroundColor:
+                                            _Palette.screenBackground,
+                                        selectedColor: _Palette.primaryBlue
+                                            .withOpacity(0.08),
+                                        checkmarkColor: _Palette.primaryBlue,
+                                        labelStyle: TextStyle(
+                                          color: sel
+                                              ? _Palette.primaryBlue
+                                              : _Palette.secondaryText,
+                                          fontWeight: sel
+                                              ? FontWeight.w600
+                                              : FontWeight.normal,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          side: BorderSide.none,
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Subcategories
+                          _buildAccordion(
+                            title: 'Subcategories',
+                            subtitle: tmpSubs.isEmpty
+                                ? 'All subcategories'
+                                : tmpSubs.map(_capitalize).join(', '),
+                            child: availableSubcategories.isEmpty
+                                ? _emptyHint('No subcategories available yet')
+                                : Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: availableSubcategories.map((s) {
+                                      final sel = tmpSubs.contains(s);
+                                      return FilterChip(
+                                        label: Text(_capitalize(s)),
+                                        selected: sel,
+                                        onSelected: (_) => setSheetState(() {
+                                          if (sel) {
+                                            tmpSubs.remove(s);
+                                          } else {
+                                            tmpSubs.add(s);
+                                          }
+                                        }),
+                                        backgroundColor:
+                                            _Palette.screenBackground,
+                                        selectedColor: _Palette.primaryBlue
+                                            .withOpacity(0.08),
+                                        checkmarkColor: _Palette.primaryBlue,
+                                        labelStyle: TextStyle(
+                                          color: sel
+                                              ? _Palette.primaryBlue
+                                              : _Palette.secondaryText,
+                                          fontWeight: sel
+                                              ? FontWeight.w600
+                                              : FontWeight.normal,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          side: BorderSide.none,
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                          ),
+                          const SizedBox(height: 12),
+
+                          _buildAccordion(
+                            title: 'Item type',
+                            subtitle: tmpTypes.isEmpty
+                                ? 'All items'
+                                : tmpTypes
+                                    .map(_displayNameForTypeKey)
+                                    .join(', '),
+                            child: Wrap(
                               spacing: 8,
                               runSpacing: 8,
-                              children: availableCategories.map((c) {
-                                final sel = tmpCats.contains(c);
+                              children: typesAvailable.map((t) {
+                                final sel = tmpTypes.contains(t);
                                 return FilterChip(
-                                  label: Text(_capitalize(c)),
+                                  label: Text(_displayNameForTypeKey(t)),
                                   selected: sel,
                                   onSelected: (_) => setSheetState(() {
                                     if (sel)
-                                      tmpCats.remove(c);
+                                      tmpTypes.remove(t);
                                     else
-                                      tmpCats.add(c);
+                                      tmpTypes.add(t);
                                   }),
                                   backgroundColor: _Palette.screenBackground,
                                   selectedColor:
@@ -490,44 +658,79 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                                 );
                               }).toList(),
                             ),
-                          const SizedBox(height: 16),
-                          _sectionTitle('Subcategories'),
-                          if (availableSubcategories.isEmpty)
-                            _emptyHint('No subcategories available yet')
-                          else
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: availableSubcategories.map((s) {
-                                final sel = tmpSubs.contains(s);
-                                return FilterChip(
-                                  label: Text(_capitalize(s)),
-                                  selected: sel,
-                                  onSelected: (_) => setSheetState(() {
-                                    if (sel)
-                                      tmpSubs.remove(s);
-                                    else
-                                      tmpSubs.add(s);
-                                  }),
-                                  backgroundColor: _Palette.screenBackground,
-                                  selectedColor:
-                                      _Palette.primaryBlue.withOpacity(0.08),
-                                  checkmarkColor: _Palette.primaryBlue,
-                                  labelStyle: TextStyle(
-                                    color: sel
-                                        ? _Palette.primaryBlue
-                                        : _Palette.secondaryText,
-                                    fontWeight: sel
-                                        ? FontWeight.w600
-                                        : FontWeight.normal,
+                          ),
+                          const SizedBox(height: 12),
+
+                          _buildAccordion(
+                            title: 'Price',
+                            subtitle: (tmpMin == null && tmpMax == null)
+                                ? 'Any price'
+                                : '${tmpMin?.toStringAsFixed(0) ?? '0'} - ${tmpMax?.toStringAsFixed(0) ?? '∞'}',
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    keyboardType:
+                                        const TextInputType.numberWithOptions(
+                                            decimal: true),
+                                    decoration: const InputDecoration(
+                                      labelText: 'Min',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    onChanged: (v) => setSheetState(() {
+                                      tmpMin = double.tryParse(v);
+                                    }),
                                   ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    side: BorderSide.none,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: TextField(
+                                    keyboardType:
+                                        const TextInputType.numberWithOptions(
+                                            decimal: true),
+                                    decoration: const InputDecoration(
+                                      labelText: 'Max',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    onChanged: (v) => setSheetState(() {
+                                      tmpMax = double.tryParse(v);
+                                    }),
                                   ),
-                                );
-                              }).toList(),
+                                ),
+                              ],
                             ),
+                          ),
+                          const SizedBox(height: 12),
+
+                          _buildAccordion(
+                            title: 'Delivery',
+                            subtitle: tmpDeliveryOnly ? 'Delivery only' : 'Any',
+                            child: SwitchListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: const Text('Show delivery requests only'),
+                              value: tmpDeliveryOnly,
+                              onChanged: (v) =>
+                                  setSheetState(() => tmpDeliveryOnly = v),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+
+                          _buildAccordion(
+                            title: 'Delivers to',
+                            subtitle:
+                                (CountryService.instance.countryName.isNotEmpty
+                                    ? CountryService.instance.countryName
+                                    : 'Your country'),
+                            child: ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(
+                                  CountryService.instance.countryName.isNotEmpty
+                                      ? CountryService.instance.countryName
+                                      : 'Current country'),
+                              subtitle: const Text(
+                                  'Country is based on your selection'),
+                            ),
+                          ),
                           const SizedBox(height: 24),
                         ],
                       ),
@@ -550,22 +753,25 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                                 _selectedSubcategories
                                   ..clear()
                                   ..addAll(tmpSubs);
+                                _sortBy = tmpSort;
+                                _minPrice = tmpMin;
+                                _maxPrice = tmpMax;
+                                _deliveryOnly = tmpDeliveryOnly;
                                 _page = 1;
                                 _hasMore = true;
                               });
                               Navigator.pop(context);
-                              // Re-load to apply potential server-side type filter
                               _loadInitial();
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: _Palette.primaryBlue,
+                              backgroundColor: Colors.black,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
-                            child: const Text('Apply filters'),
+                            child: const Text('Show results'),
                           ),
                         ),
                       ),
@@ -624,6 +830,38 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
   String _capitalize(String v) {
     if (v.isEmpty) return v;
     return v[0].toUpperCase() + v.substring(1);
+  }
+
+  Widget _buildAccordion({
+    required String title,
+    String? subtitle,
+    required Widget child,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: _Palette.cardBackground,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+          childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          title:
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+          subtitle: subtitle != null
+              ? Text(subtitle, style: TextStyle(color: _Palette.secondaryText))
+              : null,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          collapsedShape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          children: [child],
+        ),
+      ),
+    );
   }
 
   Widget _buildResultCount() {
