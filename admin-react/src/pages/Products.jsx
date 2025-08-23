@@ -131,12 +131,22 @@ const Products = () => {
     }
     
     try {
-      const res = await api.get('/subcategories', { params: { categoryId } });
+      // Hit the dedicated endpoint that filters by category on the server
+      const res = await api.get(`/subcategories/category/${categoryId}`);
       const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
       setSubcategories(list.sort((a,b)=> (a.name||'').localeCompare(b.name||'')));
     } catch (error) {
-      console.error('Error loading subcategories:', error);
-      setSubcategories([]);
+      console.error('Error loading subcategories by category, falling back to client-side filter:', error);
+      // Fallback: fetch all then filter client-side if the specific route is unavailable
+      try {
+        const all = await api.get('/subcategories');
+        const arr = Array.isArray(all.data) ? all.data : (all.data?.data || []);
+        const list = arr.filter(sc => (sc.category_id || sc.categoryId) === categoryId);
+        setSubcategories(list.sort((a,b)=> (a.name||'').localeCompare(b.name||'')));
+      } catch (e2) {
+        console.error('Fallback subcategory load failed:', e2);
+        setSubcategories([]);
+      }
     }
   };
 
@@ -230,20 +240,51 @@ const Products = () => {
   };
 
   const handleImageUpload = async (event) => {
-    const files = Array.from(event.target.files);
+    const files = Array.from(event.target.files || []);
     if (files.length === 0) return;
 
+    // Always allow re-selecting the same files next time
+    if (event.target) {
+      try { event.target.value = ''; } catch {}
+    }
+
     try {
-      const form = new FormData();
-      files.forEach(f => form.append('files', f));
-      const res = await api.post('/uploads/products', form, { headers: { 'Content-Type': 'multipart/form-data' }});
-      const uploaded = res.data?.files || res.data?.data || res.data || [];
-      const urls = uploaded.map(f => f.url || f.location || f.path || f);
+      // Try S3 first — one request per file
+      const urls = [];
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        const s3Form = new FormData();
+        s3Form.append('file', f);
+        s3Form.append('uploadType', 'master-products');
+        s3Form.append('imageIndex', String(i));
+        const { data } = await api.post('/s3/upload', s3Form, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        if (data?.success && data?.url) {
+          urls.push(data.url);
+        } else {
+          throw new Error('S3 upload did not return URL');
+        }
+      }
+
       setUploadedImages(prev => [...prev, ...urls]);
-      setFormData(prev => ({ ...prev, images: [...(prev.images||[]), ...urls] }));
-    } catch (error) {
-      console.error('Error uploading images:', error);
-      alert('Error uploading images: ' + (error.response?.data?.message || error.message));
+      setFormData(prev => ({ ...prev, images: [...(prev.images || []), ...urls] }));
+    } catch (s3Error) {
+      console.warn('S3 upload failed, falling back to local upload:', s3Error?.message || s3Error);
+      try {
+        const form = new FormData();
+        files.forEach(f => form.append('files', f));
+        const res = await api.post('/uploads/products', form, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        const uploaded = res.data?.files || res.data?.data || res.data || [];
+        const urls = uploaded.map(f => f.url || f.location || f.path || f);
+        setUploadedImages(prev => [...prev, ...urls]);
+        setFormData(prev => ({ ...prev, images: [...(prev.images || []), ...urls] }));
+      } catch (error) {
+        console.error('Error uploading images (both S3 and local):', error);
+        alert('Error uploading images: ' + (error.response?.data?.message || error.message));
+      }
     }
   };
 
