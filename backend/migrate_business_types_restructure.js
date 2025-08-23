@@ -1,15 +1,27 @@
 const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
+const dotenv = require('dotenv');
+
+// Load env similar to services/database.js
+const envCandidates = [
+  path.join(process.cwd(), '.env.rds'),
+  path.join(__dirname, '.env.rds'),
+  path.join(__dirname, '..', '.env.rds'),
+];
+for (const p of envCandidates) {
+  if (fs.existsSync(p)) { dotenv.config({ path: p }); break; }
+}
 
 // Database configuration
+// Use the same env var names as services/database.js
 const dbConfig = {
-  user: process.env.DB_USER || 'your_db_user',
-  host: process.env.DB_HOST || 'your_db_host',
-  database: process.env.DB_NAME || 'your_db_name',
-  password: process.env.DB_PASSWORD || 'your_db_password',
-  port: process.env.DB_PORT || 5432,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  user: process.env.DB_USERNAME || process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: parseInt(process.env.DB_PORT || '5432', 10),
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : (process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false)
 };
 
 const pool = new Pool(dbConfig);

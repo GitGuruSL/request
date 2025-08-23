@@ -218,27 +218,40 @@ async function autoActivateCountryData(countryCode, countryName, adminUserId, ad
       console.log(`   ✅ ${collection.name}: ${activatedCount} activated, ${skippedCount} already existed`);
     }
     
-    // Seed country business types from global templates if not present
-    console.log('   📋 Processing business types...');
-    const globalTypes = await dbService.query(`SELECT id, name, description, icon, display_order, is_active FROM business_types WHERE is_active = true`);
-    let btActivated = 0, btSkipped = 0;
-    for (const t of globalTypes.rows) {
-      const exists = await dbService.query(
-        `SELECT id FROM country_business_types WHERE country_code = $1 AND (global_business_type_id = $2 OR name = $3)`,
-        [countryCode, t.id, t.name]
-      );
-      if (exists.rows.length === 0) {
-        await dbService.query(
-          `INSERT INTO country_business_types (name, description, icon, is_active, display_order, country_code, global_business_type_id, created_by, updated_by, created_at, updated_at)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$8,NOW(),NOW())`,
-          [t.name, t.description, t.icon, true, t.display_order || 0, countryCode, t.id, adminUserId]
-        );
-        btActivated++;
+    // Seed country business types from global templates if country_business_types exists
+    try {
+      console.log('   📋 Processing business types...');
+      // Check table existence first
+      const tbl = await dbService.query(`
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema='public' AND table_name='country_business_types'
+      `);
+      if (tbl.rows.length === 0) {
+        console.warn('   ⚠️ Skipping business types seeding: country_business_types table not found');
       } else {
-        btSkipped++;
+        const globalTypes = await dbService.query(`SELECT id, name, description, icon, display_order, is_active FROM business_types WHERE is_active = true`);
+        let btActivated = 0, btSkipped = 0;
+        for (const t of globalTypes.rows) {
+          const exists = await dbService.query(
+            `SELECT id FROM country_business_types WHERE country_code = $1 AND (global_business_type_id = $2 OR name = $3)`,
+            [countryCode, t.id, t.name]
+          );
+          if (exists.rows.length === 0) {
+            await dbService.query(
+              `INSERT INTO country_business_types (name, description, icon, is_active, display_order, country_code, global_business_type_id, created_by, updated_by, created_at, updated_at)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$8,NOW(),NOW())`,
+              [t.name, t.description, t.icon, true, t.display_order || 0, countryCode, t.id, adminUserId]
+            );
+            btActivated++;
+          } else {
+            btSkipped++;
+          }
+        }
+        console.log(`   ✅ business_types: ${btActivated} activated, ${btSkipped} already existed`);
       }
+    } catch (btErr) {
+      console.error('   ❌ Error seeding country business types (continuing):', btErr.message);
     }
-    console.log(`   ✅ business_types: ${btActivated} activated, ${btSkipped} already existed`);
 
     console.log(`🎉 Auto-activation completed for ${countryName}!`);
     

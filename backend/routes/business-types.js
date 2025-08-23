@@ -3,6 +3,19 @@ const router = express.Router();
 const database = require('../services/database');
 const auth = require('../services/auth');
 
+// Helper to detect if new country_business_types table exists
+async function hasCountryBusinessTypesTable() {
+  try {
+    const r = await database.query(`
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema='public' AND table_name='country_business_types'
+    `);
+    return r.rows.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 // Check migration status endpoint
 router.get('/migration-status', auth.authMiddleware(), async (req, res) => {
   try {
@@ -66,6 +79,29 @@ router.get('/migration-status', auth.authMiddleware(), async (req, res) => {
       message: 'Error checking migration status',
       error: error.message
     });
+  }
+});
+
+// Health endpoint to verify table existence and basic schema
+router.get('/health', auth.authMiddleware(), async (req, res) => {
+  try {
+    const hasCountry = await hasCountryBusinessTypesTable();
+    let count = 0;
+    let columns = [];
+    if (hasCountry) {
+      const c = await database.query(`SELECT COUNT(*)::int AS count FROM country_business_types`);
+      count = c.rows[0]?.count || 0;
+      const cols = await database.query(`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_schema='public' AND table_name='country_business_types'
+        ORDER BY ordinal_position
+      `);
+      columns = cols.rows.map(r => r.column_name);
+    }
+    res.json({ success: true, data: { hasCountryBusinessTypesTable: hasCountry, count, columns } });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Health check failed', error: e.message });
   }
 });
 
@@ -426,19 +462,27 @@ router.get('/', async (req, res) => {
   try {
     const { country_code = 'LK' } = req.query;
 
-    const query = `
+    if (await hasCountryBusinessTypesTable()) {
+      const query = `
+        SELECT id, name, description, icon, display_order
+        FROM country_business_types 
+        WHERE country_code = $1 AND is_active = true
+        ORDER BY display_order, name
+      `;
+      const result = await database.query(query, [country_code]);
+      return res.json({ success: true, data: result.rows });
+    }
+
+    // Legacy fallback: read from old business_types if not migrated yet
+    const legacyQuery = `
       SELECT id, name, description, icon, display_order
-      FROM country_business_types 
+      FROM business_types
       WHERE country_code = $1 AND is_active = true
       ORDER BY display_order, name
     `;
+    const legacy = await database.query(legacyQuery, [country_code]);
 
-    const result = await database.query(query, [country_code]);
-
-    res.json({
-      success: true,
-      data: result.rows
-    });
+    res.json({ success: true, data: legacy.rows });
   } catch (error) {
     console.error('Error fetching business types:', error);
     res.status(500).json({
@@ -512,44 +556,57 @@ router.get('/admin', async (req, res) => {
   try {
     const { country_code } = req.query;
     const userRole = req.user.role;
+    const hasCountry = await hasCountryBusinessTypesTable();
     
-    let query = `
-      SELECT cbt.*, 
-             bt.name as global_name,
-             bt.description as global_description,
-             bt.icon as global_icon,
-             cb.display_name as created_by_name,
-             ub.display_name as updated_by_name
-      FROM country_business_types cbt
-      LEFT JOIN business_types bt ON cbt.global_business_type_id = bt.id
-      LEFT JOIN admin_users cb ON cbt.created_by = cb.id
-      LEFT JOIN admin_users ub ON cbt.updated_by = ub.id
-    `;
+    let query;
     
     const params = [];
     const conditions = [];
     
-    // Super admins see all countries, others see only their country
+    if (hasCountry) {
+      query = `
+        SELECT cbt.*, 
+               bt.name as global_name,
+               bt.description as global_description,
+               bt.icon as global_icon,
+               cb.display_name as created_by_name,
+               ub.display_name as updated_by_name
+        FROM country_business_types cbt
+        LEFT JOIN business_types bt ON cbt.global_business_type_id = bt.id
+        LEFT JOIN admin_users cb ON cbt.created_by = cb.id
+        LEFT JOIN admin_users ub ON cbt.updated_by = ub.id
+      `;
+      // Super admins see all countries, others see only their country
+      if (userRole !== 'super_admin') {
+        conditions.push('cbt.country_code = $1');
+        params.push(req.adminCountry || req.user.country_code);
+      } else if (country_code) {
+        conditions.push('cbt.country_code = $1');
+        params.push(country_code);
+      }
+      if (conditions.length > 0) query += ' WHERE ' + conditions.join(' AND ');
+      query += ' ORDER BY cbt.country_code, cbt.display_order, cbt.name';
+      const result = await database.query(query, params);
+      return res.json({ success: true, data: result.rows });
+    }
+
+    // Legacy fallback: list from old business_types
+    query = `
+      SELECT bt.*, NULL::text as created_by_name, NULL::text as updated_by_name
+      FROM business_types bt
+    `;
     if (userRole !== 'super_admin') {
-      conditions.push('cbt.country_code = $1');
+      conditions.push('bt.country_code = $1');
       params.push(req.adminCountry || req.user.country_code);
     } else if (country_code) {
-      conditions.push('cbt.country_code = $1');
+      conditions.push('bt.country_code = $1');
       params.push(country_code);
     }
-    
-    if (conditions.length > 0) {
-      query += ' WHERE ' + conditions.join(' AND ');
-    }
-    
-    query += ' ORDER BY cbt.country_code, cbt.display_order, cbt.name';
+    if (conditions.length > 0) query += ' WHERE ' + conditions.join(' AND ');
+    query += ' ORDER BY bt.country_code, bt.display_order, bt.name';
+    const legacyResult = await database.query(query, params);
 
-    const result = await database.query(query, params);
-
-    res.json({
-      success: true,
-      data: result.rows
-    });
+    res.json({ success: true, data: legacyResult.rows });
   } catch (error) {
     console.error('Error fetching business types (admin):', error);
     res.status(500).json({
@@ -563,6 +620,9 @@ router.get('/admin', async (req, res) => {
 // Create new business type
 router.post('/admin', auth.authMiddleware(), async (req, res) => {
   try {
+    if (!(await hasCountryBusinessTypesTable())) {
+      return res.status(400).json({ success: false, message: 'Business types migration required. Please run /api/business-types/run-migration as super admin.' });
+    }
     const { name, description, icon, country_code, display_order = 0, global_business_type_id } = req.body;
     const userId = req.user.id;
     
