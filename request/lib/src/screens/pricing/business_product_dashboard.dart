@@ -23,6 +23,8 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
 
   List<dynamic> _countryProducts = [];
   List<dynamic> _myPriceListings = [];
+  List<dynamic> _countryVariables =
+      []; // Available variables from country table
   bool _isSearching = false;
   bool _isLoadingMyPrices = false;
   bool _isSeller = true; // gated after registration check
@@ -49,6 +51,7 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
     await Future.wait([
       _loadCountryProducts(),
       _loadMyPriceListings(),
+      _loadCountryVariables(),
     ]);
   }
 
@@ -84,6 +87,37 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
     } catch (e) {
       print('Error loading my price listings: $e');
       setState(() => _isLoadingMyPrices = false);
+    }
+  }
+
+  Future<void> _loadCountryVariables() async {
+    try {
+      // For now, create a sample structure until backend is ready
+      setState(() {
+        _countryVariables = [
+          {
+            'id': 1,
+            'name': 'Color',
+            'type': 'select',
+            'values': ['Red', 'Blue', 'Green', 'Black', 'White', 'Yellow']
+          },
+          {
+            'id': 2,
+            'name': 'Size',
+            'type': 'select',
+            'values': ['XS', 'S', 'M', 'L', 'XL', 'XXL']
+          },
+          {
+            'id': 3,
+            'name': 'Material',
+            'type': 'select',
+            'values': ['Cotton', 'Polyester', 'Silk', 'Wool', 'Leather']
+          },
+          {'id': 4, 'name': 'Brand', 'type': 'text', 'values': []}
+        ];
+      });
+    } catch (e) {
+      print('Error loading country variables: $e');
     }
   }
 
@@ -534,14 +568,19 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
     List<String> existingImageUrls =
         isEditing ? List<String>.from(existingListing.productImages ?? []) : [];
 
-    // Get product variables
-    Map<String, dynamic> productVariables = {};
-    Map<String, String> selectedVariables = isEditing
+    // Track selected variables for two-step selection
+    Map<String, bool> enabledVariables = {};
+    Map<String, String> selectedVariableValues = isEditing
         ? Map<String, String>.from(existingListing.selectedVariables ?? {})
         : {};
 
-    if (product != null && product.availableVariables != null) {
-      productVariables = Map<String, dynamic>.from(product.availableVariables);
+    // Initialize enabled variables based on existing selections
+    if (isEditing && selectedVariableValues.isNotEmpty) {
+      for (var variable in _countryVariables) {
+        final variableName = variable['name'];
+        enabledVariables[variableName] =
+            selectedVariableValues.containsKey(variableName);
+      }
     }
 
     showModalBottomSheet(
@@ -660,8 +699,8 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Product Variables
-                      if (productVariables.isNotEmpty) ...[
+                      // Two-Step Variable Selection
+                      if (_countryVariables.isNotEmpty) ...[
                         const Text(
                           'Product Variables',
                           style: TextStyle(
@@ -670,38 +709,115 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        ...productVariables.entries.map((entry) {
-                          final variableName = entry.key;
-                          final variableOptions = entry.value;
 
-                          if (variableOptions is List) {
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 16),
-                              child: DropdownButtonFormField<String>(
-                                value: selectedVariables[variableName],
-                                decoration: InputDecoration(
-                                  labelText: variableName,
-                                  border: const OutlineInputBorder(),
-                                ),
-                                items: variableOptions
-                                    .map<DropdownMenuItem<String>>((option) {
-                                  return DropdownMenuItem<String>(
-                                    value: option.toString(),
-                                    child: Text(option.toString()),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  setDialogState(() {
-                                    if (value != null) {
-                                      selectedVariables[variableName] = value;
-                                    }
-                                  });
-                                },
-                              ),
-                            );
-                          }
-                          return const SizedBox.shrink();
+                        // Step 1: Select which variables to use
+                        const Text(
+                          'Step 1: Select which variables you want to specify',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+
+                        ..._countryVariables.map((variable) {
+                          final variableName = variable['name'];
+                          return CheckboxListTile(
+                            title: Text(variableName),
+                            value: enabledVariables[variableName] ?? false,
+                            onChanged: (bool? value) {
+                              setDialogState(() {
+                                enabledVariables[variableName] = value ?? false;
+                                if (!enabledVariables[variableName]!) {
+                                  // Remove value when variable is disabled
+                                  selectedVariableValues.remove(variableName);
+                                }
+                              });
+                            },
+                          );
                         }).toList(),
+
+                        const SizedBox(height: 16),
+
+                        // Step 2: Select values for enabled variables
+                        if (enabledVariables.values
+                            .any((enabled) => enabled)) ...[
+                          const Text(
+                            'Step 2: Select values for chosen variables',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ..._countryVariables.where((variable) {
+                            final variableName = variable['name'];
+                            return enabledVariables[variableName] ?? false;
+                          }).map((variable) {
+                            final variableName = variable['name'];
+                            final variableType = variable['type'];
+                            final variableValues =
+                                List<String>.from(variable['values'] ?? []);
+
+                            if (variableType == 'text') {
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: TextField(
+                                  decoration: InputDecoration(
+                                    labelText: variableName,
+                                    border: const OutlineInputBorder(),
+                                  ),
+                                  onChanged: (value) {
+                                    selectedVariableValues[variableName] =
+                                        value;
+                                  },
+                                  controller: TextEditingController(
+                                    text:
+                                        selectedVariableValues[variableName] ??
+                                            '',
+                                  ),
+                                ),
+                              );
+                            } else {
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: DropdownButtonFormField<String>(
+                                  value: selectedVariableValues[variableName],
+                                  decoration: InputDecoration(
+                                    labelText: variableName,
+                                    border: const OutlineInputBorder(),
+                                  ),
+                                  items: [
+                                    DropdownMenuItem<String>(
+                                      value: null,
+                                      child: Text('Select $variableName'),
+                                    ),
+                                    ...variableValues
+                                        .map<DropdownMenuItem<String>>((value) {
+                                      return DropdownMenuItem<String>(
+                                        value: value,
+                                        child: Text(value),
+                                      );
+                                    }).toList(),
+                                  ],
+                                  onChanged: (value) {
+                                    setDialogState(() {
+                                      if (value != null && value.isNotEmpty) {
+                                        selectedVariableValues[variableName] =
+                                            value;
+                                      } else {
+                                        selectedVariableValues
+                                            .remove(variableName);
+                                      }
+                                    });
+                                  },
+                                ),
+                              );
+                            }
+                          }).toList(),
+                        ],
                         const SizedBox(height: 16),
                       ],
 
@@ -910,7 +1026,7 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                               website: websiteController.text,
                               quantity: qtyController.text,
                               modelNumber: modelController.text,
-                              variables: selectedVariables,
+                              variables: selectedVariableValues,
                               newImages: selectedImages,
                               existingImages: existingImageUrls,
                             );
