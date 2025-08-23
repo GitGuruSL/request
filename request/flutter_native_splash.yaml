@@ -1,24 +1,5 @@
 flutter_native_splash:
-  # Clean, centered logo splash. Remove default white flash by providing
-  # proper native resources via this config.
-  color: "#FFFFFF"
-  color_dark: "#000000"
-  image: assets/images/app_logo.png
-  image_dark: assets/images/app_logo.png
-  android: true
-  ios: true
+  # Disable generation to remove default splash setup; handled via transparent LaunchTheme
+  android: false
+  ios: false
   web: false
-  fullscreen: true
-  branding_mode: bottom
-
-  # Android 12 specific configuration
-  android_12:
-    icon_background_color: "#FFFFFF"
-    icon_background_color_dark: "#000000"
-    image: assets/images/app_logo.png
-    image_dark: assets/images/app_logo.png
-
-  # Optional: center content (default). Uncomment to change gravity.
-  # android_gravity: center
-
-  # If future dark-only tweaks needed, add overrides above.
