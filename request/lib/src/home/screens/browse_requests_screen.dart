@@ -310,7 +310,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
           final category = categories[index];
           final isSelected = category == _selectedCategory;
           return Padding(
-            padding: const EdgeInsets.only(right: 12),
+            padding: const EdgeInsets.only(right: 8),
             child: FilterChip(
               label: Text(category),
               selected: isSelected,
@@ -322,20 +322,21 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                 });
                 _loadInitial();
               },
-              backgroundColor: _Palette.lightBeige,
-              selectedColor: _Palette.pastelViolet.withOpacity(0.35),
-              checkmarkColor: _Palette.darkViolet,
+              backgroundColor: _Palette.chipBackground,
+              selectedColor: _Palette.primaryBlue.withOpacity(0.1),
+              checkmarkColor: _Palette.primaryBlue,
               labelStyle: TextStyle(
-                color: isSelected ? _Palette.darkViolet : Colors.grey[700],
+                color:
+                    isSelected ? _Palette.primaryBlue : _Palette.secondaryText,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
               ),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(10),
                 side: BorderSide(
                     color: isSelected
-                        ? _Palette.darkViolet.withOpacity(0.25)
+                        ? _Palette.primaryBlue.withOpacity(0.3)
                         : Colors.transparent,
-                    width: 0.5),
+                    width: 1),
               ),
               elevation: 0,
               pressElevation: 0,
@@ -347,23 +348,29 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
   }
 
   Widget _buildResultCount() {
+    final count = _filteredRequests.length;
+    // Handle pluralization gracefully
+    final requestsFoundText =
+        count == 1 ? '1 request found' : '$count requests found';
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Row(
         children: [
           Text(
-            '${_filteredRequests.length} requests found',
+            requestsFoundText,
             style: TextStyle(
-              color: Colors.grey[600],
+              color: _Palette.secondaryText,
               fontSize: 14,
+              fontWeight: FontWeight.w500,
             ),
           ),
           const Spacer(),
           if (_fetchingMore && !_initialLoading)
             const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2.5),
             ),
         ],
       ),
@@ -372,74 +379,86 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
 
   Widget _buildErrorState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
-          const SizedBox(height: 12),
-          Text(_error ?? 'Error',
-              style: const TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          ElevatedButton.icon(
-            onPressed: _loadInitial,
-            icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
-          )
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.cloud_off_outlined,
+                size: 64, color: _Palette.secondaryText),
+            const SizedBox(height: 16),
+            Text(
+              _error ?? 'Something went wrong',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: _Palette.primaryText),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'We couldn\'t load requests. Please check your connection and try again.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: _Palette.secondaryText),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: _loadInitial,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+              style: ElevatedButton.styleFrom(
+                foregroundColor: Colors.white,
+                backgroundColor: _Palette.primaryBlue,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+            )
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildEmptyState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 96,
-            height: 96,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [
-                  _Palette.pastelViolet.withOpacity(0.25),
-                  _Palette.lightOrange.withOpacity(0.25),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.search_off_rounded,
+              size: 64,
+              color: Colors.grey[300],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No requests here',
+              style: TextStyle(
+                fontSize: 18,
+                color: _Palette.primaryText,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            child: Icon(
-              Icons.search_off_rounded,
-              size: 40,
-              color: _Palette.saturatedOrange,
+            const SizedBox(height: 8),
+            Text(
+              'Try selecting a different category or check back later for new opportunities.',
+              style: TextStyle(
+                fontSize: 15,
+                color: _Palette.secondaryText,
+              ),
+              textAlign: TextAlign.center,
             ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No requests found',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Try adjusting your filters or check back later',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[500],
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildRequestCard(models.RequestModel request) {
-    // Map request types to a richer style
     final requestType = _displayTypeFor(request);
     final style = _typeStyle(requestType);
 
@@ -447,7 +466,14 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: style.bg, // Solid card color per request type
+        color: _Palette.cardBackground,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
       ),
       child: InkWell(
         onTap: () => _showRequestDetails(request),
@@ -458,15 +484,12 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.white, // white icon circle
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(style.icon, color: style.fg, size: 20),
+                  Icon(
+                    style.icon,
+                    color: _Palette.secondaryText,
+                    size: 22,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -476,32 +499,29 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                         Text(
                           request.title,
                           style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: _onColor(style.bg),
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            color: _Palette.primaryText,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 4),
                         Row(
                           children: [
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 2),
+                                  horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: _onColor(style.bg).withOpacity(0.12),
+                                color: style.bg.withOpacity(0.15),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                    color:
-                                        _onColor(style.bg).withOpacity(0.24)),
                               ),
                               child: Text(
                                 '$requestType Request',
                                 style: TextStyle(
                                   fontSize: 11,
-                                  color: _onColor(style.bg),
                                   fontWeight: FontWeight.w600,
+                                  color: style.bg,
                                 ),
                               ),
                             ),
@@ -509,8 +529,9 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                             Text(
                               _relativeTime(request.createdAt),
                               style: TextStyle(
-                                  fontSize: 11,
-                                  color: _onColor(style.bg).withOpacity(0.75)),
+                                fontSize: 12,
+                                color: _Palette.secondaryText,
+                              ),
                             ),
                           ],
                         ),
@@ -519,39 +540,37 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               Text(
                 request.description,
                 style: TextStyle(
-                  fontSize: 14,
-                  color: _onColor(style.bg).withOpacity(0.72),
-                  height: 1.35,
+                  fontSize: 14.5,
+                  color: _Palette.secondaryText,
+                  height: 1.4,
                 ),
-                maxLines: 3,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               Row(
                 children: [
                   Icon(Icons.chat_bubble_outline,
-                      size: 16, color: _onColor(style.bg).withOpacity(0.72)),
-                  const SizedBox(width: 12),
+                      size: 18, color: _Palette.secondaryText),
+                  const SizedBox(width: 16),
                   Icon(Icons.favorite_border,
-                      size: 16, color: _onColor(style.bg).withOpacity(0.72)),
+                      size: 18, color: _Palette.secondaryText),
                   const Spacer(),
                   if (request.location?.city != null)
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.location_on_outlined,
-                            size: 14,
-                            color: _onColor(style.bg).withOpacity(0.72)),
+                            size: 16, color: _Palette.secondaryText),
                         const SizedBox(width: 4),
                         Text(
                           request.location!.city!,
                           style: TextStyle(
-                              fontSize: 12,
-                              color: _onColor(style.bg).withOpacity(0.72)),
+                              fontSize: 13, color: _Palette.secondaryText),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
@@ -596,6 +615,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
         searchText.contains('maintenance') ||
         searchText.contains('fix') ||
         searchText.contains('consultation') ||
+        searchText.contains('cleaning') || // Added cleaning
         searchText.contains('support')) {
       return 'Service';
     }
@@ -637,21 +657,14 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
   Widget _buildLoadingSkeleton() {
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      itemCount: 6,
+      itemCount: 5,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         return Container(
-          height: 110,
+          height: 150, // Adjusted height
           decoration: BoxDecoration(
-            color: _Palette.lightBeige,
+            color: _Palette.cardBackground,
             borderRadius: BorderRadius.circular(16),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 0.5, sigmaY: 0.5),
-              child: const SizedBox.expand(),
-            ),
           ),
         );
       },
@@ -662,26 +675,21 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     switch (type) {
       case 'Delivery':
         return _TypeStyle(
-            Icons.local_shipping_outlined, _Palette.lightGreen, Colors.white);
+            Icons.local_shipping_outlined, _Palette.vibrantTeal, Colors.white);
       case 'Ride':
         return _TypeStyle(
-            Icons.directions_car_outlined, _Palette.darkViolet, Colors.white);
+            Icons.directions_car_outlined, _Palette.primaryBlue, Colors.white);
       case 'Service':
         return _TypeStyle(
-            Icons.build_outlined, _Palette.pastelViolet, _Palette.darkViolet);
+            Icons.build_outlined, _Palette.deepPurple, Colors.white);
       case 'Rent':
-        return _TypeStyle(Icons.apartment_outlined, _Palette.lightOrange,
-            _Palette.darkViolet);
+        return _TypeStyle(
+            Icons.weekend_outlined, _Palette.warmOrange, Colors.white);
       case 'Items':
       default:
-        return _TypeStyle(Icons.shopping_bag_outlined, _Palette.saturatedOrange,
-            Colors.white);
+        return _TypeStyle(
+            Icons.widgets_outlined, _Palette.sunnyYellow, _Palette.primaryText);
     }
-  }
-
-  // Pick readable foreground (white/black) based on background luminance
-  Color _onColor(Color background) {
-    return background.computeLuminance() < 0.5 ? Colors.white : Colors.black87;
   }
 }
 
@@ -693,47 +701,43 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      padding: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            _Palette.saturatedOrange.withOpacity(0.20),
-            _Palette.pastelViolet.withOpacity(0.20),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: _Palette.cardBackground,
         borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
+          bottomLeft: Radius.circular(28),
+          bottomRight: Radius.circular(28),
         ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
             blurRadius: 12,
             offset: const Offset(0, 4),
-          ),
+          )
         ],
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  const Text(
-                    'Discover Requests',
+                  Text(
+                    'Discover',
                     style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
+                      fontSize: 30,
+                      fontWeight: FontWeight.bold,
+                      color: _Palette.primaryText,
                     ),
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.refresh),
+                    icon: const Icon(Icons.refresh_rounded),
                     onPressed: onRefresh,
                     tooltip: 'Refresh',
+                    color: _Palette.secondaryText,
                   ),
                 ],
               ),
@@ -753,17 +757,18 @@ class _SearchBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: _Palette.screenBackground,
+        borderRadius: BorderRadius.circular(16),
       ),
       child: TextField(
         decoration: InputDecoration(
-          hintText: 'Find requests that match your skills',
-          hintStyle: TextStyle(color: Colors.grey[500]),
-          prefixIcon: Icon(Icons.search_outlined, color: Colors.grey[500]),
+          hintText: 'Find requests by skill, item, or service',
+          hintStyle: TextStyle(color: _Palette.secondaryText, fontSize: 15),
+          prefixIcon:
+              Icon(Icons.search_outlined, color: _Palette.secondaryText),
           border: InputBorder.none,
           contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         ),
       ),
     );
@@ -777,12 +782,19 @@ class _TypeStyle {
   _TypeStyle(this.icon, this.bg, this.fg);
 }
 
-// Bright palette based on provided swatches
+// Modern, vibrant, and accessible color palette
 class _Palette {
-  static const pastelViolet = Color(0xFFC4C3E3); // #C4C3E3
-  static const darkViolet = Color(0xFF504E76); // #504E76
-  static const lightBeige = Color(0xFFFDF8E2); // #FDF8E2
-  static const lightGreen = Color(0xFFA3B565); // #A3B565
-  static const lightOrange = Color(0xFFFCDD9D); // #FCDD9D
-  static const saturatedOrange = Color(0xFFF1642E); // #F1642E
+  // Primary & Accents
+  static const primaryBlue = Color(0xFF007AFF);
+  static const vibrantTeal = Color(0xFF30D158);
+  static const warmOrange = Color(0xFFFF9500);
+  static const deepPurple = Color(0xFF5856D6);
+  static const sunnyYellow = Color(0xFFFFCC00);
+
+  // Neutrals
+  static const cardBackground = Color(0xFFFFFFFF);
+  static const screenBackground = Color(0xFFF2F2F7);
+  static const primaryText = Color(0xFF1C1C1E);
+  static const secondaryText = Color(0xFF6E6E73);
+  static const chipBackground = Color(0xFFE9E9EB);
 }
