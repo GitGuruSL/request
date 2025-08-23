@@ -65,7 +65,7 @@ const AdminUsers = () => {
       // Request Management
       requestManagement: true,
       responseManagement: true,
-      priceListingManagement: true,
+  priceListingManagement: true,
       
       // Business Management
       productManagement: true,
@@ -822,7 +822,10 @@ const AdminUsers = () => {
               <Typography variant="subtitle2" gutterBottom sx={{ mb: 2 }}>
                 Permissions
               </Typography>
-              
+              {formData.role === 'super_admin' ? (
+                <Alert severity="info">Super Admins have full access. Permissions cannot be customized.</Alert>
+              ) : (
+                <>
               {/* Request Management Section */}
               <Typography variant="body2" color="primary" gutterBottom sx={{ mt: 2, fontWeight: 'bold' }}>
                 📋 Request Management
@@ -1162,6 +1165,8 @@ const AdminUsers = () => {
                   />
                 </Grid>
               </Grid>
+              </>
+              )}
             </Grid>
 
             <Grid item xs={12}>
