@@ -10,12 +10,7 @@ enum RequestStatus {
   expired
 }
 
-enum Priority {
-  low,
-  medium,
-  high,
-  urgent
-}
+enum Priority { low, medium, high, urgent }
 
 class RequestModel {
   final String id;
@@ -69,28 +64,28 @@ class RequestModel {
   });
 
   // Helper methods for specific request types
-  ItemRequestData? get itemData => type == RequestType.item 
-      ? ItemRequestData.fromMap(typeSpecificData) 
+  ItemRequestData? get itemData => type == RequestType.item
+      ? ItemRequestData.fromMap(typeSpecificData)
       : null;
-  
-  ServiceRequestData? get serviceData => type == RequestType.service 
-      ? ServiceRequestData.fromMap(typeSpecificData) 
+
+  ServiceRequestData? get serviceData => type == RequestType.service
+      ? ServiceRequestData.fromMap(typeSpecificData)
       : null;
-  
-  RideRequestData? get rideData => type == RequestType.ride 
-      ? RideRequestData.fromMap(typeSpecificData) 
+
+  RideRequestData? get rideData => type == RequestType.ride
+      ? RideRequestData.fromMap(typeSpecificData)
       : null;
-  
-  DeliveryRequestData? get deliveryData => type == RequestType.delivery 
-      ? DeliveryRequestData.fromMap(typeSpecificData) 
+
+  DeliveryRequestData? get deliveryData => type == RequestType.delivery
+      ? DeliveryRequestData.fromMap(typeSpecificData)
       : null;
-  
-  RentalRequestData? get rentalData => type == RequestType.rental 
-      ? RentalRequestData.fromMap(typeSpecificData) 
+
+  RentalRequestData? get rentalData => type == RequestType.rental
+      ? RentalRequestData.fromMap(typeSpecificData)
       : null;
-  
-  PriceRequestData? get priceData => type == RequestType.price 
-      ? PriceRequestData.fromMap(typeSpecificData) 
+
+  PriceRequestData? get priceData => type == RequestType.price
+      ? PriceRequestData.fromMap(typeSpecificData)
       : null;
 
   factory RequestModel.fromMap(Map<String, dynamic> map) {
@@ -102,19 +97,19 @@ class RequestModel {
       type: _parseRequestType(map['type']),
       status: _parseRequestStatus(map['status']),
       priority: _parsePriority(map['priority']),
-      location: map['location'] != null 
-          ? LocationInfo.fromMap(map['location']) 
+      location: map['location'] != null
+          ? LocationInfo.fromMap(map['location'])
           : null,
-      destinationLocation: map['destinationLocation'] != null 
-          ? LocationInfo.fromMap(map['destinationLocation']) 
+      destinationLocation: map['destinationLocation'] != null
+          ? LocationInfo.fromMap(map['destinationLocation'])
           : null,
       budget: map['budget']?.toDouble(),
       currency: map['currency'],
-      deadline: map['deadline'] != null 
-          ? _parseDateTime(map['deadline']) 
-          : null,
+      deadline:
+          map['deadline'] != null ? _parseDateTime(map['deadline']) : null,
       images: List<String>.from(map['images'] ?? []),
-      typeSpecificData: Map<String, dynamic>.from(map['typeSpecificData'] ?? {}),
+      typeSpecificData:
+          Map<String, dynamic>.from(map['typeSpecificData'] ?? {}),
       tags: List<String>.from(map['tags'] ?? []),
       contactMethod: map['contactMethod'],
       isPublic: map['isPublic'] ?? true,
@@ -122,17 +117,55 @@ class RequestModel {
       updatedAt: _parseDateTime(map['updatedAt']) ?? DateTime.now(),
       assignedTo: map['assignedTo'],
       responses: (map['responses'] as List<dynamic>?)
-          ?.map((e) => ResponseModel.fromMap(e))
-          .toList() ?? [],
+              ?.map((e) => ResponseModel.fromMap(e))
+              .toList() ??
+          [],
       country: map['country'],
       countryName: map['countryName'],
     );
   }
 
   static RequestType _parseRequestType(String? type) {
+    // Normalize various backend/legacy representations to enum values
+    if (type == null) return RequestType.item;
+    var t = type.trim().toLowerCase();
+    // Handle formats like "RequestType.item"
+    if (t.startsWith('requesttype.')) {
+      t = t.substring('requesttype.'.length);
+    }
+    // Common aliases/synonyms and plural forms
+    switch (t) {
+      case 'items':
+      case 'product':
+      case 'products':
+        t = 'item';
+        break;
+      case 'services':
+        t = 'service';
+        break;
+      case 'rental':
+      case 'rent':
+      case 'rentals':
+        t = 'rental';
+        break;
+      case 'deliver':
+      case 'courier':
+      case 'parcel':
+        t = 'delivery';
+        break;
+      case 'rides':
+      case 'transport':
+      case 'trip':
+        t = 'ride';
+        break;
+      case 'price_comparison':
+      case 'pricing':
+        t = 'price';
+        break;
+    }
     try {
-      return RequestType.values.byName(type ?? 'item');
-    } catch (e) {
+      return RequestType.values.byName(t);
+    } catch (_) {
       return RequestType.item; // Fallback to item type
     }
   }
@@ -343,8 +376,8 @@ class ServiceRequestData {
     return ServiceRequestData(
       serviceType: map['serviceType'] ?? '',
       skillLevel: map['skillLevel'],
-      preferredTime: map['preferredTime'] != null 
-          ? DateTime.parse(map['preferredTime']) 
+      preferredTime: map['preferredTime'] != null
+          ? DateTime.parse(map['preferredTime'])
           : null,
       estimatedDuration: map['estimatedDuration'] ?? 1,
       isRecurring: map['isRecurring'] ?? false,
@@ -438,8 +471,10 @@ class DeliveryRequestData {
   factory DeliveryRequestData.fromMap(Map<String, dynamic> map) {
     return DeliveryRequestData(
       package: PackageInfo.fromMap(map['package'] ?? {}),
-      preferredPickupTime: _parseDateTime(map['preferredPickupTime']) ?? DateTime.now(),
-      preferredDeliveryTime: _parseDateTime(map['preferredDeliveryTime']) ?? DateTime.now().add(Duration(hours: 2)),
+      preferredPickupTime:
+          _parseDateTime(map['preferredPickupTime']) ?? DateTime.now(),
+      preferredDeliveryTime: _parseDateTime(map['preferredDeliveryTime']) ??
+          DateTime.now().add(Duration(hours: 2)),
       isFlexibleTime: map['isFlexibleTime'] ?? false,
       requireSignature: map['requireSignature'] ?? false,
       isFragile: map['isFragile'] ?? false,
@@ -447,7 +482,7 @@ class DeliveryRequestData {
       deliveryInstructions: map['deliveryInstructions'],
     );
   }
-  
+
   // Helper method to safely parse DateTime
   static DateTime? _parseDateTime(dynamic dateTime) {
     if (dateTime == null) return null;
@@ -564,7 +599,8 @@ class RentalRequestData {
     return RentalRequestData(
       itemCategory: map['itemCategory'] ?? '',
       startDate: _parseDateTime(map['startDate']) ?? DateTime.now(),
-      endDate: _parseDateTime(map['endDate']) ?? DateTime.now().add(Duration(days: 1)),
+      endDate: _parseDateTime(map['endDate']) ??
+          DateTime.now().add(Duration(days: 1)),
       isFlexibleDates: map['isFlexibleDates'] ?? false,
       preferredBrand: map['preferredBrand'],
       specifications: _parseStringMap(map['specifications'] ?? {}),
@@ -572,13 +608,13 @@ class RentalRequestData {
       needsSetup: map['needsSetup'] ?? false,
     );
   }
-  
+
   // Helper method to safely convert any map to Map<String, String>
   static Map<String, String> _parseStringMap(Map<String, dynamic>? map) {
     if (map == null) return {};
     return map.map((key, value) => MapEntry(key, value?.toString() ?? ''));
   }
-  
+
   // Helper method to safely parse DateTime
   static DateTime? _parseDateTime(dynamic dateTime) {
     if (dateTime == null) return null;
@@ -643,7 +679,7 @@ class PriceRequestData {
       compareNewAndUsed: map['compareNewAndUsed'] ?? true,
     );
   }
-  
+
   // Helper method to safely convert any map to Map<String, String>
   static Map<String, String> _parseStringMap(Map<String, dynamic>? map) {
     if (map == null) return {};
@@ -708,11 +744,11 @@ class ResponseModel {
       message: map['message'] ?? '',
       price: map['price']?.toDouble(),
       currency: map['currency'],
-      availableFrom: map['availableFrom'] != null 
-          ? DateTime.parse(map['availableFrom']) 
+      availableFrom: map['availableFrom'] != null
+          ? DateTime.parse(map['availableFrom'])
           : null,
-      availableUntil: map['availableUntil'] != null 
-          ? DateTime.parse(map['availableUntil']) 
+      availableUntil: map['availableUntil'] != null
+          ? DateTime.parse(map['availableUntil'])
           : null,
       images: List<String>.from(map['images'] ?? []),
       additionalInfo: Map<String, dynamic>.from(map['additionalInfo'] ?? {}),

@@ -35,6 +35,36 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     _scrollController.addListener(_onScroll);
   }
 
+  // Normalize model type to one of our display tabs
+  String _displayTypeFor(models.RequestModel r) {
+    // Prefer explicit DB origin if present in typeSpecificData/request_type
+    String t = r.type.name.toLowerCase();
+    final meta = r.typeSpecificData;
+    final dbType = meta['request_type']?.toString() ?? meta['type']?.toString();
+    if (dbType != null && dbType.isNotEmpty) {
+      t = dbType.toLowerCase();
+      if (t.startsWith('requesttype.')) {
+        t = t.substring('requesttype.'.length);
+      }
+    }
+    switch (t) {
+      case 'item':
+        return 'Items';
+      case 'service':
+        return 'Service';
+      case 'rental':
+      case 'rent':
+        return 'Rent';
+      case 'delivery':
+        return 'Delivery';
+      case 'ride':
+        return 'Ride';
+      default:
+        // Fallback to keyword check only if type is unknown
+        return _getRequestTypeFromCategory(r.type.name, r.title, r.description);
+    }
+  }
+
   @override
   void dispose() {
     _scrollController.dispose();
@@ -122,8 +152,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
 
     if (_selectedCategory == 'All') return gated;
     return gated.where((r) {
-      String requestType =
-          _getRequestTypeFromCategory(r.type.name, r.title, r.description);
+      final requestType = _displayTypeFor(r);
       return requestType == _selectedCategory;
     }).toList();
   }
@@ -390,8 +419,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
 
   Widget _buildRequestCard(models.RequestModel request) {
     // Map request types to a richer style
-    final requestType = _getRequestTypeFromCategory(
-        request.type.name, request.title, request.description);
+    final requestType = _displayTypeFor(request);
     final style = _typeStyle(requestType);
 
     return Container(

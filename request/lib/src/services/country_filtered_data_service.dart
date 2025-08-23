@@ -336,33 +336,75 @@ class CountryFilteredDataService {
   }
 
   String? _getRequestTypeFromMetadata(RequestModel r) {
-    // First priority: check the new request_type column from database
-    if (r.requestType != null && r.requestType!.isNotEmpty) {
-      return r.requestType;
+    // Priority 1: explicit DB column
+    final dbType = r.requestType;
+    if (dbType != null && dbType.toString().isNotEmpty) return dbType;
+
+    // Priority 2: metadata explicit key 'request_type'
+    final meta = r.metadata;
+    final metaReqType = meta != null ? meta['request_type'] : null;
+    if (metaReqType != null && metaReqType.toString().isNotEmpty) {
+      return metaReqType.toString();
     }
 
-    // Second priority: check metadata for request_type
-    if (r.metadata != null && r.metadata!['request_type'] != null) {
-      return r.metadata!['request_type'] as String;
+    // Priority 3: legacy metadata key 'type' (often like 'RequestType.rental')
+    final metaType = meta != null ? meta['type'] : null;
+    if (metaType != null && metaType.toString().isNotEmpty) {
+      return metaType.toString();
     }
 
-    // Third priority: check category type from backend (category.type field)
-    if (r.categoryType != null && r.categoryType!.isNotEmpty) {
-      return r.categoryType;
-    }
+    // Priority 4: backend-provided category type
+    final catType = r.categoryType;
+    if (catType != null && catType.toString().isNotEmpty) return catType;
 
-    // Fallback to category name
+    // Fallback: category name (very loose)
     return r.categoryName;
   }
 
   enhanced.RequestType _convertRequestType(String? type) {
-    switch (type?.toLowerCase()) {
+    if (type == null) return enhanced.RequestType.item;
+    var t = type.toString().trim().toLowerCase();
+    // Handle formats like "RequestType.rental"
+    if (t.startsWith('requesttype.')) {
+      t = t.substring('requesttype.'.length);
+    }
+    // Normalize common aliases/plurals
+    switch (t) {
+      case 'items':
+      case 'product':
+      case 'products':
+        t = 'item';
+        break;
+      case 'services':
+        t = 'service';
+        break;
+      case 'rental':
+      case 'rent':
+      case 'rentals':
+        t = 'rental';
+        break;
+      case 'deliver':
+      case 'courier':
+      case 'parcel':
+        t = 'delivery';
+        break;
+      case 'rides':
+      case 'transport':
+      case 'trip':
+        t = 'ride';
+        break;
+      case 'price_comparison':
+      case 'pricing':
+        t = 'price';
+        break;
+    }
+
+    switch (t) {
       case 'item':
         return enhanced.RequestType.item;
       case 'service':
         return enhanced.RequestType.service;
       case 'rental':
-      case 'rent':
         return enhanced.RequestType.rental;
       case 'delivery':
         return enhanced.RequestType.delivery;
