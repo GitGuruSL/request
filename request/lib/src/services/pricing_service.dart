@@ -49,6 +49,70 @@ class PricingService {
     }
   }
 
+  /// Get all available products for a country (for adding new price listings)
+  Future<List<MasterProduct>> getAllCountryProducts(
+      {String country = 'LK', String query = '', int limit = 50}) async {
+    try {
+      print(
+          'DEBUG: Getting all country products for: $country, query: "$query", limit: $limit');
+
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/country-products',
+        queryParameters: {
+          'country': country,
+          if (query.isNotEmpty) 'search': query,
+          'limit': limit.toString(),
+        },
+      );
+
+      print(
+          'DEBUG: Country products response - success: ${response.isSuccess}');
+      print('DEBUG: Country products response: ${response.data}');
+
+      if (response.isSuccess && response.data != null) {
+        final responseData = response.data!;
+        final dataArray = responseData['data'] as List<dynamic>?;
+
+        print(
+            'DEBUG: Country products data array length: ${dataArray?.length}');
+
+        if (dataArray != null) {
+          var products = dataArray
+              .where((data) =>
+                  data['countryEnabled'] == true) // Only show enabled products
+              .map((data) => MasterProduct.fromJson({
+                    'id': data['id'],
+                    'name': data['name'],
+                    'slug': data['name']?.toLowerCase()?.replaceAll(' ', '-'),
+                    'baseUnit': data['baseUnit'],
+                    'brand': data['brand'],
+                    'listingCount': 0, // No existing listings for new products
+                    'priceRange': null,
+                  }))
+              .toList();
+
+          // Filter by search query if provided
+          if (query.isNotEmpty) {
+            final queryLower = query.toLowerCase();
+            products = products
+                .where((product) =>
+                    product.name.toLowerCase().contains(queryLower))
+                .toList();
+          }
+
+          print(
+              'DEBUG: Parsed ${products.length} country products successfully');
+          return products;
+        }
+      }
+      print('DEBUG: Country products response not successful or data is null');
+      return [];
+    } catch (e) {
+      print('Error getting country products: $e');
+      return [];
+    }
+  }
+
   Future<bool> isBusinessEligibleForPricing(String? businessUserId) async {
     if (businessUserId == null) {
       print('DEBUG: No businessUserId provided');

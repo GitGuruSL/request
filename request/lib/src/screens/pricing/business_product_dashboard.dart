@@ -76,8 +76,9 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
   Future<void> _loadCountryProducts() async {
     setState(() => _isSearching = true);
     try {
+      // Use getAllCountryProducts for loading all available products to add prices for
       final products =
-          await _pricingService.searchProducts(query: '', limit: 50);
+          await _pricingService.getAllCountryProducts(query: '', limit: 50);
       setState(() {
         _countryProducts = products;
         _isSearching = false;
@@ -217,7 +218,8 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
 
     setState(() => _isSearching = true);
     try {
-      final products = await _pricingService.searchProducts(
+      // Use getAllCountryProducts for searching all available products
+      final products = await _pricingService.getAllCountryProducts(
         query: _searchController.text.trim(),
         limit: 50,
       );
