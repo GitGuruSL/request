@@ -821,23 +821,42 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                           ),
                           const SizedBox(height: 8),
 
-                          ..._countryVariables.map((variable) {
-                            final variableName = variable['name'];
-                            return CheckboxListTile(
-                              title: Text(variableName),
-                              value: enabledVariables[variableName] ?? false,
-                              onChanged: (bool? value) {
-                                setDialogState(() {
-                                  enabledVariables[variableName] =
-                                      value ?? false;
-                                  if (!enabledVariables[variableName]!) {
-                                    // Remove value when variable is disabled
-                                    selectedVariableValues.remove(variableName);
-                                  }
-                                });
-                              },
-                            );
-                          }).toList(),
+                          // Compact variable selection using chips
+                          Wrap(
+                            spacing: 8.0,
+                            runSpacing: 4.0,
+                            children: _countryVariables.map((variable) {
+                              final variableName = variable['name'];
+                              final isSelected =
+                                  enabledVariables[variableName] ?? false;
+
+                              return FilterChip(
+                                label: Text(
+                                  variableName,
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Colors.black87,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                selected: isSelected,
+                                onSelected: (bool selected) {
+                                  setDialogState(() {
+                                    enabledVariables[variableName] = selected;
+                                    if (!selected) {
+                                      // Remove value when variable is disabled
+                                      selectedVariableValues
+                                          .remove(variableName);
+                                    }
+                                  });
+                                },
+                                backgroundColor: Colors.grey[200],
+                                selectedColor: Colors.blue,
+                                checkmarkColor: Colors.white,
+                              );
+                            }).toList(),
+                          ),
 
                           const SizedBox(height: 16),
 
