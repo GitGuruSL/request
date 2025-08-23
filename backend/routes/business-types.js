@@ -456,6 +456,7 @@ router.use(auth.authMiddleware());
 const checkAdminPermission = (req, res, next) => {
   const userRole = req.user.role;
   const userCountry = req.user.country_code;
+  const permissions = req.user.permissions || {};
   
   // Super admins can manage all countries
   if (userRole === 'super_admin') {
@@ -464,6 +465,10 @@ const checkAdminPermission = (req, res, next) => {
   
   // Country admins can only manage their own country
   if (userRole === 'admin' || userRole === 'country_admin') {
+    // Enforce explicit permission flag for managing country business types
+    if (!permissions.countryBusinessTypeManagement) {
+      return res.status(403).json({ success: false, message: 'Permission denied: country business types management' });
+    }
     req.adminCountry = userCountry; // Restrict to admin's country
     return next();
   }

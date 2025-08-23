@@ -38,12 +38,16 @@ import {
   VisibilityOff as VisibilityOffIcon
 } from '@mui/icons-material';
 import api from '../services/apiClient';
+import { useAuth } from '../contexts/AuthContext';
 
 const CountryBusinessTypesManagement = () => {
   const [businessTypes, setBusinessTypes] = useState([]);
   const [countries, setCountries] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCountry, setSelectedCountry] = useState('LK');
+  const { user, adminData, userRole, userCountry } = useAuth();
+  const isSuperAdmin = userRole === 'super_admin';
+  const hasPermission = isSuperAdmin || user?.permissions?.countryBusinessTypeManagement;
+  const [selectedCountry, setSelectedCountry] = useState(userCountry || 'LK');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingType, setEditingType] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
@@ -52,7 +56,7 @@ const CountryBusinessTypesManagement = () => {
     description: '',
     icon: '',
     display_order: 0,
-    country_code: 'LK',
+    country_code: userCountry || 'LK',
     is_active: true
   });
 
@@ -63,9 +67,19 @@ const CountryBusinessTypesManagement = () => {
   ];
 
   useEffect(() => {
-    fetchCountries();
+    if (!hasPermission) return;
+    // For super admins, allow selecting any country (load countries list)
+    // For country admins, bind to their assigned country and hide selector
+    if (isSuperAdmin) {
+      fetchCountries();
+    } else {
+      // Ensure selectedCountry matches logged-in admin's country
+      if (userCountry && selectedCountry !== userCountry) {
+        setSelectedCountry(userCountry);
+      }
+    }
     fetchBusinessTypes();
-  }, [selectedCountry]);
+  }, [selectedCountry, isSuperAdmin, userCountry, hasPermission]);
 
   const fetchCountries = async () => {
     try {
@@ -79,7 +93,9 @@ const CountryBusinessTypesManagement = () => {
   const fetchBusinessTypes = async () => {
     try {
       setLoading(true);
-      const { data } = await api.get(`/business-types`, { params: { country_code: selectedCountry } });
+      // Use admin endpoint to get full details; backend restricts country automatically for non-super admins
+      const params = isSuperAdmin && selectedCountry ? { country_code: selectedCountry } : undefined;
+      const { data } = await api.get(`/business-types/admin`, { params });
       if (data?.success) {
         setBusinessTypes(data.data || []);
       } else {
@@ -97,10 +113,11 @@ const CountryBusinessTypesManagement = () => {
     e.preventDefault();
     
     try {
-      const url = editingType 
+  const url = editingType 
         ? `/business-types/admin/${editingType.id}`
         : '/business-types/admin';
-      const payload = { ...formData, country_code: selectedCountry };
+  const boundCountry = isSuperAdmin ? selectedCountry : (userCountry || selectedCountry);
+  const payload = { ...formData, country_code: boundCountry };
       const { data } = editingType
         ? await api.put(url, payload)
         : await api.post(url, payload);
@@ -114,7 +131,7 @@ const CountryBusinessTypesManagement = () => {
           description: '',
           icon: '',
           display_order: 0,
-          country_code: selectedCountry,
+          country_code: boundCountry,
           is_active: true
         });
         fetchBusinessTypes();
@@ -134,7 +151,7 @@ const CountryBusinessTypesManagement = () => {
       description: businessType.description || '',
       icon: businessType.icon || '',
       display_order: businessType.display_order || 0,
-      country_code: businessType.country_code,
+  country_code: businessType.country_code,
       is_active: businessType.is_active
     });
     setIsDialogOpen(true);
@@ -190,6 +207,17 @@ const CountryBusinessTypesManagement = () => {
     });
   };
 
+  if (!hasPermission) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          Country Business Types Management
+        </Typography>
+        <Alert severity="warning">You don't have permission to access this page.</Alert>
+      </Container>
+    );
+  }
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -203,20 +231,28 @@ const CountryBusinessTypesManagement = () => {
         </Box>
         
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <FormControl sx={{ minWidth: 200 }}>
-            <InputLabel>Country</InputLabel>
-            <Select
-              value={selectedCountry}
-              label="Country"
-              onChange={(e) => setSelectedCountry(e.target.value)}
-            >
-              {countries.map((country) => (
-                <MenuItem key={country.code} value={country.code}>
-                  {country.name} ({country.code})
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          {isSuperAdmin ? (
+            <FormControl sx={{ minWidth: 220 }}>
+              <InputLabel>Country</InputLabel>
+              <Select
+                value={selectedCountry}
+                label="Country"
+                onChange={(e) => setSelectedCountry(e.target.value)}
+              >
+                {countries.map((country) => (
+                  <MenuItem key={country.code} value={country.code}>
+                    {country.name} ({country.code})
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          ) : (
+            <Chip
+              label={`Country: ${userCountry || selectedCountry}`}
+              color="default"
+              variant="outlined"
+            />
+          )}
 
           <Button
             variant="contained"
@@ -231,7 +267,7 @@ const CountryBusinessTypesManagement = () => {
       <Card>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            Business Types for {countries.find(c => c.code === selectedCountry)?.name || selectedCountry}
+            Business Types for {isSuperAdmin ? (countries.find(c => c.code === selectedCountry)?.name || selectedCountry) : (userCountry || selectedCountry)}
           </Typography>
           
           {loading ? (
