@@ -359,152 +359,158 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          // Google Maps View
-          Positioned.fill(
-            child: GoogleMap(
-              initialCameraPosition: _initialPosition,
-              onMapCreated: (GoogleMapController controller) {
-                _mapController = controller;
-              },
-              markers: _markers,
-              polylines: _polylines,
-              onTap: _onMapTapped,
-              myLocationEnabled: true,
-              myLocationButtonEnabled: false,
-              zoomControlsEnabled: false,
-              mapToolbarEnabled: false,
-            ),
-          ),
-
-          // My Location Button (like in Uber)
-          Positioned(
-            right: 16,
-            top: 120,
-            child: FloatingActionButton(
-              mini: true,
-              backgroundColor: Colors.white,
-              onPressed: _goToCurrentLocation,
-              child: const Icon(
-                Icons.my_location,
-                color: Colors.black,
+    return WillPopScope(
+      onWillPop: () async {
+        // Ensure proper back navigation
+        return true;
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: Stack(
+          children: [
+            // Google Maps View
+            Positioned.fill(
+              child: GoogleMap(
+                initialCameraPosition: _initialPosition,
+                onMapCreated: (GoogleMapController controller) {
+                  _mapController = controller;
+                },
+                markers: _markers,
+                polylines: _polylines,
+                onTap: _onMapTapped,
+                myLocationEnabled: true,
+                myLocationButtonEnabled: false,
+                zoomControlsEnabled: false,
+                mapToolbarEnabled: false,
               ),
             ),
-          ),
 
-          // Top App Bar
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top + 8,
-                left: 16,
-                right: 16,
-                bottom: 8,
-              ),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 4,
-                    offset: Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  const Expanded(
-                    child: Text(
-                      'Book a Ride',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.my_location),
-                    onPressed: _goToCurrentLocation,
-                  ),
-                ],
+            // My Location Button (like in Uber)
+            Positioned(
+              right: 16,
+              top: 120,
+              child: FloatingActionButton(
+                mini: true,
+                backgroundColor: Colors.white,
+                onPressed: _goToCurrentLocation,
+                child: const Icon(
+                  Icons.my_location,
+                  color: Colors.black,
+                ),
               ),
             ),
-          ),
 
-          // Bottom Sheet with ride details
-          DraggableScrollableSheet(
-            initialChildSize: 0.4,
-            minChildSize: 0.3,
-            maxChildSize: 0.9,
-            builder: (context, scrollController) {
-              return Container(
+            // Top App Bar
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: EdgeInsets.only(
+                  top: MediaQuery.of(context).padding.top + 8,
+                  left: 16,
+                  right: 16,
+                  bottom: 8,
+                ),
                 decoration: const BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(20),
-                  ),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black12,
-                      blurRadius: 10,
-                      offset: Offset(0, -2),
+                      blurRadius: 4,
+                      offset: Offset(0, 2),
                     ),
                   ],
                 ),
-                child: ListView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.all(20),
+                child: Row(
                   children: [
-                    // Drag handle
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(2),
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    const Expanded(
+                      child: Text(
+                        'Book a Ride',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
-                    const SizedBox(height: 20),
-
-                    // Location inputs
-                    _buildLocationInputs(),
-                    const SizedBox(height: 16),
-
-                    // Distance information card
-                    if (_distance != null) _buildDistanceCard(),
-                    if (_distance != null) const SizedBox(height: 16),
-
-                    // Vehicle selection
-                    _buildVehicleSelection(),
-                    const SizedBox(height: 24),
-
-                    // Passengers and scheduling
-                    _buildRideOptions(),
-                    const SizedBox(height: 24),
-
-                    // Request ride button
-                    _buildRequestButton(),
+                    IconButton(
+                      icon: const Icon(Icons.my_location),
+                      onPressed: _goToCurrentLocation,
+                    ),
                   ],
                 ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
+              ),
+            ),
+
+            // Bottom Sheet with ride details
+            DraggableScrollableSheet(
+              initialChildSize: 0.4,
+              minChildSize: 0.3,
+              maxChildSize: 0.9,
+              builder: (context, scrollController) {
+                return Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(20),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 10,
+                        offset: Offset(0, -2),
+                      ),
+                    ],
+                  ),
+                  child: ListView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.all(20),
+                    children: [
+                      // Drag handle
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Location inputs
+                      _buildLocationInputs(),
+                      const SizedBox(height: 16),
+
+                      // Distance information card
+                      if (_distance != null) _buildDistanceCard(),
+                      if (_distance != null) const SizedBox(height: 16),
+
+                      // Vehicle selection
+                      _buildVehicleSelection(),
+                      const SizedBox(height: 24),
+
+                      // Passengers and scheduling
+                      _buildRideOptions(),
+                      const SizedBox(height: 24),
+
+                      // Request ride button
+                      _buildRequestButton(),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ), // Scaffold closing
+    ); // WillPopScope closing
   }
 
   // Removed unused _buildSectionTitle helper (design simplified)

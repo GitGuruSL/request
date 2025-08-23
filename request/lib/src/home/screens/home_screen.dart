@@ -3,7 +3,6 @@ import '../../services/rest_auth_service.dart';
 import '../../screens/unified_request_response/unified_request_create_screen.dart';
 import '../../models/enhanced_user_model.dart' show RequestType;
 import '../../screens/requests/ride/create_ride_request_screen.dart';
-import '../../screens/requests/create_price_request_screen.dart';
 import '../../services/rest_support_services.dart'
     show CountryService, ModuleService, CountryModules; // Module gating
 import '../../services/pricing_service.dart';
@@ -195,7 +194,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _handleTap(_RequestType it) {
     if (!_moduleEnabled(it.type)) {
-      Navigator.of(context).pop();
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) => ComingSoonWidget(
@@ -212,7 +210,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _selectRequestType(String type) {
-    Navigator.of(context).pop();
     switch (type) {
       case 'item':
         _openUnified(RequestType.item);
@@ -233,7 +230,7 @@ class _HomeScreenState extends State<HomeScreen> {
         break;
       case 'price':
         Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const CreatePriceRequestScreen()),
+          MaterialPageRoute(builder: (_) => const PriceComparisonScreen()),
         );
         break;
     }
@@ -531,7 +528,7 @@ class _QuickActionsGrid extends StatelessWidget {
                 Icon(
                   it.icon,
                   color: disabled ? Colors.grey : it.color,
-                  size: 18,
+                  size: 28,
                 ),
                 const SizedBox(height: 8),
                 Text(
