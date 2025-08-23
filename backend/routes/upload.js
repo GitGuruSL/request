@@ -45,6 +45,36 @@ const upload = multer({
   }
 });
 
+// Upload multiple product images (expects field name 'files')
+router.post('/products', (req, res, next) => {
+  // Create a multer instance to accept multiple files under uploads/images
+  const multer = require('multer');
+  const path = require('path');
+  const fs = require('fs');
+  const storage = multer.diskStorage({
+    destination: (req2, file, cb) => {
+      const uploadDir = path.join(__dirname, '../uploads/images');
+      if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+      cb(null, uploadDir);
+    },
+    filename: (req2, file, cb) => {
+      const timestamp = Date.now();
+      const ext = path.extname(file.originalname);
+      cb(null, `product_${timestamp}_${Math.random().toString(36).slice(2)}${ext}`);
+    }
+  });
+
+  const uploader = multer({ storage });
+  uploader.array('files')(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    const files = req.files || [];
+    if (!files.length) return res.status(400).json({ error: 'No image files provided' });
+    const base = `${req.protocol}://${req.get('host')}/uploads/images/`;
+    const data = files.map((f) => ({ url: base + f.filename, filename: f.filename, size: f.size }));
+    return res.json({ success: true, files: data });
+  });
+});
+
 // Upload single image (generic images)
 router.post('/', upload.single('image'), (req, res) => {
   try {
