@@ -4,6 +4,7 @@ import 'dart:io';
 import '../../services/pricing_service.dart';
 import '../../services/enhanced_user_service.dart';
 import '../../services/file_upload_service.dart';
+import '../../services/api_client.dart';
 import '../../theme/app_theme.dart';
 import '../../services/user_registration_service.dart';
 
@@ -92,33 +93,74 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
 
   Future<void> _loadCountryVariables() async {
     try {
-      // For now, create a sample structure until backend is ready
-      setState(() {
-        _countryVariables = [
-          {
-            'id': 1,
-            'name': 'Color',
-            'type': 'select',
-            'values': ['Red', 'Blue', 'Green', 'Black', 'White', 'Yellow']
-          },
-          {
-            'id': 2,
-            'name': 'Size',
-            'type': 'select',
-            'values': ['XS', 'S', 'M', 'L', 'XL', 'XXL']
-          },
-          {
-            'id': 3,
-            'name': 'Material',
-            'type': 'select',
-            'values': ['Cotton', 'Polyester', 'Silk', 'Wool', 'Leather']
-          },
-          {'id': 4, 'name': 'Brand', 'type': 'text', 'values': []}
-        ];
-      });
+      // Get country variables from the backend
+      final response = await ApiClient.instance.get<Map<String, dynamic>>(
+        '/api/country-variable-types', // API endpoint for country variables
+        queryParameters: {
+          'country': 'LK', // Pass country code as query parameter
+        },
+      );
+
+      if (response.isSuccess && response.data != null) {
+        final responseData = response.data!;
+        final variablesArray = responseData['data'] as List<dynamic>?;
+
+        if (variablesArray != null) {
+          setState(() {
+            _countryVariables = variablesArray.map((variable) {
+              return {
+                'id': variable['id'],
+                'name': variable['name'],
+                'type': variable['type'],
+                'values': List<String>.from(variable['possibleValues'] ?? []),
+                'description': variable['description'],
+                'country_code': variable['country_code'],
+                'is_active': variable['is_active'],
+                'required': variable['required'] ?? false,
+              };
+            }).toList();
+          });
+
+          print('DEBUG: Loaded ${_countryVariables.length} country variables');
+          print(
+              'DEBUG: Variables: ${_countryVariables.map((v) => v['name']).join(', ')}');
+        }
+      } else {
+        print('Failed to load country variables: ${response.error}');
+        // Fallback to sample data if API fails
+        _loadFallbackVariables();
+      }
     } catch (e) {
       print('Error loading country variables: $e');
+      // Fallback to sample data if API fails
+      _loadFallbackVariables();
     }
+  }
+
+  void _loadFallbackVariables() {
+    setState(() {
+      _countryVariables = [
+        {
+          'id': '1',
+          'name': 'Color',
+          'type': 'select',
+          'values': ['Red', 'Blue', 'Green', 'Black', 'White', 'Yellow']
+        },
+        {
+          'id': '2',
+          'name': 'Size',
+          'type': 'select',
+          'values': ['XS', 'S', 'M', 'L', 'XL', 'XXL']
+        },
+        {
+          'id': '3',
+          'name': 'Material',
+          'type': 'select',
+          'values': ['Cotton', 'Polyester', 'Silk', 'Wool', 'Leather']
+        },
+        {'id': '4', 'name': 'Brand', 'type': 'text', 'values': []}
+      ];
+    });
   }
 
   Future<void> _searchProducts() async {
