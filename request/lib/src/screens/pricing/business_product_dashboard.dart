@@ -854,6 +854,8 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                                 backgroundColor: Colors.grey[200],
                                 selectedColor: Colors.blue,
                                 checkmarkColor: Colors.white,
+                                side: BorderSide.none, // Remove border
+                                elevation: 0, // Remove shadow for flatter look
                               );
                             }).toList(),
                           ),
