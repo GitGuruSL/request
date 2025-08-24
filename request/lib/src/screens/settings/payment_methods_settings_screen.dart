@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../services/auth_service.dart';
 import '../../services/payment_methods_service.dart';
 import '../../services/rest_support_services.dart';
+import '../../theme/glass_theme.dart';
 
 class PaymentMethodsSettingsScreen extends StatefulWidget {
   const PaymentMethodsSettingsScreen({super.key});
@@ -217,118 +219,160 @@ class _PaymentMethodsSettingsScreenState
     final selectedMethods =
         _allMethods.where((m) => _selected.contains(m.id)).toList();
     return Scaffold(
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text('Payment Methods'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: GlassTheme.colors.textPrimary,
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add),
+            icon: Icon(Icons.add, color: GlassTheme.colors.textSecondary),
             tooltip: 'Add',
             onPressed: _loading ? null : _openAddSheet,
           ),
         ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Add your payment methods',
-                      style: TextStyle(fontSize: 14)),
-                  const SizedBox(height: 12),
-                  if (selectedMethods.isEmpty) ...[
-                    Expanded(
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.credit_card_off,
-                                size: 56, color: Colors.grey[400]),
-                            const SizedBox(height: 8),
-                            Text('No payment methods added',
-                                style: TextStyle(color: Colors.grey[600])),
-                            const SizedBox(height: 12),
-                            ElevatedButton.icon(
-                              onPressed: _openAddSheet,
-                              icon: const Icon(Icons.add),
-                              label: const Text('Add'),
-                            ),
-                          ],
+      body: GlassTheme.backgroundContainer(
+        child: SafeArea(
+          top: true,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Add your payment methods',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: GlassTheme.colors.textSecondary,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ),
-                  ] else ...[
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: selectedMethods.map((m) {
-                        final hasImage = m.imageUrl.isNotEmpty;
-                        return Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            SizedBox(
-                              width: 40,
-                              height: 40,
-                              child: ClipOval(
-                                child: hasImage
-                                    ? Image.network(
-                                        m.imageUrl,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => Container(
-                                          color: Colors.grey[200],
-                                          child: const Icon(Icons.payment,
-                                              size: 18, color: Colors.grey),
-                                        ),
-                                      )
-                                    : Container(
-                                        color: Colors.grey[200],
-                                        child: const Icon(Icons.payment,
-                                            size: 18, color: Colors.grey),
-                                      ),
-                              ),
-                            ),
-                            Positioned(
-                              right: -6,
-                              top: -6,
-                              child: InkWell(
-                                onTap: () => _remove(m.id),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.65),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  padding: const EdgeInsets.all(2),
-                                  child: const Icon(Icons.close,
-                                      size: 14, color: Colors.white),
+                      const SizedBox(height: 12),
+                      if (selectedMethods.isEmpty) ...[
+                        Expanded(
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.credit_card_off,
+                                    size: 56,
+                                    color: GlassTheme.colors.textTertiary),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'No payment methods added',
+                                  style: TextStyle(
+                                      color: GlassTheme.colors.textSecondary),
                                 ),
-                              ),
-                            )
-                          ],
-                        );
-                      }).toList(),
-                    ),
-                    const Spacer(),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: ElevatedButton(
-                        onPressed: _dirty && !_saving ? _save : null,
-                        style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 10)),
-                        child: _saving
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2))
-                            : const Text('Save'),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
+                                const SizedBox(height: 12),
+                                ElevatedButton.icon(
+                                  onPressed: _openAddSheet,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor:
+                                        GlassTheme.colors.primaryBlue,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  icon: const Icon(Icons.add),
+                                  label: const Text('Add'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ] else ...[
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: selectedMethods.map((m) {
+                            final hasImage = m.imageUrl.isNotEmpty;
+                            return Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                SizedBox(
+                                  width: 40,
+                                  height: 40,
+                                  child: ClipOval(
+                                    child: hasImage
+                                        ? Image.network(
+                                            m.imageUrl,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) =>
+                                                Container(
+                                              color: Colors.grey[200],
+                                              child: const Icon(Icons.payment,
+                                                  size: 18, color: Colors.grey),
+                                            ),
+                                          )
+                                        : Container(
+                                            color: Colors.grey[200],
+                                            child: const Icon(Icons.payment,
+                                                size: 18, color: Colors.grey),
+                                          ),
+                                  ),
+                                ),
+                                Positioned(
+                                  right: -6,
+                                  top: -6,
+                                  child: InkWell(
+                                    onTap: () => _remove(m.id),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: GlassTheme.colors.primaryBlue,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      padding: const EdgeInsets.all(2),
+                                      child: const Icon(Icons.close,
+                                          size: 14, color: Colors.white),
+                                    ),
+                                  ),
+                                )
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                        const Spacer(),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: ElevatedButton(
+                            onPressed: _dirty && !_saving ? _save : null,
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 10),
+                              backgroundColor: GlassTheme.colors.primaryBlue,
+                              foregroundColor: Colors.white,
+                              disabledBackgroundColor:
+                                  Colors.grey.withOpacity(0.3),
+                              disabledForegroundColor:
+                                  Colors.white.withOpacity(0.7),
+                            ),
+                            child: _saving
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                                Colors.white)),
+                                  )
+                                : const Text('Save'),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+          ),
+        ),
+      ),
     );
   }
 }
