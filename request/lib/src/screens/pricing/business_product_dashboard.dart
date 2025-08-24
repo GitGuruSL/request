@@ -265,7 +265,7 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                   onPressed: () =>
                       Navigator.pushNamed(context, '/business-registration'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
+                    backgroundColor: GlassTheme.colors.primaryBlue,
                     foregroundColor: Colors.white,
                   ),
                   child: const Text('Register Business'),
@@ -292,8 +292,8 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
               labelColor: GlassTheme.colors.textPrimary,
               unselectedLabelColor: GlassTheme.colors.textSecondary,
               tabs: const [
-                Tab(text: 'Add Prices', icon: Icon(Icons.add_business)),
-                Tab(text: 'My Prices', icon: Icon(Icons.price_check)),
+                Tab(text: 'Add Prices'),
+                Tab(text: 'My Prices'),
               ],
             ),
           ),

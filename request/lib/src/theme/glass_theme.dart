@@ -46,7 +46,7 @@ class GlassTheme {
     shadowLight: Color(0xCCFFFFFF), // 80% white (for top shadows)
 
     // Accent colors
-    primaryBlue: Color(0xFF6366F1), // Indigo
+    primaryBlue: Color(0xFF4B5563), // Charcoal gray (replacing purple)
     primaryAmber: Color(0xFFF59E0B), // Amber
     primaryEmerald: Color(0xFF10B981), // Emerald
     primaryPurple: Color(0xFF8B5CF6), // Purple
@@ -96,7 +96,7 @@ class GlassTheme {
     shadowLight: Color(0x0DFFFFFF), // 5% white (very subtle top shadows)
 
     // Accent colors (same as light but might be adjusted)
-    primaryBlue: Color(0xFF6366F1),
+    primaryBlue: Color(0xFF6B7280), // Charcoal gray for dark mode
     primaryAmber: Color(0xFFF59E0B),
     primaryEmerald: Color(0xFF10B981),
     primaryPurple: Color(0xFF8B5CF6),
