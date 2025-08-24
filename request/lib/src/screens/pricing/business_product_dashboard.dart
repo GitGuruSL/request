@@ -608,29 +608,19 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
             ),
             const SizedBox(height: 12),
             Row(
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _editPrice(listing),
-                    icon: const Icon(Icons.edit, size: 16),
-                    label: const Text('Edit'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: GlassTheme.colors.primaryBlue,
-                      side: BorderSide(color: GlassTheme.colors.primaryBlue),
-                    ),
-                  ),
+                IconButton(
+                  onPressed: () => _editPrice(listing),
+                  icon: const Icon(Icons.edit, size: 20),
+                  color: GlassTheme.colors.primaryBlue,
+                  tooltip: 'Edit',
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _deletePrice(listing),
-                    icon: const Icon(Icons.delete, size: 16),
-                    label: const Text('Delete'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      side: const BorderSide(color: Colors.red),
-                    ),
-                  ),
+                IconButton(
+                  onPressed: () => _deletePrice(listing),
+                  icon: const Icon(Icons.delete, size: 20),
+                  color: Colors.red,
+                  tooltip: 'Delete',
                 ),
               ],
             ),
