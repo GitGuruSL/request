@@ -248,110 +248,43 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final user = RestAuthService.instance.currentUser;
     return Scaffold(
-      backgroundColor:
-          const Color(0xFFE2E8F0), // Light gray background for glass effect
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white.withOpacity(0.3),
-                Colors.white.withOpacity(0.1),
-              ],
-            ),
-            border: Border(
-              bottom: BorderSide(
-                color: Colors.white.withOpacity(0.2),
-                width: 1,
-              ),
-            ),
-          ),
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Good Day!',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF64748B),
-              ),
-            ),
-            Text(
-              user?.displayName ?? user?.email ?? 'User',
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF0F172A),
-              ),
-            ),
-          ],
-        ),
+        scrolledUnderElevation: 0,
+        title: const SizedBox.shrink(),
         actions: [
           Stack(
             children: [
-              Container(
-                margin: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Colors.white.withOpacity(0.3),
-                      Colors.white.withOpacity(0.15),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.4),
-                    width: 1.5,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: IconButton(
-                  tooltip: 'Notifications',
-                  icon: const Icon(Icons.notifications_none,
-                      color: Color(0xFF1E293B), size: 24),
-                  onPressed: () async {
-                    try {
-                      await Navigator.pushNamed(context, '/notifications');
-                    } catch (_) {
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const NotificationScreen(),
-                        ),
-                      );
-                    }
-                    await _loadUnreadCounts();
-                  },
-                ),
+              IconButton(
+                tooltip: 'Notifications',
+                icon: const Icon(Icons.notifications_none,
+                    color: Color(0xFF1E293B), size: 24),
+                onPressed: () async {
+                  try {
+                    await Navigator.pushNamed(context, '/notifications');
+                  } catch (_) {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationScreen(),
+                      ),
+                    );
+                  }
+                  await _loadUnreadCounts();
+                },
               ),
               if (_unreadNotifications > 0)
                 Positioned(
-                  right: 14,
-                  top: 14,
+                  right: 8,
+                  top: 8,
                   child: Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: const Color(0xFFEF4444),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: Colors.white,
-                        width: 2,
-                      ),
                     ),
                     child: Text(
                       '$_unreadNotifications',
@@ -367,55 +300,30 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           Padding(
             padding: const EdgeInsets.only(right: 16),
-            child: Container(
-              margin: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.white.withOpacity(0.3),
-                    Colors.white.withOpacity(0.15),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.4),
-                  width: 1.5,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+            child: IconButton(
+              splashRadius: 22,
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const UserProfileScreen(),
                   ),
-                ],
-              ),
-              child: IconButton(
-                splashRadius: 22,
-                onPressed: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const UserProfileScreen(),
-                    ),
-                  );
-                  await _loadUnreadCounts();
-                },
-                icon: CircleAvatar(
-                  radius: 16,
-                  backgroundColor: const Color(0xFF6366F1),
-                  child: Text(
-                    (user?.displayName?.isNotEmpty == true
-                            ? user!.displayName![0]
-                            : user?.email.isNotEmpty == true
-                                ? user!.email[0]
-                                : 'U')
-                        .toUpperCase(),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                );
+                await _loadUnreadCounts();
+              },
+              icon: CircleAvatar(
+                radius: 16,
+                backgroundColor: const Color(0xFF6366F1),
+                child: Text(
+                  (user?.displayName?.isNotEmpty == true
+                          ? user!.displayName![0]
+                          : user?.email.isNotEmpty == true
+                              ? user!.email[0]
+                              : 'U')
+                      .toUpperCase(),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
                 ),
               ),
@@ -486,49 +394,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 const SizedBox(height: 20),
 
-                // Quick actions section header
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.white.withOpacity(0.15),
-                        Colors.white.withOpacity(0.05),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.2),
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.flash_on_rounded,
-                          color: Color(0xFF10B981),
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Text('Quick Actions',
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: const Color(0xFF0F172A),
-                                  )),
-                    ],
-                  ),
-                ),
+                // Quick actions
+                Text('Quick Actions',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF0F172A),
+                        )),
                 const SizedBox(height: 16),
                 _QuickActionsGrid(
                   items: _requestTypes,
@@ -537,93 +408,33 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
 
                 const SizedBox(height: 24),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.white.withOpacity(0.15),
-                        Colors.white.withOpacity(0.05),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.2),
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF59E0B).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.trending_up_rounded,
-                          color: Color(0xFFF59E0B),
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text('Popular Products',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
+                Row(
+                  children: [
+                    Text('Popular Products',
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w700,
                                   color: const Color(0xFF0F172A),
                                 )),
-                      ),
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              const Color(0xFF6366F1).withOpacity(0.15),
-                              const Color(0xFF6366F1).withOpacity(0.1),
-                            ],
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const PriceComparisonScreen(),
                           ),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: const Color(0xFF6366F1).withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: TextButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const PriceComparisonScreen(),
-                              ),
-                            );
-                          },
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          child: const Text(
-                            'See All',
-                            style: TextStyle(
-                              color: Color(0xFF6366F1),
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
-                            ),
-                          ),
+                        );
+                      },
+                      child: const Text(
+                        'See All',
+                        style: TextStyle(
+                          color: Color(0xFF6366F1),
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
                 SizedBox(
                   height: 210,
