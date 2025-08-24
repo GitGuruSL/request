@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import '../services/enhanced_user_service.dart';
 import '../services/api_client.dart';
@@ -6,6 +7,7 @@ import '../services/feature_gate_service.dart';
 import '../services/module_management_service.dart';
 import '../models/enhanced_user_model.dart';
 import '../theme/app_theme.dart';
+import '../theme/glass_theme.dart';
 
 class RoleManagementScreen extends StatefulWidget {
   const RoleManagementScreen({Key? key}) : super(key: key);
@@ -192,72 +194,88 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text('Role Management'),
-        backgroundColor: AppTheme.backgroundColor,
+        backgroundColor: Colors.transparent,
         foregroundColor: AppTheme.textPrimary,
         elevation: 0,
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+        ),
         leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.pop(context)),
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: () {
-                setState(() {
-                  _isLoading = true;
-                });
-                _loadUserData();
-              })
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              setState(() => _isLoading = true);
+              _loadUserData();
+            },
+          ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadUserData,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Your Roles',
-                        style: TextStyle(
+      body: GlassTheme.backgroundContainer(
+        child: SafeArea(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : RefreshIndicator(
+                  onRefresh: _loadUserData,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Your Roles',
+                          style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: AppTheme.textPrimary)),
-                    const SizedBox(height: 8),
-                    Text('Manage your roles and verification status',
-                        style: TextStyle(
-                            fontSize: 16, color: AppTheme.textSecondary)),
-                    const SizedBox(height: 24),
-                    // Driver role card with module gating
-                    FeatureGateService.instance.gateWidget(
-                      requiredModule: BusinessModule.rideSharing,
-                      enabledWidget: _buildRoleCard(UserRole.driver),
-                      disabledWidget: _buildDisabledRoleCard(
-                        UserRole.driver,
-                        'Driver registration is not available in your country yet.',
-                      ),
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Manage your roles and verification status',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        // Driver role card with module gating
+                        FeatureGateService.instance.gateWidget(
+                          requiredModule: BusinessModule.rideSharing,
+                          enabledWidget: _buildRoleCard(UserRole.driver),
+                          disabledWidget: _buildDisabledRoleCard(
+                            UserRole.driver,
+                            'Driver registration is not available in your country yet.',
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildRoleCard(UserRole.business),
+                        const SizedBox(height: 32),
+                        _buildRoleBenefitsSection(),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    _buildRoleCard(UserRole.business),
-                    const SizedBox(height: 32),
-                    _buildRoleBenefitsSection(),
-                  ],
+                  ),
                 ),
-              ),
-            ),
+        ),
+      ),
     );
   }
 
   Widget _buildRoleCard(UserRole role) {
-    final hasRole = _currentUser?.hasRole(role) == true;
-    final roleData = _currentUser?.getRoleInfo(role);
     final submittedStatus = _verificationStatuses[role];
     final hasVerificationRequest = submittedStatus != null;
-    final verificationStatus = submittedStatus ?? roleData?.verificationStatus;
+    final hasRole = _currentUser?.hasRole(role) ?? false;
+    final verificationStatus = submittedStatus;
     final roleTitle = _getRoleDisplayName(role);
     final statusText = hasVerificationRequest || hasRole
         ? _getVerificationStatusText(verificationStatus)
@@ -267,60 +285,88 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
         : Colors.grey;
     final roleIcon = _getRoleIcon(role);
     final subtitle = _getRoleSubtitle(role, hasVerificationRequest || hasRole);
+
     return Container(
       width: double.infinity,
+      decoration: GlassTheme.glassContainer,
       padding: const EdgeInsets.all(20),
-      color: AppTheme.backgroundColor,
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Icon(roleIcon, size: 32, color: statusColor),
-          const SizedBox(width: 16),
-          Expanded(
-              child: Column(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(roleIcon, size: 32, color: statusColor),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                Text(roleTitle,
-                    style: const TextStyle(
+                    Text(
+                      roleTitle,
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.textPrimary)),
-                const SizedBox(height: 4),
-                Text(subtitle,
-                    style:
-                        TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
-              ])),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            color: statusColor.withOpacity(0.1),
-            child: Text(statusText,
-                style: TextStyle(
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: statusColor.withOpacity(0.25)),
+                ),
+                child: Text(
+                  statusText,
+                  style: TextStyle(
                     color: statusColor,
                     fontSize: 12,
-                    fontWeight: FontWeight.bold)),
-          )
-        ]),
-        if (hasVerificationRequest || hasRole) ...[
-          const SizedBox(height: 20),
-          _buildRoleDetails(role, verificationStatus),
-          const SizedBox(height: 20),
-          _buildRoleActions(role, hasVerificationRequest, verificationStatus),
-        ] else ...[
-          const SizedBox(height: 16),
-          Text(_getRoleDescription(role),
-              style: TextStyle(
-                  fontSize: 14, color: AppTheme.textSecondary, height: 1.4)),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () => _registerRole(role),
-              icon: const Icon(Icons.add, size: 18),
-              label: Text('Register as $roleTitle'),
-              style: AppTheme.primaryButtonStyle,
-            ),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ]
-      ]),
+          if (hasVerificationRequest || hasRole) ...[
+            const SizedBox(height: 20),
+            _buildRoleDetails(role, verificationStatus),
+            const SizedBox(height: 20),
+            _buildRoleActions(role, hasVerificationRequest, verificationStatus),
+          ] else ...[
+            const SizedBox(height: 16),
+            Text(
+              _getRoleDescription(role),
+              style: TextStyle(
+                fontSize: 14,
+                color: AppTheme.textSecondary,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _registerRole(role),
+                icon: const Icon(Icons.add, size: 18),
+                label: Text('Register as $roleTitle'),
+                style: AppTheme.primaryButtonStyle,
+              ),
+            ),
+          ]
+        ],
+      ),
     );
   }
 
@@ -331,7 +377,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      color: AppTheme.backgroundColor,
+      decoration: GlassTheme.glassContainer,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -501,7 +547,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
   Widget _buildRoleBenefitsSection() {
     return Container(
       padding: const EdgeInsets.all(20),
-      color: AppTheme.primaryColor.withOpacity(0.05),
+      decoration: GlassTheme.glassContainer,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Icon(Icons.star, color: AppTheme.primaryColor, size: 24),
