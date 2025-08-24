@@ -9,7 +9,6 @@ import 'content_page_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 // import 'package:google_fonts/google_fonts.dart';
 import '../theme/glass_theme.dart';
-import '../widgets/glass_page.dart';
 
 class AboutUsSimpleScreen extends StatefulWidget {
   const AboutUsSimpleScreen({super.key});
@@ -181,188 +180,207 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
       return null;
     }
 
-    return GlassPage(
-      title: 'About Us',
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                // Header logo + title (optional via metadata.logoUrl)
-                if ((_resolvedLogoUrl ?? _getMeta<String>('logoUrl'))
-                        ?.isNotEmpty ==
-                    true)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Center(
-                          child: Image.network(
-                            _resolvedLogoUrl ?? _getMeta<String>('logoUrl')!,
-                            height: 72,
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stack) =>
-                                const SizedBox.shrink(),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text('Request', style: GlassTheme.titleSmall),
-                      ],
-                    ),
-                  ),
-
-                // About text (metadata or page content fallback)
-                if (aboutTextFallback()?.isNotEmpty == true)
-                  _sectionCard(
-                    child: Text(
-                      aboutTextFallback()!,
-                      style: GlassTheme.bodyLarge,
-                    ),
-                  ),
-
-                // Address
-                if (_getMeta<String>('hqTitle') != null ||
-                    _getMeta<String>('hqAddress') != null)
-                  _sectionCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (_getMeta<String>('hqTitle')?.isNotEmpty == true)
-                          Text(_getMeta<String>('hqTitle')!,
-                              style: GlassTheme.titleSmall),
-                        if (_getMeta<String>('hqAddress')?.isNotEmpty == true)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 6),
-                            child: Text(_getMeta<String>('hqAddress')!,
-                                style: GlassTheme.bodyLarge),
-                          ),
-                      ],
-                    ),
-                  ),
-
-                // Support numbers row
-                if (_getMeta<String>('supportPassenger')?.isNotEmpty == true ||
-                    _getMeta<String>('hotline')?.isNotEmpty == true)
-                  _sectionCard(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _contactColumn('Support - Passenger',
-                            _getMeta<String>('supportPassenger')),
-                        _contactColumn('Hotline', _getMeta<String>('hotline')),
-                      ],
-                    ),
-                  ),
-
-                // Website link
-                if (_getMeta<String>('websiteUrl')?.isNotEmpty == true)
-                  _sectionCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Website', style: GlassTheme.titleSmall),
-                        const SizedBox(height: 6),
-                        InkWell(
-                          onTap: () =>
-                              _launchUrl(_getMeta<String>('websiteUrl')!),
-                          child: Text(
-                            _getMeta<String>('websiteUrl')!,
-                            style: GlassTheme.accent,
-                          ),
-                        )
-                      ],
-                    ),
-                  ),
-
-                // Feedback blurb
-                if (_getMeta<String>('feedbackText')?.isNotEmpty == true)
-                  _sectionCard(
-                    child: Text(_getMeta<String>('feedbackText')!,
-                        style: GlassTheme.bodyLarge),
-                  ),
-
-                // Legal and Privacy links
-                _sectionCard(
-                  child: Column(
-                    children: [
-                      _tile(
-                        icon: Icons.gavel_outlined,
-                        title: 'Legal',
-                        onTap: () {
-                          _openPreferredPage(
-                            preferredSlugs: const ['legal', 'terms-conditions'],
-                            keywordsFallback: const [
-                              'terms',
-                              'legal',
-                              'conditions'
-                            ],
-                            defaultSlug: 'terms-conditions',
-                            defaultTitle: 'Terms & Conditions',
-                          );
-                        },
-                      ),
-                      _divider(),
-                      _tile(
-                        icon: Icons.privacy_tip_outlined,
-                        title: 'Privacy Policy',
-                        onTap: () {
-                          _openPreferredPage(
-                            preferredSlugs: const [
-                              'privacy-policy-central',
-                              'privacy-policy'
-                            ],
-                            keywordsFallback: const ['privacy', 'policy'],
-                            defaultSlug: 'privacy-policy',
-                            defaultTitle: 'Privacy Policy',
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Socials row (optional)
-                if (_getMeta<String>('facebookUrl')?.isNotEmpty == true ||
-                    _getMeta<String>('xUrl')?.isNotEmpty == true)
-                  _sectionCard(
-                    child: Row(
-                      children: [
-                        Text('Follow Us', style: GlassTheme.titleSmall),
-                        const SizedBox(width: 12),
-                        if (_getMeta<String>('facebookUrl')?.isNotEmpty == true)
-                          IconButton(
-                            icon: Icon(Icons.facebook,
-                                color: GlassTheme.colors.infoColor),
-                            onPressed: () =>
-                                _launchUrl(_getMeta<String>('facebookUrl')!),
-                          ),
-                        if (_getMeta<String>('xUrl')?.isNotEmpty == true)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 8.0),
-                            child: IconButton(
-                              icon: Icon(Icons.public,
-                                  color: GlassTheme.colors.textPrimary),
-                              onPressed: () =>
-                                  _launchUrl(_getMeta<String>('xUrl')!),
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        title: const Text('About Us'),
+        centerTitle: false,
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        foregroundColor: GlassTheme.colors.textPrimary,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: GlassTheme.backgroundGradient,
+        ),
+      ),
+      body: GlassTheme.backgroundContainer(
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  // Header logo + title (optional via metadata.logoUrl)
+                  if ((_resolvedLogoUrl ?? _getMeta<String>('logoUrl'))
+                          ?.isNotEmpty ==
+                      true)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Center(
+                            child: Image.network(
+                              _resolvedLogoUrl ?? _getMeta<String>('logoUrl')!,
+                              height: 72,
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stack) =>
+                                  const SizedBox.shrink(),
                             ),
                           ),
+                          const SizedBox(height: 8),
+                          Text('Request', style: GlassTheme.titleSmall),
+                        ],
+                      ),
+                    ),
+
+                  // About text (metadata or page content fallback)
+                  if (aboutTextFallback()?.isNotEmpty == true)
+                    _sectionCard(
+                      child: Text(
+                        aboutTextFallback()!,
+                        style: GlassTheme.bodyLarge,
+                      ),
+                    ),
+
+                  // Address
+                  if (_getMeta<String>('hqTitle') != null ||
+                      _getMeta<String>('hqAddress') != null)
+                    _sectionCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (_getMeta<String>('hqTitle')?.isNotEmpty == true)
+                            Text(_getMeta<String>('hqTitle')!,
+                                style: GlassTheme.titleSmall),
+                          if (_getMeta<String>('hqAddress')?.isNotEmpty == true)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(_getMeta<String>('hqAddress')!,
+                                  style: GlassTheme.bodyLarge),
+                            ),
+                        ],
+                      ),
+                    ),
+
+                  // Support numbers row
+                  if (_getMeta<String>('supportPassenger')?.isNotEmpty ==
+                          true ||
+                      _getMeta<String>('hotline')?.isNotEmpty == true)
+                    _sectionCard(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _contactColumn('Support - Passenger',
+                              _getMeta<String>('supportPassenger')),
+                          _contactColumn(
+                              'Hotline', _getMeta<String>('hotline')),
+                        ],
+                      ),
+                    ),
+
+                  // Website link
+                  if (_getMeta<String>('websiteUrl')?.isNotEmpty == true)
+                    _sectionCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Website', style: GlassTheme.titleSmall),
+                          const SizedBox(height: 6),
+                          InkWell(
+                            onTap: () =>
+                                _launchUrl(_getMeta<String>('websiteUrl')!),
+                            child: Text(
+                              _getMeta<String>('websiteUrl')!,
+                              style: GlassTheme.accent,
+                            ),
+                          )
+                        ],
+                      ),
+                    ),
+
+                  // Feedback blurb
+                  if (_getMeta<String>('feedbackText')?.isNotEmpty == true)
+                    _sectionCard(
+                      child: Text(_getMeta<String>('feedbackText')!,
+                          style: GlassTheme.bodyLarge),
+                    ),
+
+                  // Legal and Privacy links
+                  _sectionCard(
+                    child: Column(
+                      children: [
+                        _tile(
+                          icon: Icons.gavel_outlined,
+                          title: 'Legal',
+                          onTap: () {
+                            _openPreferredPage(
+                              preferredSlugs: const [
+                                'legal',
+                                'terms-conditions'
+                              ],
+                              keywordsFallback: const [
+                                'terms',
+                                'legal',
+                                'conditions'
+                              ],
+                              defaultSlug: 'terms-conditions',
+                              defaultTitle: 'Terms & Conditions',
+                            );
+                          },
+                        ),
+                        _divider(),
+                        _tile(
+                          icon: Icons.privacy_tip_outlined,
+                          title: 'Privacy Policy',
+                          onTap: () {
+                            _openPreferredPage(
+                              preferredSlugs: const [
+                                'privacy-policy-central',
+                                'privacy-policy'
+                              ],
+                              keywordsFallback: const ['privacy', 'policy'],
+                              defaultSlug: 'privacy-policy',
+                              defaultTitle: 'Privacy Policy',
+                            );
+                          },
+                        ),
                       ],
                     ),
                   ),
 
-                // App version footer
-                if (_appVersion != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Center(
-                      child: Text('App version $_appVersion',
-                          style: GlassTheme.bodySmall),
+                  // Socials row (optional)
+                  if (_getMeta<String>('facebookUrl')?.isNotEmpty == true ||
+                      _getMeta<String>('xUrl')?.isNotEmpty == true)
+                    _sectionCard(
+                      child: Row(
+                        children: [
+                          Text('Follow Us', style: GlassTheme.titleSmall),
+                          const SizedBox(width: 12),
+                          if (_getMeta<String>('facebookUrl')?.isNotEmpty ==
+                              true)
+                            IconButton(
+                              icon: Icon(Icons.facebook,
+                                  color: GlassTheme.colors.infoColor),
+                              onPressed: () =>
+                                  _launchUrl(_getMeta<String>('facebookUrl')!),
+                            ),
+                          if (_getMeta<String>('xUrl')?.isNotEmpty == true)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 8.0),
+                              child: IconButton(
+                                icon: Icon(Icons.public,
+                                    color: GlassTheme.colors.textPrimary),
+                                onPressed: () =>
+                                    _launchUrl(_getMeta<String>('xUrl')!),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
-              ],
-            ),
+
+                  // App version footer
+                  if (_appVersion != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Center(
+                        child: Text('App version $_appVersion',
+                            style: GlassTheme.bodySmall),
+                      ),
+                    ),
+                ],
+              ),
+      ),
     );
   }
 
