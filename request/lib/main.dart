@@ -8,7 +8,6 @@ import 'src/auth/screens/otp_screen.dart';
 import 'src/auth/screens/password_screen.dart';
 import 'src/auth/screens/profile_completion_screen.dart';
 import 'src/navigation/main_navigation_screen.dart';
-import 'src/home/screens/browse_requests_screen.dart';
 import 'src/screens/pricing/price_comparison_screen.dart';
 import 'src/screens/pricing/business_product_dashboard.dart';
 import 'src/screens/profile/business_profile_edit_screen.dart';
@@ -139,10 +138,6 @@ class MyApp extends StatelessWidget {
           case '/home':
             return MaterialPageRoute(
               builder: (context) => const MainNavigationScreen(),
-            );
-          case '/browse':
-            return MaterialPageRoute(
-              builder: (context) => const BrowseRequestsScreen(),
             );
           case '/price':
             // Redirect to price comparison screen
