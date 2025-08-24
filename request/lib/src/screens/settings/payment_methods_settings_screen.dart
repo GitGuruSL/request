@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../services/auth_service.dart';
 import '../../services/payment_methods_service.dart';
 import '../../services/rest_support_services.dart';
+import '../../services/api_client.dart';
 import '../../theme/glass_theme.dart';
 
 class PaymentMethodsSettingsScreen extends StatefulWidget {
@@ -47,6 +48,11 @@ class _PaymentMethodsSettingsScreenState
     }
   }
 
+  String _absoluteUrl(String url) {
+    if (url.isEmpty || url.startsWith('http')) return url;
+    final base = ApiClient.baseUrlPublic;
+    return url.startsWith('/') ? '$base$url' : '$base/$url';
+  }
   Future<void> _save() async {
     if (_saving) return;
     setState(() => _saving = true);
@@ -136,13 +142,16 @@ class _PaymentMethodsSettingsScreenState
                       itemBuilder: (context, index) {
                         final m = notSelected[index];
                         final isPicked = localSelected.contains(m.id);
-                        return ListTile(
+            final avatarUrl = m.imageUrl.isNotEmpty
+              ? _absoluteUrl(m.imageUrl)
+              : '';
+            return ListTile(
                           leading: CircleAvatar(
                             backgroundColor: Colors.grey[200],
-                            backgroundImage: (m.imageUrl.isNotEmpty)
-                                ? NetworkImage(m.imageUrl)
+              backgroundImage: (avatarUrl.isNotEmpty)
+                ? NetworkImage(avatarUrl)
                                 : null,
-                            child: (m.imageUrl.isEmpty)
+              child: (avatarUrl.isEmpty)
                                 ? const Icon(Icons.payment, color: Colors.grey)
                                 : null,
                           ),
@@ -289,11 +298,12 @@ class _PaymentMethodsSettingsScreenState
                           ),
                         ),
                       ] else ...[
-                        Wrap(
+            Wrap(
                           spacing: 10,
                           runSpacing: 10,
                           children: selectedMethods.map((m) {
                             final hasImage = m.imageUrl.isNotEmpty;
+              final imgUrl = hasImage ? _absoluteUrl(m.imageUrl) : '';
                             return Stack(
                               clipBehavior: Clip.none,
                               children: [
@@ -301,17 +311,17 @@ class _PaymentMethodsSettingsScreenState
                                   width: 40,
                                   height: 40,
                                   child: ClipOval(
-                                    child: hasImage
-                                        ? Image.network(
-                                            m.imageUrl,
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (_, __, ___) =>
-                                                Container(
-                                              color: Colors.grey[200],
-                                              child: const Icon(Icons.payment,
-                                                  size: 18, color: Colors.grey),
-                                            ),
-                                          )
+                  child: hasImage
+                    ? Image.network(
+                      imgUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                        Container(
+                        color: Colors.grey[200],
+                        child: const Icon(Icons.payment,
+                          size: 18, color: Colors.grey),
+                      ),
+                      )
                                         : Container(
                                             color: Colors.grey[200],
                                             child: const Icon(Icons.payment,

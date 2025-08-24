@@ -28,6 +28,9 @@ class ApiClient {
   static ApiClient? _instance;
   static ApiClient get instance => _instance ??= ApiClient._internal();
 
+  // Public accessor for base URL (used to compose absolute asset URLs)
+  static String get baseUrlPublic => _baseUrl;
+
   ApiClient._internal() {
     _dio = Dio(BaseOptions(
       baseUrl: _baseUrl,
