@@ -112,7 +112,8 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
         ),
         backgroundColor: Colors.transparent,
         foregroundColor: AppTheme.textPrimary,
-        title: Text('Price Comparison', style: TextStyle(color: AppTheme.textPrimary)),
+        title: Text('Price Comparison',
+            style: TextStyle(color: AppTheme.textPrimary)),
         elevation: 0,
         actions: [
           if (_selectedProductId != null)
@@ -296,7 +297,8 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: GlassTheme.colors.primaryBlue.withOpacity(0.1),
+                              color: GlassTheme.colors.primaryBlue
+                                  .withOpacity(0.1),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Row(
