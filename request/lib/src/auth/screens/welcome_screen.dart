@@ -90,9 +90,28 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   }
 
   Future<void> _checkExistingCountry() async {
-    // For now, just proceed to country selection
-    // In production, you can check SharedPreferences or API for saved country
-    return;
+    try {
+      // Load any previously saved country
+      await _countryService.loadPersistedCountry();
+
+      // Check if a country was already selected
+      final existingCountryCode = _countryService.countryCode;
+      if (existingCountryCode != null && mounted) {
+        // Country already selected, navigate directly to login
+        Navigator.of(context).pushReplacementNamed(
+          '/login',
+          arguments: {
+            'countryCode': existingCountryCode,
+            'phoneCode': _countryService.phoneCode,
+            'countryName': _countryService.countryName,
+          },
+        );
+        return;
+      }
+    } catch (e) {
+      debugPrint('Error checking existing country: $e');
+    }
+    // No existing country, continue with country selection
   }
 
   void _onCountrySelected(Country country) async {
@@ -105,6 +124,13 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     setState(() {
       _selectedCountry = country;
     });
+
+    try {
+      // Save the selected country to persistence
+      await _countryService.setCountryFromObject(country);
+    } catch (e) {
+      debugPrint('Error saving country: $e');
+    }
 
     // Navigate to login screen
     if (!mounted) return;
