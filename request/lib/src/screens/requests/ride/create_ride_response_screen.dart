@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:math' as math;
 import '../../../models/request_model.dart';
@@ -12,9 +11,6 @@ import '../../../services/enhanced_user_service.dart';
 import '../../../services/country_service.dart';
 import '../../../services/vehicle_service.dart';
 import '../../../utils/address_utils.dart';
-import '../../../widgets/image_upload_widget.dart';
-import '../../../widgets/accurate_location_picker_widget.dart';
-import '../../../utils/currency_helper.dart';
 import '../../../theme/glass_theme.dart';
 import '../../../widgets/glass_page.dart';
 
@@ -162,11 +158,12 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
       if (currentUser == null) return;
 
       // Use provided existing response or check request responses
-      ResponseModel? existingResponse = widget.existingResponse;
+      final ResponseModel? existingResponse = widget.existingResponse;
+      if (existingResponse == null) return;
 
       setState(() {
         _isEditMode = true;
-        _existingResponseId = existingResponse!.id;
+        _existingResponseId = existingResponse.id;
         // Load existing response data
         _priceController.text = existingResponse.price?.toString() ?? '';
         _messageController.text = existingResponse.message;
@@ -174,8 +171,6 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
         if (existingResponse.additionalInfo.isNotEmpty) {
           _vehicleType = existingResponse.additionalInfo['vehicleType'] ??
               (_vehicleTypes.isNotEmpty ? _vehicleTypes.first.name : '');
-          _availableSeats =
-              existingResponse.additionalInfo['availableSeats'] ?? 3;
           _smokingAllowed =
               existingResponse.additionalInfo['smokingAllowed'] ?? false;
           _petsAllowed = existingResponse.additionalInfo['petsAllowed'] ?? true;

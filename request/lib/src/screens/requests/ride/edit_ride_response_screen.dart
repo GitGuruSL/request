@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../models/request_model.dart';
-import '../../../models/enhanced_user_model.dart';
 import '../../../models/vehicle_type_model.dart';
 import '../../../services/enhanced_request_service.dart';
 import '../../../services/enhanced_user_service.dart';
-import '../../../services/vehicle_service.dart';
 import '../../../widgets/image_upload_widget.dart';
 import '../../../widgets/accurate_location_picker_widget.dart';
 import '../../../utils/currency_helper.dart';
@@ -29,7 +27,6 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
   final _formKey = GlobalKey<FormState>();
   final EnhancedRequestService _requestService = EnhancedRequestService();
   final EnhancedUserService _userService = EnhancedUserService();
-  final VehicleService _vehicleService = VehicleService();
 
   // Form Controllers
   final _descriptionController = TextEditingController();

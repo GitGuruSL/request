@@ -169,50 +169,47 @@ class _UnifiedRequestCreateScreenState
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async => true,
-      child: GlassPage(
-        title: 'Create ${_getTypeDisplayName(_selectedType)}',
-        body: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                GlassTheme.glassCard(child: _buildTypeSpecificFields()),
-              ],
-            ),
+    return GlassPage(
+      title: 'Create ${_getTypeDisplayName(_selectedType)}',
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GlassTheme.glassCard(child: _buildTypeSpecificFields()),
+            ],
           ),
         ),
-        bottomBar: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                GlassTheme.colors.glassBackground.first,
-                GlassTheme.colors.glassBackgroundSubtle.last,
-              ],
-            ),
-            border: Border(
-              top: BorderSide(color: GlassTheme.colors.glassBorderSubtle),
-            ),
+      ),
+      bottomBar: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              GlassTheme.colors.glassBackground.first,
+              GlassTheme.colors.glassBackgroundSubtle.last,
+            ],
           ),
-          child: SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _isLoading ? null : _submitRequest,
-              style: GlassTheme.primaryButton,
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text('Create ${_getTypeDisplayName(_selectedType)}'),
-            ),
+          border: Border(
+            top: BorderSide(color: GlassTheme.colors.glassBorderSubtle),
+          ),
+        ),
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: _isLoading ? null : _submitRequest,
+            style: GlassTheme.primaryButton,
+            child: _isLoading
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text('Create ${_getTypeDisplayName(_selectedType)}'),
           ),
         ),
       ),
