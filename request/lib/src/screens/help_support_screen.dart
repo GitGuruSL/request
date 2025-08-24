@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/content_service.dart';
 import 'content_page_screen.dart';
 import '../theme/glass_theme.dart';
+import '../widgets/glass_page.dart';
 
 class HelpSupportScreen extends StatefulWidget {
   const HelpSupportScreen({super.key});
@@ -52,30 +53,18 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text(
-          'Help & Support',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        backgroundColor: Colors.blue[600],
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          indicatorColor: Colors.white,
-          tabs: const [
-            Tab(text: 'FAQ'),
-            Tab(text: 'Guides'),
-            Tab(text: 'Contact'),
-          ],
-        ),
+    return GlassPage(
+      title: 'Help & Support',
+      bottom: TabBar(
+        controller: _tabController,
+        labelColor: GlassTheme.colors.textPrimary,
+        unselectedLabelColor: GlassTheme.colors.textSecondary,
+        indicatorColor: GlassTheme.colors.textAccent,
+        tabs: const [
+          Tab(text: 'FAQ'),
+          Tab(text: 'Guides'),
+          Tab(text: 'Contact'),
+        ],
       ),
       body: TabBarView(
         controller: _tabController,
@@ -98,14 +87,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
           if (_isLoading)
             const Center(child: CircularProgressIndicator())
           else if (_helpPages.isNotEmpty) ...[
-            Text(
-              'Help Articles',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[800],
-              ),
-            ),
+            Text('Help Articles', style: GlassTheme.titleSmall),
             const SizedBox(height: 15),
             ListView.builder(
               shrinkWrap: true,
@@ -113,13 +95,17 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
               itemCount: _helpPages.length,
               itemBuilder: (context, index) {
                 final page = _helpPages[index];
-                return Card(
+                return Container(
                   margin: const EdgeInsets.only(bottom: 10),
+                  decoration: GlassTheme.glassContainer,
                   child: ListTile(
-                    leading: Icon(Icons.article, color: Colors.blue[600]),
-                    title: Text(page.title),
-                    subtitle: Text(page.category ?? ''),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    leading:
+                        Icon(Icons.article, color: GlassTheme.colors.infoColor),
+                    title: Text(page.title, style: GlassTheme.bodyLarge),
+                    subtitle:
+                        Text(page.category ?? '', style: GlassTheme.bodySmall),
+                    trailing: Icon(Icons.arrow_forward_ios,
+                        size: 16, color: GlassTheme.colors.textTertiary),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -139,14 +125,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
           ],
 
           // Static FAQ Items
-          Text(
-            'Frequently Asked Questions',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[800],
-            ),
-          ),
+          Text('Frequently Asked Questions', style: GlassTheme.titleSmall),
           const SizedBox(height: 15),
 
           _buildFAQItem(
@@ -184,14 +163,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'User Guides',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[800],
-            ),
-          ),
+          Text('User Guides', style: GlassTheme.titleSmall),
           const SizedBox(height: 15),
           _buildGuideItem(
             Icons.person_add,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/content_service.dart';
+import '../theme/glass_theme.dart';
 
 class ContentPageScreen extends StatefulWidget {
   final String slug;
@@ -60,12 +61,17 @@ class _ContentPageScreenState extends State<ContentPageScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: Text(widget.title ?? _page?.title ?? 'Loading...'),
         centerTitle: false,
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        foregroundColor: GlassTheme.colors.textPrimary,
         elevation: 0,
+        flexibleSpace: Container(
+          decoration: GlassTheme.backgroundGradient,
+        ),
       ),
       body: _buildBody(),
     );
@@ -110,112 +116,98 @@ class _ContentPageScreenState extends State<ContentPageScreen> {
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _loadPage,
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Optional page title (hide if content already has an H1)
-            if (!_contentHasTopHeading(_page!.content)) ...[
-              Text(
-                _page!.title,
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            // Page metadata
-            if (_shouldShowMetadata()) ...[
-              _buildMetadata(),
-              const SizedBox(height: 16),
-            ],
-
-            // Page content
-            Html(
-              data: _renderedContent(_page!.content),
-              onLinkTap: (url, attributes, element) {
-                if (url != null) {
-                  _launchUrl(url);
-                }
-              },
-              style: {
-                "body": Style(
-                  margin: Margins.zero,
-                  padding: HtmlPaddings.zero,
-                  // Preserve line breaks when content is plain text
-                  whiteSpace: WhiteSpace.normal,
-                ),
-                "p": Style(
-                  fontSize: FontSize(16),
-                  lineHeight: const LineHeight(1.6),
-                  margin: Margins.only(bottom: 16),
-                  textAlign: TextAlign.justify,
-                ),
-                "h1": Style(
-                  fontSize: FontSize(24),
-                  fontWeight: FontWeight.bold,
-                  margin: Margins.only(top: 24, bottom: 16),
-                  color: Theme.of(context).colorScheme.primary,
-                  textAlign: TextAlign.start,
-                ),
-                "h2": Style(
-                  fontSize: FontSize(20),
-                  fontWeight: FontWeight.bold,
-                  margin: Margins.only(top: 20, bottom: 12),
-                  color: Theme.of(context).colorScheme.primary,
-                  textAlign: TextAlign.start,
-                ),
-                "h3": Style(
-                  fontSize: FontSize(18),
-                  fontWeight: FontWeight.bold,
-                  margin: Margins.only(top: 16, bottom: 8),
-                  color: Theme.of(context).colorScheme.primary,
-                  textAlign: TextAlign.start,
-                ),
-                "a": Style(
-                  color: Theme.of(context).colorScheme.secondary,
-                  textDecoration: TextDecoration.underline,
-                ),
-                "ul": Style(
-                  margin: Margins.only(bottom: 16),
-                ),
-                "ol": Style(
-                  margin: Margins.only(bottom: 16),
-                ),
-                "li": Style(
-                  margin: Margins.only(bottom: 8),
-                ),
-                "blockquote": Style(
-                  border: Border(
-                    left: BorderSide(
-                      color: Theme.of(context).colorScheme.primary,
-                      width: 4,
-                    ),
+    return GlassTheme.backgroundContainer(
+      child: RefreshIndicator(
+        onRefresh: _loadPage,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (!_contentHasTopHeading(_page!.content)) ...[
+                Text(_page!.title, style: GlassTheme.titleLarge),
+                const SizedBox(height: 16),
+              ],
+              if (_shouldShowMetadata()) ...[
+                _buildMetadata(),
+                const SizedBox(height: 16),
+              ],
+              Html(
+                data: _renderedContent(_page!.content),
+                onLinkTap: (url, attributes, element) {
+                  if (url != null) _launchUrl(url);
+                },
+                style: {
+                  "body": Style(
+                    margin: Margins.zero,
+                    padding: HtmlPaddings.zero,
+                    whiteSpace: WhiteSpace.normal,
+                    color: GlassTheme.colors.textPrimary,
                   ),
-                  padding: HtmlPaddings.only(left: 16),
-                  margin: Margins.only(bottom: 16),
-                  backgroundColor: Colors.grey[50],
-                ),
-                "code": Style(
-                  backgroundColor: Colors.grey[100],
-                  padding: HtmlPaddings.symmetric(horizontal: 4, vertical: 2),
-                  fontFamily: 'monospace',
-                ),
-                "pre": Style(
-                  backgroundColor: Colors.grey[100],
-                  padding: HtmlPaddings.all(12),
-                  margin: Margins.only(bottom: 16),
-                  fontFamily: 'monospace',
-                ),
-              },
-            ),
-          ],
+                  "p": Style(
+                    fontSize: FontSize(16),
+                    lineHeight: const LineHeight(1.6),
+                    margin: Margins.only(bottom: 16),
+                    textAlign: TextAlign.justify,
+                  ),
+                  "h1": Style(
+                    fontSize: FontSize(24),
+                    fontWeight: FontWeight.bold,
+                    margin: Margins.only(top: 24, bottom: 16),
+                    color: GlassTheme.colors.textAccent,
+                    textAlign: TextAlign.start,
+                  ),
+                  "h2": Style(
+                    fontSize: FontSize(20),
+                    fontWeight: FontWeight.bold,
+                    margin: Margins.only(top: 20, bottom: 12),
+                    color: GlassTheme.colors.textAccent,
+                    textAlign: TextAlign.start,
+                  ),
+                  "h3": Style(
+                    fontSize: FontSize(18),
+                    fontWeight: FontWeight.bold,
+                    margin: Margins.only(top: 16, bottom: 8),
+                    color: GlassTheme.colors.textAccent,
+                    textAlign: TextAlign.start,
+                  ),
+                  "a": Style(
+                    color: GlassTheme.colors.textAccent,
+                    textDecoration: TextDecoration.underline,
+                  ),
+                  "ul": Style(margin: Margins.only(bottom: 16)),
+                  "ol": Style(margin: Margins.only(bottom: 16)),
+                  "li": Style(margin: Margins.only(bottom: 8)),
+                  "blockquote": Style(
+                    border: Border(
+                      left: BorderSide(
+                        color: GlassTheme.colors.textAccent,
+                        width: 4,
+                      ),
+                    ),
+                    padding: HtmlPaddings.only(left: 16),
+                    margin: Margins.only(bottom: 16),
+                    backgroundColor:
+                        GlassTheme.colors.glassBackgroundSubtle.first,
+                  ),
+                  "code": Style(
+                    backgroundColor:
+                        GlassTheme.colors.glassBackgroundSubtle.last,
+                    padding: HtmlPaddings.symmetric(horizontal: 4, vertical: 2),
+                    fontFamily: 'monospace',
+                  ),
+                  "pre": Style(
+                    backgroundColor:
+                        GlassTheme.colors.glassBackgroundSubtle.last,
+                    padding: HtmlPaddings.all(12),
+                    margin: Margins.only(bottom: 16),
+                    fontFamily: 'monospace',
+                  ),
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -247,13 +239,9 @@ class _ContentPageScreenState extends State<ContentPageScreen> {
 
     final metadata = _page!.metadata!;
 
-    return Container(
+    return GlassTheme.glassCard(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
+      subtle: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -262,15 +250,15 @@ class _ContentPageScreenState extends State<ContentPageScreen> {
               Icon(
                 Icons.info_outline,
                 size: 16,
-                color: Colors.grey[600],
+                color: GlassTheme.colors.textSecondary,
               ),
               const SizedBox(width: 4),
               Text(
                 'Page Information',
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[600],
-                    ),
+                style: GlassTheme.labelMedium.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: GlassTheme.colors.textSecondary,
+                ),
               ),
             ],
           ),
@@ -280,9 +268,9 @@ class _ContentPageScreenState extends State<ContentPageScreen> {
               padding: const EdgeInsets.only(bottom: 4),
               child: Text(
                 '${entry.key}: ${entry.value}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[700],
-                    ),
+                style: GlassTheme.bodySmall.copyWith(
+                  color: GlassTheme.colors.textSecondary,
+                ),
               ),
             );
           }).toList(),

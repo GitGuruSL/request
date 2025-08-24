@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../theme/glass_theme.dart';
+import '../../../widgets/glass_page.dart';
 import '../../../services/rest_auth_service.dart' hide UserModel;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 // Removed unused firebase_shim import after migration
@@ -198,17 +200,6 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
     if (currentUser == null) return false;
     return _responses
         .any((response) => response.responderId == currentUser.uid);
-  }
-
-  ResponseModel? _getUserResponse() {
-    final currentUser = RestAuthService.instance.currentUser;
-    if (currentUser == null) return null;
-    try {
-      return _responses
-          .firstWhere((response) => response.responderId == currentUser.uid);
-    } catch (e) {
-      return null;
-    }
   }
 
   // Removed cheapest fare computation per requirement
@@ -439,33 +430,22 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return Scaffold(
-        backgroundColor: Colors.white,
-        body: const Center(child: CircularProgressIndicator()),
+      return GlassTheme.backgroundContainer(
+        child: const Center(child: CircularProgressIndicator()),
       );
     }
 
     if (_request == null) {
-      return Scaffold(
-        backgroundColor: Colors.white,
-        appBar: AppBar(
-          title: const Text('Ride Request'),
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
-          elevation: 0,
-        ),
+      return GlassPage(
+        title: 'Ride Request',
         body: const Center(
           child: Text('Ride request not found or has been removed.'),
         ),
       );
     }
 
-    final isDriverView = !_isOwner;
-    final canEdit = isDriverView && _hasUserResponded();
-
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
+    return GlassTheme.backgroundContainer(
+      child: Stack(
         children: [
           // Map View
           GoogleMap(
@@ -492,35 +472,35 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
               child: Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back),
-                    ),
-                    Expanded(
-                      child: Text(
-                        _buildAppBarTitle(),
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (_isOwner) ...[
+                decoration: GlassTheme.glassContainer,
+                child: Material(
+                  color: Colors.transparent,
+                  child: Row(
+                    children: [
                       IconButton(
-                        onPressed: _navigateToEditRideRequest,
-                        icon: const Icon(Icons.edit),
-                        tooltip: 'Edit Request',
+                        onPressed: () => Navigator.pop(context),
+                        icon: Icon(Icons.arrow_back,
+                            color: GlassTheme.colors.textPrimary),
                       ),
+                      Expanded(
+                        child: Text(
+                          _buildAppBarTitle(),
+                          style: GlassTheme.titleSmall,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (_isOwner) ...[
+                        IconButton(
+                          onPressed: _navigateToEditRideRequest,
+                          icon: Icon(Icons.edit,
+                              color: GlassTheme.colors.textPrimary),
+                          tooltip: 'Edit Request',
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -533,46 +513,43 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
             maxChildSize: 0.85,
             builder: (context, scrollController) {
               return Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
-                  ),
-                ),
-                child: SingleChildScrollView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Drag handle
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          margin: const EdgeInsets.only(bottom: 20),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(2),
+                decoration: GlassTheme.glassContainer,
+                child: Material(
+                  color: Colors.transparent,
+                  child: SingleChildScrollView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Drag handle
+                        Center(
+                          child: Container(
+                            width: 40,
+                            height: 4,
+                            margin: const EdgeInsets.only(bottom: 20),
+                            decoration: BoxDecoration(
+                              color: GlassTheme.colors.glassBorderSubtle,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
                           ),
                         ),
-                      ),
 
-                      _buildRideDetails(),
-                      const SizedBox(height: 24),
-                      _buildRequesterInfo(),
-                      const SizedBox(height: 24),
-                      _buildResponsesSection(),
-
-                      // Respond Area for non-owners (single entry point)
-                      if (!_isOwner) ...[
+                        _buildRideDetails(),
                         const SizedBox(height: 24),
-                        if (_canUserRespond()) _buildQuickRespondSection(),
-                      ],
+                        _buildRequesterInfo(),
+                        const SizedBox(height: 24),
+                        _buildResponsesSection(),
 
-                      const SizedBox(height: 80), // Space for FAB
-                    ],
+                        // Respond Area for non-owners (single entry point)
+                        if (!_isOwner) ...[
+                          const SizedBox(height: 24),
+                          if (_canUserRespond()) _buildQuickRespondSection(),
+                        ],
+
+                        const SizedBox(height: 80), // Space for FAB
+                      ],
+                    ),
                   ),
                 ),
               );
@@ -580,22 +557,6 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
           ),
         ],
       ),
-      floatingActionButton: canEdit
-          ? FloatingActionButton.extended(
-              onPressed: _showEditResponseSheet,
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-              elevation: 6,
-              icon: const Icon(Icons.edit, size: 20),
-              label: const Text(
-                'Edit',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            )
-          : null,
     );
   }
 
@@ -1169,139 +1130,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
 
   // Removed duplicate _buildResponsesSection (retaining the earlier version defined above)
 
-  void _showEditResponseSheet() {
-    final existing = _getUserResponse();
-    if (existing == null || _request == null) return;
-    final controller = TextEditingController(
-      text: (existing.price ?? 0).toStringAsFixed(0),
-    );
-    String? errorText;
-    final currencySymbol = CurrencyHelper.instance.getCurrencySymbol();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
-            top: 16,
-            left: 16,
-            right: 16,
-          ),
-          child: StatefulBuilder(
-            builder: (context, setModalState) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const Center(
-                    child: Text(
-                      'Edit your fare',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: 200, // Make text field smaller
-                    child: TextField(
-                      controller: controller,
-                      keyboardType: const TextInputType.numberWithOptions(
-                          signed: false, decimal: true),
-                      textAlign: TextAlign.center,
-                      decoration: InputDecoration(
-                        hintText: 'Enter fare',
-                        prefixText: currencySymbol,
-                        filled: true,
-                        fillColor: Colors.grey[50],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        errorText: errorText,
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 14),
-                      ),
-                      onChanged: (_) {
-                        if (errorText != null) {
-                          setModalState(() => errorText = null);
-                        }
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        final raw = controller.text.trim().replaceAll(',', '');
-                        final price = double.tryParse(raw);
-                        if (price == null || price <= 0) {
-                          setModalState(
-                              () => errorText = 'Enter a valid amount');
-                          return;
-                        }
-                        final currency = CurrencyHelper.instance.getCurrency();
-                        try {
-                          final updated = await rest.RestRequestService.instance
-                              .updateResponse(
-                            _request!.id,
-                            existing.id,
-                            {
-                              'price': price,
-                              if (currency.isNotEmpty) 'currency': currency,
-                            },
-                          );
-                          if (!mounted) return;
-                          if (updated != null) {
-                            Navigator.of(ctx).pop();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Response updated')),
-                            );
-                            await _loadRequestData();
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('Failed to update response')),
-                            );
-                          }
-                        } catch (e) {
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                                content: Text('Failed to update response: $e')),
-                          );
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: const Text(
-                        'Update',
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
+  // _showEditResponseSheet removed (Glass refactor)
 
   Color _getStatusColor(RequestStatus status) {
     switch (status) {

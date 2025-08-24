@@ -8,6 +8,8 @@ import '../services/module_service.dart';
 import '../services/user_registration_service.dart';
 import 'unified_request_response/unified_request_view_screen.dart';
 import 'requests/ride/view_ride_request_screen.dart';
+import '../theme/glass_theme.dart';
+import '../widgets/glass_page.dart';
 
 class BrowseScreen extends StatefulWidget {
   const BrowseScreen({super.key});
@@ -226,45 +228,29 @@ class _BrowseScreenState extends State<BrowseScreen> {
     }
   }
 
-  Color _getLightTypeColor(RequestType type) {
-    switch (type) {
-      case RequestType.item:
-        return const Color(0xFFFF6B35).withOpacity(0.1); // Light orange/red
-      case RequestType.service:
-        return const Color(0xFF00BCD4).withOpacity(0.1); // Light teal
-      case RequestType.rental:
-        return const Color(0xFF2196F3).withOpacity(0.1); // Light blue
-      case RequestType.delivery:
-        return const Color(0xFF4CAF50).withOpacity(0.1); // Light green
-      case RequestType.ride:
-        return const Color(0xFFFFC107).withOpacity(0.1); // Light yellow
-      case RequestType.price:
-        return const Color(0xFF9C27B0).withOpacity(0.1); // Light purple
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_needsCountrySelection) {
-      return Scaffold(
-        backgroundColor: const Color(0xFFF8F9FA),
+      return GlassPage(
+        title: 'Browse',
+        leading: const SizedBox.shrink(),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.flag_outlined,
-                    size: 72, color: Colors.blueGrey),
+                Icon(Icons.flag_outlined,
+                    size: 72, color: GlassTheme.colors.textSecondary),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Select your country',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                  style: GlassTheme.titleMedium,
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Choose your country to browse requests near you.',
-                  style: TextStyle(color: Colors.grey[600]),
+                  style: GlassTheme.bodyMedium,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
@@ -278,68 +264,62 @@ class _BrowseScreenState extends State<BrowseScreen> {
         ),
       );
     }
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA), // Light gray background
-      body: SafeArea(
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : Column(
-                children: [
-                  // Modern Search Header
-                  Container(
+    return GlassPage(
+      title: 'Discover Requests',
+      leading: const SizedBox.shrink(),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                // Search Header
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: GlassTheme.glassCard(
                     padding: const EdgeInsets.all(20),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.only(
-                        bottomLeft: Radius.circular(24),
-                        bottomRight: Radius.circular(24),
-                      ),
-                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Discover Requests',
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
+                          style: GlassTheme.titleLarge,
                         ),
                         const SizedBox(height: 8),
                         Text(
                           'Find requests that match your skills',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[600],
-                          ),
+                          style: GlassTheme.bodyMedium,
                         ),
                         const SizedBox(height: 20),
 
-                        // Modern Search Bar
+                        // Search Bar
                         Container(
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF5F5F5),
+                            color: GlassTheme.isDarkMode
+                                ? Colors.white.withOpacity(0.06)
+                                : Colors.black.withOpacity(0.04),
                             borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: GlassTheme.colors.glassBorderSubtle,
+                              width: 1,
+                            ),
                           ),
                           child: TextField(
+                            style: GlassTheme.bodyMedium,
                             decoration: InputDecoration(
                               hintText:
                                   'Search by title, location, description... (use commas to separate)',
-                              hintStyle: TextStyle(
-                                color: Colors.grey[500],
-                                fontSize: 14,
+                              hintStyle: GlassTheme.bodySmall.copyWith(
+                                color: GlassTheme.colors.textTertiary,
                               ),
                               prefixIcon: Icon(
                                 Icons.search,
-                                color: Colors.grey[500],
+                                color: GlassTheme.colors.textTertiary,
                                 size: 20,
                               ),
                               suffixIcon: _searchQuery.isNotEmpty
                                   ? IconButton(
                                       icon: Icon(
                                         Icons.clear,
-                                        color: Colors.grey[500],
+                                        color: GlassTheme.colors.textTertiary,
                                         size: 20,
                                       ),
                                       onPressed: () {
@@ -376,16 +356,16 @@ class _BrowseScreenState extends State<BrowseScreen> {
                       ],
                     ),
                   ),
+                ),
 
-                  // Results List
-                  Expanded(
-                    child: _error != null
-                        ? _buildErrorWidget()
-                        : _buildRequestsList(),
-                  ),
-                ],
-              ),
-      ),
+                // Results List
+                Expanded(
+                  child: _error != null
+                      ? _buildErrorWidget()
+                      : _buildRequestsList(),
+                ),
+              ],
+            ),
     );
   }
 
@@ -488,133 +468,117 @@ class _BrowseScreenState extends State<BrowseScreen> {
   }
 
   Widget _buildRequestCard(RequestModel request) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: _getLightTypeColor(request.type),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: _getTypeColor(request.type).withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: InkWell(
-        onTap: () => _navigateToRequestView(request),
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header with type and status
-              Row(
-                children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _getTypeColor(request.type),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      _getTypeDisplayName(request.type),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.green[100],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      request.status.toString().split('.').last.toUpperCase(),
-                      style: TextStyle(
-                        color: Colors.green[700],
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 12),
-
-              // Title
-              Text(
-                request.title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-
-              const SizedBox(height: 8),
-
-              // Description
-              Text(
-                request.description,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[700],
-                  height: 1.4,
-                ),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-
-              const SizedBox(height: 12),
-
-              // Footer with budget and location
-              Row(
-                children: [
-                  if (request.budget != null) ...[
-                    Icon(
-                      Icons.attach_money,
-                      size: 16,
-                      color: Colors.grey[600],
-                    ),
-                    Text(
-                      '${_currencySymbol ?? ''} ${request.budget!.toStringAsFixed(0)}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: GlassTheme.glassCard(
+        child: InkWell(
+          onTap: () => _navigateToRequestView(request),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header with type and status
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
                         color: _getTypeColor(request.type),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                    ),
-                  ],
-                  const Spacer(),
-                  if (request.location?.city != null) ...[
-                    Icon(
-                      Icons.location_on,
-                      size: 16,
-                      color: Colors.grey[600],
-                    ),
-                    const SizedBox(width: 4),
-                    Flexible(
                       child: Text(
-                        request.location!.city!,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
+                        _getTypeDisplayName(request.type),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                         ),
-                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.green[100],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        request.status.toString().split('.').last.toUpperCase(),
+                        style: TextStyle(
+                          color: Colors.green[700],
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ],
-                ],
-              ),
-            ],
+                ),
+
+                const SizedBox(height: 12),
+
+                // Title
+                Text(
+                  request.title,
+                  style: GlassTheme.titleSmall,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+
+                const SizedBox(height: 8),
+
+                // Description
+                Text(
+                  request.description,
+                  style: GlassTheme.bodyMedium,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+
+                const SizedBox(height: 12),
+
+                // Footer with budget and location
+                Row(
+                  children: [
+                    if (request.budget != null) ...[
+                      Icon(
+                        Icons.attach_money,
+                        size: 16,
+                        color: GlassTheme.colors.textTertiary,
+                      ),
+                      Text(
+                        '${_currencySymbol ?? ''} ${request.budget!.toStringAsFixed(0)}',
+                        style: GlassTheme.bodyMedium.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: _getTypeColor(request.type),
+                        ),
+                      ),
+                    ],
+                    const Spacer(),
+                    if (request.location?.city != null) ...[
+                      Icon(
+                        Icons.location_on,
+                        size: 16,
+                        color: GlassTheme.colors.textTertiary,
+                      ),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          request.location!.city!,
+                          style: GlassTheme.bodyMedium.copyWith(
+                            color: GlassTheme.colors.textTertiary,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -8,6 +8,7 @@ import '../screens/chat/conversation_screen.dart';
 import '../services/chat_service.dart';
 import '../models/chat_models.dart';
 import '../theme/glass_theme.dart';
+import '../widgets/glass_page.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -29,81 +30,72 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Widget build(BuildContext context) {
     final userId = _auth.currentUser?.uid;
     if (userId == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Notifications')),
+      return GlassPage(
+        title: 'Notifications',
         body: const Center(child: Text('Please log in to view notifications')),
       );
     }
 
-    return Container(
-      decoration: GlassTheme.backgroundGradient,
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          foregroundColor: GlassTheme.colors.textPrimary,
-          elevation: 0,
-          title: Text('Notifications', style: GlassTheme.titleLarge),
-        ),
-        body: FutureBuilder<List<NotificationModel>>(
-          future: _restNotifications.fetchMyNotifications(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.error_outline, size: 56, color: Colors.red[300]),
-                    const SizedBox(height: 12),
-                    Text('Error: ${snapshot.error}'),
-                  ],
-                ),
-              );
-            }
-            final notifications = snapshot.data ?? [];
-            if (notifications.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.notifications_none,
-                        size: 64, color: Colors.grey[400]),
-                    const SizedBox(height: 12),
-                    Text(
-                      'No notifications yet',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "You'll see notifications here when something happens",
-                      style: TextStyle(color: Colors.grey[500]),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            return RefreshIndicator(
-              onRefresh: _refresh,
-              child: ListView.separated(
-                padding: const EdgeInsets.all(12),
-                itemCount: notifications.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 8),
-                itemBuilder: (context, index) {
-                  final n = notifications[index];
-                  return _buildCard(n);
-                },
+    return GlassPage(
+      title: 'Notifications',
+      body: FutureBuilder<List<NotificationModel>>(
+        future: _restNotifications.fetchMyNotifications(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline, size: 56, color: Colors.red[300]),
+                  const SizedBox(height: 12),
+                  Text('Error: ${snapshot.error}'),
+                ],
               ),
             );
-          },
-        ),
+          }
+          final notifications = snapshot.data ?? [];
+          if (notifications.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.notifications_none,
+                      size: 64, color: Colors.grey[400]),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No notifications yet',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "You'll see notifications here when something happens",
+                    style: TextStyle(color: Colors.grey[500]),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: _refresh,
+            child: ListView.separated(
+              padding: const EdgeInsets.all(12),
+              itemCount: notifications.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final n = notifications[index];
+                return _buildCard(n);
+              },
+            ),
+          );
+        },
       ),
     );
   }

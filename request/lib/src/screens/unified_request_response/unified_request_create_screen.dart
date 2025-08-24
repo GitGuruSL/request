@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../theme/glass_theme.dart';
+import '../../widgets/glass_page.dart';
 import '../../models/request_model.dart';
 import '../../models/enhanced_user_model.dart';
 import '../../services/centralized_request_service.dart';
@@ -6,7 +8,6 @@ import '../../services/enhanced_user_service.dart';
 import '../../widgets/image_upload_widget.dart';
 import '../../widgets/accurate_location_picker_widget.dart';
 import '../../widgets/category_picker.dart';
-import '../../theme/app_theme.dart';
 import '../../utils/currency_helper.dart';
 
 class UnifiedRequestCreateScreen extends StatefulWidget {
@@ -21,11 +22,11 @@ class UnifiedRequestCreateScreen extends StatefulWidget {
 
 class _UnifiedRequestCreateScreenState
     extends State<UnifiedRequestCreateScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final CentralizedRequestService _requestService = CentralizedRequestService();
   final EnhancedUserService _userService = EnhancedUserService();
+  final CentralizedRequestService _requestService = CentralizedRequestService();
 
   // Common form controllers
+  final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _locationController = TextEditingController();
@@ -34,10 +35,6 @@ class _UnifiedRequestCreateScreenState
   // Item-specific controllers
   final _itemNameController = TextEditingController();
   final _quantityController = TextEditingController();
-  final _categoryController = TextEditingController();
-
-  // Service-specific controllers
-  final _specialInstructionsController = TextEditingController();
 
   // Rental-specific controllers
   final _itemToRentController = TextEditingController();
@@ -50,18 +47,19 @@ class _UnifiedRequestCreateScreenState
   final _itemDescriptionController = TextEditingController();
   final _weightController = TextEditingController();
   final _dimensionsController = TextEditingController();
+  final _specialInstructionsController = TextEditingController();
 
   RequestType _selectedType = RequestType.item;
   String _selectedCondition = 'New';
   String _selectedUrgency = 'Flexible';
-  String _selectedDeliveryTime = 'Anytime';
+  // kept for parity with other flows if needed later
+
   String _selectedCategory = 'Electronics';
   String? _selectedCategoryId;
   String? _selectedSubCategoryId;
   String? _selectedSubcategory;
   String _pickupDropoffPreference = 'pickup';
-  DateTime? _startDate;
-  DateTime? _endDate;
+  // legacy placeholders removed; using *_DateTime specific fields
   DateTime? _preferredDateTime;
   DateTime? _startDateTime;
   DateTime? _endDateTime;
@@ -78,40 +76,12 @@ class _UnifiedRequestCreateScreenState
     'Any Condition'
   ];
   final List<String> _urgencyLevels = ['Flexible', 'ASAP', 'Specific Date'];
-  final List<String> _deliveryTimes = [
-    'Anytime',
-    'Morning',
-    'Afternoon',
-    'By End of Day'
-  ];
-  final List<String> _categories = [
-    'Electronics',
-    'Clothing & Accessories',
-    'Home & Garden',
-    'Sports & Outdoors',
-    'Books & Media',
-    'Toys & Games',
-    'Health & Beauty',
-    'Automotive',
-    'Tools & Hardware',
-    'Art & Crafts',
-    'Jewelry & Watches',
-    'Musical Instruments',
-    'Baby & Kids',
-    'Pet Supplies',
-    'Office Supplies',
-    'Food & Beverages',
-    'Other'
-  ];
+  // delivery time options are derived inline in UI where needed
 
   @override
   void initState() {
     super.initState();
-    if (widget.initialType != null) {
-      _selectedType = widget.initialType!;
-    } else {
-      _selectedType = RequestType.item; // Default fallback
-    }
+    _selectedType = widget.initialType ?? RequestType.item;
   }
 
   @override
@@ -122,8 +92,6 @@ class _UnifiedRequestCreateScreenState
     _budgetController.dispose();
     _itemNameController.dispose();
     _quantityController.dispose();
-    _categoryController.dispose();
-    _specialInstructionsController.dispose();
     _itemToRentController.dispose();
     _rentalItemController.dispose();
     _pickupLocationController.dispose();
@@ -132,6 +100,7 @@ class _UnifiedRequestCreateScreenState
     _itemDescriptionController.dispose();
     _weightController.dispose();
     _dimensionsController.dispose();
+    _specialInstructionsController.dispose();
     super.dispose();
   }
 
@@ -152,22 +121,7 @@ class _UnifiedRequestCreateScreenState
     }
   }
 
-  Color _getTypeColor(RequestType type) {
-    switch (type) {
-      case RequestType.item:
-        return const Color(0xFFFF6B35); // Orange/red
-      case RequestType.service:
-        return const Color(0xFF00BCD4); // Teal
-      case RequestType.rental:
-        return const Color(0xFF2196F3); // Blue
-      case RequestType.delivery:
-        return const Color(0xFF4CAF50); // Green
-      case RequestType.ride:
-        return const Color(0xFFFFC107); // Yellow
-      case RequestType.price:
-        return const Color(0xFF9C27B0); // Purple
-    }
-  }
+  // Color mapping now handled by GlassTheme buttons
 
   String _getRequestTypeString(RequestType type) {
     switch (type) {
@@ -216,18 +170,9 @@ class _UnifiedRequestCreateScreenState
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
-      onWillPop: () async {
-        // Ensure proper back navigation
-        return true;
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text('Create ${_getTypeDisplayName(_selectedType)}'),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-        ),
+      onWillPop: () async => true,
+      child: GlassPage(
+        title: 'Create ${_getTypeDisplayName(_selectedType)}',
         body: Form(
           key: _formKey,
           child: SingleChildScrollView(
@@ -235,55 +180,50 @@ class _UnifiedRequestCreateScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildTypeSpecificFields(),
+                GlassTheme.glassCard(child: _buildTypeSpecificFields()),
               ],
             ),
           ),
         ),
-        bottomNavigationBar: Container(
+        bottomBar: Container(
           padding: const EdgeInsets.all(16),
-          decoration: const BoxDecoration(
-            color: Colors.white,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                GlassTheme.colors.glassBackground.first,
+                GlassTheme.colors.glassBackgroundSubtle.last,
+              ],
+            ),
+            border: Border(
+              top: BorderSide(color: GlassTheme.colors.glassBorderSubtle),
+            ),
           ),
           child: SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: _isLoading ? null : _submitRequest,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _getTypeColor(_selectedType),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                elevation: 0,
-              ),
+              style: GlassTheme.primaryButton,
               child: _isLoading
                   ? const SizedBox(
                       height: 20,
                       width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text(
-                      'Create ${_getTypeDisplayName(_selectedType)}',
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w600),
-                    ),
+                  : Text('Create ${_getTypeDisplayName(_selectedType)}'),
             ),
           ),
         ),
-      ), // Scaffold closing
-    ); // WillPopScope closing
+      ),
+    );
   }
 
   Widget _buildFlatField({required Widget child}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16.0),
-      decoration: AppTheme.fieldDecoration,
+      decoration: GlassTheme.glassContainerSubtle,
       child: child,
     );
   }

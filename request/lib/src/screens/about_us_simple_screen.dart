@@ -7,7 +7,9 @@ import '../services/content_service.dart';
 import '../services/api_client.dart';
 import 'content_page_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:google_fonts/google_fonts.dart';
+// import 'package:google_fonts/google_fonts.dart';
+import '../theme/glass_theme.dart';
+import '../widgets/glass_page.dart';
 
 class AboutUsSimpleScreen extends StatefulWidget {
   const AboutUsSimpleScreen({super.key});
@@ -179,12 +181,8 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
       return null;
     }
 
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: const Text('About Us'),
-        elevation: 0,
-      ),
+    return GlassPage(
+      title: 'About Us',
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
@@ -210,14 +208,7 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        Text(
-                          'Request',
-                          style: GoogleFonts.poppins(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                        ),
+                        Text('Request', style: GlassTheme.titleSmall),
                       ],
                     ),
                   ),
@@ -227,7 +218,7 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
                   _sectionCard(
                     child: Text(
                       aboutTextFallback()!,
-                      style: const TextStyle(fontSize: 16),
+                      style: GlassTheme.bodyLarge,
                     ),
                   ),
 
@@ -240,13 +231,12 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
                       children: [
                         if (_getMeta<String>('hqTitle')?.isNotEmpty == true)
                           Text(_getMeta<String>('hqTitle')!,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w600, fontSize: 16)),
+                              style: GlassTheme.titleSmall),
                         if (_getMeta<String>('hqAddress')?.isNotEmpty == true)
                           Padding(
                             padding: const EdgeInsets.only(top: 6),
                             child: Text(_getMeta<String>('hqAddress')!,
-                                style: const TextStyle(fontSize: 16)),
+                                style: GlassTheme.bodyLarge),
                           ),
                       ],
                     ),
@@ -272,17 +262,14 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Website',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 16)),
+                        Text('Website', style: GlassTheme.titleSmall),
                         const SizedBox(height: 6),
                         InkWell(
                           onTap: () =>
                               _launchUrl(_getMeta<String>('websiteUrl')!),
                           child: Text(
                             _getMeta<String>('websiteUrl')!,
-                            style: const TextStyle(
-                                color: Colors.indigo, fontSize: 16),
+                            style: GlassTheme.accent,
                           ),
                         )
                       ],
@@ -293,7 +280,7 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
                 if (_getMeta<String>('feedbackText')?.isNotEmpty == true)
                   _sectionCard(
                     child: Text(_getMeta<String>('feedbackText')!,
-                        style: const TextStyle(fontSize: 16)),
+                        style: GlassTheme.bodyLarge),
                   ),
 
                 // Legal and Privacy links
@@ -342,14 +329,12 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
                   _sectionCard(
                     child: Row(
                       children: [
-                        const Text('Follow Us',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 16)),
+                        Text('Follow Us', style: GlassTheme.titleSmall),
                         const SizedBox(width: 12),
                         if (_getMeta<String>('facebookUrl')?.isNotEmpty == true)
                           IconButton(
-                            icon:
-                                const Icon(Icons.facebook, color: Colors.blue),
+                            icon: Icon(Icons.facebook,
+                                color: GlassTheme.colors.infoColor),
                             onPressed: () =>
                                 _launchUrl(_getMeta<String>('facebookUrl')!),
                           ),
@@ -357,8 +342,8 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
                           Padding(
                             padding: const EdgeInsets.only(left: 8.0),
                             child: IconButton(
-                              icon: const Icon(Icons.public,
-                                  color: Colors.black87),
+                              icon: Icon(Icons.public,
+                                  color: GlassTheme.colors.textPrimary),
                               onPressed: () =>
                                   _launchUrl(_getMeta<String>('xUrl')!),
                             ),
@@ -373,7 +358,7 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
                     padding: const EdgeInsets.only(top: 12),
                     child: Center(
                       child: Text('App version $_appVersion',
-                          style: TextStyle(color: Colors.grey[600])),
+                          style: GlassTheme.bodySmall),
                     ),
                   ),
               ],
@@ -454,13 +439,10 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
   }
 
   Widget _sectionCard({required Widget child}) {
-    return Container(
+    return GlassTheme.glassCard(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
+      subtle: true,
       child: child,
     );
   }
@@ -470,15 +452,12 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style:
-                  const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+          Text(label, style: GlassTheme.titleSmall),
           const SizedBox(height: 6),
           if (value != null && value.isNotEmpty)
             InkWell(
               onTap: () => _launchUrl('tel:$value'),
-              child: Text(value,
-                  style: const TextStyle(color: Colors.indigo, fontSize: 16)),
+              child: Text(value, style: GlassTheme.accent),
             )
         ],
       ),

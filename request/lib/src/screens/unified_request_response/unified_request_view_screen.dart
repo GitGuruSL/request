@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../widgets/glass_page.dart';
+import '../../theme/glass_theme.dart';
 import '../../services/rest_request_service.dart' as rest;
 import '../../services/rest_auth_service.dart';
 import '../../models/request_model.dart';
@@ -658,56 +660,58 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return Scaffold(
-          appBar: AppBar(title: const Text('Loading...')),
-          body: const Center(child: CircularProgressIndicator()));
+      return const GlassPage(
+        title: 'Loading...',
+        body: Center(child: CircularProgressIndicator()),
+        leading: SizedBox.shrink(),
+      );
     }
     if (_request == null) {
-      return Scaffold(
-          appBar: AppBar(title: const Text('Request')),
-          body: const Center(child: Text('Request not found.')));
+      return const GlassPage(
+        title: 'Request',
+        body: Center(child: Text('Request not found.')),
+      );
     }
     final r = _request!;
-    return Scaffold(
-      appBar: AppBar(
-          title: Text(r.title.isNotEmpty ? r.title : 'Request'),
-          actions: [
-            IconButton(
-                onPressed: _load,
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Reload'),
-            if (_isOwner)
-              PopupMenuButton<String>(
-                onSelected: (val) {
-                  switch (val) {
-                    case 'edit':
-                      _openEditRequestSheet();
-                      break;
-                    case 'edit_full':
-                      _navigateToRequestEdit();
-                      break;
-                    case 'status':
-                      _toggleStatus();
-                      break;
-                    case 'delete':
-                      _confirmDeleteRequest();
-                      break;
-                  }
-                },
-                itemBuilder: (ctx) => [
-                  const PopupMenuItem(value: 'edit', child: Text('Quick Edit')),
-                  const PopupMenuItem(
-                      value: 'edit_full', child: Text('Full Edit Screen')),
-                  PopupMenuItem(
-                      value: 'status',
-                      child: Text(_request!.status.toLowerCase() == 'active'
-                          ? 'Close Request'
-                          : 'Reopen Request')),
-                  const PopupMenuItem(
-                      value: 'delete', child: Text('Delete Request')),
-                ],
-              ),
-          ]),
+    return GlassPage(
+      title: r.title.isNotEmpty ? r.title : 'Request',
+      actions: [
+        IconButton(
+            onPressed: _load,
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Reload'),
+        if (_isOwner)
+          PopupMenuButton<String>(
+            onSelected: (val) {
+              switch (val) {
+                case 'edit':
+                  _openEditRequestSheet();
+                  break;
+                case 'edit_full':
+                  _navigateToRequestEdit();
+                  break;
+                case 'status':
+                  _toggleStatus();
+                  break;
+                case 'delete':
+                  _confirmDeleteRequest();
+                  break;
+              }
+            },
+            itemBuilder: (ctx) => [
+              const PopupMenuItem(value: 'edit', child: Text('Quick Edit')),
+              const PopupMenuItem(
+                  value: 'edit_full', child: Text('Full Edit Screen')),
+              PopupMenuItem(
+                  value: 'status',
+                  child: Text(_request!.status.toLowerCase() == 'active'
+                      ? 'Close Request'
+                      : 'Reopen Request')),
+              const PopupMenuItem(
+                  value: 'delete', child: Text('Delete Request')),
+            ],
+          ),
+      ],
       body: RefreshIndicator(
         onRefresh: _load,
         child: SingleChildScrollView(
@@ -745,7 +749,6 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                             decoration: BoxDecoration(
                               color: Colors.grey[100],
                               borderRadius: BorderRadius.circular(8),
-                              // Border removed per design update
                             ),
                             child: Center(
                               child: Column(
@@ -1121,10 +1124,9 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
     );
   }
 
-  Widget _sectionCard({required Widget child}) => Card(
-        elevation: 1,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(padding: const EdgeInsets.all(20), child: child),
+  Widget _sectionCard({required Widget child}) => GlassTheme.glassCard(
+        padding: const EdgeInsets.all(20),
+        child: child,
       );
 
   Widget _chip(IconData icon, String label) => Container(

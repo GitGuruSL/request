@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../theme/glass_theme.dart';
+import '../widgets/glass_page.dart';
 import '../services/auth_service.dart';
 import '../services/rest_request_service.dart' as rest;
 import '../services/rest_support_services.dart';
@@ -53,41 +55,29 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Custom header
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(
-                children: const [
-                  BackButton(),
-                  SizedBox(width: 8),
-                  Text(
-                    'My Activities',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-            ),
-            // Tab bar
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
+    return GlassPage(
+      title: 'My Activities',
+      body: Column(
+        children: [
+          // Tab bar in a glass card
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: GlassTheme.glassCard(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: TabBar(
                 controller: _tabController,
-                labelColor: Colors.blue,
-                unselectedLabelColor: Colors.grey,
-                indicatorColor: Colors.blue,
                 isScrollable: true,
-                labelStyle:
-                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                unselectedLabelStyle: const TextStyle(fontSize: 12),
+                indicator: UnderlineTabIndicator(
+                  borderSide: BorderSide(
+                    color: GlassTheme.colors.textAccent,
+                    width: 2,
+                  ),
+                ),
+                labelColor: GlassTheme.colors.textPrimary,
+                unselectedLabelColor: GlassTheme.colors.textTertiary,
+                labelStyle: GlassTheme.labelMedium
+                    .copyWith(fontWeight: FontWeight.w700),
+                unselectedLabelStyle: GlassTheme.labelMedium,
                 labelPadding: const EdgeInsets.symmetric(horizontal: 10),
                 tabs: const [
                   Tab(text: 'Requests'),
@@ -97,21 +87,21 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-            // Tab content
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildRequestsTab(),
-                  _buildResponsesTab(),
-                  _buildAcceptedTab(),
-                  _buildCompletedTab(),
-                ],
-              ),
+          ),
+          const SizedBox(height: 8),
+          // Tab content
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildRequestsTab(),
+                _buildResponsesTab(),
+                _buildAcceptedTab(),
+                _buildCompletedTab(),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -158,7 +148,8 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
           if (_loadingAccepted) return _skeletonCard();
           final r = _acceptedRequests[index];
           return _requestCard(r,
-              statusLabel: 'Accepted', statusColor: Colors.blue);
+              statusLabel: 'Accepted',
+              statusColor: GlassTheme.colors.infoColor);
         },
       ),
     );
@@ -174,7 +165,8 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
           if (_loadingCompleted) return _skeletonCard();
           final r = _completedRequests[index];
           return _requestCard(r,
-              statusLabel: 'Completed', statusColor: Colors.grey);
+              statusLabel: 'Completed',
+              statusColor: GlassTheme.colors.textTertiary);
         },
       ),
     );
@@ -187,12 +179,12 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
     // Maintain backwards-compatibility but allow overrides for Accepted/Completed tabs
     final color = statusColor ?? (isOrder ? Colors.blue : Colors.green);
     final label = statusLabel ?? (isOrder ? 'Accepted' : 'Active');
-    return Card(
+    return GlassTheme.glassCard(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
         contentPadding: const EdgeInsets.all(16),
         leading: CircleAvatar(
-          backgroundColor: color.withOpacity(0.1),
+          backgroundColor: color.withOpacity(0.15),
           child: Icon(isOrder ? Icons.shopping_bag : Icons.receipt_long,
               color: color),
         ),
@@ -212,7 +204,7 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(label, style: TextStyle(color: color, fontSize: 11)),
