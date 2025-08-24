@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import '../services/enhanced_user_service.dart';
 import '../services/contact_verification_service.dart';
 import '../services/api_client.dart';
+import '../services/image_upload_service.dart';
 import '../theme/app_theme.dart';
-import 'src/utils/firebase_shim.dart'; // Added by migration script
-// REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
-// Removed direct firebase_storage dependency; using FileUploadService / stub.
 import 'dart:io';
 
 class BusinessVerificationScreen extends StatefulWidget {
@@ -83,8 +81,10 @@ class _BusinessVerificationScreenState
             print('DEBUG: Raw API business data:');
             print('  phoneVerified: ${businessData['phoneVerified']}');
             print('  emailVerified: ${businessData['emailVerified']}');
-            print('  requiresPhoneVerification: ${businessData['requiresPhoneVerification']}');
-            print('  requiresEmailVerification: ${businessData['requiresEmailVerification']}');
+            print(
+                '  requiresPhoneVerification: ${businessData['requiresPhoneVerification']}');
+            print(
+                '  requiresEmailVerification: ${businessData['requiresEmailVerification']}');
             print('  phone_verified (old): ${businessData['phone_verified']}');
             print('  email_verified (old): ${businessData['email_verified']}');
           }
@@ -130,8 +130,10 @@ class _BusinessVerificationScreenState
       'taxId': apiData['tax_id'],
       'country': apiData['country'],
       'status': apiData['status'],
-      'phoneVerified': apiData['phoneVerified'] ?? apiData['phone_verified'] ?? false,
-      'emailVerified': apiData['emailVerified'] ?? apiData['email_verified'] ?? false,
+      'phoneVerified':
+          apiData['phoneVerified'] ?? apiData['phone_verified'] ?? false,
+      'emailVerified':
+          apiData['emailVerified'] ?? apiData['email_verified'] ?? false,
       'requiresPhoneVerification': apiData['requiresPhoneVerification'] ?? true,
       'requiresEmailVerification': apiData['requiresEmailVerification'] ?? true,
       'phoneVerificationSource': apiData['phoneVerificationSource'],
@@ -233,15 +235,16 @@ class _BusinessVerificationScreenState
   Widget _buildBusinessInformation() {
     final businessPhone = _businessData?['businessPhone'] ?? '';
     final businessEmail = _businessData?['businessEmail'] ?? '';
-    
+
     // Use unified verification status from API with fallback to credentialsStatus
     final isPhoneVerified = (_businessData?['phoneVerified'] ?? false) ||
         (_credentialsStatus?.businessPhoneVerified ?? false);
     final isEmailVerified = (_businessData?['emailVerified'] ?? false) ||
         (_credentialsStatus?.businessEmailVerified ?? false);
-    
+
     // Check if phone verification is required based on API response
-    final requiresPhoneVerification = _businessData?['requiresPhoneVerification'] ?? !isPhoneVerified;
+    final requiresPhoneVerification =
+        _businessData?['requiresPhoneVerification'] ?? !isPhoneVerified;
 
     return Container(
       width: double.infinity,
@@ -1037,15 +1040,18 @@ class _BusinessVerificationScreenState
           throw Exception('Unknown document type: $documentType');
       }
 
-      // Upload image to Firebase Storage
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('business_verifications')
-          .child(currentUser.uid)
-          .child(storagePath);
+      // Upload image using ImageUploadService
+      final imageUploadService = ImageUploadService();
+      final xFile = XFile(imageFile.path);
+      final uploadPath =
+          'business_verifications/${currentUser.uid}/$storagePath';
 
-      final uploadTask = await storageRef.putFile(imageFile);
-      final downloadUrl = await uploadTask.ref.getDownloadURL();
+      final downloadUrl =
+          await imageUploadService.uploadImage(xFile, uploadPath);
+
+      if (downloadUrl == null) {
+        throw Exception('Failed to upload image');
+      }
 
       // Create update data with new document URL and reset status to pending
       final updateData = <String, dynamic>{};

@@ -1,6 +1,3 @@
-// REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
-
-import 'src/utils/firebase_shim.dart'; // Added by migration script
 enum PromoCodeType {
   percentageDiscount,
   fixedDiscount,
@@ -67,7 +64,7 @@ class PromoCodeModel {
 
   factory PromoCodeModel.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    
+
     return PromoCodeModel(
       id: doc.id,
       code: data['code'] ?? '',
@@ -91,7 +88,9 @@ class PromoCodeModel {
       conditions: Map<String, dynamic>.from(data['conditions'] ?? {}),
       createdBy: data['createdBy'] ?? '',
       approvedBy: data['approvedBy'],
-      approvedAt: data['approvedAt'] != null ? (data['approvedAt'] as Timestamp).toDate() : null,
+      approvedAt: data['approvedAt'] != null
+          ? (data['approvedAt'] as Timestamp).toDate()
+          : null,
       rejectionReason: data['rejectionReason'],
       createdByCountry: data['createdByCountry'] ?? '',
       createdAt: (data['createdAt'] as Timestamp).toDate(),
@@ -127,9 +126,9 @@ class PromoCodeModel {
   bool get isValid {
     final now = DateTime.now();
     return status == PromoCodeStatus.active &&
-           now.isAfter(validFrom) &&
-           now.isBefore(validTo) &&
-           currentUses < maxUses;
+        now.isAfter(validFrom) &&
+        now.isBefore(validTo) &&
+        currentUses < maxUses;
   }
 
   bool get isPendingApproval {
@@ -146,7 +145,8 @@ class PromoCodeModel {
 
   bool isApplicableForUser(String userType, String countryCode) {
     return applicableUserTypes.contains(userType) &&
-           (applicableCountries.isEmpty || applicableCountries.contains(countryCode));
+        (applicableCountries.isEmpty ||
+            applicableCountries.contains(countryCode));
   }
 
   String get displayValue {
@@ -190,7 +190,7 @@ class PromoCodeUsage {
 
   factory PromoCodeUsage.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    
+
     return PromoCodeUsage(
       id: doc.id,
       promoCodeId: data['promoCodeId'] ?? '',

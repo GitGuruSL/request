@@ -5,11 +5,8 @@ import '../services/api_client.dart';
 import '../services/image_upload_service.dart';
 import '../services/contact_verification_service.dart';
 import '../theme/app_theme.dart';
-import 'src/utils/firebase_shim.dart'; // Added by migration script
-// REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-// Removed direct firebase_storage dependency; using FileUploadService / stub.
 
 class DriverVerificationScreen extends StatefulWidget {
   const DriverVerificationScreen({Key? key}) : super(key: key);
@@ -184,21 +181,13 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
       return cityValue;
     }
 
-    // If it looks like a Firebase document ID, try to resolve it
+    // If it looks like a document ID, return the original value since we no longer use Firebase
+    // The REST API should provide city names directly
     try {
-// FIRESTORE_TODO: replace with REST service. Original: final cityDoc = await FirebaseFirestore.instance
-      final cityDoc = await FirebaseFirestore.instance
-          .collection('cities')
-          .doc(cityValue)
-          .get();
-
-      // firebase_shim returns a non-null data map or empty map; simplify checks
-      if (cityDoc.exists) {
-        final data = cityDoc.data();
-        return data['name'] ?? cityValue;
-      }
+      // City resolution would be handled by the REST API if needed
+      print('City value passed through as-is: $cityValue');
     } catch (e) {
-      print('Error resolving city name: $e');
+      print('Error with city value: $e');
     }
 
     return cityValue; // Return original value if resolution fails
@@ -1461,9 +1450,16 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
 
   String _formatDate(dynamic date) {
     if (date == null) return 'N/A';
-    if (date is Timestamp) {
-      final DateTime dateTime = date.toDate();
-      return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+    if (date is DateTime) {
+      return '${date.day}/${date.month}/${date.year}';
+    }
+    if (date is String) {
+      try {
+        final dateTime = DateTime.parse(date);
+        return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+      } catch (e) {
+        return date;
+      }
     }
     return date.toString();
   }
