@@ -12,11 +12,11 @@ class EditProfileScreen extends StatefulWidget {
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final EnhancedUserService _userService = EnhancedUserService();
   final _formKey = GlobalKey<FormState>();
-  
+
   UserModel? _currentUser;
   bool _isLoading = true;
   bool _isSaving = false;
-  
+
   late TextEditingController _firstNameController;
   late TextEditingController _lastNameController;
   late TextEditingController _phoneController;
@@ -79,7 +79,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       // Here you would implement the profile update logic
       // For now, we'll just show a success message
       await Future.delayed(const Duration(seconds: 1)); // Simulate API call
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile updated successfully!')),
@@ -150,9 +150,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             children: [
               // Profile Picture Section
               _buildProfilePictureSection(),
-              
+
               const SizedBox(height: 24),
-              
+
               // Basic Information Section
               _buildSection(
                 title: 'Basic Information',
@@ -195,9 +195,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               // Additional Information Section
               _buildSection(
                 title: 'Additional Information',
@@ -220,7 +220,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 32),
             ],
           ),
@@ -250,18 +250,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               CircleAvatar(
                 radius: 50,
                 backgroundColor: Colors.grey[200],
-                child: false // Profile picture URL not available in current UserModel
-                    ? ClipOval(
-                        child: Image.network(
-                          '', // Placeholder
-                          width: 100,
-                          height: 100,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              Icon(Icons.person, size: 50, color: Colors.grey[600]),
-                        ),
-                      )
-                    : Icon(Icons.person, size: 50, color: Colors.grey[600]),
+                child:
+                    false // Profile picture URL not available in current UserModel
+                        ? ClipOval(
+                            child: Image.network(
+                              '', // Placeholder
+                              width: 100,
+                              height: 100,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Icon(Icons.person,
+                                      size: 50, color: Colors.grey[600]),
+                            ),
+                          )
+                        : Icon(Icons.person, size: 50, color: Colors.grey[600]),
               ),
               Positioned(
                 bottom: 0,
@@ -294,7 +296,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Widget _buildSection({required String title, required List<Widget> children}) {
+  Widget _buildSection(
+      {required String title, required List<Widget> children}) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
