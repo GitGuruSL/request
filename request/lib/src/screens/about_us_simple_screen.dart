@@ -8,6 +8,7 @@ import '../services/api_client.dart';
 import 'content_page_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../theme/glass_theme.dart';
 
 class AboutUsSimpleScreen extends StatefulWidget {
   const AboutUsSimpleScreen({super.key});

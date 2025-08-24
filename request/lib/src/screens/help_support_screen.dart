@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/content_service.dart';
 import 'content_page_screen.dart';
+import '../theme/glass_theme.dart';
 
 class HelpSupportScreen extends StatefulWidget {
   const HelpSupportScreen({super.key});

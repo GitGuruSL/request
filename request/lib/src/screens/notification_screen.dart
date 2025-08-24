@@ -7,6 +7,7 @@ import '../screens/requests/ride/view_ride_request_screen.dart';
 import '../screens/chat/conversation_screen.dart';
 import '../services/chat_service.dart';
 import '../models/chat_models.dart';
+import '../theme/glass_theme.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -34,72 +35,75 @@ class _NotificationScreenState extends State<NotificationScreen> {
       );
     }
 
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        elevation: 0.5,
-        title: const Text('Notifications'),
-      ),
-      body: FutureBuilder<List<NotificationModel>>(
-        future: _restNotifications.fetchMyNotifications(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline, size: 56, color: Colors.red[300]),
-                  const SizedBox(height: 12),
-                  Text('Error: ${snapshot.error}'),
-                ],
-              ),
-            );
-          }
-          final notifications = snapshot.data ?? [];
-          if (notifications.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.notifications_none,
-                      size: 64, color: Colors.grey[400]),
-                  const SizedBox(height: 12),
-                  Text(
-                    'No notifications yet',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w600,
+    return Container(
+      decoration: GlassTheme.backgroundGradient,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          foregroundColor: GlassTheme.colors.textPrimary,
+          elevation: 0,
+          title: Text('Notifications', style: GlassTheme.titleLarge),
+        ),
+        body: FutureBuilder<List<NotificationModel>>(
+          future: _restNotifications.fetchMyNotifications(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline, size: 56, color: Colors.red[300]),
+                    const SizedBox(height: 12),
+                    Text('Error: ${snapshot.error}'),
+                  ],
+                ),
+              );
+            }
+            final notifications = snapshot.data ?? [];
+            if (notifications.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.notifications_none,
+                        size: 64, color: Colors.grey[400]),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No notifications yet',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "You'll see notifications here when something happens",
-                    style: TextStyle(color: Colors.grey[500]),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    Text(
+                      "You'll see notifications here when something happens",
+                      style: TextStyle(color: Colors.grey[500]),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView.separated(
+                padding: const EdgeInsets.all(12),
+                itemCount: notifications.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final n = notifications[index];
+                  return _buildCard(n);
+                },
               ),
             );
-          }
-
-          return RefreshIndicator(
-            onRefresh: _refresh,
-            child: ListView.separated(
-              padding: const EdgeInsets.all(12),
-              itemCount: notifications.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final n = notifications[index];
-                return _buildCard(n);
-              },
-            ),
-          );
-        },
+          },
+        ),
       ),
     );
   }
@@ -107,9 +111,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Widget _buildCard(NotificationModel n) {
     final isUnread = n.status == NotificationStatus.unread;
     final color = _color(n.type);
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: GlassTheme.glassContainer,
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () => _onTap(n),
@@ -136,6 +140,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                       style: TextStyle(
                         fontWeight:
                             isUnread ? FontWeight.w700 : FontWeight.w600,
+                        color: GlassTheme.colors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -143,7 +148,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                       n.message,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: Colors.grey[700]),
+                      style: TextStyle(color: GlassTheme.colors.textSecondary),
                     ),
                   ],
                 ),

@@ -3,6 +3,7 @@ import '../../models/chat_models.dart';
 import '../../services/chat_service.dart';
 import '../../services/rest_auth_service.dart';
 import 'conversation_screen.dart';
+import '../../theme/glass_theme.dart';
 
 class ChatConversationsScreen extends StatefulWidget {
   const ChatConversationsScreen({super.key});

@@ -6,7 +6,7 @@ import '../../services/enhanced_user_service.dart';
 import '../../services/file_upload_service.dart';
 import '../../services/api_client.dart';
 import '../../services/rest_auth_service.dart';
-import '../../theme/app_theme.dart';
+import '../../theme/glass_theme.dart';
 import '../../services/user_registration_service.dart';
 
 class BusinessProductDashboard extends StatefulWidget {
@@ -279,25 +279,30 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
 
     return DefaultTabController(
       length: 2,
-      child: Scaffold(
-        backgroundColor: AppTheme.backgroundColor,
-        appBar: AppBar(
-          backgroundColor: AppTheme.backgroundColor,
-          foregroundColor: AppTheme.textPrimary,
-          title: const Text('Product Dashboard'),
-          elevation: 0,
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Add Prices', icon: Icon(Icons.add_business)),
-              Tab(text: 'My Prices', icon: Icon(Icons.price_check)),
+      child: Container(
+        decoration: GlassTheme.backgroundGradient,
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            foregroundColor: GlassTheme.colors.textPrimary,
+            title: Text('Product Dashboard', style: GlassTheme.titleLarge),
+            elevation: 0,
+            bottom: TabBar(
+              labelColor: GlassTheme.colors.textPrimary,
+              unselectedLabelColor: GlassTheme.colors.textSecondary,
+              tabs: const [
+                Tab(text: 'Add Prices', icon: Icon(Icons.add_business)),
+                Tab(text: 'My Prices', icon: Icon(Icons.price_check)),
+              ],
+            ),
+          ),
+          body: TabBarView(
+            children: [
+              _buildAddPricesTab(),
+              _buildMyPricesTab(),
             ],
           ),
-        ),
-        body: TabBarView(
-          children: [
-            _buildAddPricesTab(),
-            _buildMyPricesTab(),
-          ],
         ),
       ),
     );
@@ -347,7 +352,7 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppTheme.primaryColor),
+                borderSide: BorderSide(color: GlassTheme.colors.primaryBlue),
               ),
             ),
             onChanged: (value) {
@@ -469,8 +474,9 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
             ElevatedButton(
               onPressed: () => _addEditPrice(product),
               style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    hasExistingPrice ? Colors.orange : AppTheme.primaryColor,
+                backgroundColor: hasExistingPrice
+                    ? Colors.orange
+                    : GlassTheme.colors.primaryBlue,
                 foregroundColor: Colors.white,
               ),
               child: Text(hasExistingPrice ? 'Edit Price' : 'Add Price'),
@@ -566,10 +572,10 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                   children: [
                     Text(
                       '${listing.currency ?? 'LKR'} ${listing.price?.toStringAsFixed(2) ?? '0.00'}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.primaryColor,
+                        color: GlassTheme.colors.primaryBlue,
                       ),
                     ),
                     Container(
@@ -603,8 +609,8 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                     icon: const Icon(Icons.edit, size: 16),
                     label: const Text('Edit'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.primaryColor,
-                      side: const BorderSide(color: AppTheme.primaryColor),
+                      foregroundColor: GlassTheme.colors.primaryBlue,
+                      side: BorderSide(color: GlassTheme.colors.primaryBlue),
                     ),
                   ),
                 ),
@@ -1201,7 +1207,7 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                             if (context.mounted) Navigator.pop(context);
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryColor,
+                            backgroundColor: GlassTheme.colors.primaryBlue,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
