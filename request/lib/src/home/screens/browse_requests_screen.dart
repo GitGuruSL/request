@@ -427,412 +427,455 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
           builder: (context, scrollController) {
             return StatefulBuilder(
               builder: (context, setSheetState) {
-                return Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.white.withOpacity(0.95),
-                        Colors.white.withOpacity(0.9),
-                      ],
-                    ),
-                    borderRadius:
-                        const BorderRadius.vertical(top: Radius.circular(24)),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.4),
-                      width: 1.0,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 20,
-                        offset: const Offset(0, -5),
-                      ),
-                      BoxShadow(
-                        color: Colors.white.withOpacity(0.8),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      // Grabber
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.withOpacity(0.4),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-                      // Header with Reset
-                      SizedBox(
-                        height: 48,
-                        child: Row(
+                return ClipRRect(
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(24)),
+                  child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                      child: Container(
+                        decoration: GlassTheme.glassContainer
+                            .copyWith(
+                                borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(24)))
+                            .copyWith(),
+                        child: Column(
                           children: [
-                            const SizedBox(width: 16),
-                            const Expanded(
-                              child: Center(
-                                child: Text('Filters',
-                                    style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600)),
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                setSheetState(() {
-                                  tmpTypes.clear();
-                                  tmpCats.clear();
-                                  tmpSubs.clear();
-                                  tmpSort = 'relevance';
-                                  tmpMin = null;
-                                  tmpMax = null;
-                                  tmpDeliveryOnly = false;
-                                });
-                              },
-                              child: const Text('Reset'),
-                            ),
-                            const SizedBox(width: 8),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: ListView(
-                          controller: scrollController,
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                          children: [
-                            _sectionTitle('Sort by'),
-                            Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    Colors.white.withOpacity(0.3),
-                                    Colors.white.withOpacity(0.2),
-                                  ],
+                            // Grabber
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Container(
+                                width: 40,
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  color: GlassTheme.colors.textTertiary
+                                      .withOpacity(0.4),
+                                  borderRadius: BorderRadius.circular(2),
                                 ),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: Colors.white.withOpacity(0.4),
-                                  width: 1.0,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                  BoxShadow(
-                                    color: Colors.white.withOpacity(0.8),
-                                    blurRadius: 5,
-                                    offset: const Offset(0, -1),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                children: [
-                                  RadioListTile<String>(
-                                    value: 'relevance',
-                                    groupValue: tmpSort,
-                                    onChanged: (v) =>
-                                        setSheetState(() => tmpSort = v!),
-                                    title: const Text('Relevance'),
-                                    dense: true,
-                                  ),
-                                  RadioListTile<String>(
-                                    value: 'recent',
-                                    groupValue: tmpSort,
-                                    onChanged: (v) =>
-                                        setSheetState(() => tmpSort = v!),
-                                    title: const Text('Most recent'),
-                                    dense: true,
-                                  ),
-                                  RadioListTile<String>(
-                                    value: 'price_high',
-                                    groupValue: tmpSort,
-                                    onChanged: (v) =>
-                                        setSheetState(() => tmpSort = v!),
-                                    title: const Text('Highest priced'),
-                                    dense: true,
-                                  ),
-                                  RadioListTile<String>(
-                                    value: 'price_low',
-                                    groupValue: tmpSort,
-                                    onChanged: (v) =>
-                                        setSheetState(() => tmpSort = v!),
-                                    title: const Text('Lowest priced'),
-                                    dense: true,
-                                  ),
-                                ],
                               ),
                             ),
-                            const SizedBox(height: 12),
-
-                            _buildAccordion(
-                              title: 'Categories',
-                              subtitle: tmpCats.isEmpty
-                                  ? 'All categories'
-                                  : tmpCats.map(_capitalize).join(', '),
-                              child: availableCategories.isEmpty
-                                  ? _emptyHint('No categories available yet')
-                                  : Wrap(
-                                      spacing: 8,
-                                      runSpacing: 8,
-                                      children: availableCategories.map((c) {
-                                        final sel = tmpCats.contains(c);
-                                        return FilterChip(
-                                          label: Text(_capitalize(c)),
-                                          selected: sel,
-                                          onSelected: (_) => setSheetState(() {
-                                            if (sel) {
-                                              tmpCats.remove(c);
-                                            } else {
-                                              tmpCats.add(c);
-                                            }
-                                          }),
-                                          backgroundColor:
-                                              _Palette.screenBackground,
-                                          selectedColor: _Palette.primaryBlue
-                                              .withOpacity(0.08),
-                                          checkmarkColor: _Palette.primaryBlue,
-                                          labelStyle: TextStyle(
-                                            color: sel
-                                                ? _Palette.primaryBlue
-                                                : _Palette.secondaryText,
-                                            fontWeight: sel
-                                                ? FontWeight.w600
-                                                : FontWeight.normal,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                            side: BorderSide.none,
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
-                            ),
-                            const SizedBox(height: 12),
-
-                            // Subcategories
-                            _buildAccordion(
-                              title: 'Subcategories',
-                              subtitle: tmpSubs.isEmpty
-                                  ? 'All subcategories'
-                                  : tmpSubs.map(_capitalize).join(', '),
-                              child: availableSubcategories.isEmpty
-                                  ? _emptyHint('No subcategories available yet')
-                                  : Wrap(
-                                      spacing: 8,
-                                      runSpacing: 8,
-                                      children: availableSubcategories.map((s) {
-                                        final sel = tmpSubs.contains(s);
-                                        return FilterChip(
-                                          label: Text(_capitalize(s)),
-                                          selected: sel,
-                                          onSelected: (_) => setSheetState(() {
-                                            if (sel) {
-                                              tmpSubs.remove(s);
-                                            } else {
-                                              tmpSubs.add(s);
-                                            }
-                                          }),
-                                          backgroundColor:
-                                              _Palette.screenBackground,
-                                          selectedColor: _Palette.primaryBlue
-                                              .withOpacity(0.08),
-                                          checkmarkColor: _Palette.primaryBlue,
-                                          labelStyle: TextStyle(
-                                            color: sel
-                                                ? _Palette.primaryBlue
-                                                : _Palette.secondaryText,
-                                            fontWeight: sel
-                                                ? FontWeight.w600
-                                                : FontWeight.normal,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                            side: BorderSide.none,
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
-                            ),
-                            const SizedBox(height: 12),
-
-                            _buildAccordion(
-                              title: 'Item type',
-                              subtitle: tmpTypes.isEmpty
-                                  ? 'All items'
-                                  : tmpTypes
-                                      .map(_displayNameForTypeKey)
-                                      .join(', '),
-                              child: Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: typesAvailable.map((t) {
-                                  final sel = tmpTypes.contains(t);
-                                  return FilterChip(
-                                    label: Text(_displayNameForTypeKey(t)),
-                                    selected: sel,
-                                    onSelected: (_) => setSheetState(() {
-                                      if (sel)
-                                        tmpTypes.remove(t);
-                                      else
-                                        tmpTypes.add(t);
-                                    }),
-                                    backgroundColor: _Palette.screenBackground,
-                                    selectedColor:
-                                        _Palette.primaryBlue.withOpacity(0.08),
-                                    checkmarkColor: _Palette.primaryBlue,
-                                    labelStyle: TextStyle(
-                                      color: sel
-                                          ? _Palette.primaryBlue
-                                          : _Palette.secondaryText,
-                                      fontWeight: sel
-                                          ? FontWeight.w600
-                                          : FontWeight.normal,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      side: BorderSide.none,
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-
-                            _buildAccordion(
-                              title: 'Price',
-                              subtitle: (tmpMin == null && tmpMax == null)
-                                  ? 'Any price'
-                                  : '${tmpMin?.toStringAsFixed(0) ?? '0'} - ${tmpMax?.toStringAsFixed(0) ?? '∞'}',
+                            // Header with Reset
+                            SizedBox(
+                              height: 48,
                               child: Row(
                                 children: [
+                                  const SizedBox(width: 16),
                                   Expanded(
-                                    child: TextField(
-                                      keyboardType:
-                                          const TextInputType.numberWithOptions(
-                                              decimal: true),
-                                      decoration: const InputDecoration(
-                                        labelText: 'Min',
-                                        border: OutlineInputBorder(),
-                                      ),
-                                      onChanged: (v) => setSheetState(() {
-                                        tmpMin = double.tryParse(v);
-                                      }),
+                                    child: Center(
+                                      child: Text('Filters',
+                                          style: GlassTheme.titleSmall),
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: TextField(
-                                      keyboardType:
-                                          const TextInputType.numberWithOptions(
-                                              decimal: true),
-                                      decoration: const InputDecoration(
-                                        labelText: 'Max',
-                                        border: OutlineInputBorder(),
-                                      ),
-                                      onChanged: (v) => setSheetState(() {
-                                        tmpMax = double.tryParse(v);
-                                      }),
+                                  TextButton(
+                                    onPressed: () {
+                                      setSheetState(() {
+                                        tmpTypes.clear();
+                                        tmpCats.clear();
+                                        tmpSubs.clear();
+                                        tmpSort = 'relevance';
+                                        tmpMin = null;
+                                        tmpMax = null;
+                                        tmpDeliveryOnly = false;
+                                      });
+                                    },
+                                    style: TextButton.styleFrom(
+                                      foregroundColor:
+                                          GlassTheme.colors.textAccent,
                                     ),
+                                    child: const Text('Reset'),
                                   ),
+                                  const SizedBox(width: 8),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 12),
+                            Expanded(
+                              child: ListView(
+                                controller: scrollController,
+                                padding:
+                                    const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                children: [
+                                  _sectionTitle('Sort by'),
+                                  GlassTheme.glassCard(
+                                    subtle: true,
+                                    child: Column(
+                                      children: [
+                                        RadioListTile<String>(
+                                          value: 'relevance',
+                                          groupValue: tmpSort,
+                                          onChanged: (v) =>
+                                              setSheetState(() => tmpSort = v!),
+                                          activeColor:
+                                              GlassTheme.colors.primaryBlue,
+                                          title: Text('Relevance',
+                                              style: GlassTheme.bodyMedium
+                                                  .copyWith(
+                                                      color: GlassTheme
+                                                          .colors.textPrimary)),
+                                          dense: true,
+                                        ),
+                                        RadioListTile<String>(
+                                          value: 'recent',
+                                          groupValue: tmpSort,
+                                          onChanged: (v) =>
+                                              setSheetState(() => tmpSort = v!),
+                                          activeColor:
+                                              GlassTheme.colors.primaryBlue,
+                                          title: Text('Most recent',
+                                              style: GlassTheme.bodyMedium
+                                                  .copyWith(
+                                                      color: GlassTheme
+                                                          .colors.textPrimary)),
+                                          dense: true,
+                                        ),
+                                        RadioListTile<String>(
+                                          value: 'price_high',
+                                          groupValue: tmpSort,
+                                          onChanged: (v) =>
+                                              setSheetState(() => tmpSort = v!),
+                                          activeColor:
+                                              GlassTheme.colors.primaryBlue,
+                                          title: Text('Highest priced',
+                                              style: GlassTheme.bodyMedium
+                                                  .copyWith(
+                                                      color: GlassTheme
+                                                          .colors.textPrimary)),
+                                          dense: true,
+                                        ),
+                                        RadioListTile<String>(
+                                          value: 'price_low',
+                                          groupValue: tmpSort,
+                                          onChanged: (v) =>
+                                              setSheetState(() => tmpSort = v!),
+                                          activeColor:
+                                              GlassTheme.colors.primaryBlue,
+                                          title: Text('Lowest priced',
+                                              style: GlassTheme.bodyMedium
+                                                  .copyWith(
+                                                      color: GlassTheme
+                                                          .colors.textPrimary)),
+                                          dense: true,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
 
-                            _buildAccordion(
-                              title: 'Delivery',
-                              subtitle:
-                                  tmpDeliveryOnly ? 'Delivery only' : 'Any',
-                              child: SwitchListTile(
-                                contentPadding: EdgeInsets.zero,
-                                title:
-                                    const Text('Show delivery requests only'),
-                                value: tmpDeliveryOnly,
-                                onChanged: (v) =>
-                                    setSheetState(() => tmpDeliveryOnly = v),
+                                  _buildAccordion(
+                                    title: 'Categories',
+                                    subtitle: tmpCats.isEmpty
+                                        ? 'All categories'
+                                        : tmpCats.map(_capitalize).join(', '),
+                                    child: availableCategories.isEmpty
+                                        ? _emptyHint(
+                                            'No categories available yet')
+                                        : Wrap(
+                                            spacing: 8,
+                                            runSpacing: 8,
+                                            children:
+                                                availableCategories.map((c) {
+                                              final sel = tmpCats.contains(c);
+                                              return FilterChip(
+                                                label: Text(_capitalize(c)),
+                                                selected: sel,
+                                                onSelected: (_) =>
+                                                    setSheetState(() {
+                                                  if (sel) {
+                                                    tmpCats.remove(c);
+                                                  } else {
+                                                    tmpCats.add(c);
+                                                  }
+                                                }),
+                                                backgroundColor:
+                                                    Colors.transparent,
+                                                selectedColor: GlassTheme
+                                                    .colors.primaryBlue
+                                                    .withOpacity(0.1),
+                                                checkmarkColor: GlassTheme
+                                                    .colors.primaryBlue,
+                                                labelStyle: TextStyle(
+                                                  color: sel
+                                                      ? GlassTheme
+                                                          .colors.primaryBlue
+                                                      : GlassTheme
+                                                          .colors.textSecondary,
+                                                  fontWeight: sel
+                                                      ? FontWeight.w600
+                                                      : FontWeight.normal,
+                                                ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(20),
+                                                  side: BorderSide.none,
+                                                ),
+                                              );
+                                            }).toList(),
+                                          ),
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  // Subcategories
+                                  _buildAccordion(
+                                    title: 'Subcategories',
+                                    subtitle: tmpSubs.isEmpty
+                                        ? 'All subcategories'
+                                        : tmpSubs.map(_capitalize).join(', '),
+                                    child: availableSubcategories.isEmpty
+                                        ? _emptyHint(
+                                            'No subcategories available yet')
+                                        : Wrap(
+                                            spacing: 8,
+                                            runSpacing: 8,
+                                            children:
+                                                availableSubcategories.map((s) {
+                                              final sel = tmpSubs.contains(s);
+                                              return FilterChip(
+                                                label: Text(_capitalize(s)),
+                                                selected: sel,
+                                                onSelected: (_) =>
+                                                    setSheetState(() {
+                                                  if (sel) {
+                                                    tmpSubs.remove(s);
+                                                  } else {
+                                                    tmpSubs.add(s);
+                                                  }
+                                                }),
+                                                backgroundColor:
+                                                    Colors.transparent,
+                                                selectedColor: GlassTheme
+                                                    .colors.primaryBlue
+                                                    .withOpacity(0.1),
+                                                checkmarkColor: GlassTheme
+                                                    .colors.primaryBlue,
+                                                labelStyle: TextStyle(
+                                                  color: sel
+                                                      ? GlassTheme
+                                                          .colors.primaryBlue
+                                                      : GlassTheme
+                                                          .colors.textSecondary,
+                                                  fontWeight: sel
+                                                      ? FontWeight.w600
+                                                      : FontWeight.normal,
+                                                ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(20),
+                                                  side: BorderSide.none,
+                                                ),
+                                              );
+                                            }).toList(),
+                                          ),
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  _buildAccordion(
+                                    title: 'Item type',
+                                    subtitle: tmpTypes.isEmpty
+                                        ? 'All items'
+                                        : tmpTypes
+                                            .map(_displayNameForTypeKey)
+                                            .join(', '),
+                                    child: Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: typesAvailable.map((t) {
+                                        final sel = tmpTypes.contains(t);
+                                        return FilterChip(
+                                          label:
+                                              Text(_displayNameForTypeKey(t)),
+                                          selected: sel,
+                                          onSelected: (_) => setSheetState(() {
+                                            if (sel) {
+                                              tmpTypes.remove(t);
+                                            } else {
+                                              tmpTypes.add(t);
+                                            }
+                                          }),
+                                          backgroundColor: Colors.transparent,
+                                          selectedColor: GlassTheme
+                                              .colors.primaryBlue
+                                              .withOpacity(0.1),
+                                          checkmarkColor:
+                                              GlassTheme.colors.primaryBlue,
+                                          labelStyle: TextStyle(
+                                            color: sel
+                                                ? GlassTheme.colors.primaryBlue
+                                                : GlassTheme
+                                                    .colors.textSecondary,
+                                            fontWeight: sel
+                                                ? FontWeight.w600
+                                                : FontWeight.normal,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(20),
+                                            side: BorderSide.none,
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  _buildAccordion(
+                                    title: 'Price',
+                                    subtitle: (tmpMin == null && tmpMax == null)
+                                        ? 'Any price'
+                                        : '${tmpMin?.toStringAsFixed(0) ?? '0'} - ${tmpMax?.toStringAsFixed(0) ?? '∞'}',
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: TextField(
+                                            keyboardType: const TextInputType
+                                                .numberWithOptions(
+                                                decimal: true),
+                                            decoration: InputDecoration(
+                                              labelText: 'Min',
+                                              labelStyle: GlassTheme.bodySmall,
+                                              filled: true,
+                                              fillColor: Colors.transparent,
+                                              enabledBorder: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                borderSide: BorderSide(
+                                                    color: GlassTheme.colors
+                                                        .glassBorderSubtle,
+                                                    width: 1),
+                                              ),
+                                              focusedBorder: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                borderSide: BorderSide(
+                                                    color: GlassTheme
+                                                        .colors.primaryBlue,
+                                                    width: 1.5),
+                                              ),
+                                            ),
+                                            onChanged: (v) => setSheetState(() {
+                                              tmpMin = double.tryParse(v);
+                                            }),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: TextField(
+                                            keyboardType: const TextInputType
+                                                .numberWithOptions(
+                                                decimal: true),
+                                            decoration: InputDecoration(
+                                              labelText: 'Max',
+                                              labelStyle: GlassTheme.bodySmall,
+                                              filled: true,
+                                              fillColor: Colors.transparent,
+                                              enabledBorder: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                borderSide: BorderSide(
+                                                    color: GlassTheme.colors
+                                                        .glassBorderSubtle,
+                                                    width: 1),
+                                              ),
+                                              focusedBorder: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                borderSide: BorderSide(
+                                                    color: GlassTheme
+                                                        .colors.primaryBlue,
+                                                    width: 1.5),
+                                              ),
+                                            ),
+                                            onChanged: (v) => setSheetState(() {
+                                              tmpMax = double.tryParse(v);
+                                            }),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  _buildAccordion(
+                                    title: 'Delivery',
+                                    subtitle: tmpDeliveryOnly
+                                        ? 'Delivery only'
+                                        : 'Any',
+                                    child: SwitchListTile(
+                                      contentPadding: EdgeInsets.zero,
+                                      title: Text('Show delivery requests only',
+                                          style: GlassTheme.bodyMedium.copyWith(
+                                              color: GlassTheme
+                                                  .colors.textPrimary)),
+                                      value: tmpDeliveryOnly,
+                                      activeColor:
+                                          GlassTheme.colors.primaryBlue,
+                                      onChanged: (v) => setSheetState(
+                                          () => tmpDeliveryOnly = v),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  _buildAccordion(
+                                    title: 'Delivers to',
+                                    subtitle: (CountryService
+                                            .instance.countryName.isNotEmpty
+                                        ? CountryService.instance.countryName
+                                        : 'Your country'),
+                                    child: ListTile(
+                                      contentPadding: EdgeInsets.zero,
+                                      title: Text(
+                                          CountryService.instance.countryName
+                                                  .isNotEmpty
+                                              ? CountryService
+                                                  .instance.countryName
+                                              : 'Current country',
+                                          style: GlassTheme.bodyMedium.copyWith(
+                                              color: GlassTheme
+                                                  .colors.textPrimary)),
+                                      subtitle: Text(
+                                          'Country is based on your selection',
+                                          style: GlassTheme.bodySmall),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 12),
-
-                            _buildAccordion(
-                              title: 'Delivers to',
-                              subtitle: (CountryService
-                                      .instance.countryName.isNotEmpty
-                                  ? CountryService.instance.countryName
-                                  : 'Your country'),
-                              child: ListTile(
-                                contentPadding: EdgeInsets.zero,
-                                title: Text(CountryService
-                                        .instance.countryName.isNotEmpty
-                                    ? CountryService.instance.countryName
-                                    : 'Current country'),
-                                subtitle: const Text(
-                                    'Country is based on your selection'),
+                            SafeArea(
+                              top: false,
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _selectedTypes
+                                          ..clear()
+                                          ..addAll(tmpTypes);
+                                        _selectedCategories
+                                          ..clear()
+                                          ..addAll(tmpCats);
+                                        _selectedSubcategories
+                                          ..clear()
+                                          ..addAll(tmpSubs);
+                                        _sortBy = tmpSort;
+                                        _minPrice = tmpMin;
+                                        _maxPrice = tmpMax;
+                                        _deliveryOnly = tmpDeliveryOnly;
+                                        _page = 1;
+                                        _hasMore = true;
+                                      });
+                                      Navigator.pop(context);
+                                      _loadInitial();
+                                    },
+                                    style: GlassTheme.primaryButton,
+                                    child: const Text('Show results'),
+                                  ),
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 24),
                           ],
                         ),
-                      ),
-                      SafeArea(
-                        top: false,
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                          child: SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: () {
-                                setState(() {
-                                  _selectedTypes
-                                    ..clear()
-                                    ..addAll(tmpTypes);
-                                  _selectedCategories
-                                    ..clear()
-                                    ..addAll(tmpCats);
-                                  _selectedSubcategories
-                                    ..clear()
-                                    ..addAll(tmpSubs);
-                                  _sortBy = tmpSort;
-                                  _minPrice = tmpMin;
-                                  _maxPrice = tmpMax;
-                                  _deliveryOnly = tmpDeliveryOnly;
-                                  _page = 1;
-                                  _hasMore = true;
-                                });
-                                Navigator.pop(context);
-                                _loadInitial();
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF6366F1),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
-                                elevation: 8,
-                                shadowColor: Colors.black.withOpacity(0.2),
-                              ),
-                              child: const Text('Show results'),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                      )),
                 );
               },
             );
@@ -864,11 +907,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         text,
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
-          color: _Palette.primaryText,
-        ),
+        style: GlassTheme.titleSmall,
       ),
     );
   }
@@ -878,7 +917,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         text,
-        style: TextStyle(fontSize: 13, color: _Palette.secondaryText),
+        style: GlassTheme.bodySmall,
       ),
     );
   }
@@ -893,43 +932,16 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     String? subtitle,
     required Widget child,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.white.withOpacity(0.3),
-            Colors.white.withOpacity(0.2),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.4),
-          width: 1.0,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-          BoxShadow(
-            color: Colors.white.withOpacity(0.8),
-            blurRadius: 5,
-            offset: const Offset(0, -1),
-          ),
-        ],
-      ),
+    return GlassTheme.glassCard(
+      subtle: true,
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           tilePadding: const EdgeInsets.symmetric(horizontal: 12),
           childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-          title:
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+          title: Text(title, style: GlassTheme.titleSmall),
           subtitle: subtitle != null
-              ? Text(subtitle, style: TextStyle(color: _Palette.secondaryText))
+              ? Text(subtitle, style: GlassTheme.bodySmall)
               : null,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -1446,7 +1458,6 @@ class _Palette {
   static const sunnyYellow = Color(0xFFFFCC00);
 
   // Neutrals
-  static const screenBackground = Color(0xFFF2F2F7);
   static const primaryText = Color(0xFF1C1C1E);
   static const secondaryText = Color(0xFF6E6E73);
 }
