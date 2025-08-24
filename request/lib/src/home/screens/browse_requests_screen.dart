@@ -6,6 +6,7 @@ import '../../services/country_service.dart';
 import '../../models/request_model.dart' as models;
 import '../../screens/unified_request_response/unified_request_view_screen.dart';
 import '../../screens/requests/ride/view_ride_request_screen.dart';
+import '../../theme/glass_theme.dart';
 
 class BrowseRequestsScreen extends StatefulWidget {
   const BrowseRequestsScreen({super.key});
@@ -265,19 +266,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFF8FAFC), // Very light gray top
-              Color(0xFFE2E8F0), // Light gray
-              Color(0xFFCBD5E1), // Medium gray
-              Color(0xFFF1F5F9), // Light gray bottom
-            ],
-          ),
-        ),
+      body: GlassTheme.backgroundContainer(
         child: _needsCountrySelection
             ? Center(
                 child: Padding(
@@ -1069,30 +1058,8 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     final requestType = _displayTypeFor(request);
     final style = _typeStyle(requestType);
 
-    return Container(
+    return GlassTheme.glassCard(
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.white.withOpacity(0.85),
-            Colors.white.withOpacity(0.75),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.6),
-          width: 1.0,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
       child: InkWell(
         onTap: () => _showRequestDetails(request),
         borderRadius: BorderRadius.circular(20),
@@ -1112,11 +1079,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                       children: [
                         Text(
                           request.title,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: _Palette.primaryText,
-                          ),
+                          style: GlassTheme.titleSmall,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1142,10 +1105,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                             const SizedBox(width: 8),
                             Text(
                               _relativeTime(request.createdAt),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: _Palette.secondaryText,
-                              ),
+                              style: GlassTheme.bodySmall,
                             ),
                           ],
                         ),
@@ -1157,11 +1117,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
               const SizedBox(height: 12),
               Text(
                 request.description,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: _Palette.secondaryText,
-                  height: 1.45,
-                ),
+                style: GlassTheme.bodyMedium,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -1171,13 +1127,12 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.location_on_outlined,
-                        size: 16, color: _Palette.secondaryText),
+                        size: 16, color: GlassTheme.colors.textSecondary),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         request.location!.city!,
-                        style: TextStyle(
-                            fontSize: 13, color: _Palette.secondaryText),
+                        style: GlassTheme.bodySmall,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -1266,27 +1221,67 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
       itemCount: 5,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        return Container(
-          height: 150, // Adjusted height
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white.withOpacity(0.8),
-                Colors.white.withOpacity(0.7),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.6),
-              width: 1.0,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.03),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+        return GlassTheme.glassCard(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: GlassTheme.colors.textTertiary.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          height: 16,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color:
+                                GlassTheme.colors.textTertiary.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          height: 12,
+                          width: 120,
+                          decoration: BoxDecoration(
+                            color:
+                                GlassTheme.colors.textTertiary.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Container(
+                height: 14,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: GlassTheme.colors.textTertiary.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                height: 14,
+                width: MediaQuery.of(context).size.width * 0.6,
+                decoration: BoxDecoration(
+                  color: GlassTheme.colors.textTertiary.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(4),
+                ),
               ),
             ],
           ),
@@ -1330,30 +1325,11 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.white.withOpacity(0.3),
-            Colors.white.withOpacity(0.1),
-          ],
-        ),
+      decoration: GlassTheme.glassContainerSubtle.copyWith(
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(28),
           bottomRight: Radius.circular(28),
         ),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.3),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: SafeArea(
         child: Padding(
@@ -1365,18 +1341,14 @@ class _Header extends StatelessWidget {
                 children: [
                   Text(
                     'Discover',
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w600,
-                      color: _Palette.primaryText,
-                    ),
+                    style: GlassTheme.titleLarge,
                   ),
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.refresh_rounded),
                     onPressed: onRefresh,
                     tooltip: 'Refresh',
-                    color: _Palette.secondaryText,
+                    color: GlassTheme.colors.textSecondary,
                   ),
                   const SizedBox(width: 4),
                   Stack(

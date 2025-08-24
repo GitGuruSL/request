@@ -3,6 +3,7 @@ import '../services/auth_service.dart';
 import '../services/enhanced_user_service.dart';
 import '../services/user_registration_service.dart';
 import '../services/rest_notification_service.dart';
+import '../theme/glass_theme.dart';
 // Removed direct RestAuthService usage in this screen
 import 'my_activities_screen.dart';
 import 'help_support_screen.dart';
@@ -11,6 +12,7 @@ import 'driver_subscription_screen.dart';
 import 'account/user_profile_screen.dart';
 import 'about_us_simple_screen.dart';
 import 'pricing/business_product_dashboard.dart';
+import 'settings_screen.dart';
 
 class ModernMenuScreen extends StatefulWidget {
   const ModernMenuScreen({super.key});
@@ -484,6 +486,18 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
             subtitle: 'Manage your membership',
             color: const Color(0xFF8B5CF6), // Purple
             onTap: () => Navigator.pushNamed(context, '/membership'),
+          ),
+          _buildActionTile(
+            icon: Icons.settings_outlined,
+            title: 'Settings',
+            subtitle: 'App preferences and theme',
+            color: const Color(0xFF6366F1), // Indigo
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const SettingsScreen(),
+              ),
+            ),
           ),
           _buildActionTile(
             icon: Icons.help_outline,

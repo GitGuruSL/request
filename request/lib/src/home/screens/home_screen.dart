@@ -12,6 +12,7 @@ import '../../widgets/coming_soon_widget.dart';
 import '../../services/rest_notification_service.dart';
 import '../../screens/notification_screen.dart';
 import '../../screens/account/user_profile_screen.dart';
+import '../../theme/glass_theme.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -331,19 +332,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFF8FAFC), // Very light gray top
-              Color(0xFFE2E8F0), // Light gray
-              Color(0xFFCBD5E1), // Medium gray
-              Color(0xFFF1F5F9), // Light gray bottom
-            ],
-          ),
-        ),
+      body: GlassTheme.backgroundContainer(
         child: SafeArea(
           child: RefreshIndicator(
             onRefresh: () async {
@@ -355,10 +344,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Text(
                   'Hello, ${_greetingName()}!',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF1E293B),
-                      ),
+                  style: GlassTheme.titleLarge,
                 ),
                 const SizedBox(height: 16),
 
@@ -487,29 +473,7 @@ class _BannerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(right: 10),
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.white.withOpacity(0.85),
-              Colors.white.withOpacity(0.75),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: Colors.white.withOpacity(0.6),
-            width: 1.0,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
+      child: GlassTheme.glassCard(
         child: ClipRRect(
           borderRadius: BorderRadius.circular(20),
           child: Stack(
@@ -615,35 +579,7 @@ class _QuickActionsGrid extends StatelessWidget {
           onTap: disabled ? null : () => onTap(it),
           borderRadius: BorderRadius.circular(18),
           child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: disabled
-                    ? [
-                        Colors.white.withOpacity(0.6),
-                        Colors.white.withOpacity(0.5),
-                      ]
-                    : [
-                        Colors.white.withOpacity(0.85),
-                        Colors.white.withOpacity(0.75),
-                      ],
-              ),
-              border: Border.all(
-                color: disabled
-                    ? Colors.white.withOpacity(0.4)
-                    : Colors.white.withOpacity(0.6),
-                width: 1.0,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
+            decoration: GlassTheme.glassContainerDisabled(disabled: disabled),
             padding: const EdgeInsets.all(14),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -702,28 +638,7 @@ class _ProductCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
         child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white.withOpacity(0.85),
-                Colors.white.withOpacity(0.75),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.6),
-              width: 1.0,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.03),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
+          decoration: GlassTheme.glassContainer,
           padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
