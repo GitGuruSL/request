@@ -80,7 +80,10 @@ const PagesModule = () => {
     requiresApproval: true,
     status: 'draft',
     metaDescription: '',
-    keywords: []
+  keywords: [],
+  // UI fields mapped to payload.metadata
+  headerLogoUrl: '',
+  effectiveDate: ''
   });
 
   // Page types and categories
@@ -140,7 +143,9 @@ const PagesModule = () => {
       requiresApproval: !isSuperAdmin, // Super admin pages don't need approval
       status: 'draft',
       metaDescription: '',
-      keywords: []
+  keywords: [],
+  headerLogoUrl: '',
+  effectiveDate: ''
     });
     setSelectedPage(null);
     setDialogOpen(true);
@@ -158,7 +163,9 @@ const PagesModule = () => {
       requiresApproval: page.requiresApproval !== false,
       status: page.status || 'draft',
       metaDescription: page.metaDescription || '',
-      keywords: page.keywords || []
+  keywords: page.keywords || [],
+  headerLogoUrl: (page.metadata?.headerLogoUrl || page.metadata?.logoUrl || page.metadata?.brandLogoUrl || page.metadata?.logo || ''),
+  effectiveDate: (page.metadata?.effectiveDate || page.metadata?.effective_date || page.metadata?.effectiveDateDisplay || page.metadata?.effective_date_display || '')
     });
     setSelectedPage(page);
     setDialogOpen(true);
@@ -166,10 +173,17 @@ const PagesModule = () => {
 
   const handleSavePage = async () => {
     try {
+      // Exclude UI-only fields from top-level payload
+      const { headerLogoUrl, effectiveDate, ...rest } = formData;
       const payload = {
-        ...formData,
-        slug: formData.slug || formData.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
-        country: formData.type === 'country-specific' ? userCountry : null
+        ...rest,
+        slug: rest.slug || rest.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+        country: rest.type === 'country-specific' ? userCountry : null,
+        // Only send metadata fields the mobile app consumes
+        metadata: {
+          headerLogoUrl: headerLogoUrl || undefined,
+          effectiveDate: effectiveDate || undefined
+        }
       };
       if (selectedPage) { await api.put(`/content-pages/${selectedPage.id}`, payload); } else { await api.post('/content-pages', payload); }
 
@@ -623,6 +637,29 @@ const PagesModule = () => {
                   ))}
                 </Select>
               </FormControl>
+            </Grid>
+
+            {/* Metadata: Header Logo URL & Effective Date */}
+            <Grid item xs={12} sm={8}>
+              <TextField
+                fullWidth
+                label="Header Logo URL"
+                value={formData.headerLogoUrl}
+                onChange={(e) => setFormData({ ...formData, headerLogoUrl: e.target.value })}
+                placeholder="https://cdn.example.com/brand/logo.png or /public/logo.png"
+                helperText="Shown at top of Legal/Privacy pages in the mobile app"
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                fullWidth
+                label="Effective Date"
+                type="date"
+                value={formData.effectiveDate}
+                onChange={(e) => setFormData({ ...formData, effectiveDate: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                helperText="Displayed under the title (YYYY-MM-DD)"
+              />
             </Grid>
 
             <Grid item xs={12}>

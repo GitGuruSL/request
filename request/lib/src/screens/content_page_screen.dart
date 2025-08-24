@@ -3,6 +3,7 @@ import 'package:flutter_html/flutter_html.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/content_service.dart';
 import '../theme/glass_theme.dart';
+import '../services/api_client.dart';
 
 class ContentPageScreen extends StatefulWidget {
   final String slug;
@@ -119,93 +120,151 @@ class _ContentPageScreenState extends State<ContentPageScreen> {
     return GlassTheme.backgroundContainer(
       child: RefreshIndicator(
         onRefresh: _loadPage,
+        color: GlassTheme.colors.primaryBlue,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (!_contentHasTopHeading(_page!.content)) ...[
-                Text(_page!.title, style: GlassTheme.titleLarge),
-                const SizedBox(height: 16),
-              ],
-              if (_shouldShowMetadata()) ...[
-                _buildMetadata(),
-                const SizedBox(height: 16),
-              ],
-              Html(
-                data: _renderedContent(_page!.content),
-                onLinkTap: (url, attributes, element) {
-                  if (url != null) _launchUrl(url);
-                },
-                style: {
-                  "body": Style(
-                    margin: Margins.zero,
-                    padding: HtmlPaddings.zero,
-                    whiteSpace: WhiteSpace.normal,
-                    color: GlassTheme.colors.textPrimary,
-                  ),
-                  "p": Style(
-                    fontSize: FontSize(16),
-                    lineHeight: const LineHeight(1.6),
-                    margin: Margins.only(bottom: 16),
-                    textAlign: TextAlign.justify,
-                  ),
-                  "h1": Style(
-                    fontSize: FontSize(24),
-                    fontWeight: FontWeight.bold,
-                    margin: Margins.only(top: 24, bottom: 16),
-                    color: GlassTheme.colors.textAccent,
-                    textAlign: TextAlign.start,
-                  ),
-                  "h2": Style(
-                    fontSize: FontSize(20),
-                    fontWeight: FontWeight.bold,
-                    margin: Margins.only(top: 20, bottom: 12),
-                    color: GlassTheme.colors.textAccent,
-                    textAlign: TextAlign.start,
-                  ),
-                  "h3": Style(
-                    fontSize: FontSize(18),
-                    fontWeight: FontWeight.bold,
-                    margin: Margins.only(top: 16, bottom: 8),
-                    color: GlassTheme.colors.textAccent,
-                    textAlign: TextAlign.start,
-                  ),
-                  "a": Style(
-                    color: GlassTheme.colors.textAccent,
-                    textDecoration: TextDecoration.underline,
-                  ),
-                  "ul": Style(margin: Margins.only(bottom: 16)),
-                  "ol": Style(margin: Margins.only(bottom: 16)),
-                  "li": Style(margin: Margins.only(bottom: 8)),
-                  "blockquote": Style(
-                    border: Border(
-                      left: BorderSide(
-                        color: GlassTheme.colors.textAccent,
-                        width: 4,
-                      ),
+              // Optional brand/header logo from page metadata
+              if (_headerLogoUrl() != null) ...[
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Image.network(
+                      _headerLogoUrl()!,
+                      height: 56,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stack) =>
+                          const SizedBox.shrink(),
                     ),
-                    padding: HtmlPaddings.only(left: 16),
-                    margin: Margins.only(bottom: 16),
-                    backgroundColor:
-                        GlassTheme.colors.glassBackgroundSubtle.first,
                   ),
-                  "code": Style(
-                    backgroundColor:
-                        GlassTheme.colors.glassBackgroundSubtle.last,
-                    padding: HtmlPaddings.symmetric(horizontal: 4, vertical: 2),
-                    fontFamily: 'monospace',
+                ),
+              ],
+              if (!_contentHasTopHeading(_page!.content))
+                GlassTheme.glassCard(
+                  subtle: true,
+                  padding: const EdgeInsets.all(16),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(_page!.title, style: GlassTheme.titleLarge),
+                      const SizedBox(height: 8),
+                      if (_effectiveDateText() != null)
+                        Text(
+                          'Effective Date: ${_effectiveDateText()!}',
+                          style: GlassTheme.bodySmall,
+                        )
+                      else
+                        Text(
+                          'Updated on ${_formatDate(_page!.updatedAt)}',
+                          style: GlassTheme.bodySmall,
+                        ),
+                    ],
                   ),
-                  "pre": Style(
-                    backgroundColor:
-                        GlassTheme.colors.glassBackgroundSubtle.last,
-                    padding: HtmlPaddings.all(12),
-                    margin: Margins.only(bottom: 16),
-                    fontFamily: 'monospace',
+                ),
+              // If content already has an H1, still show the effective date (if provided)
+              if (_contentHasTopHeading(_page!.content) &&
+                  _effectiveDateText() != null)
+                GlassTheme.glassCard(
+                  subtle: true,
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: Text(
+                    'Effective Date: ${_effectiveDateText()!}',
+                    style: GlassTheme.bodySmall,
                   ),
-                },
+                ),
+              GlassTheme.glassCard(
+                subtle: true,
+                padding: const EdgeInsets.all(16),
+                child: Html(
+                  data: _renderedContent(_page!.content),
+                  onLinkTap: (url, attributes, element) {
+                    if (url != null) _launchUrl(url);
+                  },
+                  style: {
+                    "body": Style(
+                      margin: Margins.zero,
+                      padding: HtmlPaddings.zero,
+                      whiteSpace: WhiteSpace.normal,
+                      color: GlassTheme.colors.textPrimary,
+                    ),
+                    "p": Style(
+                      fontSize: FontSize(16),
+                      lineHeight: const LineHeight(1.7),
+                      margin: Margins.only(bottom: 16),
+                      textAlign: TextAlign.justify,
+                    ),
+                    "h1": Style(
+                      fontSize: FontSize(24),
+                      fontWeight: FontWeight.bold,
+                      margin: Margins.only(top: 24, bottom: 16),
+                      color: GlassTheme.colors.textAccent,
+                      textAlign: TextAlign.start,
+                    ),
+                    "h2": Style(
+                      fontSize: FontSize(20),
+                      fontWeight: FontWeight.bold,
+                      margin: Margins.only(top: 20, bottom: 12),
+                      color: GlassTheme.colors.textAccent,
+                      textAlign: TextAlign.start,
+                    ),
+                    "h3": Style(
+                      fontSize: FontSize(18),
+                      fontWeight: FontWeight.bold,
+                      margin: Margins.only(top: 16, bottom: 8),
+                      color: GlassTheme.colors.textAccent,
+                      textAlign: TextAlign.start,
+                    ),
+                    "a": Style(
+                      color: GlassTheme.colors.textAccent,
+                      textDecoration: TextDecoration.underline,
+                    ),
+                    "ul": Style(
+                      margin: Margins.only(bottom: 16),
+                      padding: HtmlPaddings.only(left: 16),
+                    ),
+                    "ol": Style(
+                      margin: Margins.only(bottom: 16),
+                      padding: HtmlPaddings.only(left: 16),
+                    ),
+                    "li": Style(margin: Margins.only(bottom: 8)),
+                    "blockquote": Style(
+                      border: Border(
+                        left: BorderSide(
+                          color: GlassTheme.colors.textAccent,
+                          width: 4,
+                        ),
+                      ),
+                      padding: HtmlPaddings.only(left: 16),
+                      margin: Margins.only(bottom: 16),
+                      backgroundColor:
+                          GlassTheme.colors.glassBackgroundSubtle.first,
+                    ),
+                    "code": Style(
+                      backgroundColor:
+                          GlassTheme.colors.glassBackgroundSubtle.last,
+                      padding:
+                          HtmlPaddings.symmetric(horizontal: 4, vertical: 2),
+                      fontFamily: 'monospace',
+                    ),
+                    "pre": Style(
+                      backgroundColor:
+                          GlassTheme.colors.glassBackgroundSubtle.last,
+                      padding: HtmlPaddings.all(12),
+                      margin: Margins.only(bottom: 16),
+                      fontFamily: 'monospace',
+                    ),
+                  },
+                ),
               ),
+              if (_shouldShowMetadata()) ...[
+                const SizedBox(height: 16),
+                _buildMetadata(),
+              ],
             ],
           ),
         ),
@@ -232,6 +291,24 @@ class _ContentPageScreenState extends State<ContentPageScreen> {
     final looksLikeHtml = RegExp(r"<[a-zA-Z][^>]*>").hasMatch(content);
     if (looksLikeHtml) return content;
     return content.replaceAll('\n', '<br/>');
+  }
+
+  String _formatDate(DateTime date) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 
   Widget _buildMetadata() {
@@ -298,5 +375,44 @@ class _ContentPageScreenState extends State<ContentPageScreen> {
         );
       }
     }
+  }
+
+  String? _effectiveDateText() {
+    final meta = _page?.metadata;
+    if (meta == null) return null;
+    final candidates = [
+      'effectiveDate',
+      'effective_date',
+      'effectiveDateDisplay',
+      'effective_date_display',
+    ];
+    for (final k in candidates) {
+      final v = meta[k];
+      if (v is String && v.trim().isNotEmpty) return v.trim();
+    }
+    return null;
+  }
+
+  String? _headerLogoUrl() {
+    final meta = _page?.metadata;
+    if (meta == null) return null;
+    final candidates = [
+      'headerLogoUrl',
+      'logoUrl',
+      'brandLogoUrl',
+      'logo',
+    ];
+    for (final k in candidates) {
+      final v = meta[k];
+      if (v is String && v.trim().isNotEmpty) return _absoluteUrl(v.trim());
+    }
+    return null;
+  }
+
+  String _absoluteUrl(String url) {
+    final u = url.trim();
+    if (u.startsWith('http://') || u.startsWith('https://')) return u;
+    if (u.startsWith('/')) return '${ApiClient.baseUrlPublic}$u';
+    return u; // leave as-is if already absolute-like
   }
 }
