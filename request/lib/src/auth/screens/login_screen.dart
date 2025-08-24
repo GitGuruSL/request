@@ -68,20 +68,35 @@ class _LoginScreenState extends State<LoginScreen>
 
     try {
       final isEmail = !_isPhoneLogin;
-      final emailOrPhone = isEmail
+      final rawInput = isEmail
           ? _emailController.text.trim()
           : (completePhoneNumber.isNotEmpty
               ? completePhoneNumber
               : _phoneController.text.trim());
+      // Normalize phone by removing spaces so the API receives a clean number
+      final emailOrPhone =
+          isEmail ? rawInput : rawInput.replaceAll(RegExp(r'\s+'), '');
 
-      // Check if user exists to determine new/existing flow
-      final exists =
-          await RestAuthService.instance.checkUserExists(emailOrPhone);
+      // For email logins, go straight to password screen (no OTP)
+      if (isEmail) {
+        if (!mounted) return;
+        Navigator.pushNamed(
+          context,
+          '/password',
+          arguments: {
+            'emailOrPhone': emailOrPhone,
+            'isNewUser': false,
+            'isEmail': true,
+            'countryCode': widget.countryCode,
+          },
+        );
+        return;
+      }
 
-      // Send OTP via REST service
+      // Otherwise, proceed with OTP (phone logins)
       final otpResult = await RestAuthService.instance.sendOTP(
         emailOrPhone: emailOrPhone,
-        isEmail: isEmail,
+        isEmail: false,
         countryCode: widget.countryCode,
       );
 
@@ -95,8 +110,8 @@ class _LoginScreenState extends State<LoginScreen>
         '/otp',
         arguments: {
           'emailOrPhone': emailOrPhone,
-          'isEmail': isEmail,
-          'isNewUser': !exists,
+          'isEmail': false,
+          'isNewUser': true,
           'countryCode': widget.countryCode,
         },
       );
@@ -249,47 +264,77 @@ class _LoginScreenState extends State<LoginScreen>
                               AnimatedSwitcher(
                                 duration: const Duration(milliseconds: 300),
                                 child: _isPhoneLogin
-                                    ? Stack(
-                                        children: [
-                                          IntlPhoneField(
-                                            key: const ValueKey('phone'),
+                                    ? ((widget.phoneCode != null &&
+                                            widget.phoneCode!.isNotEmpty)
+                                        // LOCKED country code: simple text field with fixed prefix
+                                        ? TextFormField(
+                                            key: const ValueKey('phone_locked'),
                                             controller: _phoneController,
-                                            decoration: const InputDecoration(
+                                            decoration: InputDecoration(
                                               labelText: 'Phone Number',
-                                              prefixIcon: Icon(Icons.phone),
+                                              prefixIcon:
+                                                  const Icon(Icons.phone),
+                                              prefixText:
+                                                  '${widget.phoneCode} ',
                                             ),
-                                            initialCountryCode:
-                                                widget.countryCode.isNotEmpty
-                                                    ? widget.countryCode
-                                                    : 'US',
-                                            enabled: true,
-                                            showCountryFlag: true,
-                                            showDropdownIcon: false,
-                                            disableLengthCheck: false,
-                                            onChanged: (phone) {
+                                            keyboardType: TextInputType.phone,
+                                            onChanged: (value) {
+                                              final num = value.trim();
                                               completePhoneNumber =
-                                                  phone.completeNumber;
+                                                  '${widget.phoneCode}${num.isNotEmpty ? ' ' : ''}$num';
                                             },
-                                            validator: (phone) {
-                                              if (phone == null ||
-                                                  phone.number.isEmpty) {
+                                            validator: (value) {
+                                              if (value == null ||
+                                                  value.trim().isEmpty) {
                                                 return 'Please enter a valid phone number';
                                               }
                                               return null;
                                             },
-                                          ),
-                                          // Block taps on country selector
-                                          const Positioned(
-                                            left: 0,
-                                            top: 0,
-                                            bottom: 0,
-                                            width: 80,
-                                            child: IgnorePointer(
-                                              child: SizedBox.expand(),
-                                            ),
-                                          ),
-                                        ],
-                                      )
+                                          )
+                                        // Fallback: allow country selection (overlay blocks picker)
+                                        : Stack(
+                                            children: [
+                                              IntlPhoneField(
+                                                key: const ValueKey('phone'),
+                                                controller: _phoneController,
+                                                decoration:
+                                                    const InputDecoration(
+                                                  labelText: 'Phone Number',
+                                                  prefixIcon: Icon(Icons.phone),
+                                                ),
+                                                initialCountryCode: widget
+                                                        .countryCode.isNotEmpty
+                                                    ? widget.countryCode
+                                                    : 'US',
+                                                enabled: true,
+                                                showCountryFlag: true,
+                                                showDropdownIcon: false,
+                                                disableLengthCheck: false,
+                                                onChanged: (phone) {
+                                                  completePhoneNumber =
+                                                      phone.completeNumber;
+                                                },
+                                                validator: (phone) {
+                                                  if (phone == null ||
+                                                      phone.number.isEmpty) {
+                                                    return 'Please enter a valid phone number';
+                                                  }
+                                                  return null;
+                                                },
+                                              ),
+                                              // Block taps on country selector
+                                              const Positioned(
+                                                left: 0,
+                                                top: 0,
+                                                bottom: 0,
+                                                width:
+                                                    100, // cover flag+code region
+                                                child: IgnorePointer(
+                                                  child: SizedBox.expand(),
+                                                ),
+                                              ),
+                                            ],
+                                          ))
                                     : TextFormField(
                                         key: const ValueKey('email'),
                                         controller: _emailController,
@@ -344,7 +389,7 @@ class _LoginScreenState extends State<LoginScreen>
                                     ),
                                   )
                                 : const Text(
-                                    'Send OTP',
+                                    'Continue',
                                     style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.w600,

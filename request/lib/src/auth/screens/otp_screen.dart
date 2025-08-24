@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../services/rest_auth_service.dart';
+import '../../theme/glass_theme.dart';
+import '../../theme/app_theme.dart';
 
 class OTPScreen extends StatefulWidget {
   final String emailOrPhone;
@@ -37,103 +39,70 @@ class _OTPScreenState extends State<OTPScreen> {
 
   @override
   void dispose() {
-    for (var controller in _controllers) {
-      controller.dispose();
+    for (final c in _controllers) {
+      c.dispose();
     }
-    for (var focusNode in _focusNodes) {
-      focusNode.dispose();
+    for (final f in _focusNodes) {
+      f.dispose();
     }
     super.dispose();
   }
 
   Future<void> _sendOTP() async {
     setState(() => _isResending = true);
-
     try {
-      final authService = RestAuthService.instance;
-      final result = await authService.sendOTP(
+      final result = await RestAuthService.instance.sendOTP(
         emailOrPhone: widget.emailOrPhone,
         isEmail: widget.isEmail,
         countryCode: widget.countryCode,
       );
-
       if (result.success) {
         _otpToken = result.otpToken ?? '';
-        String info = 'OTP sent';
-        if (result.channel == 'email') {
-          if (result.messageId != null) {
-            info += ' (ID: ${result.messageId!.substring(0, 8)}...)';
-          } else if (result.fallback) {
-            info += ' (dev fallback)';
-          }
-          if (result.deliveryError != null) {
-            info += ' ! Email warn: ${result.deliveryError}';
-          }
-        }
-        _showMessage(info, isError: false);
+        _showMessage('OTP sent', isError: false);
       } else {
         _showMessage(result.error ?? 'Failed to send OTP');
       }
     } catch (e) {
       _showMessage('Error sending OTP: $e');
     } finally {
-      setState(() => _isResending = false);
+      if (mounted) setState(() => _isResending = false);
     }
   }
 
   Future<void> _verifyOTP() async {
     final otp = _controllers.map((c) => c.text).join();
-
     if (otp.length != 6) {
       _showMessage('Please enter complete 6-digit OTP');
       return;
     }
 
     setState(() => _isLoading = true);
-
     try {
-      final authService = RestAuthService.instance;
-      final result = await authService.verifyOTP(
+      final result = await RestAuthService.instance.verifyOTP(
         emailOrPhone: widget.emailOrPhone,
         otp: otp,
-        otpToken: _otpToken.isNotEmpty ? _otpToken : '',
+        otpToken: _otpToken,
       );
-
       if (result.success) {
-        // For brand new users we should collect a password next (registration not complete yet)
-        if (widget.isNewUser) {
-          // New user: proceed to profile completion flow after verification
-          Navigator.pushReplacementNamed(
-            context,
-            '/profile',
-            arguments: {
-              'isNewUser': true,
-              'emailOrPhone': widget.emailOrPhone,
-              'isEmail': widget.isEmail,
-              'countryCode': widget.countryCode,
-              'otpToken': _otpToken,
-            },
-          );
-        } else {
-          // Existing user verifying contact -> go to profile/dashboard
-          Navigator.pushReplacementNamed(
-            context,
-            '/profile',
-            arguments: {
-              'emailOrPhone': widget.emailOrPhone,
-              'isEmail': widget.isEmail,
-              'countryCode': widget.countryCode,
-              'otpToken': _otpToken,
-            },
-          );
-        }
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(
+          context,
+          '/profile',
+          arguments: {
+            'isNewUser': widget.isNewUser,
+            'emailOrPhone': widget.emailOrPhone,
+            'isEmail': widget.isEmail,
+            'countryCode': widget.countryCode,
+            'otpToken': _otpToken,
+          },
+        );
       } else {
         _showMessage(result.error ?? 'Invalid OTP');
       }
     } catch (e) {
       _showMessage('Error verifying OTP: $e');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -153,141 +122,144 @@ class _OTPScreenState extends State<OTPScreen> {
       _focusNodes[index - 1].requestFocus();
     }
 
-    // Auto-verify when all fields are filled
     if (index == 5 && value.isNotEmpty) {
       final otp = _controllers.map((c) => c.text).join();
-      if (otp.length == 6) {
-        _verifyOTP();
-      }
+      if (otp.length == 6) _verifyOTP();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Verify ${widget.isEmail ? 'Email' : 'Phone'}'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        foregroundColor: Colors.black87,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 20),
-
-            // Title
-            Text(
-              'Enter Verification Code',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-            ),
-
-            const SizedBox(height: 12),
-
-            // Subtitle
-            Text(
-              'We sent a 6-digit code to ${widget.emailOrPhone}',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Colors.grey[600],
-                  ),
-            ),
-
-            const SizedBox(height: 40),
-
-            // OTP Input Fields
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: List.generate(6, (index) {
-                return SizedBox(
-                  width: 50,
-                  child: TextFormField(
-                    controller: _controllers[index],
-                    focusNode: _focusNodes[index],
-                    textAlign: TextAlign.center,
-                    keyboardType: TextInputType.number,
-                    maxLength: 1,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                    decoration: InputDecoration(
-                      counterText: '',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(color: Colors.blue, width: 2),
-                      ),
+    return GlassTheme.backgroundContainer(
+      child: Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
+        appBar: AppBar(
+          title: Text('Verify ${widget.isEmail ? 'Email' : 'Phone'}'),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          foregroundColor: AppTheme.textPrimary,
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 20),
+              Text(
+                'Enter Verification Code',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary,
                     ),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                    ],
-                    onChanged: (value) => _onOTPChanged(index, value),
-                  ),
-                );
-              }),
-            ),
-
-            const SizedBox(height: 40),
-
-            // Verify Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _verifyOTP,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text(
-                        'Verify',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'We sent a 6-digit code to ${widget.emailOrPhone}',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: AppTheme.textSecondary,
+                    ),
+              ),
+              const SizedBox(height: 40),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: List.generate(6, (index) {
+                  return SizedBox(
+                    width: 48,
+                    child: TextFormField(
+                      controller: _controllers[index],
+                      focusNode: _focusNodes[index],
+                      textAlign: TextAlign.center,
+                      keyboardType: TextInputType.number,
+                      maxLength: 1,
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.textPrimary,
+                              ),
+                      decoration: InputDecoration(
+                        counterText: '',
+                        filled: true,
+                        fillColor: GlassTheme.colors.glassBackground.first,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 14,
                         ),
                       ),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                      ],
+                      onChanged: (value) => _onOTPChanged(index, value),
+                    ),
+                  );
+                }),
               ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Resend Button
-            Center(
-              child: TextButton(
-                onPressed: _isResending ? null : _sendOTP,
-                child: _isResending
-                    ? const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+              const SizedBox(height: 40),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _verifyOTP,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: GlassTheme.colors.primaryBlue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text(
+                          'Verify',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
                           ),
-                          SizedBox(width: 8),
-                          Text('Resending...'),
-                        ],
-                      )
-                    : const Text(
-                        'Resend Code',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
                         ),
-                      ),
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 20),
+              Center(
+                child: TextButton(
+                  onPressed: _isResending ? null : _sendOTP,
+                  child: _isResending
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Resending...',
+                              style: TextStyle(color: AppTheme.textSecondary),
+                            ),
+                          ],
+                        )
+                      : Text(
+                          'Resend Code',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: GlassTheme.colors.primaryBlue,
+                          ),
+                        ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
