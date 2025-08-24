@@ -92,7 +92,8 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A), // Dark charcoal background
+      backgroundColor:
+          const Color(0xFFE2E8F0), // Light gray background for glass effect
       body: _isLoading ? _buildLoadingState() : _buildMenuContent(),
     );
   }
@@ -100,7 +101,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
   Widget _buildLoadingState() {
     return const Center(
       child: CircularProgressIndicator(
-        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6366F1)),
       ),
     );
   }
@@ -109,11 +110,13 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
           colors: [
-            Color(0xFF2C2C2C), // Charcoal top
-            Color(0xFF1A1A1A), // Darker bottom
+            Color(0xFFF8FAFC), // Very light gray top
+            Color(0xFFE2E8F0), // Light gray
+            Color(0xFFCBD5E1), // Medium gray
+            Color(0xFFF1F5F9), // Light gray bottom
           ],
         ),
       ),
@@ -154,9 +157,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
         ],
       ),
     );
-  }
-
-  // Note: User profile header is rendered via _buildCenteredProfileSection()
+  } // Note: User profile header is rendered via _buildCenteredProfileSection()
 
   Widget _buildCenteredProfileSection() {
     return Column(
@@ -172,11 +173,12 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Color(0xFF1E293B), // Dark slate
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.search, color: Colors.white, size: 28),
+                icon: const Icon(Icons.search,
+                    color: Color(0xFF475569), size: 28),
                 onPressed: () => Navigator.pushNamed(context, '/search'),
               ),
             ],
@@ -197,14 +199,14 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: Colors.white.withOpacity(0.3),
+                color: const Color(0xFFE2E8F0), // Light border
                 width: 3,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
+                  color: const Color(0xFF64748B).withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
@@ -214,11 +216,11 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                   _profileImageUrl != null && _profileImageUrl!.isNotEmpty
                       ? NetworkImage(_profileImageUrl!)
                       : null,
-              backgroundColor: const Color(0xFF404040),
+              backgroundColor: const Color(0xFFF1F5F9),
               child: _profileImageUrl == null || _profileImageUrl!.isEmpty
                   ? const Icon(
                       Icons.person,
-                      color: Colors.white70,
+                      color: Color(0xFF64748B),
                       size: 50,
                     )
                   : null,
@@ -234,7 +236,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
           style: const TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: Color(0xFF0F172A), // Very dark slate
           ),
           textAlign: TextAlign.center,
         ),
@@ -245,27 +247,24 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
+            color: const Color(0xFF9CA3AF)
+                .withOpacity(0.1), // Light gray background
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.2),
-              width: 1,
-            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
+              const Icon(
                 Icons.verified_user,
-                color: Colors.white.withOpacity(0.8),
+                color: Color(0xFF6B7280),
                 size: 16,
               ),
               const SizedBox(width: 6),
-              Text(
+              const Text(
                 'Member',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.white.withOpacity(0.9),
+                  color: Color(0xFF6B7280),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -378,17 +377,17 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
+                    color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.1),
+                      color: Colors.white.withOpacity(0.3),
                       width: 1,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
@@ -414,7 +413,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                            color: Color(0xFF1E293B), // Dark slate
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -448,7 +447,8 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
               child: Text(
                 'Become a verified driver to enable Ride Alerts',
                 style: TextStyle(
-                    color: Colors.white.withOpacity(0.7), fontSize: 13),
+                    color: const Color(0xFF64748B).withOpacity(0.8),
+                    fontSize: 13),
               ),
             ),
         ],
@@ -462,12 +462,19 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withOpacity(0.2),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.white.withOpacity(0.1),
+          color: Colors.white.withOpacity(0.3),
           width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -517,12 +524,19 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withOpacity(0.2),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.white.withOpacity(0.1),
+          color: Colors.white.withOpacity(0.3),
           width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: _buildActionTile(
         icon: Icons.logout,
@@ -533,19 +547,22 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
           final shouldLogout = await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
-              backgroundColor: const Color(0xFF2C2C2C),
+              backgroundColor: Colors.white,
               title: const Text(
                 'Log Out',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: Color(0xFF1E293B)),
               ),
               content: const Text(
                 'Are you sure you want to log out?',
-                style: TextStyle(color: Colors.white70),
+                style: TextStyle(color: Color(0xFF64748B)),
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancel'),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(color: Color(0xFF64748B)),
+                  ),
                 ),
                 TextButton(
                   onPressed: () => Navigator.pop(context, true),
@@ -606,16 +623,16 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                      color: Color(0xFF1E293B), // Dark slate
                     ),
                   ),
                   if (subtitle != null) ...[
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 13,
-                        color: Colors.white.withOpacity(0.7),
+                        color: Color(0xFF64748B), // Slate gray
                       ),
                     ),
                   ],
@@ -625,7 +642,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
             Icon(
               Icons.arrow_forward_ios,
               size: 16,
-              color: Colors.white.withOpacity(0.5),
+              color: const Color(0xFF94A3B8), // Lighter slate
             ),
           ],
         ),
