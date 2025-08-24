@@ -1,7 +1,6 @@
 plugins {
     id "com.android.application"
     id "kotlin-android"
-    id "com.google.gms.google-services"
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id "dev.flutter.flutter-gradle-plugin"
 }
@@ -84,6 +83,11 @@ android {
             shrinkResources = false
         }
     }
+
+    // Provide manifest placeholders (e.g., Google Maps key)
+    defaultConfig.manifestPlaceholders += [
+        MAPS_API_KEY: System.getenv('MAPS_API_KEY') ?: (keystoreProperties['MAPS_API_KEY'] ?: '')
+    ]
 }
 
 flutter {
@@ -101,5 +105,4 @@ dependencies {
     
     // Google Play Services for Google Sign-In
     implementation 'com.google.android.gms:play-services-auth:21.2.0'
-    implementation 'com.google.firebase:firebase-auth:23.1.0'
 }

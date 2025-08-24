@@ -44,10 +44,10 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <!-- Google Maps API Key -->
+        <!-- Google Maps API Key (provided via manifest placeholders) -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyAZhdbNcSuvrrNzyAYmdHy5kH9drDEHgw8"/>
+            android:value="${MAPS_API_KEY}"/>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
