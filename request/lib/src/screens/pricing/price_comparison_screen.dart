@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../models/price_listing.dart';
 import '../../services/pricing_service.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/glass_theme.dart';
 import '../../utils/image_url_helper.dart';
 
 class PriceComparisonScreen extends StatefulWidget {
@@ -100,11 +102,17 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: AppTheme.backgroundColor,
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.dark,
+          statusBarBrightness: Brightness.light,
+        ),
+        backgroundColor: Colors.transparent,
         foregroundColor: AppTheme.textPrimary,
-        title: const Text('Price Comparison'),
+        title: Text('Price Comparison', style: TextStyle(color: AppTheme.textPrimary)),
         elevation: 0,
         actions: [
           if (_selectedProductId != null)
@@ -114,15 +122,19 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
             ),
         ],
       ),
-      body: Column(
-        children: [
-          _buildSearchSection(),
-          Expanded(
-            child: _selectedProductId == null
-                ? _buildProductsList()
-                : _buildPriceComparisonList(),
+      body: GlassTheme.backgroundContainer(
+        child: SafeArea(
+          child: Column(
+            children: [
+              _buildSearchSection(),
+              Expanded(
+                child: _selectedProductId == null
+                    ? _buildProductsList()
+                    : _buildPriceComparisonList(),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -167,17 +179,16 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
   }
 
   Widget _buildSearchSection() {
-    return Container(
-      color: Colors.white,
+    return Padding(
       padding: const EdgeInsets.all(16),
       child: TextField(
         controller: _searchController,
         decoration: InputDecoration(
           hintText: 'Search for products (iPhone, Samsung TV, Rice, etc.)',
-          prefixIcon: Icon(Icons.search, color: AppTheme.primaryColor),
+          prefixIcon: Icon(Icons.search, color: AppTheme.textSecondary),
           suffixIcon: _searchController.text.isNotEmpty
               ? IconButton(
-                  icon: const Icon(Icons.clear),
+                  icon: Icon(Icons.clear, color: AppTheme.textSecondary),
                   onPressed: () {
                     _searchController.clear();
                     _loadPopularProducts();
@@ -186,17 +197,18 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
               : null,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey[300]!),
+            borderSide: BorderSide.none,
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
+            borderSide: BorderSide.none,
           ),
           filled: true,
-          fillColor: Colors.grey[50],
+          fillColor: GlassTheme.colors.glassBackground.first,
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
+        style: TextStyle(color: AppTheme.textPrimary),
         onChanged: (value) {
           setState(() {});
           if (value.length >= 2) {
@@ -219,16 +231,13 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: () => _loadPricesForProduct(product.id, name),
           borderRadius: BorderRadius.circular(16),
-          child: Padding(
+          child: Container(
+            decoration: GlassTheme.glassContainer,
             padding: const EdgeInsets.all(20),
             child: Row(
               children: [
@@ -238,7 +247,8 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                   height: 60,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
-                    color: Colors.grey[100],
+                    color: Colors.white.withOpacity(0.7),
+                    border: Border.all(color: Colors.white.withOpacity(0.4)),
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
@@ -263,7 +273,7 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
-                          color: Colors.black87,
+                          color: AppTheme.textPrimary,
                         ),
                       ),
                       if (brand.isNotEmpty) ...[
@@ -272,7 +282,7 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                           brand,
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey[600],
+                            color: AppTheme.textSecondary,
                             fontWeight: FontWeight.w400,
                           ),
                         ),
@@ -286,7 +296,7 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryColor.withOpacity(0.1),
+                              color: GlassTheme.colors.primaryBlue.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Row(
@@ -295,14 +305,14 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                                 Icon(
                                   Icons.store_outlined,
                                   size: 14,
-                                  color: AppTheme.primaryColor,
+                                  color: GlassTheme.colors.primaryBlue,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
                                   '$listingCount sellers',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: AppTheme.primaryColor,
+                                    color: GlassTheme.colors.primaryBlue,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -318,14 +328,14 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                                   'Starting from',
                                   style: TextStyle(
                                     fontSize: 10,
-                                    color: Colors.grey[600],
+                                    color: AppTheme.textSecondary,
                                   ),
                                 ),
                                 Text(
                                   'LKR ${minPrice.toStringAsFixed(0)}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 16,
-                                    color: AppTheme.primaryColor,
+                                    color: GlassTheme.colors.primaryBlue,
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
@@ -341,13 +351,14 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Colors.grey[200],
+                    color: Colors.white.withOpacity(0.7),
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white.withOpacity(0.4)),
                   ),
                   child: const Icon(
                     Icons.arrow_forward_ios,
                     size: 16,
-                    color: Colors.grey,
+                    color: Color(0xFF64748B),
                   ),
                 ),
               ],
@@ -509,11 +520,8 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
   Widget _buildPriceCard(PriceListing listing, bool isLowestPrice) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
+      child: Container(
+        decoration: GlassTheme.glassContainer,
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -530,8 +538,8 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                     height: 50,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
-                      color: Colors.grey[100],
-                      border: Border.all(color: Colors.grey[200]!),
+                      color: Colors.white.withOpacity(0.7),
+                      border: Border.all(color: Colors.white.withOpacity(0.4)),
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
@@ -560,7 +568,7 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: Colors.grey[800],
+                              color: AppTheme.textPrimary,
                             ),
                           ),
                           if (isLowestPrice) ...[
@@ -599,7 +607,7 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                 'Model: ${listing.modelNumber}',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey[600],
+                  color: AppTheme.textSecondary,
                 ),
               ),
               const SizedBox(height: 8),
@@ -611,14 +619,14 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                 Icon(
                   Icons.business,
                   size: 14,
-                  color: Colors.grey[600],
+                  color: AppTheme.textSecondary,
                 ),
                 const SizedBox(width: 4),
                 Text(
                   listing.businessName,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey[600],
+                    color: AppTheme.textSecondary,
                   ),
                 ),
               ],
