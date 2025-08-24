@@ -53,6 +53,7 @@ class _PaymentMethodsSettingsScreenState
     final base = ApiClient.baseUrlPublic;
     return url.startsWith('/') ? '$base$url' : '$base/$url';
   }
+
   Future<void> _save() async {
     if (_saving) return;
     setState(() => _saving = true);
@@ -142,16 +143,16 @@ class _PaymentMethodsSettingsScreenState
                       itemBuilder: (context, index) {
                         final m = notSelected[index];
                         final isPicked = localSelected.contains(m.id);
-            final avatarUrl = m.imageUrl.isNotEmpty
-              ? _absoluteUrl(m.imageUrl)
-              : '';
-            return ListTile(
+                        final avatarUrl = m.imageUrl.isNotEmpty
+                            ? _absoluteUrl(m.imageUrl)
+                            : '';
+                        return ListTile(
                           leading: CircleAvatar(
                             backgroundColor: Colors.grey[200],
-              backgroundImage: (avatarUrl.isNotEmpty)
-                ? NetworkImage(avatarUrl)
+                            backgroundImage: (avatarUrl.isNotEmpty)
+                                ? NetworkImage(avatarUrl)
                                 : null,
-              child: (avatarUrl.isEmpty)
+                            child: (avatarUrl.isEmpty)
                                 ? const Icon(Icons.payment, color: Colors.grey)
                                 : null,
                           ),
@@ -298,12 +299,13 @@ class _PaymentMethodsSettingsScreenState
                           ),
                         ),
                       ] else ...[
-            Wrap(
+                        Wrap(
                           spacing: 10,
                           runSpacing: 10,
                           children: selectedMethods.map((m) {
                             final hasImage = m.imageUrl.isNotEmpty;
-              final imgUrl = hasImage ? _absoluteUrl(m.imageUrl) : '';
+                            final imgUrl =
+                                hasImage ? _absoluteUrl(m.imageUrl) : '';
                             return Stack(
                               clipBehavior: Clip.none,
                               children: [
@@ -311,17 +313,17 @@ class _PaymentMethodsSettingsScreenState
                                   width: 40,
                                   height: 40,
                                   child: ClipOval(
-                  child: hasImage
-                    ? Image.network(
-                      imgUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                        Container(
-                        color: Colors.grey[200],
-                        child: const Icon(Icons.payment,
-                          size: 18, color: Colors.grey),
-                      ),
-                      )
+                                    child: hasImage
+                                        ? Image.network(
+                                            imgUrl,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) =>
+                                                Container(
+                                              color: Colors.grey[200],
+                                              child: const Icon(Icons.payment,
+                                                  size: 18, color: Colors.grey),
+                                            ),
+                                          )
                                         : Container(
                                             color: Colors.grey[200],
                                             child: const Icon(Icons.payment,
