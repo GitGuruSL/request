@@ -179,7 +179,7 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
     // Maintain backwards-compatibility but allow overrides for Accepted/Completed tabs
     final color = statusColor ?? (isOrder ? Colors.blue : Colors.green);
     final label = statusLabel ?? (isOrder ? 'Accepted' : 'Active');
-    return GlassTheme.glassCard(
+    return _flatGlassCard(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
         contentPadding: const EdgeInsets.all(16),
@@ -259,7 +259,7 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
 
   Widget _responseCard(_ResponseSummary s) {
     final statusColor = s.accepted ? Colors.blue : Colors.orange;
-    return Card(
+    return _flatGlassCard(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
         contentPadding: const EdgeInsets.all(16),
@@ -447,10 +447,33 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen>
     );
   }
 
-  Widget _skeletonCard() => Card(
+  Widget _skeletonCard() => _flatGlassCard(
         margin: const EdgeInsets.only(bottom: 12),
         child: Container(height: 76, padding: const EdgeInsets.all(16)),
       );
+
+  // Local flat glass card (no border, no shadow) for this screen
+  Widget _flatGlassCard({
+    required Widget child,
+    EdgeInsetsGeometry? padding,
+    EdgeInsetsGeometry? margin,
+    double radius = 20,
+  }) {
+    return Container(
+      margin: margin,
+      padding: padding ?? const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: GlassTheme.colors.glassBackground,
+        ),
+        borderRadius: BorderRadius.circular(radius),
+        // No border, no boxShadow to keep it flat
+      ),
+      child: child,
+    );
+  }
 
   // Removed history helper
 
