@@ -1,0 +1,7 @@
+Archived (do not compile)
+Original path: lib/src/screens/about_request_screen_broken.dart
+Reason: Marked broken/unused during cleanup.
+
+-- Begin original content snapshot --
+Please refer to the original repository history for full context. This file was archived to avoid analyzer errors.
+-- End original content snapshot --

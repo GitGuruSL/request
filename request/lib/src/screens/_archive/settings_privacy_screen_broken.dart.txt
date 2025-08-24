@@ -1,0 +1,7 @@
+Archived (do not compile)
+Original path: lib/src/screens/settings_privacy_screen_broken.dart
+Reason: Marked broken/unused during cleanup.
+
+-- Begin original content snapshot --
+[Content archived intentionally to avoid analyzer errors.]
+-- End original content snapshot --
