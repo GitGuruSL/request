@@ -493,25 +493,20 @@ class _BannerCard extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Colors.white.withOpacity(0.3),
-              Colors.white.withOpacity(0.1),
+              Colors.white.withOpacity(0.85),
+              Colors.white.withOpacity(0.75),
             ],
           ),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: Colors.white.withOpacity(0.4),
-            width: 1.5,
+            color: Colors.white.withOpacity(0.6),
+            width: 1.0,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 15,
-              offset: const Offset(0, 5),
-            ),
-            BoxShadow(
-              color: Colors.white.withOpacity(0.8),
-              blurRadius: 15,
-              offset: const Offset(-5, -5),
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -627,30 +622,25 @@ class _QuickActionsGrid extends StatelessWidget {
                 end: Alignment.bottomRight,
                 colors: disabled
                     ? [
-                        Colors.white.withOpacity(0.1),
-                        Colors.white.withOpacity(0.05),
+                        Colors.white.withOpacity(0.6),
+                        Colors.white.withOpacity(0.5),
                       ]
                     : [
-                        Colors.white.withOpacity(0.25),
-                        Colors.white.withOpacity(0.15),
+                        Colors.white.withOpacity(0.85),
+                        Colors.white.withOpacity(0.75),
                       ],
               ),
               border: Border.all(
                 color: disabled
-                    ? Colors.white.withOpacity(0.2)
-                    : Colors.white.withOpacity(0.4),
-                width: 1.5,
+                    ? Colors.white.withOpacity(0.4)
+                    : Colors.white.withOpacity(0.6),
+                width: 1.0,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-                BoxShadow(
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.black.withOpacity(0.03),
                   blurRadius: 8,
-                  offset: const Offset(-2, -2),
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
@@ -717,25 +707,20 @@ class _ProductCard extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Colors.white.withOpacity(0.25),
-                Colors.white.withOpacity(0.15),
+                Colors.white.withOpacity(0.85),
+                Colors.white.withOpacity(0.75),
               ],
             ),
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: Colors.white.withOpacity(0.4),
-              width: 1.5,
+              color: Colors.white.withOpacity(0.6),
+              width: 1.0,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-              BoxShadow(
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.black.withOpacity(0.03),
                 blurRadius: 8,
-                offset: const Offset(-2, -2),
+                offset: const Offset(0, 2),
               ),
             ],
           ),
@@ -750,13 +735,13 @@ class _ProductCard extends StatelessWidget {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        Colors.white.withOpacity(0.4),
-                        Colors.white.withOpacity(0.2),
+                        Colors.white.withOpacity(0.7),
+                        Colors.white.withOpacity(0.5),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.3),
+                      color: Colors.white.withOpacity(0.4),
                       width: 1,
                     ),
                   ),
