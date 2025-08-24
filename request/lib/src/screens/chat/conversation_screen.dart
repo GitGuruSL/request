@@ -121,7 +121,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
         child: SafeArea(
           top: true,
           child: Padding(
-            padding: const EdgeInsets.only(top: kToolbarHeight),
+            padding: const EdgeInsets.only(top: 8),
             child: Column(
               children: [
                 // Request Header Card (Facebook-like)

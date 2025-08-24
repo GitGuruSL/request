@@ -82,7 +82,7 @@ class _ChatConversationsScreenState extends State<ChatConversationsScreen> {
         child: SafeArea(
           top: true,
           child: Padding(
-            padding: const EdgeInsets.only(top: kToolbarHeight),
+            padding: const EdgeInsets.only(top: 8),
             child: RefreshIndicator(
               onRefresh: _load,
               child: _loading
@@ -101,7 +101,7 @@ class _ChatConversationsScreenState extends State<ChatConversationsScreen> {
                           ),
                         )
                       : ListView.separated(
-                          padding: const EdgeInsets.all(12),
+                          padding: EdgeInsets.fromLTRB(12, 6, 12, 12),
                           itemCount: _conversations.length,
                           separatorBuilder: (_, __) =>
                               const SizedBox(height: 8),
