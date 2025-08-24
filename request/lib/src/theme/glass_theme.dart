@@ -68,34 +68,32 @@ class GlassTheme {
 
   // Dark theme colors
   static const _darkColors = _GlassColors(
-    // Background gradients
+    // Background gradients - Only 2 shades like the screenshot
     primaryGradient: [
-      Color(0xFF0F172A), // Very dark slate
-      Color(0xFF1E293B), // Dark slate
-      Color(0xFF334155), // Medium dark slate
-      Color(0xFF475569), // Medium slate
+      Color(0xFF2C2C2C), // Charcoal top
+      Color(0xFF1A1A1A), // Darker bottom
     ],
 
-    // Glass effect colors
+    // Glass effect colors - More grayish cards
     glassBackground: [
-      Color(0x4DFFFFFF), // 30% white
-      Color(0x33FFFFFF), // 20% white
-    ],
-    glassBackgroundSubtle: [
-      Color(0x26FFFFFF), // 15% white
+      Color(0x26FFFFFF), // 15% white (more visible/grayish)
       Color(0x1AFFFFFF), // 10% white
     ],
-    glassBackgroundDisabled: [
+    glassBackgroundSubtle: [
       Color(0x1AFFFFFF), // 10% white
       Color(0x0DFFFFFF), // 5% white
     ],
-    glassBorder: Color(0x66FFFFFF), // 40% white
-    glassBorderSubtle: Color(0x33FFFFFF), // 20% white
+    glassBackgroundDisabled: [
+      Color(0x0DFFFFFF), // 5% white
+      Color(0x08FFFFFF), // 3% white
+    ],
+    glassBorder: Color(0x1AFFFFFF), // 10% white (subtle border)
+    glassBorderSubtle: Color(0x0DFFFFFF), // 5% white
 
-    // Shadow colors
-    shadowPrimary: Color(0x1A000000), // 10% black
-    shadowSecondary: Color(0x26000000), // 15% black
-    shadowLight: Color(0x1AFFFFFF), // 10% white (for top shadows)
+    // Shadow colors - Darker shadows
+    shadowPrimary: Color(0x33000000), // 20% black (stronger shadow)
+    shadowSecondary: Color(0x40000000), // 25% black (stronger shadow)
+    shadowLight: Color(0x0DFFFFFF), // 5% white (very subtle top shadows)
 
     // Accent colors (same as light but might be adjusted)
     primaryBlue: Color(0xFF6366F1),

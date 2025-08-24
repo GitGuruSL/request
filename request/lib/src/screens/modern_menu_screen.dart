@@ -94,70 +94,59 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:
-          const Color(0xFFE2E8F0), // Light gray background for glass effect
-      body: _isLoading ? _buildLoadingState() : _buildMenuContent(),
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: GlassTheme.backgroundGradient,
+        child: _isLoading ? _buildLoadingState() : _buildMenuContent(),
+      ),
     );
   }
 
   Widget _buildLoadingState() {
-    return const Center(
+    return Center(
       child: CircularProgressIndicator(
-        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6366F1)),
+        valueColor:
+            AlwaysStoppedAnimation<Color>(GlassTheme.colors.primaryBlue),
       ),
     );
   }
 
   Widget _buildMenuContent() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFF8FAFC), // Very light gray top
-            Color(0xFFE2E8F0), // Light gray
-            Color(0xFFCBD5E1), // Medium gray
-            Color(0xFFF1F5F9), // Light gray bottom
-          ],
-        ),
-      ),
-      child: CustomScrollView(
-        slivers: [
-          // Modern header with centered profile
-          SliverToBoxAdapter(
-            child: SafeArea(
-              child: Column(
-                children: [
-                  const SizedBox(height: 20),
+    return CustomScrollView(
+      slivers: [
+        // Modern header with centered profile
+        SliverToBoxAdapter(
+          child: SafeArea(
+            child: Column(
+              children: [
+                const SizedBox(height: 20),
 
-                  // Centered Profile Section
-                  _buildCenteredProfileSection(),
+                // Centered Profile Section
+                _buildCenteredProfileSection(),
 
-                  const SizedBox(height: 30),
-                ],
-              ),
+                const SizedBox(height: 30),
+              ],
             ),
           ),
+        ),
 
-          // Menu content
-          SliverList(
-            delegate: SliverChildListDelegate([
-              // Modern grid sections
-              _buildMenuGrid(),
-              const SizedBox(height: 20),
+        // Menu content
+        SliverList(
+          delegate: SliverChildListDelegate([
+            // Modern grid sections
+            _buildMenuGrid(),
+            const SizedBox(height: 20),
 
-              // Account actions section
-              _buildAccountActionsSection(),
-              const SizedBox(height: 20),
+            // Account actions section
+            _buildAccountActionsSection(),
+            const SizedBox(height: 20),
 
-              // Logout separated
-              _buildLogoutSection(),
-              const SizedBox(height: 120),
-            ]),
-          ),
-        ],
-      ),
+            // Logout separated
+            _buildLogoutSection(),
+            const SizedBox(height: 120),
+          ]),
+        ),
+      ],
     );
   } // Note: User profile header is rendered via _buildCenteredProfileSection()
 
@@ -170,17 +159,17 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Menu',
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E293B), // Dark slate
+                  color: GlassTheme.colors.textPrimary,
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.search,
-                    color: Color(0xFF475569), size: 28),
+                icon: Icon(Icons.search,
+                    color: GlassTheme.colors.textSecondary, size: 28),
                 onPressed: () => Navigator.pushNamed(context, '/search'),
               ),
             ],
@@ -201,14 +190,20 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: const Color(0xFFE2E8F0), // Light border
+                color: GlassTheme.isDarkMode
+                    ? Colors.white.withOpacity(0.3)
+                    : const Color(0xFFE2E8F0),
                 width: 3,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF64748B).withOpacity(0.1),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
+                  color: GlassTheme.isDarkMode
+                      ? Colors.black.withOpacity(0.3)
+                      : const Color(0xFF64748B).withOpacity(0.1),
+                  blurRadius: GlassTheme.isDarkMode ? 10 : 20,
+                  offset: GlassTheme.isDarkMode
+                      ? const Offset(0, 5)
+                      : const Offset(0, 8),
                 ),
               ],
             ),
@@ -218,11 +213,15 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                   _profileImageUrl != null && _profileImageUrl!.isNotEmpty
                       ? NetworkImage(_profileImageUrl!)
                       : null,
-              backgroundColor: const Color(0xFFF1F5F9),
+              backgroundColor: GlassTheme.isDarkMode
+                  ? const Color(0xFF404040)
+                  : const Color(0xFFF1F5F9),
               child: _profileImageUrl == null || _profileImageUrl!.isEmpty
-                  ? const Icon(
+                  ? Icon(
                       Icons.person,
-                      color: Color(0xFF64748B),
+                      color: GlassTheme.isDarkMode
+                          ? Colors.white70
+                          : const Color(0xFF64748B),
                       size: 50,
                     )
                   : null,
@@ -235,10 +234,10 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
         // Centered Name
         Text(
           _currentUser?['name'] ?? _currentUser?['displayName'] ?? 'User',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF0F172A), // Very dark slate
+            color: GlassTheme.colors.textPrimary,
           ),
           textAlign: TextAlign.center,
         ),
@@ -249,24 +248,23 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           decoration: BoxDecoration(
-            color: const Color(0xFF9CA3AF)
-                .withOpacity(0.1), // Light gray background
+            color: GlassTheme.colors.textSecondary.withOpacity(0.1),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.verified_user,
-                color: Color(0xFF6B7280),
+                color: GlassTheme.colors.textSecondary,
                 size: 16,
               ),
               const SizedBox(width: 6),
-              const Text(
+              Text(
                 'Member',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Color(0xFF6B7280),
+                  color: GlassTheme.colors.textSecondary,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -378,21 +376,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                 },
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.3),
-                      width: 1,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
+                  decoration: GlassTheme.glassContainer,
                   padding: const EdgeInsets.all(16),
                   child: Row(
                     children: [
@@ -412,10 +396,10 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                       Expanded(
                         child: Text(
                           item.title,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF1E293B), // Dark slate
+                            color: GlassTheme.colors.textPrimary,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -449,7 +433,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
               child: Text(
                 'Become a verified driver to enable Ride Alerts',
                 style: TextStyle(
-                    color: const Color(0xFF64748B).withOpacity(0.8),
+                    color: GlassTheme.colors.textSecondary.withOpacity(0.8),
                     fontSize: 13),
               ),
             ),
@@ -463,21 +447,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
   Widget _buildAccountActionsSection() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.3),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      decoration: GlassTheme.glassContainer,
       child: Column(
         children: [
           _buildActionTile(
@@ -492,12 +462,18 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
             title: 'Settings',
             subtitle: 'App preferences and theme',
             color: const Color(0xFF6366F1), // Indigo
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const SettingsScreen(),
-              ),
-            ),
+            onTap: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SettingsScreen(),
+                ),
+              );
+              // Refresh the screen when returning from settings
+              if (mounted) {
+                setState(() {});
+              }
+            },
           ),
           _buildActionTile(
             icon: Icons.help_outline,
@@ -537,21 +513,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
   Widget _buildLogoutSection() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.3),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      decoration: GlassTheme.glassContainer,
       child: _buildActionTile(
         icon: Icons.logout,
         title: 'Log Out',
@@ -561,21 +523,23 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
           final shouldLogout = await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
-              backgroundColor: Colors.white,
-              title: const Text(
+              backgroundColor: GlassTheme.isDarkMode
+                  ? const Color(0xFF2C2C2C)
+                  : Colors.white,
+              title: Text(
                 'Log Out',
-                style: TextStyle(color: Color(0xFF1E293B)),
+                style: TextStyle(color: GlassTheme.colors.textPrimary),
               ),
-              content: const Text(
+              content: Text(
                 'Are you sure you want to log out?',
-                style: TextStyle(color: Color(0xFF64748B)),
+                style: TextStyle(color: GlassTheme.colors.textSecondary),
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text(
+                  child: Text(
                     'Cancel',
-                    style: TextStyle(color: Color(0xFF64748B)),
+                    style: TextStyle(color: GlassTheme.colors.textSecondary),
                   ),
                 ),
                 TextButton(
@@ -634,19 +598,19 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF1E293B), // Dark slate
+                      color: GlassTheme.colors.textPrimary,
                     ),
                   ),
                   if (subtitle != null) ...[
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
-                        color: Color(0xFF64748B), // Slate gray
+                        color: GlassTheme.colors.textSecondary,
                       ),
                     ),
                   ],
@@ -656,7 +620,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
             Icon(
               Icons.arrow_forward_ios,
               size: 16,
-              color: const Color(0xFF94A3B8), // Lighter slate
+              color: GlassTheme.colors.textSecondary.withOpacity(0.6),
             ),
           ],
         ),
