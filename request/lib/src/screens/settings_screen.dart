@@ -284,16 +284,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return GlassTheme.glassCard(
       child: InkWell(
         onTap: () {
-          // TODO: Navigate to privacy settings
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Privacy settings coming soon!',
-                style: GlassTheme.bodyMedium.copyWith(color: Colors.white),
-              ),
-              backgroundColor: GlassTheme.colors.infoColor,
-            ),
-          );
+          Navigator.pushNamed(context, '/privacy-policy');
         },
         borderRadius: BorderRadius.circular(20),
         child: Row(

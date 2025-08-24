@@ -27,6 +27,9 @@ import 'src/screens/modern_menu_screen.dart';
 import 'src/screens/content_page_screen.dart';
 import 'src/screens/content_test_screen.dart';
 import 'src/screens/api_test_screen.dart'; // API test screen
+import 'src/screens/legal_page_screen.dart';
+import 'src/screens/privacy_policy_screen.dart';
+import 'src/screens/terms_conditions_screen.dart';
 import 'src/theme/app_theme.dart';
 import 'src/screens/chat/chat_conversations_screen.dart';
 import 'src/screens/notification_screen.dart';
@@ -233,6 +236,21 @@ class MyApp extends StatelessWidget {
           case '/search':
             return MaterialPageRoute(
               builder: (context) => _buildPlaceholderScreen(settings.name!),
+            );
+          case '/privacy-policy':
+            return MaterialPageRoute(
+              builder: (context) => const PrivacyPolicyScreen(),
+            );
+          case '/terms-conditions':
+            return MaterialPageRoute(
+              builder: (context) => const TermsConditionsScreen(),
+            );
+          case '/legal':
+            return MaterialPageRoute(
+              builder: (context) => const LegalPageScreen(
+                pageSlug: 'legal',
+                pageTitle: 'Legal',
+              ),
             );
           default:
             return MaterialPageRoute(
