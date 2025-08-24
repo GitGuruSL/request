@@ -13,6 +13,7 @@ import '../../services/rest_notification_service.dart';
 import '../../screens/notification_screen.dart';
 import '../../screens/account/user_profile_screen.dart';
 import '../../theme/glass_theme.dart';
+import '../../theme/app_theme.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -77,17 +78,19 @@ class _HomeScreenState extends State<HomeScreen> {
       if (cs.countryCode == null) {
         await cs.loadPersistedCountry();
       }
-      final code = cs.getCurrentCountryCode();
+      final code = CountryService.instance.countryCode ?? 'US';
       final mods = await ModuleService.getCountryModules(code);
-      if (mounted) setState(() => _modules = mods);
+      if (!mounted) return;
+      setState(() => _modules = mods);
     } catch (_) {
-      // Silent; fallback logic in _moduleEnabled
+      // ignore
     } finally {
       if (mounted) setState(() => _loadingModules = false);
     }
   }
 
   Future<void> _loadPopularProducts() async {
+    if (_loadingPopular) return;
     setState(() => _loadingPopular = true);
     try {
       // Use empty query to get popular/top products from backend
@@ -146,7 +149,7 @@ class _HomeScreenState extends State<HomeScreen> {
           title: 'Ride Request',
           subtitle: 'Request for transportation',
           icon: Icons.directions_car,
-          color: const Color(0xFFFFC107),
+          color: const Color(0xFF3B82F6),
         ),
         _RequestType(
           type: 'price',
@@ -161,10 +164,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final user = RestAuthService.instance.currentUser;
     if (user == null) return '';
     if (user.firstName != null && user.firstName!.trim().isNotEmpty) {
-      return _capitalize(user.firstName!.trim());
-    }
-    if (user.displayName != null && user.displayName!.trim().isNotEmpty) {
-      final first = user.displayName!.trim().split(RegExp(r'\s+')).first;
+      final first = user.firstName!.trim();
       if (first.isNotEmpty) return _capitalize(first);
     }
     final emailLocal = user.email.split('@').first;
@@ -260,8 +260,11 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               IconButton(
                 tooltip: 'Notifications',
-                icon: const Icon(Icons.notifications_none,
-                    color: Color(0xFF1E293B), size: 24),
+                icon: Icon(
+                  Icons.notifications_none,
+                  color: AppTheme.textPrimary,
+                  size: 24,
+                ),
                 onPressed: () async {
                   try {
                     await Navigator.pushNamed(context, '/notifications');
@@ -314,7 +317,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
               icon: CircleAvatar(
                 radius: 16,
-                backgroundColor: const Color(0xFF6366F1),
+                backgroundColor: GlassTheme.colors.primaryBlue,
                 child: Text(
                   (user?.displayName?.isNotEmpty == true
                           ? user!.displayName![0]
@@ -370,8 +373,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       margin: const EdgeInsets.symmetric(horizontal: 3),
                       decoration: BoxDecoration(
                         color: _currentBanner == i
-                            ? const Color(0xFF1E293B)
-                            : const Color(0xFF94A3B8),
+                            ? AppTheme.textPrimary
+                            : AppTheme.textTertiary,
                         borderRadius: BorderRadius.circular(3),
                       ),
                     ),
@@ -384,7 +387,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text('Quick Actions',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w700,
-                          color: const Color(0xFF0F172A),
+                          color: AppTheme.textPrimary,
                         )),
                 const SizedBox(height: 16),
                 _QuickActionsGrid(
@@ -400,7 +403,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         style:
                             Theme.of(context).textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF0F172A),
+                                  color: AppTheme.textPrimary,
                                 )),
                     const Spacer(),
                     TextButton(
@@ -412,10 +415,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         );
                       },
-                      child: const Text(
+                      child: Text(
                         'See All',
                         style: TextStyle(
-                          color: Color(0xFF6366F1),
+                          color: GlassTheme.colors.primaryBlue,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -503,18 +506,18 @@ class _BannerCard extends StatelessWidget {
                       children: [
                         Text(
                           item.title,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFF0F172A),
+                            color: AppTheme.textPrimary,
                             height: 1.2,
                           ),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           item.subtitle,
-                          style: const TextStyle(
-                            color: Color(0xFF475569),
+                          style: TextStyle(
+                            color: AppTheme.textSecondary,
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                           ),
@@ -613,7 +616,7 @@ class _QuickActionsGrid extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                     color: disabled
                         ? const Color(0xFF9CA3AF)
-                        : const Color(0xFF0F172A),
+                        : AppTheme.textPrimary,
                     fontSize: 13,
                   ),
                 )
@@ -671,9 +674,9 @@ class _ProductCard extends StatelessWidget {
                 product.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF0F172A),
+                  color: AppTheme.textPrimary,
                   fontSize: 14,
                 ),
               ),
@@ -682,8 +685,8 @@ class _ProductCard extends StatelessWidget {
                 product.brandName ?? product.brand,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Color(0xFF64748B),
+                style: TextStyle(
+                  color: AppTheme.textSecondary,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
@@ -692,18 +695,18 @@ class _ProductCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF6366F1).withOpacity(0.1),
+                  color: GlassTheme.colors.primaryBlue.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: const Color(0xFF6366F1).withOpacity(0.2),
+                    color: GlassTheme.colors.primaryBlue.withOpacity(0.2),
                     width: 1,
                   ),
                 ),
                 child: Text(
                   _formatPriceRange(context, product),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF6366F1),
+                    color: GlassTheme.colors.primaryBlue,
                     fontSize: 12,
                   ),
                 ),
