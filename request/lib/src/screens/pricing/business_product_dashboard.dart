@@ -286,7 +286,7 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             foregroundColor: GlassTheme.colors.textPrimary,
-            title: Text('Product Dashboard', style: GlassTheme.titleLarge),
+            title: Text('Find Products', style: GlassTheme.titleLarge),
             elevation: 0,
             bottom: TabBar(
               labelColor: GlassTheme.colors.textPrimary,
@@ -319,7 +319,6 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
 
   Widget _buildSearchSection() {
     return Container(
-      color: Colors.white,
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -335,8 +334,9 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: 'Search products (iPhone, Samsung TV, Rice, etc.)',
-              prefixIcon: const Icon(Icons.search),
+              hintText: 'Find requests by skill, item, or service',
+              hintStyle: TextStyle(color: Colors.grey[500]),
+              prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear),
@@ -352,8 +352,14 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: GlassTheme.colors.primaryBlue),
+                borderSide: BorderSide(color: Colors.grey[400]!),
               ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey[300]!),
+              ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
             onChanged: (value) {
               setState(() {});
