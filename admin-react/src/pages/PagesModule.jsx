@@ -53,6 +53,8 @@ import {
 } from '@mui/icons-material';
 import useCountryFilter from '../hooks/useCountryFilter.jsx';
 import api from '../services/apiClient';
+import RichTextEditor from '../components/RichTextEditor.jsx';
+import DOMPurify from 'dompurify';
 
 const PagesModule = () => {
   const {
@@ -675,15 +677,11 @@ const PagesModule = () => {
             </Grid>
 
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Content"
+              <Typography variant="subtitle2" sx={{ mb: 0.5 }}>Content</Typography>
+              <RichTextEditor
                 value={formData.content}
-                onChange={(e) => setFormData({...formData, content: e.target.value})}
-                multiline
-                rows={10}
-                placeholder="Enter page content (supports HTML/Markdown)"
-                required
+                onChange={(html) => setFormData({ ...formData, content: html })}
+                placeholder="Write and format your page content"
               />
             </Grid>
 
@@ -783,19 +781,21 @@ const PagesModule = () => {
               </Box>
               <Divider sx={{ mb: 2 }} />
               <Typography variant="h6" gutterBottom>Content Preview</Typography>
-              <Box 
-                sx={{ 
-                  p: 2, 
-                  bgcolor: 'grey.50', 
+              <Box
+                sx={{
+                  p: 2,
+                  bgcolor: 'grey.50',
                   borderRadius: 1,
                   maxHeight: 400,
-                  overflow: 'auto'
+                  overflow: 'auto',
+                  '& h1': { fontSize: '1.6rem', marginTop: 0 },
+                  '& h2': { fontSize: '1.3rem' },
+                  '& p, & li': { lineHeight: 1.7 },
+                  '& blockquote': { borderLeft: '4px solid', borderColor: 'divider', paddingLeft: 8, color: 'text.secondary' },
+                  '& pre': { backgroundColor: 'grey.100', padding: 8, borderRadius: 4, fontFamily: 'monospace', overflowX: 'auto' }
                 }}
-              >
-                <Typography variant="body2" style={{ whiteSpace: 'pre-wrap' }}>
-                  {selectedPage.content}
-                </Typography>
-              </Box>
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(selectedPage.content || '') }}
+              />
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setViewDialogOpen(false)}>Close</Button>
