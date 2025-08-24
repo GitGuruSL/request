@@ -37,7 +37,7 @@ class _ContentPageScreenState extends State<ContentPageScreen> {
       });
 
       final page = await _contentService.getPageBySlug(widget.slug);
-      
+
       if (mounted) {
         setState(() {
           _page = page;
@@ -62,6 +62,7 @@ class _ContentPageScreenState extends State<ContentPageScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title ?? _page?.title ?? 'Loading...'),
+        centerTitle: false,
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -117,25 +118,27 @@ class _ContentPageScreenState extends State<ContentPageScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Page title
-            Text(
-              _page!.title,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
+            // Optional page title (hide if content already has an H1)
+            if (!_contentHasTopHeading(_page!.content)) ...[
+              Text(
+                _page!.title,
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
               ),
-            ),
-            const SizedBox(height: 16),
-            
+              const SizedBox(height: 16),
+            ],
+
             // Page metadata
-            if (_page!.metadata != null) ...[
+            if (_shouldShowMetadata()) ...[
               _buildMetadata(),
               const SizedBox(height: 16),
             ],
-            
+
             // Page content
             Html(
-              data: _page!.content,
+              data: _renderedContent(_page!.content),
               onLinkTap: (url, attributes, element) {
                 if (url != null) {
                   _launchUrl(url);
@@ -145,29 +148,35 @@ class _ContentPageScreenState extends State<ContentPageScreen> {
                 "body": Style(
                   margin: Margins.zero,
                   padding: HtmlPaddings.zero,
+                  // Preserve line breaks when content is plain text
+                  whiteSpace: WhiteSpace.normal,
                 ),
                 "p": Style(
                   fontSize: FontSize(16),
                   lineHeight: const LineHeight(1.6),
                   margin: Margins.only(bottom: 16),
+                  textAlign: TextAlign.justify,
                 ),
                 "h1": Style(
                   fontSize: FontSize(24),
                   fontWeight: FontWeight.bold,
                   margin: Margins.only(top: 24, bottom: 16),
                   color: Theme.of(context).colorScheme.primary,
+                  textAlign: TextAlign.start,
                 ),
                 "h2": Style(
                   fontSize: FontSize(20),
                   fontWeight: FontWeight.bold,
                   margin: Margins.only(top: 20, bottom: 12),
                   color: Theme.of(context).colorScheme.primary,
+                  textAlign: TextAlign.start,
                 ),
                 "h3": Style(
                   fontSize: FontSize(18),
                   fontWeight: FontWeight.bold,
                   margin: Margins.only(top: 16, bottom: 8),
                   color: Theme.of(context).colorScheme.primary,
+                  textAlign: TextAlign.start,
                 ),
                 "a": Style(
                   color: Theme.of(context).colorScheme.secondary,
@@ -212,11 +221,32 @@ class _ContentPageScreenState extends State<ContentPageScreen> {
     );
   }
 
+  // Only show metadata if explicitly enabled via metadata.showMeta == true
+  bool _shouldShowMetadata() {
+    final m = _page?.metadata;
+    if (m == null) return false;
+    final v = m['showMeta'];
+    return v == true || v == 'true';
+  }
+
+  // Detect if content already includes a top-level heading, to avoid duplicate title
+  bool _contentHasTopHeading(String content) {
+    final lc = content.toLowerCase();
+    return RegExp(r"<h1[\s>]").hasMatch(lc);
+  }
+
+  // If the content isn't HTML, convert newlines to <br/> so it's displayed correctly
+  String _renderedContent(String content) {
+    final looksLikeHtml = RegExp(r"<[a-zA-Z][^>]*>").hasMatch(content);
+    if (looksLikeHtml) return content;
+    return content.replaceAll('\n', '<br/>');
+  }
+
   Widget _buildMetadata() {
     if (_page?.metadata == null) return const SizedBox.shrink();
-    
+
     final metadata = _page!.metadata!;
-    
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -238,9 +268,9 @@ class _ContentPageScreenState extends State<ContentPageScreen> {
               Text(
                 'Page Information',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[600],
-                ),
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[600],
+                    ),
               ),
             ],
           ),
@@ -251,8 +281,8 @@ class _ContentPageScreenState extends State<ContentPageScreen> {
               child: Text(
                 '${entry.key}: ${entry.value}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey[700],
-                ),
+                      color: Colors.grey[700],
+                    ),
               ),
             );
           }).toList(),

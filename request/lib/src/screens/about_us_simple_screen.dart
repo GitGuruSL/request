@@ -8,7 +8,6 @@ import '../services/api_client.dart';
 import 'content_page_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../theme/glass_theme.dart';
 
 class AboutUsSimpleScreen extends StatefulWidget {
   const AboutUsSimpleScreen({super.key});
@@ -91,14 +90,78 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
   }
 
   ContentPage? _findPageByKeywords(List<String> keywords) {
-    for (final p in _pages) {
+    // Prefer published, country_specific matches first, then any published, then any
+    bool matches(ContentPage p) {
       final title = p.title.toLowerCase();
       final cat = (p.category ?? '').toLowerCase();
-      if (keywords.any((k) => title.contains(k) || cat.contains(k))) {
-        return p;
-      }
+      return keywords.any((k) => title.contains(k) || cat.contains(k));
+    }
+
+    // 1) published + country_specific
+    final pubCountry = _pages.where((p) =>
+        p.status == 'published' && p.type == 'country_specific' && matches(p));
+    if (pubCountry.isNotEmpty) return pubCountry.first;
+
+    // 2) published (any type)
+    final published =
+        _pages.where((p) => p.status == 'published' && matches(p));
+    if (published.isNotEmpty) return published.first;
+
+    // 3) any status (fallback)
+    for (final p in _pages) {
+      if (matches(p)) return p;
     }
     return null;
+  }
+
+  Future<void> _openPreferredPage({
+    required List<String> preferredSlugs,
+    required List<String> keywordsFallback,
+    required String defaultSlug,
+    required String defaultTitle,
+  }) async {
+    // Try preferred slugs via service to ensure we get the published, country-specific page
+    for (final slug in preferredSlugs) {
+      try {
+        final page = await _contentService.getPageBySlug(slug);
+        if (page != null) {
+          if (!mounted) return;
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ContentPageScreen(slug: slug, title: page.title),
+            ),
+          );
+          return;
+        }
+      } catch (_) {}
+    }
+
+    // Fallback to keyword search within already-fetched pages
+    final preferred = _findPageByKeywords(keywordsFallback);
+    if (preferred != null) {
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ContentPageScreen(
+            slug: preferred.slug,
+            title: preferred.title,
+          ),
+        ),
+      );
+      return;
+    }
+
+    // Final fallback to default template slug
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            ContentPageScreen(slug: defaultSlug, title: defaultTitle),
+      ),
+    );
   }
 
   @override
@@ -241,27 +304,16 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
                         icon: Icons.gavel_outlined,
                         title: 'Legal',
                         onTap: () {
-                          final preferred = _findPageByKeywords(
-                              ['terms', 'legal', 'conditions']);
-                          if (preferred != null) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ContentPageScreen(
-                                    slug: preferred.slug,
-                                    title: preferred.title),
-                              ),
-                            );
-                          } else {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const ContentPageScreen(
-                                    slug: 'terms-conditions',
-                                    title: 'Terms & Conditions'),
-                              ),
-                            );
-                          }
+                          _openPreferredPage(
+                            preferredSlugs: const ['legal', 'terms-conditions'],
+                            keywordsFallback: const [
+                              'terms',
+                              'legal',
+                              'conditions'
+                            ],
+                            defaultSlug: 'terms-conditions',
+                            defaultTitle: 'Terms & Conditions',
+                          );
                         },
                       ),
                       _divider(),
@@ -269,27 +321,15 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
                         icon: Icons.privacy_tip_outlined,
                         title: 'Privacy Policy',
                         onTap: () {
-                          final preferred =
-                              _findPageByKeywords(['privacy', 'policy']);
-                          if (preferred != null) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ContentPageScreen(
-                                    slug: preferred.slug,
-                                    title: preferred.title),
-                              ),
-                            );
-                          } else {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const ContentPageScreen(
-                                    slug: 'privacy-policy',
-                                    title: 'Privacy Policy'),
-                              ),
-                            );
-                          }
+                          _openPreferredPage(
+                            preferredSlugs: const [
+                              'privacy-policy-central',
+                              'privacy-policy'
+                            ],
+                            keywordsFallback: const ['privacy', 'policy'],
+                            defaultSlug: 'privacy-policy',
+                            defaultTitle: 'Privacy Policy',
+                          );
                         },
                       ),
                     ],
