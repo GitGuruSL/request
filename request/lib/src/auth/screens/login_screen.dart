@@ -77,8 +77,12 @@ class _LoginScreenState extends State<LoginScreen>
       final emailOrPhone =
           isEmail ? rawInput : rawInput.replaceAll(RegExp(r'\s+'), '');
 
-      // For email logins, go straight to password screen (no OTP)
-      if (isEmail) {
+      // Check if user exists to determine flow
+      final exists =
+          await RestAuthService.instance.checkUserExists(emailOrPhone);
+
+      if (exists) {
+        // Existing user -> go to password screen
         if (!mounted) return;
         Navigator.pushNamed(
           context,
@@ -86,17 +90,17 @@ class _LoginScreenState extends State<LoginScreen>
           arguments: {
             'emailOrPhone': emailOrPhone,
             'isNewUser': false,
-            'isEmail': true,
+            'isEmail': isEmail,
             'countryCode': widget.countryCode,
           },
         );
         return;
       }
 
-      // Otherwise, proceed with OTP (phone logins)
+      // New user -> proceed with OTP
       final otpResult = await RestAuthService.instance.sendOTP(
         emailOrPhone: emailOrPhone,
-        isEmail: false,
+        isEmail: isEmail,
         countryCode: widget.countryCode,
       );
 
@@ -110,7 +114,7 @@ class _LoginScreenState extends State<LoginScreen>
         '/otp',
         arguments: {
           'emailOrPhone': emailOrPhone,
-          'isEmail': false,
+          'isEmail': isEmail,
           'isNewUser': true,
           'countryCode': widget.countryCode,
         },
