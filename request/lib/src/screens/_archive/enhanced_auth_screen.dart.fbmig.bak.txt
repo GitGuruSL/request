@@ -1,2 +1,0 @@
-Archived backup (.fbmig.bak). Original path: lib/src/screens/enhanced_auth_screen.dart.fbmig.bak
-Reason: Backup variant; not referenced by routes/imports.

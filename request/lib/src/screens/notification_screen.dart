@@ -51,7 +51,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 children: [
                   Icon(Icons.error_outline, size: 56, color: Colors.red[300]),
                   const SizedBox(height: 12),
-                  Text('Error: ${snapshot.error}'),
+                  Text('Error: ${snapshot.error}',
+                      style: TextStyle(color: GlassTheme.colors.textSecondary)),
                 ],
               ),
             );
@@ -63,19 +64,19 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.notifications_none,
-                      size: 64, color: Colors.grey[400]),
+                      size: 64, color: GlassTheme.colors.textTertiary),
                   const SizedBox(height: 12),
                   Text(
                     'No notifications yet',
                     style: TextStyle(
-                      color: Colors.grey[600],
+                      color: GlassTheme.colors.textSecondary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     "You'll see notifications here when something happens",
-                    style: TextStyle(color: Colors.grey[500]),
+                    style: TextStyle(color: GlassTheme.colors.textTertiary),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -86,7 +87,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           return RefreshIndicator(
             onRefresh: _refresh,
             child: ListView.separated(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
               itemCount: notifications.length,
               separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
@@ -104,10 +105,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
     final isUnread = n.status == NotificationStatus.unread;
     final color = _color(n.type);
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: GlassTheme.glassContainer,
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(20),
         onTap: () => _onTap(n),
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -151,13 +151,15 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 children: [
                   Text(
                     _time(n.createdAt),
-                    style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                    style: TextStyle(
+                        color: GlassTheme.colors.textTertiary, fontSize: 12),
                   ),
                 ],
               ),
               const SizedBox(width: 4),
               PopupMenuButton<String>(
-                icon: Icon(Icons.more_vert, color: Colors.grey[500], size: 20),
+                icon: Icon(Icons.more_vert,
+                    color: GlassTheme.colors.textTertiary, size: 20),
                 onSelected: (v) => _menu(v, n),
                 itemBuilder: (context) => [
                   if (isUnread)

@@ -1,7 +1,0 @@
-Archived (do not compile)
-Original path: lib/src/screens/browse_screen_old.dart
-Reason: Superseded by new browsing flow; unused in routes.
-
--- Begin original content snapshot --
-[Content archived intentionally to avoid analyzer errors.]
--- End original content snapshot --
