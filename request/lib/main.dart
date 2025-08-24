@@ -9,7 +9,6 @@ import 'src/auth/screens/password_screen.dart';
 import 'src/auth/screens/profile_completion_screen.dart';
 import 'src/navigation/main_navigation_screen.dart';
 import 'src/home/screens/browse_requests_screen.dart';
-import 'src/screens/browse_screen.dart';
 import 'src/screens/pricing/price_comparison_screen.dart';
 import 'src/screens/pricing/business_product_dashboard.dart';
 import 'src/screens/profile/business_profile_edit_screen.dart';
@@ -25,8 +24,6 @@ import 'src/screens/verification_status_screen.dart';
 import 'src/screens/role_management_screen.dart';
 import 'src/screens/modern_menu_screen.dart';
 import 'src/screens/content_page_screen.dart';
-import 'src/screens/content_test_screen.dart';
-import 'src/screens/api_test_screen.dart'; // API test screen
 import 'src/screens/legal_page_screen.dart';
 import 'src/screens/privacy_policy_screen.dart';
 import 'src/screens/terms_conditions_screen.dart';
@@ -138,10 +135,6 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(
               builder: (context) => const RoleManagementScreen(),
             );
-          case '/api-test':
-            return MaterialPageRoute(
-              builder: (context) => const ApiTestScreen(),
-            );
           case '/main-dashboard':
           case '/home':
             return MaterialPageRoute(
@@ -150,10 +143,6 @@ class MyApp extends StatelessWidget {
           case '/browse':
             return MaterialPageRoute(
               builder: (context) => const BrowseRequestsScreen(),
-            );
-          case '/browse-old':
-            return MaterialPageRoute(
-              builder: (context) => const BrowseScreen(),
             );
           case '/price':
             // Redirect to price comparison screen
@@ -211,10 +200,6 @@ class MyApp extends StatelessWidget {
                 slug: args?['slug'] ?? '',
                 title: args?['title'],
               ),
-            );
-          case '/content-test':
-            return MaterialPageRoute(
-              builder: (context) => const ContentTestScreen(),
             );
           // Placeholder routes for menu items
           case '/saved':
