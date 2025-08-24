@@ -92,151 +92,187 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: const Color(0xFF1A1A1A), // Dark charcoal background
       body: _isLoading ? _buildLoadingState() : _buildMenuContent(),
     );
   }
 
   Widget _buildLoadingState() {
     return const Center(
-      child: CircularProgressIndicator(),
+      child: CircularProgressIndicator(
+        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+      ),
     );
   }
 
   Widget _buildMenuContent() {
-    return CustomScrollView(
-      slivers: [
-        // Facebook-style header
-        SliverAppBar(
-          expandedHeight: 80,
-          floating: false,
-          pinned: true,
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
-          elevation: 0,
-          flexibleSpace: FlexibleSpaceBar(
-            background: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                border: Border(
-                  bottom: BorderSide(color: Colors.grey, width: 0.2),
-                ),
-              ),
-              child: const SafeArea(
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Menu',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFF2C2C2C), // Charcoal top
+            Color(0xFF1A1A1A), // Darker bottom
+          ],
+        ),
+      ),
+      child: CustomScrollView(
+        slivers: [
+          // Modern header with centered profile
+          SliverToBoxAdapter(
+            child: SafeArea(
+              child: Column(
+                children: [
+                  const SizedBox(height: 20),
+
+                  // Centered Profile Section
+                  _buildCenteredProfileSection(),
+
+                  const SizedBox(height: 30),
+                ],
               ),
             ),
           ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.search),
-              onPressed: () => Navigator.pushNamed(context, '/search'),
-            ),
-          ],
-        ),
 
-        // Menu content
-        SliverList(
-          delegate: SliverChildListDelegate([
-            const SizedBox(height: 12),
+          // Menu content
+          SliverList(
+            delegate: SliverChildListDelegate([
+              // Modern grid sections
+              _buildMenuGrid(),
+              const SizedBox(height: 20),
 
-            // User Profile Card
-            _buildUserProfileCard(),
-            const SizedBox(height: 12),
+              // Account actions section
+              _buildAccountActionsSection(),
+              const SizedBox(height: 20),
 
-            // Facebook-style grid sections
-            _buildMenuGrid(),
-            const SizedBox(height: 12),
-
-            // Information Pages and Privacy Policy removed per requirement
-
-            // Account actions section (simplified)
-            _buildAccountActionsSection(),
-            const SizedBox(height: 12),
-
-            // Logout separated
-            _buildLogoutSection(),
-            const SizedBox(height: 120),
-          ]),
-        ),
-      ],
-    );
-  }
-
-  // Note: User profile header is rendered via _buildUserProfileCard()
-
-  Widget _buildUserProfileCard() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundImage:
-                      _profileImageUrl != null && _profileImageUrl!.isNotEmpty
-                          ? NetworkImage(_profileImageUrl!)
-                          : null,
-                  backgroundColor: Colors.grey[300],
-                  child: _profileImageUrl == null || _profileImageUrl!.isEmpty
-                      ? Icon(Icons.person, color: Colors.grey[600], size: 28)
-                      : null,
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    _currentUser?['name'] ??
-                        _currentUser?['displayName'] ??
-                        'User',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const UserProfileScreen(),
-                    ),
-                  ),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    child: Icon(
-                      Icons.arrow_forward_ios,
-                      color: Colors.grey[600],
-                      size: 16,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              // Logout separated
+              _buildLogoutSection(),
+              const SizedBox(height: 120),
+            ]),
           ),
         ],
       ),
+    );
+  }
+
+  // Note: User profile header is rendered via _buildCenteredProfileSection()
+
+  Widget _buildCenteredProfileSection() {
+    return Column(
+      children: [
+        // Logo/App Title
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Menu',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.search, color: Colors.white, size: 28),
+                onPressed: () => Navigator.pushNamed(context, '/search'),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 20),
+
+        // Centered Profile Picture
+        GestureDetector(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const UserProfileScreen(),
+            ),
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withOpacity(0.3),
+                width: 3,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: CircleAvatar(
+              radius: 50,
+              backgroundImage:
+                  _profileImageUrl != null && _profileImageUrl!.isNotEmpty
+                      ? NetworkImage(_profileImageUrl!)
+                      : null,
+              backgroundColor: const Color(0xFF404040),
+              child: _profileImageUrl == null || _profileImageUrl!.isEmpty
+                  ? const Icon(
+                      Icons.person,
+                      color: Colors.white70,
+                      size: 50,
+                    )
+                  : null,
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Centered Name
+        Text(
+          _currentUser?['name'] ?? _currentUser?['displayName'] ?? 'User',
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+          textAlign: TextAlign.center,
+        ),
+
+        const SizedBox(height: 8),
+
+        // Membership status or subtitle
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.verified_user,
+                color: Colors.white.withOpacity(0.8),
+                size: 16,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Member',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.white.withOpacity(0.9),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -245,32 +281,32 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
       _MenuItem(
         title: 'Roles',
         icon: Icons.work_outline,
-        color: Colors.purple,
+        color: const Color(0xFF6366F1), // Indigo
         route: '/role-management',
       ),
       _MenuItem(
         title: 'Products',
         icon: Icons.inventory_2_outlined,
-        color: Colors.orange,
+        color: const Color(0xFFF59E0B), // Amber
         route: 'products', // handled specially
       ),
       _MenuItem(
         title: 'Messages',
         icon: Icons.message_outlined,
-        color: Colors.green,
+        color: const Color(0xFF10B981), // Emerald
         route: '/messages',
         badgeCount: _unreadMessages,
       ),
       _MenuItem(
         title: 'My Activities',
         icon: Icons.history,
-        color: Colors.teal,
+        color: const Color(0xFF06B6D4), // Cyan
         route: '/activities',
       ),
       _MenuItem(
         title: 'Notifications',
         icon: Icons.notifications_outlined,
-        color: Colors.red,
+        color: const Color(0xFFEF4444), // Red
         route: '/notifications',
         badgeCount: _unreadTotal,
       ),
@@ -278,132 +314,144 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
         _MenuItem(
           title: 'Ride Alerts',
           icon: Icons.directions_car,
-          color: Colors.blue,
+          color: const Color(0xFF3B82F6), // Blue
           route: '/driver-subscriptions',
         ),
     ];
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 3.0,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-              ),
-              itemCount: accountItems.length,
-              itemBuilder: (context, index) {
-                final item = accountItems[index];
-                return InkWell(
-                  onTap: () async {
-                    if (item.route != null) {
-                      if (item.route == '/activities') {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const MyActivitiesScreen()),
-                        );
-                      } else if (item.route == '/notifications') {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const NotificationScreen()),
-                        );
-                      } else if (item.route == '/driver-subscriptions') {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) =>
-                                  const DriverSubscriptionScreen()),
-                        );
-                      } else if (item.route == 'products') {
-                        // Always route to the business product dashboard; it self-gates for non-approved users
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) =>
-                                  const BusinessProductDashboard()),
-                        );
-                      } else {
-                        await Navigator.pushNamed(context, item.route!);
-                      }
-                      // Refresh badges after returning
-                      if (mounted) {
-                        _loadData();
-                      }
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              childAspectRatio: 3.0,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+            ),
+            itemCount: accountItems.length,
+            itemBuilder: (context, index) {
+              final item = accountItems[index];
+              return InkWell(
+                onTap: () async {
+                  if (item.route != null) {
+                    if (item.route == '/activities') {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const MyActivitiesScreen()),
+                      );
+                    } else if (item.route == '/notifications') {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const NotificationScreen()),
+                      );
+                    } else if (item.route == '/driver-subscriptions') {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) =>
+                                const DriverSubscriptionScreen()),
+                      );
+                    } else if (item.route == 'products') {
+                      // Always route to the business product dashboard; it self-gates for non-approved users
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) =>
+                                const BusinessProductDashboard()),
+                      );
+                    } else {
+                      await Navigator.pushNamed(context, item.route!);
                     }
-                  },
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
+                    // Refresh badges after returning
+                    if (mounted) {
+                      _loadData();
+                    }
+                  }
+                },
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.1),
+                      width: 1,
                     ),
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Icon(
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: item.color.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
                           item.icon,
                           color: item.color,
                           size: 24,
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          item.title,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if ((item.badgeCount ?? 0) > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           child: Text(
-                            item.title,
+                            '${item.badgeCount}',
                             style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.black87,
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
                             ),
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        if ((item.badgeCount ?? 0) > 0)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              '${item.badgeCount}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
+                    ],
                   ),
-                );
-              },
-            ),
-            if (!_isDriver)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  'Become a verified driver to enable Ride Alerts',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
+              );
+            },
+          ),
+          if (!_isDriver)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text(
+                'Become a verified driver to enable Ride Alerts',
+                style: TextStyle(
+                    color: Colors.white.withOpacity(0.7), fontSize: 13),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
@@ -414,8 +462,12 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.1),
+          width: 1,
+        ),
       ),
       child: Column(
         children: [
@@ -423,14 +475,14 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
             icon: Icons.workspace_premium_outlined,
             title: 'Membership',
             subtitle: 'Manage your membership',
-            color: Colors.blueGrey,
+            color: const Color(0xFF8B5CF6), // Purple
             onTap: () => Navigator.pushNamed(context, '/membership'),
           ),
           _buildActionTile(
             icon: Icons.help_outline,
             title: 'Help and Support',
             subtitle: 'Get help when you need it',
-            color: Colors.grey,
+            color: const Color(0xFF06B6D4), // Cyan
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
@@ -441,7 +493,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
             icon: Icons.payment_outlined,
             title: 'Payment',
             subtitle: 'Accepted payment methods',
-            color: Colors.indigo,
+            color: const Color(0xFF10B981), // Emerald
             onTap: () =>
                 Navigator.pushNamed(context, '/settings/payment-methods'),
           ),
@@ -449,7 +501,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
             icon: Icons.info_outline,
             title: 'About Us',
             subtitle: 'About Request',
-            color: Colors.grey,
+            color: const Color(0xFF6B7280), // Gray
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
@@ -465,20 +517,31 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.1),
+          width: 1,
+        ),
       ),
       child: _buildActionTile(
         icon: Icons.logout,
         title: 'Log Out',
         subtitle: 'Sign out of your account',
-        color: Colors.grey,
+        color: const Color(0xFFEF4444), // Red
         onTap: () async {
           final shouldLogout = await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
-              title: const Text('Log Out'),
-              content: const Text('Are you sure you want to log out?'),
+              backgroundColor: const Color(0xFF2C2C2C),
+              title: const Text(
+                'Log Out',
+                style: TextStyle(color: Colors.white),
+              ),
+              content: const Text(
+                'Are you sure you want to log out?',
+                style: TextStyle(color: Colors.white70),
+              ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
@@ -486,7 +549,10 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                 ),
                 TextButton(
                   onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Log Out'),
+                  child: const Text(
+                    'Log Out',
+                    style: TextStyle(color: Colors.red),
+                  ),
                 ),
               ],
             ),
@@ -512,24 +578,25 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
   }) {
     return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Row(
           children: [
             Container(
-              width: 36,
-              height: 36,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(6),
+                color: color.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 icon,
                 color: color,
-                size: 18,
+                size: 22,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -537,17 +604,18 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                   Text(
                     title,
                     style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
                     ),
                   ),
                   if (subtitle != null) ...[
-                    const SizedBox(height: 1),
+                    const SizedBox(height: 4),
                     Text(
                       subtitle,
                       style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
+                        fontSize: 13,
+                        color: Colors.white.withOpacity(0.7),
                       ),
                     ),
                   ],
@@ -557,7 +625,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
             Icon(
               Icons.arrow_forward_ios,
               size: 16,
-              color: Colors.grey[400],
+              color: Colors.white.withOpacity(0.5),
             ),
           ],
         ),
