@@ -1,5 +1,5 @@
-// Archived on cleanup. Original path: lib/src/screens/about_request_screen_broken.dart
-// Keeping for reference only; not compiled.
+// Archived placeholder. Do not compile.
+// Original: lib/src/screens/about_request_screen_broken.dart
 import 'package:flutter/material.dart';
 import '../services/content_service.dart';
 import 'content_page_screen.dart';

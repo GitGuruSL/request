@@ -24,12 +24,13 @@ class _AboutRequestScreenState extends State<AboutRequestScreen> {
     try {
       final pages = await _contentService.getPages();
       setState(() {
-        _aboutPages = pages.where((page) => 
-          page.category.toLowerCase().contains('about') ||
-          page.title.toLowerCase().contains('about') ||
-          page.title.toLowerCase().contains('faq') ||
-          page.title.toLowerCase().contains('help')
-        ).toList();
+        _aboutPages = pages
+            .where((page) =>
+                page.category.toLowerCase().contains('about') ||
+                page.title.toLowerCase().contains('about') ||
+                page.title.toLowerCase().contains('faq') ||
+                page.title.toLowerCase().contains('help'))
+            .toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -76,55 +77,55 @@ class _AboutRequestScreenState extends State<AboutRequestScreen> {
     return Column(
       children: [
         // App Logo and Info
-            Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              // App Logo - using the provided gradient logo
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF4FC3F7), // Light blue
+                      Color(0xFF66BB6A), // Green
+                    ],
+                  ),
+                ),
+                child: const Icon(
+                  Icons.arrow_upward_rounded,
+                  color: Colors.white,
+                  size: 64,
+                ),
               ),
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  // App Logo - using the provided gradient logo
-                  Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(24),
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Color(0xFF4FC3F7), // Light blue
-                          Color(0xFF66BB6A), // Green
-                        ],
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.arrow_upward_rounded,
-                      color: Colors.white,
-                      size: 64,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Request Marketplace',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Version 1.0.0',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
+              const SizedBox(height: 16),
+              const Text(
+                'Request Marketplace',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
+              const SizedBox(height: 8),
+              Text(
+                'Version 1.0.0',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
 
         // App Features
         _buildSection(
@@ -161,20 +162,23 @@ class _AboutRequestScreenState extends State<AboutRequestScreen> {
         if (_aboutPages.isNotEmpty)
           _buildSection(
             title: 'Learn More',
-            children: _aboutPages.map((page) => _buildInfoTile(
-              icon: Icons.article,
-              title: page.title,
-              subtitle: 'Learn more about our ${page.title.toLowerCase()}',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ContentPageScreen(
-                    slug: page.slug,
-                    title: page.title,
-                  ),
-                ),
-              ),
-            )).toList(),
+            children: _aboutPages
+                .map((page) => _buildInfoTile(
+                      icon: Icons.article,
+                      title: page.title,
+                      subtitle:
+                          'Learn more about our ${page.title.toLowerCase()}',
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ContentPageScreen(
+                            slug: page.slug,
+                            title: page.title,
+                          ),
+                        ),
+                      ),
+                    ))
+                .toList(),
           ),
 
         // Contact & Support
@@ -264,7 +268,7 @@ class _AboutRequestScreenState extends State<AboutRequestScreen> {
         ),
 
         const SizedBox(height: 32),
-        
+
         // Copyright
         Center(
           child: Padding(
@@ -282,7 +286,8 @@ class _AboutRequestScreenState extends State<AboutRequestScreen> {
     );
   }
 
-  Widget _buildSection({required String title, required List<Widget> children}) {
+  Widget _buildSection(
+      {required String title, required List<Widget> children}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
