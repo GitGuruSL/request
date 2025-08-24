@@ -1,6 +1,3 @@
-// REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
-
-import 'src/utils/firebase_shim.dart'; // Added by migration script
 class Category {
   final String id;
   final String name;
@@ -20,10 +17,10 @@ class Category {
     this.isActive = true,
   });
 
-  factory Category.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  // Convert from REST API response
+  factory Category.fromJson(Map<String, dynamic> data) {
     return Category(
-      id: doc.id,
+      id: data['id'] ?? '',
       name: data['name'] ?? '',
       type: data['type'] ?? '',
       subCategories: (data['subCategories'] as List<dynamic>? ?? [])

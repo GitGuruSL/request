@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'src/utils/firebase_shim.dart'; // Added by migration script
 // REMOVED_FB_IMPORT: import 'package:firebase_auth/firebase_auth.dart';
 import '../models/subscription_model.dart';
 import '../services/subscription_service.dart';

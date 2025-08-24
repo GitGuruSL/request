@@ -1,7 +1,3 @@
-// REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
-
-import 'src/utils/firebase_shim.dart'; // Added by migration script
-
 class ProductVariable {
   final String name;
   final String type;
@@ -79,32 +75,6 @@ class MasterProduct {
     this.avgPrice,
   });
 
-  factory MasterProduct.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return MasterProduct(
-      id: doc.id,
-      name: data['name'] ?? '',
-      brand: data['brand'] ?? '',
-      category: data['category'] ?? '',
-      subcategory: data['subcategory'] ?? '',
-      description: data['description'] ?? '',
-      images: List<String>.from(data['images'] ?? []),
-      availableVariables: _parseAvailableVariables(data['availableVariables']),
-      isActive: data['isActive'] ?? true,
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      businessListingsCount: data['businessListingsCount'] ?? 0,
-      // Price comparison fields (not available from Firestore)
-      slug: null,
-      baseUnit: null,
-      brandName: data['brand'],
-      listingCount: null,
-      minPrice: null,
-      maxPrice: null,
-      avgPrice: null,
-    );
-  }
-
   factory MasterProduct.fromJson(Map<String, dynamic> json) {
     return MasterProduct(
       id: json['id'] ?? '',
@@ -170,8 +140,8 @@ class MasterProduct {
         (key, variable) => MapEntry(key, variable.toMap()),
       ),
       'isActive': isActive,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': Timestamp.fromDate(updatedAt),
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
       'businessListingsCount': businessListingsCount,
     };
   }

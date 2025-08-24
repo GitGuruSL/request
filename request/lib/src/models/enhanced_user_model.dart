@@ -1,7 +1,4 @@
 // Enhanced User Model with Multi-Role Support
-// REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
-
-import 'src/utils/firebase_shim.dart'; // Added by migration script
 
 enum UserRole { general, driver, delivery, business }
 
@@ -128,10 +125,10 @@ class UserModel {
   static DateTime _parseDateTime(dynamic dateTime) {
     if (dateTime == null) {
       return DateTime.now();
-    } else if (dateTime is Timestamp) {
-      return dateTime.toDate();
     } else if (dateTime is String) {
       return DateTime.parse(dateTime);
+    } else if (dateTime is DateTime) {
+      return dateTime;
     } else {
       return DateTime.now();
     }
@@ -140,8 +137,6 @@ class UserModel {
   static DateTime? _parseDate(dynamic date) {
     if (date == null) {
       return null;
-    } else if (date is Timestamp) {
-      return date.toDate();
     } else if (date is String) {
       try {
         return DateTime.parse(date);

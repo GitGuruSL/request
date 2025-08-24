@@ -1,7 +1,3 @@
-// REMOVED_FB_IMPORT: import 'package:cloud_firestore/cloud_firestore.dart';
-
-import 'src/utils/firebase_shim.dart'; // Added by migration script
-
 class PaymentMethodRef {
   final String id;
   final String name;
@@ -82,39 +78,6 @@ class PriceListing {
     this.paymentMethods = const [],
   });
 
-  factory PriceListing.fromFirestore(DocumentSnapshot doc) {
-    final Map<String, dynamic> data =
-        (doc.data() as Map<String, dynamic>?) ?? <String, dynamic>{};
-    return PriceListing(
-      id: doc.id,
-      businessId: data['businessId'] ?? '',
-      businessName: data['businessName'] ?? '',
-      businessLogo: data['businessLogo'] ?? '',
-      masterProductId: data['masterProductId'] ?? '',
-      productName: data['productName'] ?? '',
-      brand: data['brand'] ?? '',
-      category: data['category'] ?? '',
-      subcategory: data['subcategory'] ?? '',
-      price: (data['price'] ?? 0.0).toDouble(),
-      currency: data['currency'] ?? 'LKR',
-      modelNumber: data['modelNumber'],
-      selectedVariables:
-          Map<String, String>.from(data['selectedVariables'] ?? {}),
-      productImages: List<String>.from(data['productImages'] ?? []),
-      productLink: data['productLink'],
-      whatsappNumber: data['whatsappNumber'],
-      isAvailable: data['isAvailable'] ?? true,
-      stockQuantity: data['stockQuantity'] ?? 0,
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      clickCount: data['clickCount'] ?? 0,
-      rating: (data['rating'] ?? 0.0).toDouble(),
-      reviewCount: data['reviewCount'] ?? 0,
-      country: data['country'],
-      countryName: data['countryName'],
-    );
-  }
-
   factory PriceListing.fromJson(Map<String, dynamic> json) {
     // Parse business payment methods if present
     final List<dynamic>? pmList =
@@ -178,8 +141,8 @@ class PriceListing {
       'whatsappNumber': whatsappNumber,
       'isAvailable': isAvailable,
       'stockQuantity': stockQuantity,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': Timestamp.fromDate(updatedAt),
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
       'clickCount': clickCount,
       'rating': rating,
       'reviewCount': reviewCount,
