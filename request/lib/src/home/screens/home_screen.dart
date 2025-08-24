@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../services/rest_auth_service.dart';
 import '../../screens/unified_request_response/unified_request_create_screen.dart';
 import '../../models/enhanced_user_model.dart' show RequestType;
@@ -250,7 +251,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final user = RestAuthService.instance.currentUser;
     return Scaffold(
       backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.dark, // Android
+          statusBarBrightness: Brightness.light, // iOS
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
