@@ -53,8 +53,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           _firstNameController.text = user.firstName ?? '';
           _lastNameController.text = user.lastName ?? '';
           _phoneController.text = user.phoneNumber ?? '';
-          _bioController.text = user.bio ?? '';
-          _addressController.text = user.address ?? '';
+          // Note: bio and address fields are not available in current UserModel
+          _bioController.text = '';
+          _addressController.text = '';
           _isLoading = false;
         });
       }
@@ -249,10 +250,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               CircleAvatar(
                 radius: 50,
                 backgroundColor: Colors.grey[200],
-                child: _currentUser?.profilePictureUrl?.isNotEmpty == true
+                child: false // Profile picture URL not available in current UserModel
                     ? ClipOval(
                         child: Image.network(
-                          _currentUser!.profilePictureUrl!,
+                          '', // Placeholder
                           width: 100,
                           height: 100,
                           fit: BoxFit.cover,

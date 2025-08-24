@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'src/utils/firebase_shim.dart'; // Added by migration script
-// REMOVED_FB_IMPORT: import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/message_model.dart';
-import '../../services/messaging_service.dart';
 import '../../services/enhanced_user_service.dart';
+import '../../services/auth_service.dart';
 import '../unified_request_response/unified_request_view_screen.dart';
 import 'conversation_screen.dart';
 
@@ -11,12 +9,13 @@ class ConversationsListScreen extends StatefulWidget {
   const ConversationsListScreen({super.key});
 
   @override
-  State<ConversationsListScreen> createState() => _ConversationsListScreenState();
+  State<ConversationsListScreen> createState() =>
+      _ConversationsListScreenState();
 }
 
 class _ConversationsListScreenState extends State<ConversationsListScreen> {
-  final MessagingService _messagingService = MessagingService();
   final EnhancedUserService _userService = EnhancedUserService();
+  final AuthService _authService = AuthService.instance;
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +27,9 @@ class _ConversationsListScreenState extends State<ConversationsListScreen> {
         elevation: 0,
       ),
       body: StreamBuilder<List<ConversationModel>>(
-        stream: _messagingService.getConversationsStream(),
+        // TODO: Implement REST API for conversations
+        // For now, return empty stream until messaging service is updated
+        stream: Stream.value(<ConversationModel>[]),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -107,16 +108,16 @@ class _ConversationsListScreenState extends State<ConversationsListScreen> {
   }
 
   Widget _buildConversationTile(ConversationModel conversation) {
-    final currentUserId = RestAuthService.instance.currentUser?.uid;
+    final currentUserId = _authService.currentUser?.id;
     final otherUserId = conversation.participantIds
         .firstWhere((id) => id != currentUserId, orElse: () => '');
-    
+
     return FutureBuilder(
       future: _userService.getUserById(otherUserId),
       builder: (context, userSnapshot) {
         final otherUser = userSnapshot.data;
         final isUnread = conversation.readStatus[currentUserId] == false;
-        
+
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
           child: ListTile(
@@ -201,7 +202,8 @@ class _ConversationsListScreenState extends State<ConversationsListScreen> {
                   _formatTime(conversation.lastMessageTime),
                   style: TextStyle(
                     fontSize: 12,
-                    color: isUnread ? Theme.of(context).primaryColor : Colors.grey,
+                    color:
+                        isUnread ? Theme.of(context).primaryColor : Colors.grey,
                     fontWeight: isUnread ? FontWeight.w500 : FontWeight.normal,
                   ),
                 ),
