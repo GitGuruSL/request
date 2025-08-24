@@ -196,7 +196,8 @@ class _RiderAlertCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: GlassTheme.colors.textPrimary,
-                        fontWeight: isUnread ? FontWeight.w700 : FontWeight.w600,
+                        fontWeight:
+                            isUnread ? FontWeight.w700 : FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 4),
