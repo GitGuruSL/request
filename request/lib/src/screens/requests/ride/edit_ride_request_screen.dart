@@ -14,6 +14,8 @@ import '../../../widgets/image_upload_widget.dart';
 import '../../../widgets/accurate_location_picker_widget.dart';
 import '../../../utils/currency_helper.dart';
 import '../../../services/google_directions_service.dart';
+import '../../../theme/glass_theme.dart';
+import '../../../widgets/glass_page.dart';
 
 class EditRideRequestScreen extends StatefulWidget {
   final RequestModel request;
@@ -28,7 +30,6 @@ class EditRideRequestScreen extends StatefulWidget {
 }
 
 class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
-  final _formKey = GlobalKey<FormState>();
   final EnhancedRequestService _requestService = EnhancedRequestService();
   final EnhancedUserService _userService = EnhancedUserService();
   final VehicleService _vehicleService = VehicleService();
@@ -120,47 +121,40 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
     }
 
     // Parse ride-specific data using RideRequestData model
-    if (widget.request.typeSpecificData != null) {
-      try {
-        final rideData =
-            RideRequestData.fromMap(widget.request.typeSpecificData!);
+    try {
+      final rideData = RideRequestData.fromMap(widget.request.typeSpecificData);
 
-        _passengerCount = rideData.passengers;
-        _departureTime = rideData.preferredTime;
-        _allowSharing = rideData.petsAllowed ?? true;
-        _specialRequestsController.text = rideData.specialRequests ?? '';
+      _passengerCount = rideData.passengers;
+      _departureTime = rideData.preferredTime;
+      _allowSharing = rideData.petsAllowed;
+      _specialRequestsController.text = rideData.specialRequests ?? '';
 
-        // Map vehicle type to new system
-        switch (rideData.vehicleType?.toLowerCase()) {
-          case 'economy':
-            _selectedVehicleType = 'economy';
-            break;
-          case 'premium':
-            _selectedVehicleType = 'premium';
-            break;
-          case 'shared':
-            _selectedVehicleType = 'shared';
-            break;
-          case 'suv':
-            _selectedVehicleType = 'suv';
-            break;
-          default:
-            _selectedVehicleType = 'economy';
-        }
-
-        // Check if it's scheduled for later
-        final now = DateTime.now();
-        final preferredTime = rideData.preferredTime!;
-        // If preferred time is more than 30 minutes from now, consider it scheduled
-        _scheduleForLater = preferredTime.difference(now).inMinutes > 30;
-      } catch (e) {
-        print('Error parsing ride data: $e');
-        // Fallback to default values
-        _selectedVehicleType = 'economy';
-        _passengerCount = 1;
-        _allowSharing = true;
-        _scheduleForLater = false;
+      // Map vehicle type to new system
+      switch ((rideData.vehicleType ?? '').toLowerCase()) {
+        case 'premium':
+          _selectedVehicleType = 'premium';
+          break;
+        case 'shared':
+          _selectedVehicleType = 'shared';
+          break;
+        case 'suv':
+          _selectedVehicleType = 'suv';
+          break;
+        default:
+          _selectedVehicleType = 'economy';
       }
+
+      // Check if it's scheduled for later
+      final now = DateTime.now();
+      final preferredTime = rideData.preferredTime;
+      _scheduleForLater = preferredTime.difference(now).inMinutes > 30;
+    } catch (e) {
+      print('Error parsing ride data: $e');
+      // Fallback to default values
+      _selectedVehicleType = 'economy';
+      _passengerCount = 1;
+      _allowSharing = true;
+      _scheduleForLater = false;
     }
 
     // Update map markers after data is loaded
@@ -207,8 +201,15 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
+    return GlassPage(
+      title: 'Edit Ride',
+      actions: [
+        IconButton(
+          icon: Icon(Icons.my_location, color: GlassTheme.colors.textPrimary),
+          onPressed: _goToCurrentLocation,
+          tooltip: 'My Location',
+        ),
+      ],
       body: Stack(
         children: [
           // Google Maps View
@@ -234,68 +235,6 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
             ),
           ),
 
-          // My Location Button (like in Uber)
-          Positioned(
-            right: 16,
-            top: 120,
-            child: FloatingActionButton(
-              mini: true,
-              backgroundColor: Colors.white,
-              onPressed: _goToCurrentLocation,
-              child: const Icon(
-                Icons.my_location,
-                color: Colors.black,
-              ),
-            ),
-          ),
-
-          // Top App Bar
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top + 8,
-                left: 16,
-                right: 16,
-                bottom: 8,
-              ),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 4,
-                    offset: Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  const Expanded(
-                    child: Text(
-                      'Edit Ride',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.my_location),
-                    onPressed: _goToCurrentLocation,
-                  ),
-                ],
-              ),
-            ),
-          ),
-
           // Bottom Sheet with ride details
           DraggableScrollableSheet(
             initialChildSize: 0.4,
@@ -303,55 +242,46 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
             maxChildSize: 0.9,
             builder: (context, scrollController) {
               return Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(20),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 10,
-                      offset: Offset(0, -2),
-                    ),
-                  ],
-                ),
-                child: ListView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.all(20),
-                  children: [
-                    // Drag handle
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(2),
+                decoration: GlassTheme.glassContainer,
+                child: Material(
+                  color: Colors.transparent,
+                  child: ListView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.all(20),
+                    children: [
+                      // Drag handle
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 20),
+                      const SizedBox(height: 20),
 
-                    // Location inputs
-                    _buildLocationInputs(),
-                    const SizedBox(height: 24),
+                      // Location inputs
+                      _buildLocationInputs(),
+                      const SizedBox(height: 24),
 
-                    // Vehicle selection
-                    _buildVehicleSelection(),
-                    const SizedBox(height: 24),
+                      // Vehicle selection
+                      _buildVehicleSelection(),
+                      const SizedBox(height: 24),
 
-                    // Passengers and scheduling
-                    _buildRideOptions(),
-                    const SizedBox(height: 24),
+                      // Passengers and scheduling
+                      _buildRideOptions(),
+                      const SizedBox(height: 24),
 
-                    // Budget input
-                    _buildBudgetInput(),
-                    const SizedBox(height: 24),
+                      // Budget input
+                      _buildBudgetInput(),
+                      const SizedBox(height: 24),
 
-                    // Update ride button
-                    _buildUpdateButton(),
-                  ],
+                      // Update ride button
+                      _buildUpdateButton(),
+                    ],
+                  ),
                 ),
               );
             },
@@ -361,16 +291,7 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-        color: Colors.black87,
-      ),
-    );
-  }
+  // Removed unused _buildSectionTitle helper
 
   Widget _buildLocationInputs() {
     return Column(
@@ -674,20 +595,13 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
   Widget _buildBudgetInput() {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: Colors.grey[50],
-      ),
+      decoration: GlassTheme.glassContainerSubtle,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Budget (optional)',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[700],
-            ),
+            style: GlassTheme.titleSmall,
           ),
           const SizedBox(height: 8),
           TextFormField(
@@ -695,12 +609,9 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
             decoration: InputDecoration(
               hintText: '0.00',
               prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
-              ),
+              border: InputBorder.none,
               filled: true,
-              fillColor: Colors.white,
+              fillColor: Colors.transparent,
             ),
             keyboardType: TextInputType.number,
           ),
@@ -715,23 +626,10 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
       height: 56,
       child: ElevatedButton(
         onPressed: _isLoading ? null : _updateRequest,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFFFC107), // Yellow for ride requests
-          foregroundColor: Colors.black, // Better contrast on yellow
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
+        style: GlassTheme.primaryButton,
         child: _isLoading
-            ? const CircularProgressIndicator(
-                color: Colors.black) // Changed to black for contrast
-            : const Text(
-                'Update Ride Request',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+            ? const CircularProgressIndicator(color: Colors.white)
+            : const Text('Update Ride Request'),
       ),
     );
   }

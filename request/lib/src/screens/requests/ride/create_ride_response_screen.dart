@@ -15,6 +15,8 @@ import '../../../utils/address_utils.dart';
 import '../../../widgets/image_upload_widget.dart';
 import '../../../widgets/accurate_location_picker_widget.dart';
 import '../../../utils/currency_helper.dart';
+import '../../../theme/glass_theme.dart';
+import '../../../widgets/glass_page.dart';
 
 class CreateRideResponseScreen extends StatefulWidget {
   final RequestModel request;
@@ -48,7 +50,7 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
   bool _smokingAllowed = false;
   bool _petsAllowed = true;
   DateTime? _departureTime;
-  int _availableSeats = 3;
+  // int _availableSeats = 3; // Not used in this screen
   List<String> _imageUrls = [];
 
   bool _isLoading = false;
@@ -283,28 +285,7 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
     return 0.0;
   }
 
-  Future<void> _selectDepartureTime() async {
-    final DateTime? date = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 30)),
-    );
-
-    if (date != null) {
-      final TimeOfDay? time = await showTimePicker(
-        context: context,
-        initialTime: TimeOfDay.now(),
-      );
-
-      if (time != null) {
-        setState(() {
-          _departureTime =
-              DateTime(date.year, date.month, date.day, time.hour, time.minute);
-        });
-      }
-    }
-  }
+  // Removed unused _selectDepartureTime
 
   Future<void> _submitResponse() async {
     if (!_formKey.currentState!.validate()) {
@@ -441,14 +422,8 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
-      appBar: AppBar(
-        title: Text(_isEditMode ? 'Edit Ride Offer' : 'Ride Offer'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-      ),
+    return GlassPage(
+      title: _isEditMode ? 'Edit Ride Offer' : 'Ride Offer',
       body: Form(
         key: _formKey,
         child: ListView(
@@ -457,10 +432,7 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
             // Map Section
             Container(
               height: 250,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.all(Radius.circular(12)),
-              ),
+              decoration: GlassTheme.glassContainer,
               child: _isLoadingLocation
                   ? const Center(
                       child: Column(
@@ -499,10 +471,7 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
             // Location Cards
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.all(Radius.circular(12)),
-              ),
+              decoration: GlassTheme.glassContainerSubtle,
               child: Column(
                 children: [
                   // Pickup Location
@@ -592,10 +561,7 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
             // Passengers and Price
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.all(Radius.circular(12)),
-              ),
+              decoration: GlassTheme.glassContainerSubtle,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -711,10 +677,7 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
             // Requester Contact
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.all(Radius.circular(12)),
-              ),
+              decoration: GlassTheme.glassContainerSubtle,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -780,39 +743,25 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _submitResponse,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      const Color(0xFFFFC107), // Yellow for ride requests
-                  foregroundColor: Colors.black, // Better contrast on yellow
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                  ),
-                  elevation: 0,
-                ),
+                style: GlassTheme.primaryButton,
                 child: _isLoading
                     ? Row(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
+                        children: const [
                           SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
-                              color: Colors
-                                  .black, // Changed to black for better contrast on yellow
+                              color: Colors.white,
                               strokeWidth: 2,
                             ),
                           ),
                           SizedBox(width: 12),
-                          Text(_isEditMode ? 'Updating...' : 'Submitting...'),
+                          Text('Submitting...'),
                         ],
                       )
                     : Text(
                         _isEditMode ? 'Update Ride Offer' : 'Submit Ride Offer',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
                       ),
               ),
             ),

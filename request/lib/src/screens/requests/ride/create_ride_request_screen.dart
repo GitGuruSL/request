@@ -11,6 +11,8 @@ import '../../../widgets/accurate_location_picker_widget.dart';
 import '../../../utils/currency_helper.dart';
 import '../../../utils/distance_calculator.dart';
 import '../../../services/google_directions_service.dart';
+import '../../../theme/glass_theme.dart';
+import '../../../widgets/glass_page.dart';
 
 class CreateRideRequestScreen extends StatefulWidget {
   const CreateRideRequestScreen({super.key});
@@ -359,114 +361,44 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        // Ensure proper back navigation
-        return true;
-      },
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        body: Stack(
-          children: [
-            // Google Maps View
-            Positioned.fill(
-              child: GoogleMap(
-                initialCameraPosition: _initialPosition,
-                onMapCreated: (GoogleMapController controller) {
-                  _mapController = controller;
-                },
-                markers: _markers,
-                polylines: _polylines,
-                onTap: _onMapTapped,
-                myLocationEnabled: true,
-                myLocationButtonEnabled: false,
-                zoomControlsEnabled: false,
-                mapToolbarEnabled: false,
-              ),
+    return GlassPage(
+      title: 'Book a Ride',
+      actions: [
+        IconButton(
+          icon: Icon(Icons.my_location, color: GlassTheme.colors.textPrimary),
+          tooltip: 'My Location',
+          onPressed: _goToCurrentLocation,
+        ),
+      ],
+      body: Stack(
+        children: [
+          // Google Maps View
+          Positioned.fill(
+            child: GoogleMap(
+              initialCameraPosition: _initialPosition,
+              onMapCreated: (GoogleMapController controller) {
+                _mapController = controller;
+              },
+              markers: _markers,
+              polylines: _polylines,
+              onTap: _onMapTapped,
+              myLocationEnabled: true,
+              myLocationButtonEnabled: false,
+              zoomControlsEnabled: false,
+              mapToolbarEnabled: false,
             ),
+          ),
 
-            // My Location Button (like in Uber)
-            Positioned(
-              right: 16,
-              top: 120,
-              child: FloatingActionButton(
-                mini: true,
-                backgroundColor: Colors.white,
-                onPressed: _goToCurrentLocation,
-                child: const Icon(
-                  Icons.my_location,
-                  color: Colors.black,
-                ),
-              ),
-            ),
-
-            // Top App Bar
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                padding: EdgeInsets.only(
-                  top: MediaQuery.of(context).padding.top + 8,
-                  left: 16,
-                  right: 16,
-                  bottom: 8,
-                ),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 4,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    const Expanded(
-                      child: Text(
-                        'Book a Ride',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.my_location),
-                      onPressed: _goToCurrentLocation,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Bottom Sheet with ride details
-            DraggableScrollableSheet(
-              initialChildSize: 0.4,
-              minChildSize: 0.3,
-              maxChildSize: 0.9,
-              builder: (context, scrollController) {
-                return Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(20),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black12,
-                        blurRadius: 10,
-                        offset: Offset(0, -2),
-                      ),
-                    ],
-                  ),
+          // Bottom Sheet with ride details (Glass style)
+          DraggableScrollableSheet(
+            initialChildSize: 0.4,
+            minChildSize: 0.3,
+            maxChildSize: 0.9,
+            builder: (context, scrollController) {
+              return Container(
+                decoration: GlassTheme.glassContainer,
+                child: Material(
+                  color: Colors.transparent,
                   child: ListView(
                     controller: scrollController,
                     padding: const EdgeInsets.all(20),
@@ -477,7 +409,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                           width: 40,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: Colors.grey[300],
+                            color: Colors.grey.withValues(alpha: 0.3),
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -504,13 +436,13 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                       _buildRequestButton(),
                     ],
                   ),
-                );
-              },
-            ),
-          ],
-        ),
-      ), // Scaffold closing
-    ); // WillPopScope closing
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   // Removed unused _buildSectionTitle helper (design simplified)
@@ -610,22 +542,10 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-        border: Border.all(color: Colors.grey.shade200),
-      ),
+      decoration: GlassTheme.glassContainerSubtle,
       child: Row(
         children: [
-          Icon(Icons.route, color: Colors.blue.shade600, size: 24),
+          Icon(Icons.route, color: GlassTheme.colors.infoColor, size: 24),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -634,19 +554,12 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
               children: [
                 Text(
                   'Distance: ${DistanceCalculator.formatDistance(_distance!)}',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade800,
-                  ),
+                  style: GlassTheme.titleSmall,
                 ),
                 if (_estimatedTime != null)
                   Text(
                     'Estimated time: $_estimatedTime',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade600,
-                    ),
+                    style: GlassTheme.bodyMedium,
                   ),
               ],
             ),
@@ -722,10 +635,12 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                   width: 120,
                   margin: const EdgeInsets.only(right: 12),
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: isSelected ? Colors.grey[100] : Colors.transparent,
-                  ),
+                  decoration: isSelected
+                      ? GlassTheme.glassContainerSubtle
+                      : BoxDecoration(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -736,16 +651,12 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                             _getVehicleIcon(
                                 vehicle.iconUrl ?? 'directions_car'),
                             size: 24,
-                            color: Colors.grey[800],
+                            color: GlassTheme.colors.textPrimary,
                           ),
                           const Spacer(),
                           Text(
                             ' ', // passenger capacity not in REST model yet
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey[800],
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style: GlassTheme.labelMedium,
                           ),
                         ],
                       ),
@@ -753,11 +664,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                       Flexible(
                         child: Text(
                           vehicle.name,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey[800],
-                          ),
+                          style: GlassTheme.titleSmall,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -779,13 +686,10 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
         // Passenger count
         Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: Colors.grey[50],
-          ),
+          decoration: GlassTheme.glassContainerSubtle,
           child: Row(
             children: [
-              const Icon(Icons.person, color: Colors.grey),
+              Icon(Icons.person, color: GlassTheme.colors.textSecondary),
               const SizedBox(width: 12),
               const Text(
                 'Passengers',
@@ -801,17 +705,13 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                     icon: Icon(
                       Icons.remove_circle_outline,
                       color: _passengerCount > 1
-                          ? Theme.of(context).primaryColor
+                          ? GlassTheme.colors.primaryBlue
                           : Colors.grey,
                     ),
                   ),
                   Text(
                     '$_passengerCount',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).primaryColor,
-                    ),
+                    style: GlassTheme.titleSmall,
                   ),
                   IconButton(
                     onPressed: _passengerCount < 6
@@ -820,7 +720,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                     icon: Icon(
                       Icons.add_circle_outline,
                       color: _passengerCount < 6
-                          ? Theme.of(context).primaryColor
+                          ? GlassTheme.colors.primaryBlue
                           : Colors.grey,
                     ),
                   ),
@@ -834,16 +734,13 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
 
         // Schedule for later
         Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: Colors.grey[50],
-          ),
+          decoration: GlassTheme.glassContainerSubtle,
           child: ListTile(
             leading: Icon(
               Icons.schedule,
               color: _scheduleForLater
-                  ? Theme.of(context).primaryColor
-                  : Colors.grey,
+                  ? GlassTheme.colors.primaryBlue
+                  : GlassTheme.colors.textSecondary,
             ),
             title: Text(_scheduleForLater
                 ? (_departureTime != null
@@ -874,23 +771,10 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
       height: 56,
       child: ElevatedButton(
         onPressed: _isLoading ? null : _submitRequest,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFFFC107), // Yellow for ride requests
-          foregroundColor: Colors.black, // Better contrast on yellow
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
+        style: GlassTheme.primaryButton,
         child: _isLoading
-            ? const CircularProgressIndicator(
-                color: Colors.black) // Changed to black for contrast
-            : const Text(
-                'Request Ride',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+            ? const CircularProgressIndicator(color: Colors.white)
+            : const Text('Request Ride'),
       ),
     );
   }

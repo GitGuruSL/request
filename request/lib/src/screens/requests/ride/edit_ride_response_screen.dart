@@ -8,6 +8,8 @@ import '../../../services/vehicle_service.dart';
 import '../../../widgets/image_upload_widget.dart';
 import '../../../widgets/accurate_location_picker_widget.dart';
 import '../../../utils/currency_helper.dart';
+import '../../../theme/glass_theme.dart';
+import '../../../widgets/glass_page.dart';
 
 class EditRideResponseScreen extends StatefulWidget {
   final ResponseModel response;
@@ -201,26 +203,20 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFAFF),
-      appBar: AppBar(
-        title: const Text('Edit Ride Offer'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-        actions: [
-          TextButton(
-            onPressed: _isLoading ? null : _updateResponse,
-            child: _isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Save', style: TextStyle(fontSize: 16)),
-          ),
-        ],
-      ),
+    return GlassPage(
+      title: 'Edit Ride Offer',
+      actions: [
+        TextButton(
+          onPressed: _isLoading ? null : _updateResponse,
+          child: _isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Save', style: TextStyle(fontSize: 16)),
+        ),
+      ],
       body: Form(
         key: _formKey,
         child: ListView(
@@ -229,28 +225,20 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
             if (widget.originalRequest != null) ...[
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.orange[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange[200]!),
-                ),
+                decoration: GlassTheme.glassContainerSubtle,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Original Request',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.orange[800],
-                      ),
+                      style: GlassTheme.titleSmall,
                     ),
                     const SizedBox(height: 8),
                     Text(widget.originalRequest!.title,
                         style: const TextStyle(fontWeight: FontWeight.w600)),
-                    if (widget.originalRequest!.description != null) ...[
+                    if (widget.originalRequest!.description.isNotEmpty) ...[
                       const SizedBox(height: 4),
-                      Text(widget.originalRequest!.description!),
+                      Text(widget.originalRequest!.description),
                     ],
                   ],
                 ),
@@ -262,10 +250,8 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
             TextFormField(
               controller: _descriptionController,
               decoration: InputDecoration(
-                labelText: 'Ride Description',
-                hintText: 'Describe your ride offer...',
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: Colors.transparent,
                 border: InputBorder.none,
               ),
               maxLines: 2,
@@ -280,10 +266,8 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
             TextFormField(
               controller: _drivingExperienceController,
               decoration: InputDecoration(
-                labelText: 'Driving Experience',
-                hintText: 'Years of driving, safety record, etc.',
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: Colors.transparent,
                 border: InputBorder.none,
               ),
               maxLines: 2,
@@ -297,9 +281,8 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
                     decoration: InputDecoration(
                       labelText: CurrencyHelper.instance.getPriceLabel(),
                       hintText: '0.00',
-                      prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
                       filled: true,
-                      fillColor: Colors.white,
+                      fillColor: Colors.transparent,
                       border: InputBorder.none,
                     ),
                     keyboardType: TextInputType.number,
@@ -319,10 +302,9 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     value: _vehicleType,
-                    decoration: InputDecoration(
-                      labelText: 'Vehicle Type',
+                    decoration: const InputDecoration(
                       filled: true,
-                      fillColor: Colors.white,
+                      fillColor: Colors.transparent,
                       border: InputBorder.none,
                     ),
                     items: _vehicleTypes.map((vehicle) {
@@ -348,7 +330,7 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
                 labelText: 'Vehicle Details',
                 hintText: 'Make, model, year, color, license plate...',
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: Colors.transparent,
                 border: InputBorder.none,
               ),
               maxLines: 2,
@@ -363,10 +345,7 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
             _buildSectionTitle('Trip Details'),
             const SizedBox(height: 12),
             Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-              ),
+              decoration: GlassTheme.glassContainerSubtle,
               child: ListTile(
                 title: Text(_departureTime == null
                     ? 'Select Departure Time'
@@ -378,10 +357,7 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-              ),
+              decoration: GlassTheme.glassContainerSubtle,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -408,10 +384,7 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-              ),
+              decoration: GlassTheme.glassContainerSubtle,
               child: Column(
                 children: [
                   CheckboxListTile(
@@ -472,23 +445,10 @@ class _EditRideResponseScreenState extends State<EditRideResponseScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _updateResponse,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor:
-                      const Color(0xFFFFC107), // Yellow for ride requests
-                  foregroundColor: Colors.black, // Better contrast on yellow
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
+                style: GlassTheme.primaryButton,
                 child: _isLoading
-                    ? const CircularProgressIndicator(
-                        color: Colors.black) // Changed to black for contrast
-                    : const Text(
-                        'Update Ride Offer',
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text('Update Ride Offer'),
               ),
             ),
           ],
