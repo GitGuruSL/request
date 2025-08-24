@@ -505,20 +505,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                   builder: (context) => const AboutUsSimpleScreen()),
             ),
           ),
-          _buildActionTile(
-            icon: Icons.privacy_tip_outlined,
-            title: 'Privacy Policy',
-            subtitle: 'How we protect your data',
-            color: const Color(0xFF8B5CF6), // Purple
-            onTap: () => Navigator.pushNamed(context, '/privacy-policy'),
-          ),
-          _buildActionTile(
-            icon: Icons.description_outlined,
-            title: 'Terms & Conditions',
-            subtitle: 'Service terms and conditions',
-            color: const Color(0xFF0EA5E9), // Sky Blue
-            onTap: () => Navigator.pushNamed(context, '/terms-conditions'),
-          ),
+          // Legal links removed from modern menu per request. Accessible from Settings if needed.
         ],
       ),
     );
