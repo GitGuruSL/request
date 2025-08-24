@@ -4,6 +4,7 @@ import '../services/contact_verification_service.dart';
 import '../services/api_client.dart';
 import '../services/image_upload_service.dart';
 import '../theme/app_theme.dart';
+import '../theme/glass_theme.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
@@ -159,36 +160,38 @@ class _BusinessVerificationScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
-      appBar: AppBar(
-        title: const Text('Business Profile & Documents'),
+    return GlassTheme.backgroundContainer(
+      child: Scaffold(
         backgroundColor: AppTheme.backgroundColor,
-        foregroundColor: AppTheme.textPrimary,
-        elevation: 0,
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _businessData == null
-              ? _buildNoDataView() // Revert to existing method
-              : RefreshIndicator(
-                  onRefresh: _loadBusinessData,
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildBusinessInformation(),
-                        const SizedBox(height: 24),
-                        _buildDocumentsSection(),
-                        const SizedBox(height: 24),
-                        _buildBusinessLogo(),
-                        const SizedBox(height: 100),
-                      ],
+        appBar: AppBar(
+          title: const Text('Business Profile & Documents'),
+          backgroundColor: AppTheme.backgroundColor,
+          foregroundColor: AppTheme.textPrimary,
+          elevation: 0,
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _businessData == null
+                ? _buildNoDataView() // Revert to existing method
+                : RefreshIndicator(
+                    onRefresh: _loadBusinessData,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildBusinessInformation(),
+                          const SizedBox(height: 24),
+                          _buildDocumentsSection(),
+                          const SizedBox(height: 24),
+                          _buildBusinessLogo(),
+                          const SizedBox(height: 100),
+                        ],
+                      ),
                     ),
                   ),
-                ),
+      ),
     );
   }
 
@@ -246,10 +249,8 @@ class _BusinessVerificationScreenState
     final requiresPhoneVerification =
         _businessData?['requiresPhoneVerification'] ?? !isPhoneVerified;
 
-    return Container(
-      width: double.infinity,
+    return GlassTheme.glassCard(
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(color: AppTheme.backgroundColor),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -295,10 +296,8 @@ class _BusinessVerificationScreenState
   }
 
   Widget _buildDocumentsSection() {
-    return Container(
-      width: double.infinity,
+    return GlassTheme.glassCard(
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(color: AppTheme.backgroundColor),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -347,10 +346,8 @@ class _BusinessVerificationScreenState
   }
 
   Widget _buildBusinessLogo() {
-    return Container(
-      width: double.infinity,
+    return GlassTheme.glassCard(
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(color: AppTheme.backgroundColor),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -890,50 +887,166 @@ class _BusinessVerificationScreenState
     }
   }
 
-  void _viewDocument(String documentUrl, String title) {
+  void _viewDocument(String documentUrl, String title) async {
+    // Show loading dialog first
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('View $title'),
-        content: SizedBox(
-          width: 300,
-          height: 400,
-          child: Image.network(
-            documentUrl,
-            fit: BoxFit.contain,
-            loadingBuilder: (context, child, loadingProgress) {
-              if (loadingProgress == null) return child;
-              return Center(
-                child: CircularProgressIndicator(
-                  value: loadingProgress.expectedTotalBytes != null
-                      ? loadingProgress.cumulativeBytesLoaded /
-                          loadingProgress.expectedTotalBytes!
-                      : null,
-                ),
-              );
-            },
-            errorBuilder: (context, error, stackTrace) {
-              return const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.error, size: 64, color: Colors.grey),
-                    SizedBox(height: 8),
-                    Text('Unable to load document'),
-                  ],
-                ),
-              );
-            },
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.black,
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          child: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: Colors.white),
+              SizedBox(height: 16),
+              Text(
+                'Getting secure document link...',
+                style: TextStyle(color: Colors.white),
+              ),
+            ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
       ),
     );
+
+    try {
+      final signedUrl = await ApiClient.instance.getSignedUrl(documentUrl);
+
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+
+      if (signedUrl == null) {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Error'),
+              content: const Text('Unable to load document. Please try again.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
+
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => Dialog(
+            backgroundColor: Colors.black,
+            child: Stack(
+              children: [
+                Center(
+                  child: InteractiveViewer(
+                    child: Image.network(
+                      signedUrl,
+                      fit: BoxFit.contain,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          padding: const EdgeInsets.all(20),
+                          child: const Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircularProgressIndicator(color: Colors.white),
+                              SizedBox(height: 16),
+                              Text(
+                                'Loading image...',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.error,
+                                  size: 64, color: Colors.white),
+                              const SizedBox(height: 16),
+                              const Text(
+                                'Failed to load document',
+                                style: TextStyle(
+                                    color: Colors.white, fontSize: 18),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'URL: $signedUrl',
+                                style: const TextStyle(
+                                    color: Colors.grey, fontSize: 12),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 40,
+                  left: 20,
+                  right: 20,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 40,
+                  right: 20,
+                  child: IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon:
+                        const Icon(Icons.close, color: Colors.white, size: 30),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Error'),
+            content: Text('Failed to load document: $e'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
   }
 
   void _replaceDocument(String documentType) async {

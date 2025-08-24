@@ -3,6 +3,7 @@ import '../../services/country_service.dart';
 import '../../theme/app_theme.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../models/country.dart'; // Added
+import '../../theme/glass_theme.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -149,7 +150,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GlassTheme.backgroundContainer(
+        child: Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       body: SafeArea(
         child: Padding(
@@ -192,7 +194,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           ),
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildContent() {

@@ -5,6 +5,7 @@ import '../services/api_client.dart';
 import '../services/image_upload_service.dart';
 import '../services/contact_verification_service.dart';
 import '../theme/app_theme.dart';
+import '../theme/glass_theme.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
@@ -195,50 +196,52 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
-      appBar: AppBar(
-        title: const Text('Driver Profile & Documents'),
+    return GlassTheme.backgroundContainer(
+      child: Scaffold(
         backgroundColor: AppTheme.backgroundColor,
-        foregroundColor: AppTheme.textPrimary,
-        elevation: 0,
-        actions: [
-          if (_driverData != null)
-            IconButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/driver-verification');
-              },
-              icon: const Icon(Icons.edit),
-              tooltip: 'Update Verification',
-            ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _driverData == null
-              ? _buildNoDataView()
-              : RefreshIndicator(
-                  onRefresh: _loadDriverData,
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildDriverInformation(),
-                        const SizedBox(height: 24),
-                        _buildDocumentsSection(),
-                        const SizedBox(height: 24),
-                        _buildVehicleInformation(),
-                        const SizedBox(height: 24),
-                        _buildVehicleDocuments(),
-                        const SizedBox(height: 24),
-                        _buildVehicleImages(),
-                        const SizedBox(height: 100),
-                      ],
+        appBar: AppBar(
+          title: const Text('Driver Profile & Documents'),
+          backgroundColor: AppTheme.backgroundColor,
+          foregroundColor: AppTheme.textPrimary,
+          elevation: 0,
+          actions: [
+            if (_driverData != null)
+              IconButton(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/driver-verification');
+                },
+                icon: const Icon(Icons.edit),
+                tooltip: 'Update Verification',
+              ),
+          ],
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _driverData == null
+                ? _buildNoDataView()
+                : RefreshIndicator(
+                    onRefresh: _loadDriverData,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildDriverInformation(),
+                          const SizedBox(height: 24),
+                          _buildDocumentsSection(),
+                          const SizedBox(height: 24),
+                          _buildVehicleInformation(),
+                          const SizedBox(height: 24),
+                          _buildVehicleDocuments(),
+                          const SizedBox(height: 24),
+                          _buildVehicleImages(),
+                          const SizedBox(height: 100),
+                        ],
+                      ),
                     ),
                   ),
-                ),
+      ),
     );
   }
 
@@ -283,10 +286,8 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
   }
 
   Widget _buildDriverInformation() {
-    return Container(
-      width: double.infinity,
+    return GlassTheme.glassCard(
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(color: AppTheme.backgroundColor),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -354,10 +355,8 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
         ? Map<String, dynamic>.from(docVerificationRaw as Map)
         : <String, dynamic>{};
 
-    return Container(
-      width: double.infinity,
+    return GlassTheme.glassCard(
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(color: AppTheme.backgroundColor),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -424,10 +423,8 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
   }
 
   Widget _buildVehicleInformation() {
-    return Container(
-      width: double.infinity,
+    return GlassTheme.glassCard(
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(color: AppTheme.backgroundColor),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -486,10 +483,8 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
         ? Map<String, dynamic>.from(docVerificationRaw as Map)
         : <String, dynamic>{};
 
-    return Container(
-      width: double.infinity,
+    return GlassTheme.glassCard(
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(color: AppTheme.backgroundColor),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -587,10 +582,8 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
       print('🔍 DEBUG: Padded imageVerifications list: $imageVerifications');
     }
 
-    return Container(
-      width: double.infinity,
+    return GlassTheme.glassCard(
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(color: AppTheme.backgroundColor),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -612,18 +605,19 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.1),
+              color: GlassTheme.colors.infoColor.withOpacity(0.10),
             ),
             child: Row(
               children: [
-                Icon(Icons.info_outline, color: Colors.blue, size: 18),
+                Icon(Icons.info_outline,
+                    color: GlassTheme.colors.infoColor, size: 18),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     '${vehicleImageUrls.length} of 6 photos uploaded. Minimum 4 required for approval.',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.blue[800],
+                      color: GlassTheme.colors.infoColor.withOpacity(0.9),
                     ),
                   ),
                 ),
@@ -633,13 +627,9 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
           const SizedBox(height: 16),
           // Show upload option if no photos uploaded
           if (vehicleImageUrls.where((url) => url != null).isEmpty)
-            Container(
-              width: double.infinity,
+            GlassTheme.glassCard(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                border: Border.all(color: Colors.grey[300]!),
-              ),
+              subtle: true,
               child: Column(
                 children: [
                   Icon(Icons.add_a_photo, color: Colors.grey[600], size: 48),
@@ -667,12 +657,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
                       // Navigate to driver verification screen to upload photos
                       Navigator.pushNamed(context, '/driver-verification');
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
-                    ),
+                    style: AppTheme.primaryButtonStyle,
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [

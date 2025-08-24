@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../widgets/custom_logo.dart';
 import '../../models/country.dart';
 import '../../services/country_service.dart';
+import '../../theme/glass_theme.dart';
+import '../../theme/app_theme.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -291,253 +293,255 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
 
-    return Scaffold(
-      // Uses theme background color (FAFAFAFF)
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: size.height -
-                  MediaQuery.of(context).padding.top -
-                  MediaQuery.of(context).padding.bottom,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Column(
-                children: [
-                  // Top spacing - make it flexible
-                  SizedBox(height: size.height * 0.06),
+    return GlassTheme.backgroundContainer(
+      child: Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
+        body: SafeArea(
+          child: SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: size.height -
+                    MediaQuery.of(context).padding.top -
+                    MediaQuery.of(context).padding.bottom,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Column(
+                  children: [
+                    // Top spacing - make it flexible
+                    SizedBox(height: size.height * 0.06),
 
-                  // Logo
-                  FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: CustomLogo.large(),
-                  ),
-
-                  SizedBox(height: size.height * 0.04),
-
-                  // Welcome content
-                  SlideTransition(
-                    position: _slideAnimation,
-                    child: FadeTransition(
+                    // Logo
+                    FadeTransition(
                       opacity: _fadeAnimation,
-                      child: Column(
-                        children: [
-                          Text(
-                            'Welcome to',
-                            style: TextStyle(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withOpacity(0.7),
-                              fontSize: 16,
-                              fontWeight: FontWeight.w400,
-                              fontFamily: 'Poppins',
+                      child: CustomLogo.large(),
+                    ),
+
+                    SizedBox(height: size.height * 0.04),
+
+                    // Welcome content
+                    SlideTransition(
+                      position: _slideAnimation,
+                      child: FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: Column(
+                          children: [
+                            Text(
+                              'Welcome to',
+                              style: TextStyle(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.7),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w400,
+                                fontFamily: 'Poppins',
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Request',
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF2D2D2D), // Charcoal color
-                              fontFamily: 'Poppins',
+                            const SizedBox(height: 8),
+                            Text(
+                              'Request',
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2D2D2D), // Charcoal color
+                                fontFamily: 'Poppins',
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Connect with local businesses and\nservice providers effortlessly',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withOpacity(0.7),
-                              height: 1.5,
-                              fontFamily: 'Poppins',
+                            const SizedBox(height: 16),
+                            Text(
+                              'Connect with local businesses and\nservice providers effortlessly',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.7),
+                                height: 1.5,
+                                fontFamily: 'Poppins',
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
 
-                  // Flexible spacer
-                  SizedBox(height: size.height * 0.08),
+                    // Flexible spacer
+                    SizedBox(height: size.height * 0.08),
 
-                  // Country selection
-                  SlideTransition(
-                    position: _slideAnimation,
-                    child: FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Text(
-                            'Select your country',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.onSurface,
-                              fontFamily: 'Poppins',
+                    // Country selection
+                    SlideTransition(
+                      position: _slideAnimation,
+                      child: FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              'Select your country',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.onSurface,
+                                fontFamily: 'Poppins',
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: InkWell(
-                              onTap: _isLoading
-                                  ? null
-                                  : _showCountryListBottomSheet,
-                              borderRadius: BorderRadius.circular(12),
-                              child: Container(
-                                padding: const EdgeInsets.all(16),
-                                child: Row(
-                                  children: [
-                                    if (_selectedCountry != null) ...[
-                                      Text(
-                                        _selectedCountry!.flag,
-                                        style: const TextStyle(fontSize: 24),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Text(
-                                          _selectedCountry!.name,
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurface,
-                                            fontFamily: 'Poppins',
+                            const SizedBox(height: 12),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: InkWell(
+                                onTap: _isLoading
+                                    ? null
+                                    : _showCountryListBottomSheet,
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Row(
+                                    children: [
+                                      if (_selectedCountry != null) ...[
+                                        Text(
+                                          _selectedCountry!.flag,
+                                          style: const TextStyle(fontSize: 24),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Text(
+                                            _selectedCountry!.name,
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface,
+                                              fontFamily: 'Poppins',
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                      if (!_selectedCountry!.isEnabled)
-                                        const Icon(Icons.schedule,
-                                            color: Colors.orange),
-                                    ] else if (_isLoading) ...[
-                                      const SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(
-                                            strokeWidth: 2),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Text(
-                                          'Loading countries...',
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurface
-                                                .withOpacity(0.6),
-                                            fontFamily: 'Poppins',
+                                        if (!_selectedCountry!.isEnabled)
+                                          const Icon(Icons.schedule,
+                                              color: Colors.orange),
+                                      ] else if (_isLoading) ...[
+                                        const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                              strokeWidth: 2),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Text(
+                                            'Loading countries...',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface
+                                                  .withOpacity(0.6),
+                                              fontFamily: 'Poppins',
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    ] else ...[
-                                      Expanded(
-                                        child: Text(
-                                          'Choose your country',
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurface
-                                                .withOpacity(0.6),
-                                            fontFamily: 'Poppins',
+                                      ] else ...[
+                                        Expanded(
+                                          child: Text(
+                                            'Choose your country',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface
+                                                  .withOpacity(0.6),
+                                              fontFamily: 'Poppins',
+                                            ),
                                           ),
                                         ),
+                                      ],
+                                      Icon(
+                                        Icons.keyboard_arrow_down_rounded,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.7),
                                       ),
                                     ],
-                                    Icon(
-                                      Icons.keyboard_arrow_down_rounded,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withOpacity(0.7),
-                                    ),
-                                  ],
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
 
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-                  // Continue button
-                  SlideTransition(
-                    position: _slideAnimation,
-                    child: FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: ElevatedButton(
-                          onPressed: _selectedCountry == null || _isLoading
-                              ? null
-                              : () async {
-                                  _onCountrySelected(_selectedCountry!);
-                                },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                Theme.of(context).colorScheme.primary,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                    // Continue button
+                    SlideTransition(
+                      position: _slideAnimation,
+                      child: FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: ElevatedButton(
+                            onPressed: _selectedCountry == null || _isLoading
+                                ? null
+                                : () async {
+                                    _onCountrySelected(_selectedCountry!);
+                                  },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  Theme.of(context).colorScheme.primary,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
                             ),
-                            elevation: 0,
-                          ),
-                          child: const Text(
-                            'Continue',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                              fontFamily: 'Poppins',
+                            child: const Text(
+                              'Continue',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                                fontFamily: 'Poppins',
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
 
-                  // Flexible bottom spacing
-                  SizedBox(height: size.height * 0.04),
+                    // Flexible bottom spacing
+                    SizedBox(height: size.height * 0.04),
 
-                  // Powered by footer
-                  FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: Text(
-                      'Powered by Alphabet (Pvt) Ltd',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withOpacity(0.6),
-                        fontFamily: 'Poppins',
+                    // Powered by footer
+                    FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: Text(
+                        'Powered by Alphabet (Pvt) Ltd',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.6),
+                          fontFamily: 'Poppins',
+                        ),
                       ),
                     ),
-                  ),
 
-                  const SizedBox(height: 24),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ), // Padding
+            ), // ConstrainedBox
+          ), // SingleChildScrollView
+        ), // SafeArea
+      ), // Scaffold
+    ); // GlassTheme.backgroundContainer
   }
 }

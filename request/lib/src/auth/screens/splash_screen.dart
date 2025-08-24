@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../widgets/custom_logo.dart';
+import '../../theme/glass_theme.dart';
+import '../../theme/app_theme.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -56,58 +58,59 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      // Uses theme background color (FAFAFAFF)
-      body: Center(
-        child: AnimatedBuilder(
-          animation: _controller,
-          builder: (context, child) {
-            return FadeTransition(
-              opacity: _fadeAnimation,
-              child: ScaleTransition(
-                scale: _scaleAnimation,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Logo with animation
-                    CustomLogo.splash(),
-                    const SizedBox(height: 24),
-                    // App name
-                    Text(
-                      'Request',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2D2D2D), // Charcoal color
-                        fontFamily: 'Poppins',
+    return GlassTheme.backgroundContainer(
+      child: Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
+        body: Center(
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              return FadeTransition(
+                opacity: _fadeAnimation,
+                child: ScaleTransition(
+                  scale: _scaleAnimation,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Logo with animation
+                      CustomLogo.splash(),
+                      const SizedBox(height: 24),
+                      // App name
+                      Text(
+                        'Request',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textPrimary,
+                          fontFamily: 'Poppins',
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    // Tagline
-                    Text(
-                      'Get what you need',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.7),
-                        fontFamily: 'Poppins',
+                      const SizedBox(height: 8),
+                      // Tagline
+                      Text(
+                        'Get what you need',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: AppTheme.textSecondary,
+                          fontFamily: 'Poppins',
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.of(context).pushNamed('/api-test');
-        },
-        child: const Icon(Icons.api),
-        tooltip: 'Test API',
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            Navigator.of(context).pushNamed('/api-test');
+          },
+          backgroundColor: GlassTheme.colors.primaryBlue,
+          foregroundColor: Colors.white,
+          child: const Icon(Icons.api),
+          tooltip: 'Test API',
+        ),
       ),
     );
   }
