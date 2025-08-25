@@ -62,6 +62,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _buildSectionHeader('Account'),
               const SizedBox(height: 12),
 
+              // Change Password
+              _buildChangePasswordSetting(),
+              const SizedBox(height: 12),
+
               // Privacy Setting
               _buildPrivacySetting(),
               const SizedBox(height: 12),
@@ -334,6 +338,59 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Widget _buildChangePasswordSetting() {
+    return GlassTheme.glassCard(
+      child: InkWell(
+        onTap: () {
+          _showChangePasswordDialog();
+        },
+        borderRadius: BorderRadius.circular(20),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: GlassTheme.colors.primaryBlue.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: GlassTheme.colors.primaryBlue.withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: Icon(
+                Icons.lock_outline,
+                color: GlassTheme.colors.primaryBlue,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Change Password',
+                    style: GlassTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Update your account password',
+                    style: GlassTheme.bodyMedium,
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: GlassTheme.colors.textTertiary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildDataStorageSetting() {
     return GlassTheme.glassCard(
       child: InkWell(
@@ -561,6 +618,186 @@ class _SettingsScreenState extends State<SettingsScreen> {
         'Request App v1.0.0',
         style: GlassTheme.bodySmall.copyWith(
           color: GlassTheme.colors.textTertiary,
+        ),
+      ),
+    );
+  }
+
+  void _showChangePasswordDialog() {
+    final currentPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+    bool isCurrentPasswordVisible = false;
+    bool isNewPasswordVisible = false;
+    bool isConfirmPasswordVisible = false;
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            'Change Password',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Current Password
+                TextField(
+                  controller: currentPasswordController,
+                  obscureText: !isCurrentPasswordVisible,
+                  decoration: InputDecoration(
+                    labelText: 'Current Password',
+                    border: const OutlineInputBorder(),
+                    suffixIcon: IconButton(
+                      onPressed: () {
+                        setDialogState(() {
+                          isCurrentPasswordVisible = !isCurrentPasswordVisible;
+                        });
+                      },
+                      icon: Icon(
+                        isCurrentPasswordVisible
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // New Password
+                TextField(
+                  controller: newPasswordController,
+                  obscureText: !isNewPasswordVisible,
+                  decoration: InputDecoration(
+                    labelText: 'New Password',
+                    border: const OutlineInputBorder(),
+                    suffixIcon: IconButton(
+                      onPressed: () {
+                        setDialogState(() {
+                          isNewPasswordVisible = !isNewPasswordVisible;
+                        });
+                      },
+                      icon: Icon(
+                        isNewPasswordVisible
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Confirm Password
+                TextField(
+                  controller: confirmPasswordController,
+                  obscureText: !isConfirmPasswordVisible,
+                  decoration: InputDecoration(
+                    labelText: 'Confirm New Password',
+                    border: const OutlineInputBorder(),
+                    suffixIcon: IconButton(
+                      onPressed: () {
+                        setDialogState(() {
+                          isConfirmPasswordVisible = !isConfirmPasswordVisible;
+                        });
+                      },
+                      icon: Icon(
+                        isConfirmPasswordVisible
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      if (newPasswordController.text !=
+                          confirmPasswordController.text) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Passwords do not match'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      if (newPasswordController.text.length < 6) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content:
+                                Text('Password must be at least 6 characters'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      setDialogState(() => isLoading = true);
+
+                      try {
+                        // TODO: Implement password change API call
+                        await Future.delayed(
+                            const Duration(seconds: 2)); // Simulate API call
+
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Password changed successfully'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to change password: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      } finally {
+                        if (context.mounted) {
+                          setDialogState(() => isLoading = false);
+                        }
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: GlassTheme.colors.primaryBlue,
+                foregroundColor: Colors.white,
+              ),
+              child: isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text('Change Password'),
+            ),
+          ],
         ),
       ),
     );

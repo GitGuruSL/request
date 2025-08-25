@@ -59,7 +59,11 @@ const adminEmailManagementRoutes = require('./routes/admin-email-management');
 const tempMigrationRoutes = require('./routes/temp-migration'); // Temporary migration routes
 const modulesRoutes = require('./routes/modules'); // Module management routes
 const priceListingsRoutes = require('./routes/price-listings'); // Price listings routes
+const priceStagingRoutes = require('./routes/price-staging'); // Price staging system routes
 const paymentMethodsRoutes = require('./routes/payment-methods'); // Country payment methods and business mappings
+
+// Initialize price staging service
+const priceStagingService = require('./services/price_staging_service');
 
 const app = express();
 
