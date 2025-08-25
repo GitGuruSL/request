@@ -117,6 +117,39 @@ router.get('/public', async (req,res)=>{
   }
 });
 
+// GET /api/countries/:code/banners - country-scoped banners for mobile app
+router.get('/:code/banners', async (req, res) => {
+  try {
+    const code = (req.params.code || '').toUpperCase();
+    if (!code) return res.status(400).json({ success: false, message: 'Country code required' });
+    const db = require('../services/database');
+    // ensure table exists lightly (same as banners route)
+    await db.query(`CREATE TABLE IF NOT EXISTS banners (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      country VARCHAR(10),
+      title TEXT,
+      subtitle TEXT,
+      image_url TEXT NOT NULL,
+      link_url TEXT,
+      priority INT DEFAULT 0,
+      active BOOLEAN DEFAULT TRUE,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )`);
+    const limit = Math.min(parseInt(req.query.limit || '6', 10) || 6, 20);
+    const rows = await db.query(
+      `SELECT id, country, title, subtitle, image_url AS "imageUrl", link_url AS "linkUrl", priority, active
+       FROM banners WHERE active = true AND (country = $1 OR country IS NULL) 
+       ORDER BY priority DESC, created_at DESC LIMIT ${limit}`,
+      [code]
+    );
+    res.json({ success: true, data: rows.rows });
+  } catch (e) {
+    console.error('Country banners error', e);
+    res.status(500).json({ success: false, message: 'Failed to load banners' });
+  }
+});
+
 // GET /api/countries/:codeOrId
 router.get('/:codeOrId', async (req,res) => {
   try {

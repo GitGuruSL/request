@@ -113,29 +113,43 @@ export default function BannersModule() {
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>
       ) : (
-        <Grid container spacing={2}>
-          {banners.map((b) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={b.id || b._id}>
-              <Card>
-                { (b.imageUrl || b.image) && (
-                  <CardMedia component="img" height="140" image={b.imageUrl || b.image} alt={b.title || 'Banner'} />
-                )}
-                <CardContent>
-                  <Typography variant="subtitle1" fontWeight={700}>{b.title || 'Untitled'}</Typography>
-                  {b.subtitle && <Typography variant="body2" color="text.secondary">{b.subtitle}</Typography>}
-                  {b.linkUrl && <Typography variant="caption" color="primary">{b.linkUrl}</Typography>}
-                  <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                    <Button size="small" onClick={() => openEdit(b)}>Edit</Button>
-                    <Button size="small" color="error" onClick={() => remove(b)}>Delete</Button>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-          {banners.length === 0 && (
-            <Grid item xs={12}><Alert severity="info">No banners yet. Click "Add Banner" to create one.</Alert></Grid>
+        <>
+          {banners.length === 0 ? (
+            <Alert severity="info">No banners yet. Click "Add Banner" to create one.</Alert>
+          ) : (
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 2,
+                gridTemplateColumns: {
+                  xs: '1fr',
+                  sm: 'repeat(2, 1fr)',
+                  md: 'repeat(3, 1fr)',
+                  lg: 'repeat(4, 1fr)'
+                }
+              }}
+            >
+              {banners.map((b) => (
+                <Box key={b.id || b._id}>
+                  <Card>
+                    {(b.imageUrl || b.image) && (
+                      <CardMedia component="img" height="140" image={b.imageUrl || b.image} alt={b.title || 'Banner'} />
+                    )}
+                    <CardContent>
+                      <Typography variant="subtitle1" fontWeight={700}>{b.title || 'Untitled'}</Typography>
+                      {b.subtitle && <Typography variant="body2" color="text.secondary">{b.subtitle}</Typography>}
+                      {b.linkUrl && <Typography variant="caption" color="primary">{b.linkUrl}</Typography>}
+                      <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                        <Button size="small" onClick={() => openEdit(b)}>Edit</Button>
+                        <Button size="small" color="error" onClick={() => remove(b)}>Delete</Button>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Box>
+              ))}
+            </Box>
           )}
-        </Grid>
+        </>
       )}
 
       <Dialog open={dialogOpen} onClose={closeDialog} maxWidth="sm" fullWidth>
