@@ -147,9 +147,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 GlassTheme.setTheme(value);
               });
             },
-            activeColor: GlassTheme.colors.primaryPurple,
+            activeThumbColor: GlassTheme.colors.primaryPurple,
             inactiveThumbColor: GlassTheme.colors.textTertiary,
-            inactiveTrackColor: GlassTheme.colors.textTertiary.withOpacity(0.3),
+            inactiveTrackColor:
+                GlassTheme.colors.textTertiary.withValues(alpha: 0.3),
           ),
         ],
       ),

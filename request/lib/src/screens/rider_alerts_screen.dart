@@ -203,7 +203,7 @@ class _RiderAlertCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 21,
-                backgroundColor: color.withOpacity(0.12),
+                backgroundColor: color.withValues(alpha: 0.12),
                 child: Icon(Icons.directions_car, color: color, size: 22),
               ),
               const SizedBox(width: 12),

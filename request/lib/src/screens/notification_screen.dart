@@ -117,7 +117,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
               // Borderless circular icon with soft tinted background
               CircleAvatar(
                 radius: 21,
-                backgroundColor: color.withOpacity(0.12),
+                backgroundColor: color.withValues(alpha: 0.12),
                 child: Icon(_icon(n.type), color: color, size: 22),
               ),
               const SizedBox(width: 12),

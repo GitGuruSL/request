@@ -73,7 +73,7 @@ class _ThemeSwitcherState extends State<ThemeSwitcher> {
                 GlassTheme.setTheme(value);
               });
             },
-            activeColor: GlassTheme.colors.primaryBlue,
+            activeThumbColor: GlassTheme.colors.primaryBlue,
           ),
           const SizedBox(width: 8),
           Text(
