@@ -1303,20 +1303,44 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
 
       print('DEBUG: API payload: $apiPayload');
 
-      final success = await _pricingService.addOrUpdatePriceListing(apiPayload);
+      bool success;
+      String successMessage;
+
+      if (existingListing != null) {
+        // For existing listings, use staging system
+        final stagingData = {
+          'price': double.parse(price),
+          'stockQuantity': int.tryParse(quantity) ?? 1,
+          'isAvailable': true,
+          if (whatsapp.isNotEmpty) 'whatsappNumber': whatsapp,
+          if (website.isNotEmpty) 'productLink': website,
+          if (modelNumber.isNotEmpty) 'modelNumber': modelNumber,
+          if (variables.isNotEmpty) 'selectedVariables': variables,
+        };
+
+        success = await _pricingService.stagePriceUpdate(
+            existingListing.id, stagingData);
+        successMessage = success
+            ? 'Price staged successfully! Will be applied at 1 AM daily update.'
+            : 'Failed to stage price update';
+      } else {
+        // For new listings, create directly
+        success = await _pricingService.addOrUpdatePriceListing(apiPayload);
+        successMessage =
+            success ? 'Price added successfully!' : 'Failed to add price';
+      }
 
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(existingListing != null
-                ? 'Price updated successfully!'
-                : 'Price added successfully!'),
+            content: Text(successMessage),
             backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
           ),
         );
         await _loadData(); // Refresh data
       } else {
-        throw Exception('Failed to save price');
+        throw Exception(successMessage);
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(

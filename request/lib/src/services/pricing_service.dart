@@ -375,4 +375,112 @@ class PricingService {
   Future<bool> createOrUpdateListing(Map<String, dynamic> data) async {
     return await addOrUpdatePriceListing(data);
   }
+
+  // ===================== PRICE STAGING SYSTEM =====================
+
+  /// Stage a price update (will be applied at 1 AM daily)
+  Future<bool> stagePriceUpdate(
+      String priceListingId, Map<String, dynamic> stagedData) async {
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        '/api/price-staging/stage',
+        data: {
+          'priceListingId': priceListingId,
+          ...stagedData,
+        },
+      );
+
+      return response.isSuccess;
+    } catch (e) {
+      print('Error staging price update: $e');
+      return false;
+    }
+  }
+
+  /// Get all staged prices for the current business
+  Future<List<Map<String, dynamic>>> getStagedPrices() async {
+    try {
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/price-staging/staged',
+      );
+
+      if (response.isSuccess && response.data != null) {
+        final dataArray = response.data!['data'] as List<dynamic>?;
+        return dataArray?.cast<Map<String, dynamic>>() ?? [];
+      }
+      return [];
+    } catch (e) {
+      print('Error getting staged prices: $e');
+      return [];
+    }
+  }
+
+  /// Cancel a staged price update
+  Future<bool> cancelStagedPrice(String priceListingId) async {
+    try {
+      final response = await _apiClient.delete(
+        '/api/price-staging/stage/$priceListingId',
+      );
+
+      return response.isSuccess;
+    } catch (e) {
+      print('Error cancelling staged price: $e');
+      return false;
+    }
+  }
+
+  /// Get business staging summary
+  Future<Map<String, dynamic>?> getStagingSummary() async {
+    try {
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/price-staging/summary',
+      );
+
+      if (response.isSuccess && response.data != null) {
+        return response.data!['data'] as Map<String, dynamic>?;
+      }
+      return null;
+    } catch (e) {
+      print('Error getting staging summary: $e');
+      return null;
+    }
+  }
+
+  /// Get price update history
+  Future<List<Map<String, dynamic>>> getPriceHistory({int limit = 50}) async {
+    try {
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/price-staging/history',
+        queryParameters: {
+          'limit': limit.toString(),
+        },
+      );
+
+      if (response.isSuccess && response.data != null) {
+        final dataArray = response.data!['data'] as List<dynamic>?;
+        return dataArray?.cast<Map<String, dynamic>>() ?? [];
+      }
+      return [];
+    } catch (e) {
+      print('Error getting price history: $e');
+      return [];
+    }
+  }
+
+  /// Get next scheduled update time
+  Future<Map<String, dynamic>?> getNextUpdateTime() async {
+    try {
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/price-staging/next-update',
+      );
+
+      if (response.isSuccess && response.data != null) {
+        return response.data!['data'] as Map<String, dynamic>?;
+      }
+      return null;
+    } catch (e) {
+      print('Error getting next update time: $e');
+      return null;
+    }
+  }
 }

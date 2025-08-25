@@ -193,6 +193,7 @@ app.use('/api/sms', smsRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/modules', modulesRoutes); // Module management endpoints
 app.use('/api/price-listings', priceListingsRoutes); // Price listings endpoints
+app.use('/api/price-staging', priceStagingRoutes); // Price staging system endpoints
 app.use('/api/payment-methods', paymentMethodsRoutes); // Payment methods endpoints
 app.use('/api/banners', bannersRoutes); // NEW - Banners CRUD
 
