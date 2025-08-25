@@ -651,10 +651,27 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                       width: 32,
                       height: 32,
                       child: IconButton(
-                        onPressed: () => _deletePrice(listing),
-                        icon: const Icon(Icons.delete, size: 16),
+                        onPressed: () => _toggleActiveStatus(listing),
+                        icon: Icon(
+                            listing.isAvailable
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            size: 16),
+                        color:
+                            listing.isAvailable ? Colors.orange : Colors.green,
+                        tooltip:
+                            listing.isAvailable ? 'Deactivate' : 'Activate',
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
+                    SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: IconButton(
+                        onPressed: () => _permanentlyDeletePrice(listing),
+                        icon: const Icon(Icons.delete_forever, size: 16),
                         color: Colors.red,
-                        tooltip: 'Delete',
+                        tooltip: 'Delete Permanently',
                         padding: EdgeInsets.zero,
                       ),
                     ),
@@ -1381,13 +1398,17 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
     }
   }
 
-  Future<void> _deletePrice(dynamic listing) async {
+  Future<void> _toggleActiveStatus(dynamic listing) async {
+    final action = listing.isAvailable ? 'deactivate' : 'activate';
+    final actionCapitalized = action[0].toUpperCase() + action.substring(1);
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Price'),
+        title: Text('$actionCapitalized Price Listing'),
         content: Text(
-            'Are you sure you want to delete the price for "${listing.productName}"?'),
+            'Are you sure you want to $action "${listing.productName}"?\n\n'
+            '${listing.isAvailable ? "This will hide the listing from public view but keep it in your account." : "This will make the listing visible to customers again."}'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -1395,8 +1416,10 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            style: TextButton.styleFrom(
+                foregroundColor:
+                    listing.isAvailable ? Colors.orange : Colors.green),
+            child: Text(actionCapitalized),
           ),
         ],
       ),
@@ -1404,37 +1427,127 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
 
     if (confirmed == true) {
       try {
-        final success = await _pricingService.deletePriceListing(
-            listing.id, listing.masterProductId);
+        final success =
+            await _pricingService.togglePriceListingStatus(listing.id);
 
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Price deleted successfully'),
+            SnackBar(
+              content: Text('Price listing ${action}d successfully'),
               backgroundColor: Colors.green,
             ),
           );
         } else {
-          // Delete failed - this could be due to stale data
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                  'Price listing not found or already deleted. Refreshing data...'),
-              backgroundColor: Colors.orange,
+            SnackBar(
+              content: Text('Failed to $action price listing'),
+              backgroundColor: Colors.red,
             ),
           );
         }
 
-        // Always refresh data after a delete attempt to sync with server
+        // Refresh data to show updated status
         await _loadData();
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error deleting price: $e'),
+            content: Text('Error: $e'),
             backgroundColor: Colors.red,
           ),
         );
-        // Refresh data even on error to sync with server
+        await _loadData();
+      }
+    }
+  }
+
+  Future<void> _permanentlyDeletePrice(dynamic listing) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Permanently Delete Price Listing'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+                'Are you sure you want to permanently delete "${listing.productName}"?'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.withOpacity(0.3)),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.warning, color: Colors.red, size: 16),
+                      SizedBox(width: 8),
+                      Text('Warning:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red,
+                          )),
+                    ],
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                      'This action cannot be undone. The listing will be completely removed from the database.'),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.white,
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Delete Permanently'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final success =
+            await _pricingService.permanentlyDeletePriceListing(listing.id);
+
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Price listing permanently deleted'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to delete price listing'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+
+        // Refresh data to remove deleted listing
+        await _loadData();
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
         await _loadData();
       }
     }
