@@ -102,7 +102,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
           print('🔧 [ProfileCompletion] User registered successfully');
           Navigator.pushNamedAndRemoveUntil(
             context,
-            '/terms-acceptance',
+            '/home',
             (route) => false,
           );
           return;
@@ -128,11 +128,11 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
 
       if (result.success) {
         print(
-            '🔧 [ProfileCompletion] Profile completed successfully, navigating to terms...');
+            '🔧 [ProfileCompletion] Profile completed successfully, navigating to home...');
         // Profile completed successfully
         Navigator.pushNamedAndRemoveUntil(
           context,
-          '/terms-acceptance',
+          '/home',
           (route) => false,
         );
       } else {
@@ -382,7 +382,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                       onPressed: () {
                         Navigator.pushNamedAndRemoveUntil(
                           context,
-                          '/terms-acceptance',
+                          '/home',
                           (route) => false,
                         );
                       },
