@@ -119,6 +119,8 @@ router.post('/', optionalAuth(async (req,res)=>{
 
 router.put('/:id', optionalAuth(async (req,res)=>{
   try {
+    console.log('DEBUG: Updating product', req.params.id, 'with data:', req.body);
+    
     const { 
       name, 
       slug, 
@@ -142,7 +144,10 @@ router.put('/:id', optionalAuth(async (req,res)=>{
     if (subcategoryId !== undefined) update.subcategory_id = subcategoryId;
     if (description !== undefined) update.description = description;
     if (keywords !== undefined) update.keywords = keywords;
-    if (images !== undefined) update.images = images;
+    if (images !== undefined) {
+      console.log('DEBUG: Setting images to:', images);
+      update.images = images;
+    }
     if (availableVariables !== undefined) update.available_variables = availableVariables;
     if (baseUnit !== undefined) update.base_unit = baseUnit;
     if (isActive !== undefined) update.is_active = isActive;
