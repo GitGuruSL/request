@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
+import '../../widgets/glass_page.dart';
+import '../../theme/glass_theme.dart';
 import '../../models/request_model.dart';
 import '../../models/enhanced_user_model.dart';
-import '../../services/enhanced_request_service.dart';
 import '../../services/enhanced_user_service.dart';
 import '../../services/rest_request_service.dart' as rest;
 import '../../widgets/image_upload_widget.dart';
 import '../../widgets/accurate_location_picker_widget.dart';
 import '../../widgets/category_picker.dart';
-import '../../theme/app_theme.dart';
 import '../../utils/currency_helper.dart';
 import '../requests/ride/edit_ride_request_screen.dart';
 
@@ -23,7 +23,6 @@ class UnifiedRequestEditScreen extends StatefulWidget {
 
 class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
   final _formKey = GlobalKey<FormState>();
-  final EnhancedRequestService _requestService = EnhancedRequestService();
   final EnhancedUserService _userService = EnhancedUserService();
   final rest.RestRequestService _restService = rest.RestRequestService.instance;
 
@@ -56,7 +55,6 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
   RequestType _selectedType = RequestType.item;
   String _selectedCondition = 'New';
   String _selectedUrgency = 'Flexible';
-  String _selectedDeliveryTime = 'Anytime';
   String _selectedCategory = 'Electronics';
   String? _selectedCategoryId;
   String? _selectedSubCategoryId;
@@ -70,13 +68,10 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
   DateTime? _preferredDeliveryTime;
   List<String> _imageUrls = [];
   bool _isLoading = false;
-  double? _currentLatitude;
-  double? _currentLongitude;
 
   // Location coordinates storage
   double? _selectedLatitude;
   double? _selectedLongitude;
-
   // Delivery specific coordinates
   double? _pickupLatitude;
   double? _pickupLongitude;
@@ -90,31 +85,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
     'Any Condition'
   ];
   final List<String> _urgencyLevels = ['Flexible', 'ASAP', 'Specific Date'];
-  final List<String> _deliveryTimes = [
-    'Anytime',
-    'Morning',
-    'Afternoon',
-    'By End of Day'
-  ];
-  final List<String> _categories = [
-    'Electronics',
-    'Clothing & Accessories',
-    'Home & Garden',
-    'Sports & Outdoors',
-    'Books & Media',
-    'Toys & Games',
-    'Health & Beauty',
-    'Automotive',
-    'Tools & Hardware',
-    'Art & Crafts',
-    'Jewelry & Watches',
-    'Musical Instruments',
-    'Baby & Kids',
-    'Pet Supplies',
-    'Office Supplies',
-    'Food & Beverages',
-    'Other'
-  ];
+  // Additional lists kept minimal; extended catalogs handled by CategoryPicker
 
   @override
   void initState() {
@@ -125,10 +96,10 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
 
   void _populateFormFromRequest() {
     // Populate common fields
-    _titleController.text = widget.request.title ?? '';
-    _descriptionController.text = widget.request.description?.toString() ?? '';
+    _titleController.text = widget.request.title;
+    _descriptionController.text = widget.request.description.toString();
     _budgetController.text = widget.request.budget?.toString() ?? '';
-    _imageUrls = List<String>.from(widget.request.images ?? []);
+    _imageUrls = List<String>.from(widget.request.images);
 
     // Set location if available
     if (widget.request.location != null) {
@@ -138,7 +109,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
     }
 
     // Populate type-specific data
-    final typeData = widget.request.typeSpecificData ?? {};
+    final typeData = widget.request.typeSpecificData;
 
     switch (widget.request.type) {
       case RequestType.item:
@@ -209,14 +180,6 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           // It's a timestamp, convert to DateTime
           _preferredDeliveryTime =
               DateTime.fromMillisecondsSinceEpoch(deliveryTimeData);
-          _selectedDeliveryTime =
-              'Specific Date'; // Default to specific date when we have a timestamp
-        } else if (deliveryTimeData is String) {
-          // It's a string selection
-          _selectedDeliveryTime = deliveryTimeData;
-        } else {
-          // Default fallback
-          _selectedDeliveryTime = 'Anytime';
         }
 
         // Ensure categoryId is set if we have a category
@@ -281,22 +244,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
     super.dispose();
   }
 
-  Color _getTypeColor(RequestType type) {
-    switch (type) {
-      case RequestType.item:
-        return const Color(0xFFFF6B35); // Orange/red
-      case RequestType.service:
-        return const Color(0xFF00BCD4); // Teal
-      case RequestType.rental:
-        return const Color(0xFF2196F3); // Blue
-      case RequestType.delivery:
-        return const Color(0xFF4CAF50); // Green
-      case RequestType.ride:
-        return const Color(0xFFFFC107); // Yellow
-      case RequestType.price:
-        return const Color(0xFF9C27B0); // Purple
-    }
-  }
+  // Removed unused _getTypeColor
 
   String _getTypeDisplayName(RequestType type) {
     switch (type) {
@@ -350,10 +298,8 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
       return EditRideRequestScreen(request: widget.request);
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Edit ${_getTypeDisplayName(_selectedType)}'),
-      ),
+    return GlassPage(
+      title: 'Edit ${_getTypeDisplayName(_selectedType)}',
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -361,58 +307,38 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildTypeSpecificFields(),
+              GlassTheme.glassCard(child: _buildTypeSpecificFields()),
             ],
           ),
         ),
       ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-        ),
-        child: SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _isLoading ? null : _submitRequest,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _getTypeColor(_selectedType),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              elevation: 0,
+      bottomBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _isLoading ? null : _submitRequest,
+              style: GlassTheme.primaryButton,
+              child: _isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text('Update ${_getTypeDisplayName(_selectedType)}'),
             ),
-            child: _isLoading
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : Text(
-                    'Update ${_getTypeDisplayName(_selectedType)}',
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildCommonFields() {
-    return const SizedBox(); // No common fields anymore - each type has its own order
-  }
+  // Removed unused _buildCommonFields
 
   Widget _buildFlatField({required Widget child}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16.0),
-      decoration: AppTheme.fieldDecoration,
+    return GlassTheme.glassCard(
+      padding: const EdgeInsets.all(16),
       child: child,
     );
   }
@@ -989,12 +915,16 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        _selectedSubcategory ??
-                            _selectedCategory ??
-                            'Select item to rent',
+                        (_selectedSubcategory != null &&
+                                _selectedSubcategory!.isNotEmpty)
+                            ? _selectedSubcategory!
+                            : (_selectedCategory.isNotEmpty
+                                ? _selectedCategory
+                                : 'Select item to rent'),
                         style: TextStyle(
-                          color: (_selectedSubcategory != null ||
-                                  _selectedCategory != null)
+                          color: (_selectedSubcategory != null &&
+                                      _selectedSubcategory!.isNotEmpty) ||
+                                  _selectedCategory.isNotEmpty
                               ? Colors.black
                               : Colors.grey.shade600,
                         ),
@@ -1348,12 +1278,16 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        _selectedSubcategory ??
-                            _selectedCategory ??
-                            'Select item category',
+                        (_selectedSubcategory != null &&
+                                _selectedSubcategory!.isNotEmpty)
+                            ? _selectedSubcategory!
+                            : (_selectedCategory.isNotEmpty
+                                ? _selectedCategory
+                                : 'Select item category'),
                         style: TextStyle(
-                          color: (_selectedSubcategory != null ||
-                                  _selectedCategory != null)
+                          color: (_selectedSubcategory != null &&
+                                      _selectedSubcategory!.isNotEmpty) ||
+                                  _selectedCategory.isNotEmpty
                               ? Colors.black
                               : Colors.grey.shade600,
                         ),
@@ -1595,6 +1529,18 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
         updateData['location_address'] = locationInfo.address;
         updateData['location_latitude'] = locationInfo.latitude;
         updateData['location_longitude'] = locationInfo.longitude;
+      }
+
+      // Include pickup/dropoff coordinates for delivery when available
+      if (_selectedType == RequestType.delivery) {
+        if (_pickupLatitude != null && _pickupLongitude != null) {
+          updateData['pickup_latitude'] = _pickupLatitude;
+          updateData['pickup_longitude'] = _pickupLongitude;
+        }
+        if (_dropoffLatitude != null && _dropoffLongitude != null) {
+          updateData['dropoff_latitude'] = _dropoffLatitude;
+          updateData['dropoff_longitude'] = _dropoffLongitude;
+        }
       }
 
       // Use REST service to update the request

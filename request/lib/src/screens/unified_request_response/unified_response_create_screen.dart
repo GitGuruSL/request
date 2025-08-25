@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../theme/glass_theme.dart';
+import '../../widgets/glass_page.dart';
 import '../../models/request_model.dart';
 import '../../models/enhanced_user_model.dart';
 import '../../services/centralized_request_service.dart';
@@ -204,57 +206,38 @@ class _UnifiedResponseCreateScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        title: Text('Respond to ${_getTypeDisplayName(widget.request.type)}'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-      ),
+    return GlassPage(
+      title: 'Respond to ${_getTypeDisplayName(widget.request.type)}',
       body: Form(
         key: _formKey,
-        child: Column(
-          children: [
-            _buildRequestSummary(),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: _buildResponseFields(),
-              ),
-            ),
-          ],
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GlassTheme.glassCard(child: _buildRequestSummary()),
+              const SizedBox(height: 16),
+              GlassTheme.glassCard(child: _buildResponseFields()),
+            ],
+          ),
         ),
       ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(16),
-        color: Colors.white,
-        child: SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _isLoading ? null : _submitResponse,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _getTypeColor(widget.request.type),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              elevation: 0,
+      bottomBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _isLoading ? null : _submitResponse,
+              style: GlassTheme.primaryButton,
+              child: _isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Submit Response'),
             ),
-            child: _isLoading
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : const Text(
-                    'Submit Response',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
           ),
         ),
       ),
@@ -279,71 +262,64 @@ class _UnifiedResponseCreateScreenState
   }
 
   Widget _buildRequestSummary() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                _getTypeIcon(widget.request.type),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              _getTypeIcon(widget.request.type),
+              color: _getTypeColor(widget.request.type),
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              _getTypeDisplayName(widget.request.type),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
                 color: _getTypeColor(widget.request.type),
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                _getTypeDisplayName(widget.request.type),
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: _getTypeColor(widget.request.type),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            widget.request.title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            widget.request.description,
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 14,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          if (widget.request.budget != null) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.green[50],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                'Budget: ${CurrencyHelper.instance.formatPrice(widget.request.budget ?? 0)}',
-                style: TextStyle(
-                  color: Colors.green[700],
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          widget.request.title,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          widget.request.description,
+          style: TextStyle(
+            color: Colors.grey[600],
+            fontSize: 14,
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        if (widget.request.budget != null) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.green[50],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              'Budget: ${CurrencyHelper.instance.formatPrice(widget.request.budget ?? 0)}',
+              style: TextStyle(
+                color: Colors.green[700],
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
         ],
-      ),
+      ],
     );
   }
 
@@ -392,59 +368,73 @@ class _UnifiedResponseCreateScreenState
   }
 
   Widget _buildCommonResponseField() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Your Message*',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Message
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: const BoxDecoration(color: Colors.white),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Your Message*',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _messageController,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  hintText:
+                      'Explain why you\'re the best choice for this request...',
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.all(16),
+                  filled: true,
+                  fillColor: Color(0xFFF8F9FA),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter a message';
+                  }
+                  return null;
+                },
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _messageController,
-            maxLines: 4,
-            decoration: const InputDecoration(
-              hintText:
-                  'Explain why you\'re the best choice for this request...',
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.all(16),
-              filled: true,
-              fillColor: Color(0xFFF8F9FA),
-            ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Please enter a message';
-              }
-              return null;
-            },
+        ),
+        const SizedBox(height: 16),
+        // Responder Location
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: const BoxDecoration(color: Colors.white),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Responder Location*',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              AccurateLocationPickerWidget(
+                controller: _locationAddressController,
+                labelText: '',
+                hintText: 'Tap to pick responder location',
+                isRequired: true,
+                prefixIcon: Icons.location_on,
+                onLocationSelected: (address, lat, lng) {
+                  setState(() {
+                    _locationAddressController.text = address;
+                    _locationLat = lat;
+                    _locationLon = lng;
+                  });
+                },
+              ),
+            ],
           ),
-          const SizedBox(height: 20),
-          const Text(
-            'Responder Location*',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          AccurateLocationPickerWidget(
-            controller: _locationAddressController,
-            labelText: '',
-            hintText: 'Tap to pick responder location',
-            isRequired: true,
-            prefixIcon: Icons.location_on,
-            onLocationSelected: (address, lat, lng) {
-              setState(() {
-                _locationAddressController.text = address;
-                _locationLat = lat;
-                _locationLon = lng;
-              });
-            },
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

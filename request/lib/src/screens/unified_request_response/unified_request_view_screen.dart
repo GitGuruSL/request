@@ -1248,56 +1248,60 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
 
     final typeColor = _getTypeColor(_getCurrentRequestType());
 
-    return Card(
-      elevation: 0,
-      color: typeColor.withOpacity(0.06),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Builder(builder: (context) {
-              return Row(children: [
-                const Text('Responses',
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                const Spacer(),
-                if (_responses.isNotEmpty && _isOwner)
-                  TextButton(
-                    onPressed: _navigateToViewAllResponses,
-                    child: const Text('View All'),
-                  ),
-                IconButton(
-                  tooltip: 'Reload',
-                  icon: const Icon(Icons.refresh),
-                  onPressed: _responsesLoading ? null : _reloadResponses,
-                )
-              ]);
-            }),
-            const SizedBox(height: 12),
-            if (_responsesLoading)
-              const SizedBox(
-                  height: 24,
-                  child:
-                      Center(child: CircularProgressIndicator(strokeWidth: 2))),
-            if (!_responsesLoading) ...[
-              if (_responses.isEmpty)
-                Text(
-                    _canRespond
-                        ? 'Be the first to respond.'
-                        : 'No responses yet.',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-              if (_responses.isNotEmpty)
-                Row(children: [
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                'Responses',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              if (_responses.isNotEmpty && _isOwner)
+                TextButton(
+                  onPressed: _navigateToViewAllResponses,
+                  child: const Text('View All'),
+                ),
+              IconButton(
+                tooltip: 'Reload',
+                icon: const Icon(Icons.refresh),
+                onPressed: _responsesLoading ? null : _reloadResponses,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_responsesLoading)
+            const SizedBox(
+              height: 24,
+              child: Center(
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          if (!_responsesLoading) ...[
+            if (_responses.isEmpty)
+              Text(
+                _canRespond ? 'Be the first to respond.' : 'No responses yet.',
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+              ),
+            if (_responses.isNotEmpty)
+              Row(
+                children: [
                   _infoChip(
-                      label: 'Total',
-                      value: _responses.length.toString(),
-                      color: typeColor),
-                ])
-            ]
+                    label: 'Total',
+                    value: _responses.length.toString(),
+                    color: typeColor,
+                  ),
+                ],
+              ),
           ],
-        ),
+        ],
       ),
     );
   }

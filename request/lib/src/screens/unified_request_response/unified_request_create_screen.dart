@@ -183,33 +183,22 @@ class _UnifiedRequestCreateScreenState
           ),
         ),
       ),
-      bottomBar: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              GlassTheme.colors.glassBackground.first,
-              GlassTheme.colors.glassBackgroundSubtle.last,
-            ],
-          ),
-          border: Border(
-            top: BorderSide(color: GlassTheme.colors.glassBorderSubtle),
-          ),
-        ),
-        child: SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _isLoading ? null : _submitRequest,
-            style: GlassTheme.primaryButton,
-            child: _isLoading
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Text('Create ${_getTypeDisplayName(_selectedType)}'),
+      bottomBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _isLoading ? null : _submitRequest,
+              style: GlassTheme.primaryButton,
+              child: _isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text('Create ${_getTypeDisplayName(_selectedType)}'),
+            ),
           ),
         ),
       ),
