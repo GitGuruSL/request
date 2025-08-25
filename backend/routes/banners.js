@@ -89,7 +89,7 @@ router.put('/:id', async (req, res) => {
     if (linkUrl !== undefined) data.link_url = linkUrl;
     if (priority !== undefined) data.priority = Number(priority) || 0;
     if (active !== undefined) data.active = !!active;
-    data.updated_at = new Date();
+    // Note: updated_at is automatically handled by DatabaseService.update()
     const row = await db.update(TABLE, id, data);
     const out = { ...row, imageUrl: row.image_url, linkUrl: row.link_url };
     delete out.image_url; delete out.link_url;

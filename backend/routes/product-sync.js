@@ -33,7 +33,7 @@ router.post('/sync-master-product/:masterProductId', auth.authMiddleware(), auth
       // But we can trigger updates to related tables like price_listings
       
       if (Object.keys(updates).length > 0) {
-        updates.updated_at = new Date();
+        // Note: updated_at is automatically handled by DatabaseService.update()
         updatePromises.push(
           db.update('country_products', countryProduct.id, updates)
         );
