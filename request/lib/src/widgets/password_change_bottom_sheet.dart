@@ -15,13 +15,16 @@ class PasswordChangeBottomSheet extends StatefulWidget {
   });
 
   @override
-  State<PasswordChangeBottomSheet> createState() => _PasswordChangeBottomSheetState();
+  State<PasswordChangeBottomSheet> createState() =>
+      _PasswordChangeBottomSheetState();
 }
 
 class _PasswordChangeBottomSheetState extends State<PasswordChangeBottomSheet> {
-  final TextEditingController _currentPasswordController = TextEditingController();
+  final TextEditingController _currentPasswordController =
+      TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
   final TextEditingController _otpController = TextEditingController();
 
   bool _isCurrentPasswordVisible = false;
@@ -69,7 +72,7 @@ class _PasswordChangeBottomSheetState extends State<PasswordChangeBottomSheet> {
 
     try {
       late final result;
-      
+
       if (widget.isResetMode) {
         // Reset password with OTP
         result = await AuthService.instance.resetPassword(
@@ -90,10 +93,11 @@ class _PasswordChangeBottomSheetState extends State<PasswordChangeBottomSheet> {
         if (mounted) {
           Navigator.pop(context);
           _showSuccess(result.message ?? 'Password updated successfully');
-          
+
           if (widget.isResetMode) {
             // Navigate to login for reset mode
-            Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+            Navigator.pushNamedAndRemoveUntil(
+                context, '/login', (route) => false);
           }
         }
       } else {
@@ -179,7 +183,8 @@ class _PasswordChangeBottomSheetState extends State<PasswordChangeBottomSheet> {
                   controller: _currentPasswordController,
                   label: 'Current Password',
                   isVisible: _isCurrentPasswordVisible,
-                  onToggleVisibility: () => setState(() => _isCurrentPasswordVisible = !_isCurrentPasswordVisible),
+                  onToggleVisibility: () => setState(() =>
+                      _isCurrentPasswordVisible = !_isCurrentPasswordVisible),
                 ),
                 const SizedBox(height: 16),
               ],
@@ -200,7 +205,8 @@ class _PasswordChangeBottomSheetState extends State<PasswordChangeBottomSheet> {
                 controller: _newPasswordController,
                 label: 'New Password',
                 isVisible: _isNewPasswordVisible,
-                onToggleVisibility: () => setState(() => _isNewPasswordVisible = !_isNewPasswordVisible),
+                onToggleVisibility: () => setState(
+                    () => _isNewPasswordVisible = !_isNewPasswordVisible),
               ),
               const SizedBox(height: 16),
 
@@ -209,7 +215,8 @@ class _PasswordChangeBottomSheetState extends State<PasswordChangeBottomSheet> {
                 controller: _confirmPasswordController,
                 label: 'Confirm New Password',
                 isVisible: _isConfirmPasswordVisible,
-                onToggleVisibility: () => setState(() => _isConfirmPasswordVisible = !_isConfirmPasswordVisible),
+                onToggleVisibility: () => setState(() =>
+                    _isConfirmPasswordVisible = !_isConfirmPasswordVisible),
               ),
               const SizedBox(height: 24),
 
@@ -218,7 +225,8 @@ class _PasswordChangeBottomSheetState extends State<PasswordChangeBottomSheet> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: _isLoading ? null : () => Navigator.pop(context),
+                      onPressed:
+                          _isLoading ? null : () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white,
                         side: const BorderSide(color: Colors.white54),
@@ -248,7 +256,8 @@ class _PasswordChangeBottomSheetState extends State<PasswordChangeBottomSheet> {
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.black),
                               ),
                             )
                           : Text(widget.isResetMode ? 'Reset' : 'Update'),
