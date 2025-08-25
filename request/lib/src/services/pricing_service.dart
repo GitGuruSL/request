@@ -33,10 +33,14 @@ class PricingService {
         print('DEBUG: Data array length: ${dataArray?.length}');
 
         if (dataArray != null) {
-          final products = dataArray
-              .map((data) =>
-                  MasterProduct.fromJson(data as Map<String, dynamic>))
-              .toList();
+          final products = dataArray.map((data) {
+            print('DEBUG: Raw product data: $data');
+            final product =
+                MasterProduct.fromJson(data as Map<String, dynamic>);
+            print(
+                'DEBUG: Parsed product "${product.name}" - Images: ${product.images}');
+            return product;
+          }).toList();
           print('DEBUG: Parsed ${products.length} products successfully');
           return products;
         }

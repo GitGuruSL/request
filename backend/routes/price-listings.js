@@ -357,20 +357,25 @@ router.get('/search', async (req, res) => {
 
     const result = await database.query(searchQuery, queryParams);
     
-    const products = result.rows.map(row => ({
-      id: row.id,
-      name: row.name,
-      slug: row.slug,
-      baseUnit: row.base_unit,
-      images: row.images ? (Array.isArray(row.images) ? row.images : JSON.parse(row.images || '[]')) : [],
-      brand: null,
-      listingCount: parseInt(row.listing_count) || 0,
-      priceRange: {
-        min: parseFloat(row.min_price) || 0,
-        max: parseFloat(row.max_price) || 0,
-        avg: parseFloat(row.avg_price) || 0
-      }
-    }));
+    const products = result.rows.map(row => {
+      const images = row.images ? (Array.isArray(row.images) ? row.images : JSON.parse(row.images || '[]')) : [];
+      console.log(`DEBUG: Product "${row.name}" - Images:`, images);
+      
+      return {
+        id: row.id,
+        name: row.name,
+        slug: row.slug,
+        baseUnit: row.base_unit,
+        images: images,
+        brand: null,
+        listingCount: parseInt(row.listing_count) || 0,
+        priceRange: {
+          min: parseFloat(row.min_price) || 0,
+          max: parseFloat(row.max_price) || 0,
+          avg: parseFloat(row.avg_price) || 0
+        }
+      };
+    });
 
     res.json({
       success: true,
