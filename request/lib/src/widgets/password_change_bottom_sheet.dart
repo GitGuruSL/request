@@ -229,7 +229,9 @@ class _PasswordChangeBottomSheetState extends State<PasswordChangeBottomSheet> {
                           _isLoading ? null : () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.black87,
-                        side: BorderSide(color: GlassTheme.colors.primaryBlue.withOpacity(0.5)),
+                        side: BorderSide(
+                            color:
+                                GlassTheme.colors.primaryBlue.withOpacity(0.5)),
                         backgroundColor: Colors.white.withOpacity(0.9),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
