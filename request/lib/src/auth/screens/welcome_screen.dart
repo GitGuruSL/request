@@ -146,6 +146,25 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     );
   }
 
+  void _selectCountryOnly(Country country) async {
+    if (!country.isEnabled) {
+      // Show coming soon dialog for disabled countries
+      _showComingSoonDialog(country);
+      return;
+    }
+
+    setState(() {
+      _selectedCountry = country;
+    });
+
+    try {
+      // Save the selected country to persistence
+      await _countryService.setCountryFromObject(country);
+    } catch (e) {
+      debugPrint('Error saving country: $e');
+    }
+  }
+
   void _showComingSoonDialog(Country country) {
     showDialog(
       context: context,
@@ -264,7 +283,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                       color: Colors.orange),
                               onTap: () {
                                 Navigator.pop(context);
-                                _onCountrySelected(country);
+                                _selectCountryOnly(country);
                               },
                             );
                           },
