@@ -863,10 +863,102 @@ router.put('/:id', authService.authMiddleware(), upload.array('images', 5), asyn
   }
 });
 
+// PATCH /api/price-listings/:id/toggle-status - Toggle active/inactive status (Business owner only)
+router.patch('/:id/toggle-status', authService.authMiddleware(), async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+
+    // Check if listing exists and belongs to the user
+    const existingListing = await database.query(
+      'SELECT * FROM price_listings WHERE id = $1 AND business_id = $2',
+      [id, userId]
+    );
+
+    if (existingListing.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Price listing not found or you do not have permission to modify it'
+      });
+    }
+
+    const currentStatus = existingListing.rows[0].is_active;
+    const newStatus = !currentStatus;
+
+    // Toggle the is_active status
+    const toggleQuery = `
+      UPDATE price_listings 
+      SET is_active = $3, updated_at = NOW()
+      WHERE id = $1 AND business_id = $2
+      RETURNING *
+    `;
+
+    const result = await database.query(toggleQuery, [id, userId, newStatus]);
+
+    res.json({
+      success: true,
+      message: `Price listing ${newStatus ? 'activated' : 'deactivated'} successfully`,
+      data: await formatPriceListing(result.rows[0])
+    });
+
+  } catch (error) {
+    console.error('Error toggling price listing status:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error toggling price listing status', 
+      error: error.message 
+    });
+  }
+});
+
+// DELETE /api/price-listings/:id/permanent - Permanently delete a price listing (Business owner only)
+router.delete('/:id/permanent', authService.authMiddleware(), async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+
+    // Check if listing exists and belongs to the user
+    const existingListing = await database.query(
+      'SELECT * FROM price_listings WHERE id = $1 AND business_id = $2',
+      [id, userId]
+    );
+
+    if (existingListing.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Price listing not found or you do not have permission to delete it'
+      });
+    }
+
+    // Hard delete - completely remove from database
+    const deleteQuery = `
+      DELETE FROM price_listings 
+      WHERE id = $1 AND business_id = $2
+      RETURNING *
+    `;
+
+    const result = await database.query(deleteQuery, [id, userId]);
+
+    res.json({
+      success: true,
+      message: 'Price listing permanently deleted',
+      data: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('Error permanently deleting price listing:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error permanently deleting price listing', 
+      error: error.message 
+    });
+  }
+});
+
 // DELETE /api/price-listings/:id - Delete/deactivate a price listing (Business owner only)
 router.delete('/:id', authService.authMiddleware(), async (req, res) => {
   try {
-    const userId = req.user.uid;
+    const userId = req.user.id; // Changed from req.user.uid to req.user.id
     const { id } = req.params;
 
     // Check if listing exists and belongs to the user

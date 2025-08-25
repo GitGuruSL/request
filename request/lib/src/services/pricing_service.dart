@@ -265,6 +265,29 @@ class PricingService {
     }
   }
 
+  // Toggle active/inactive status (soft delete/activate)
+  Future<bool> togglePriceListingStatus(String listingId) async {
+    try {
+      final response = await _apiClient.patch('/api/price-listings/$listingId/toggle-status');
+      return response.isSuccess;
+    } catch (e) {
+      print('Error toggling price listing status: $e');
+      return false;
+    }
+  }
+
+  // Permanently delete a price listing (hard delete)
+  Future<bool> permanentlyDeletePriceListing(String listingId) async {
+    try {
+      final response = await _apiClient.delete('/api/price-listings/$listingId/permanent');
+      return response.isSuccess;
+    } catch (e) {
+      print('Error permanently deleting price listing: $e');
+      return false;
+    }
+  }
+
+  // Legacy method - now does soft delete (deactivate)
   Future<bool> deletePriceListing(
       String listingId, String masterProductId) async {
     try {
