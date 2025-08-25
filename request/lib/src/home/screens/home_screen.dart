@@ -533,9 +533,6 @@ class _NetworkBannerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasTexts =
-        (item.title ?? '').isNotEmpty || (item.subtitle ?? '').isNotEmpty;
-
     return GestureDetector(
       onTap: () {
         final link = item.linkUrl;
@@ -570,100 +567,29 @@ class _NetworkBannerCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: FractionallySizedBox(
-                    widthFactor: 0.55,
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: Image.network(
-                        item.imageUrl,
-                        fit: BoxFit.contain,
-                        errorBuilder: (c, e, st) => const SizedBox.shrink(),
-                      ),
-                    ),
+                // Full-bleed uploaded image as background
+                Positioned.fill(
+                  child: Image.network(
+                    item.imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (c, e, st) => const SizedBox.shrink(),
                   ),
                 ),
+                // Subtle left-to-right overlay for readability
                 Positioned.fill(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
                         colors: [
-                          Colors.white.withOpacity(0.10),
-                          Colors.white.withOpacity(0.00),
+                          Colors.black.withOpacity(0.20),
+                          Colors.black.withOpacity(0.00),
                         ],
                       ),
                     ),
                   ),
                 ),
-                if (hasTexts)
-                  Positioned.fill(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 16),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if ((item.title ?? '').isNotEmpty)
-                                  Text(
-                                    item.title!,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.white,
-                                      height: 1.2,
-                                    ),
-                                  ),
-                                if ((item.subtitle ?? '').isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 6),
-                                    child: Text(
-                                      item.subtitle!,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                if ((item.linkUrl ?? '').isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 10),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 14, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(24),
-                                      ),
-                                      child: const Text(
-                                        'Get Started',
-                                        style: TextStyle(
-                                          color: Color(0xFFFF5E62),
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                        ],
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),
@@ -728,64 +654,6 @@ class _BannerCard extends StatelessWidget {
                     item.icon,
                     size: 96,
                     color: Colors.white.withOpacity(0.25),
-                  ),
-                ),
-              ),
-              Positioned.fill(
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              item.title,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                                height: 1.2,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              item.subtitle,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(24),
-                              ),
-                              child: Text(
-                                'Get Started',
-                                style: TextStyle(
-                                  color: item.color,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
                   ),
                 ),
               ),
