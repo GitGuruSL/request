@@ -69,6 +69,18 @@ class _WelcomeScreenState extends State<WelcomeScreen>
         _availableCountries = fetched;
         _filteredCountries = fetched; // Initialize filtered list
         _isLoading = false;
+
+        // Set Sri Lanka as default if no country is selected
+        if (_selectedCountry == null && fetched.isNotEmpty) {
+          final sriLanka = fetched.firstWhere(
+            (country) =>
+                country.code.toLowerCase() == 'lk' ||
+                country.name.toLowerCase().contains('sri lanka'),
+            orElse: () => fetched
+                .first, // Fallback to first country if Sri Lanka not found
+          );
+          _selectedCountry = sriLanka;
+        }
       });
     } catch (e) {
       debugPrint('Error loading countries: $e');

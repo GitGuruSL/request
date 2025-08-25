@@ -14,7 +14,7 @@ const ses = new SESClient({
 
 class EmailService {
     constructor() {
-        this.fromEmail = process.env.SES_FROM_EMAIL || 'rimaz.m.flyil@gmail.com';
+        this.fromEmail = process.env.SES_FROM_EMAIL || 'info@alphabet.lk';
         this.fromName = process.env.SES_FROM_NAME || 'Request';
         
         // Debug: Log AWS SES configuration (without showing secret key)
