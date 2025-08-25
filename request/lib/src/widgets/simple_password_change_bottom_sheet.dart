@@ -69,14 +69,11 @@ class _SimplePasswordChangeBottomSheetState
           _showSuccess(result.message ??
               'Password reset successfully! You can now login with your new password.');
 
-          // Navigate back to login after successful password reset
-          Future.delayed(const Duration(seconds: 2), () {
+          // Navigate back to password screen after successful password reset
+          Future.delayed(const Duration(seconds: 1), () {
             if (mounted) {
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                '/login',
-                (route) => false,
-              );
+              // Pop the OTP screen and go back to password screen
+              Navigator.pop(context);
             }
           });
         } else {
