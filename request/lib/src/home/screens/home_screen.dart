@@ -374,44 +374,49 @@ class _HomeScreenState extends State<HomeScreen> {
               await _loadPopularProducts();
               await _loadBanners(); // also refresh banners
             },
-            child: ListView(
-              padding: const EdgeInsets.all(16),
+            child: Column(
               children: [
-                Text(
-                  'Hello, ${_greetingName()}!',
-                  style: GlassTheme.titleLarge,
+                // Header with greeting
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Hello, ${_greetingName()}!',
+                      style: GlassTheme.titleLarge,
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 16),
 
-                // Banners carousel
-                SizedBox(
-                  height: 150,
-                  child: _loadingBanners
-                      ? const Center(child: CircularProgressIndicator())
-                      : PageView.builder(
-                          controller: _bannerController,
-                          padEnds: false,
-                          itemCount: _remoteBanners.isNotEmpty
-                              ? _remoteBanners.length
-                              : _defaultBanners.length,
-                          onPageChanged: (i) =>
-                              setState(() => _currentBanner = i),
-                          itemBuilder: (ctx, i) {
-                            if (_remoteBanners.isNotEmpty) {
-                              return SizedBox.expand(
-                                child: _NetworkBannerCard(
+                // Banners carousel - full width with custom padding to match grid
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: SizedBox(
+                    height: 150,
+                    child: _loadingBanners
+                        ? const Center(child: CircularProgressIndicator())
+                        : PageView.builder(
+                            controller: _bannerController,
+                            padEnds: false,
+                            itemCount: _remoteBanners.isNotEmpty
+                                ? _remoteBanners.length
+                                : _defaultBanners.length,
+                            onPageChanged: (i) =>
+                                setState(() => _currentBanner = i),
+                            itemBuilder: (ctx, i) {
+                              if (_remoteBanners.isNotEmpty) {
+                                return _NetworkBannerCard(
                                   item: _remoteBanners[i],
-                                ),
-                              );
-                            }
-                            return SizedBox.expand(
-                              child: _BannerCard(
+                                );
+                              }
+                              return _BannerCard(
                                 item: _defaultBanners[i],
-                              ),
-                            );
-                          },
-                        ),
+                              );
+                            },
+                          ),
+                  ),
                 ),
+
                 const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -434,59 +439,41 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 20),
+                // Rest of content in scrollable area
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      const SizedBox(height: 4),
 
-                // Quick actions
-                Text('Quick Actions',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.textPrimary,
-                        )),
-                const SizedBox(height: 16),
-                _QuickActionsGrid(
-                  items: _requestTypes,
-                  moduleEnabled: _moduleEnabled,
-                  onTap: _handleTap,
-                ),
-
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Text('Popular Products',
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: AppTheme.textPrimary,
-                                )),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const PriceComparisonScreen(),
-                          ),
-                        );
-                      },
-                      child: Text(
-                        'See All',
-                        style: TextStyle(
-                          color: GlassTheme.colors.primaryBlue,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      // Quick actions
+                      Text('Quick Actions',
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: AppTheme.textPrimary,
+                                  )),
+                      const SizedBox(height: 16),
+                      _QuickActionsGrid(
+                        items: _requestTypes,
+                        moduleEnabled: _moduleEnabled,
+                        onTap: _handleTap,
                       ),
-                    ),
-                  ],
-                ),
-                SizedBox(
-                  height: 210,
-                  child: _loadingPopular
-                      ? const Center(child: CircularProgressIndicator())
-                      : ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemBuilder: (ctx, i) => _ProductCard(
-                            product: _popularProducts[i],
-                            onTap: () {
+
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Text('Popular Products',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: AppTheme.textPrimary,
+                                  )),
+                          const Spacer(),
+                          TextButton(
+                            onPressed: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -494,13 +481,43 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               );
                             },
+                            child: Text(
+                              'See All',
+                              style: TextStyle(
+                                color: GlassTheme.colors.primaryBlue,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(width: 12),
-                          itemCount: _popularProducts.length,
-                        ),
+                        ],
+                      ),
+                      SizedBox(
+                        height: 210,
+                        child: _loadingPopular
+                            ? const Center(child: CircularProgressIndicator())
+                            : ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                itemBuilder: (ctx, i) => _ProductCard(
+                                  product: _popularProducts[i],
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const PriceComparisonScreen(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(width: 12),
+                                itemCount: _popularProducts.length,
+                              ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 24),
               ],
             ),
           ),
@@ -531,7 +548,7 @@ class _NetworkBannerCard extends StatelessWidget {
       },
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.06),
@@ -541,7 +558,7 @@ class _NetworkBannerCard extends StatelessWidget {
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(18),
           child: Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -678,7 +695,7 @@ class _BannerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.06),
@@ -688,7 +705,7 @@ class _BannerCard extends StatelessWidget {
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         child: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
