@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/rest_auth_service.dart';
 import '../../theme/glass_theme.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/password_change_bottom_sheet.dart';
 
 class PasswordScreen extends StatefulWidget {
   final bool isNewUser;
@@ -162,25 +163,20 @@ class _PasswordScreenState extends State<PasswordScreen>
         isEmail: widget.isEmail,
       );
 
-      if (result.success) {
-        setState(() {
-          _isLoading = false;
-        });
+      setState(() {
+        _isLoading = false;
+      });
 
-        Navigator.pushNamed(
-          context,
-          '/otp',
-          arguments: {
-            'emailOrPhone': widget.emailOrPhone,
-            'isNewUser': false,
-            'isEmail': widget.isEmail,
-            'countryCode': widget.countryCode,
-            'otpToken': result.otpToken,
-            'purpose': 'password_reset',
-          },
+      if (result.success) {
+        // Show password reset bottom sheet with OTP field
+        showPasswordChangeBottomSheet(
+          context: context,
+          isResetMode: true,
+          emailOrPhone: widget.emailOrPhone,
+          isEmail: widget.isEmail,
         );
       } else {
-        throw Exception(result.error ?? 'Failed to send OTP');
+        _showErrorSnackBar(result.error ?? 'Failed to send OTP');
       }
     } catch (e) {
       setState(() {

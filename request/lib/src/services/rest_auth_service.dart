@@ -229,7 +229,7 @@ class RestAuthService {
         response = await _apiClient.post<Map<String, dynamic>>(
           '/api/sms/send-otp',
           data: {
-            'phone': emailOrPhone.trim(),
+            'phoneNumber': emailOrPhone.trim(),
             'countryCode': countryCode,
           },
         );
@@ -733,6 +733,58 @@ class RestAuthService {
       return AuthResult(
         success: false,
         error: 'Failed to change password: ${e.toString()}',
+      );
+    }
+  }
+
+  /// Reset password using OTP verification
+  Future<AuthResult> resetPassword({
+    required String emailOrPhone,
+    required String otp,
+    required String newPassword,
+    required bool isEmail,
+  }) async {
+    try {
+      if (kDebugMode) {
+        print(
+            '🔐 [resetPassword] Attempting to reset password for $emailOrPhone');
+      }
+
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        '/api/auth/reset-password',
+        data: {
+          'emailOrPhone': emailOrPhone,
+          'otp': otp,
+          'newPassword': newPassword,
+          'isEmail': isEmail,
+        },
+      );
+
+      if (response.success && response.data != null) {
+        if (kDebugMode) {
+          print('✅ [resetPassword] Password reset successfully');
+        }
+        return AuthResult(
+          success: true,
+          message: response.data!['message'] ?? 'Password reset successfully',
+        );
+      } else {
+        if (kDebugMode) {
+          print('❌ [resetPassword] Failed: ${response.error}');
+        }
+        return AuthResult(
+          success: false,
+          error: response.error ?? 'Failed to reset password',
+        );
+      }
+    } catch (e, stackTrace) {
+      if (kDebugMode) {
+        print('❌ [resetPassword] Exception caught: $e');
+        print('❌ [resetPassword] Stack trace: $stackTrace');
+      }
+      return AuthResult(
+        success: false,
+        error: 'Failed to reset password: ${e.toString()}',
       );
     }
   }

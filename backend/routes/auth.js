@@ -307,6 +307,113 @@ router.post('/change-password', authService.authMiddleware(), async (req, res) =
 });
 
 /**
+ * @route POST /api/auth/reset-password
+ * @desc Reset password using OTP verification
+ */
+router.post('/reset-password', async (req, res) => {
+    try {
+        const { emailOrPhone, otp, newPassword, isEmail } = req.body;
+
+        if (!emailOrPhone || !otp || !newPassword) {
+            return res.status(400).json({ 
+                error: 'Email/phone, OTP, and new password are required' 
+            });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({ 
+                error: 'New password must be at least 6 characters' 
+            });
+        }
+
+        // Find user by email or phone first
+        const user = await dbService.query(
+            isEmail 
+                ? 'SELECT * FROM users WHERE email = $1' 
+                : 'SELECT * FROM users WHERE phone = $1',
+            [emailOrPhone]
+        );
+
+        if (user.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'User not found'
+            });
+        }
+
+        const userId = user.rows[0].id;
+
+        // Verify OTP without consuming it
+        if (isEmail) {
+            // Check email OTP validity
+            const otpResult = await dbService.query(`
+                SELECT * FROM email_otp_verifications 
+                WHERE email = $1 AND otp = $2 AND expires_at > NOW() AND verified = false
+            `, [emailOrPhone, otp]);
+
+            if (otpResult.rows.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Invalid or expired OTP'
+                });
+            }
+
+            // Update password and mark OTP as verified in transaction
+            await dbService.query('BEGIN');
+            try {
+                const hashedPassword = await authService.hashPassword(newPassword);
+                
+                // Update user password
+                await dbService.update('users', userId, {
+                    password_hash: hashedPassword
+                });
+
+                // Mark OTP as verified
+                await dbService.query(`
+                    UPDATE email_otp_verifications 
+                    SET verified = true, verified_at = NOW() 
+                    WHERE email = $1 AND otp = $2
+                `, [emailOrPhone, otp]);
+
+                await dbService.query('COMMIT');
+            } catch (error) {
+                await dbService.query('ROLLBACK');
+                throw error;
+            }
+        } else {
+            // For phone OTP, use SMS service verification
+            const smsService = require('../services/smsService');
+            const verificationResult = await smsService.verifyOTP(emailOrPhone, otp);
+            
+            if (!verificationResult.verified) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Invalid or expired OTP'
+                });
+            }
+
+            const hashedPassword = await authService.hashPassword(newPassword);
+            
+            // Update user password
+            await dbService.update('users', userId, {
+                password_hash: hashedPassword
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Password reset successfully'
+        });
+    } catch (error) {
+        console.error('Reset password error:', error);
+        res.status(400).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+/**
  * @route POST /api/auth/logout
  * @desc Logout user (client-side token removal)
  */

@@ -21,4 +21,18 @@ class AuthService {
         currentPassword: currentPassword,
         newPassword: newPassword,
       );
+
+  /// Reset password with OTP
+  Future<AuthResult> resetPassword({
+    required String emailOrPhone,
+    required String otp,
+    required String newPassword,
+    required bool isEmail,
+  }) =>
+      _rest.resetPassword(
+        emailOrPhone: emailOrPhone,
+        otp: otp,
+        newPassword: newPassword,
+        isEmail: isEmail,
+      );
 }

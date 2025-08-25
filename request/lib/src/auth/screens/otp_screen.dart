@@ -9,6 +9,7 @@ class OTPScreen extends StatefulWidget {
   final bool isEmail;
   final bool isNewUser;
   final String countryCode;
+  final String? purpose;
 
   const OTPScreen({
     super.key,
@@ -16,6 +17,7 @@ class OTPScreen extends StatefulWidget {
     required this.isEmail,
     required this.isNewUser,
     required this.countryCode,
+    this.purpose,
   });
 
   @override
@@ -78,26 +80,33 @@ class _OTPScreenState extends State<OTPScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final result = await RestAuthService.instance.verifyOTP(
-        emailOrPhone: widget.emailOrPhone,
-        otp: otp,
-        otpToken: _otpToken,
-      );
-      if (result.success) {
-        if (!mounted) return;
-        Navigator.pushReplacementNamed(
-          context,
-          '/profile',
-          arguments: {
-            'isNewUser': widget.isNewUser,
-            'emailOrPhone': widget.emailOrPhone,
-            'isEmail': widget.isEmail,
-            'countryCode': widget.countryCode,
-            'otpToken': _otpToken,
-          },
-        );
+      // Check if this is a password reset flow
+      if (widget.purpose == 'password_reset') {
+        // For password reset, show dialog to enter new password
+        _showPasswordResetDialog(otp);
       } else {
-        _showMessage(result.error ?? 'Invalid OTP');
+        // Normal OTP verification flow
+        final result = await RestAuthService.instance.verifyOTP(
+          emailOrPhone: widget.emailOrPhone,
+          otp: otp,
+          otpToken: _otpToken,
+        );
+        if (result.success) {
+          if (!mounted) return;
+          Navigator.pushReplacementNamed(
+            context,
+            '/profile',
+            arguments: {
+              'isNewUser': widget.isNewUser,
+              'emailOrPhone': widget.emailOrPhone,
+              'isEmail': widget.isEmail,
+              'countryCode': widget.countryCode,
+              'otpToken': _otpToken,
+            },
+          );
+        } else {
+          _showMessage(result.error ?? 'Invalid OTP');
+        }
       }
     } catch (e) {
       _showMessage('Error verifying OTP: $e');
@@ -111,6 +120,130 @@ class _OTPScreenState extends State<OTPScreen> {
       SnackBar(
         content: Text(message),
         backgroundColor: isError ? Colors.red : Colors.green,
+      ),
+    );
+  }
+
+  void _showPasswordResetDialog(String otp) {
+    final TextEditingController passwordController = TextEditingController();
+    final TextEditingController confirmPasswordController =
+        TextEditingController();
+    bool isObscured = true;
+    bool isConfirmObscured = true;
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Reset Password'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Enter your new password:'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: passwordController,
+                obscureText: isObscured,
+                decoration: InputDecoration(
+                  labelText: 'New Password',
+                  border: const OutlineInputBorder(),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                        isObscured ? Icons.visibility : Icons.visibility_off),
+                    onPressed: () =>
+                        setDialogState(() => isObscured = !isObscured),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: confirmPasswordController,
+                obscureText: isConfirmObscured,
+                decoration: InputDecoration(
+                  labelText: 'Confirm Password',
+                  border: const OutlineInputBorder(),
+                  suffixIcon: IconButton(
+                    icon: Icon(isConfirmObscured
+                        ? Icons.visibility
+                        : Icons.visibility_off),
+                    onPressed: () => setDialogState(
+                        () => isConfirmObscured = !isConfirmObscured),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      final password = passwordController.text;
+                      final confirmPassword = confirmPasswordController.text;
+
+                      if (password.isEmpty) {
+                        _showMessage('Please enter a new password');
+                        return;
+                      }
+
+                      if (password.length < 6) {
+                        _showMessage('Password must be at least 6 characters');
+                        return;
+                      }
+
+                      if (password != confirmPassword) {
+                        _showMessage('Passwords do not match');
+                        return;
+                      }
+
+                      setDialogState(() => isLoading = true);
+
+                      try {
+                        final result =
+                            await RestAuthService.instance.resetPassword(
+                          emailOrPhone: widget.emailOrPhone,
+                          otp: otp,
+                          newPassword: password,
+                          isEmail: widget.isEmail,
+                        );
+
+                        if (result.success) {
+                          Navigator.pop(context); // Close dialog
+                          _showMessage(
+                              'Password reset successfully! You can now login with your new password.',
+                              isError: false);
+
+                          // Navigate back to login
+                          if (mounted) {
+                            Navigator.pushNamedAndRemoveUntil(
+                                context, '/login', (route) => false);
+                          }
+                        } else {
+                          _showMessage(
+                              result.error ?? 'Failed to reset password');
+                        }
+                      } catch (e) {
+                        _showMessage('Error resetting password: $e');
+                      } finally {
+                        setDialogState(() => isLoading = false);
+                      }
+                    },
+              child: isLoading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Reset Password'),
+            ),
+          ],
+        ),
       ),
     );
   }

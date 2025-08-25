@@ -81,6 +81,7 @@ class MyApp extends StatelessWidget {
                 isEmail: args?['isEmail'] ?? false,
                 isNewUser: args?['isNewUser'] ?? false,
                 countryCode: args?['countryCode'] ?? 'LK',
+                purpose: args?['purpose'],
               ),
             );
           case '/password':
@@ -89,6 +90,8 @@ class MyApp extends StatelessWidget {
               builder: (context) => PasswordScreen(
                 isNewUser: args?['isNewUser'] ?? false,
                 emailOrPhone: args?['emailOrPhone'] ?? '',
+                isEmail: args?['isEmail'] ?? false,
+                countryCode: args?['countryCode'],
               ),
             );
           case '/profile':
