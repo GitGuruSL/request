@@ -24,8 +24,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           surfaceTintColor: Colors.transparent,
           systemOverlayStyle: SystemUiOverlayStyle(
             statusBarColor: Colors.transparent,
-            statusBarIconBrightness:
-                GlassTheme.isDarkMode ? Brightness.light : Brightness.dark,
+            statusBarIconBrightness: GlassTheme.isDarkMode
+                ? Brightness.light
+                : Brightness.dark,
           ),
           leading: IconButton(
             icon: Icon(
@@ -34,10 +35,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             onPressed: () => Navigator.pop(context),
           ),
-          title: Text(
-            'Settings',
-            style: GlassTheme.titleLarge,
-          ),
+          title: Text('Settings', style: GlassTheme.titleLarge),
         ),
         body: SafeArea(
           child: ListView(
@@ -133,10 +131,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Theme',
-                  style: GlassTheme.titleSmall,
-                ),
+                Text('Theme', style: GlassTheme.titleSmall),
                 const SizedBox(height: 2),
                 Text(
                   GlassTheme.isDarkMode ? 'Dark mode' : 'Light mode',
@@ -154,8 +149,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
             activeThumbColor: GlassTheme.colors.primaryPurple,
             inactiveThumbColor: GlassTheme.colors.textTertiary,
-            inactiveTrackColor:
-                GlassTheme.colors.textTertiary.withValues(alpha: 0.3),
+            inactiveTrackColor: GlassTheme.colors.textTertiary.withValues(
+              alpha: 0.3,
+            ),
           ),
         ],
       ),
@@ -201,15 +197,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Language',
-                    style: GlassTheme.titleSmall,
-                  ),
+                  Text('Language', style: GlassTheme.titleSmall),
                   const SizedBox(height: 2),
-                  Text(
-                    'English',
-                    style: GlassTheme.bodyMedium,
-                  ),
+                  Text('English', style: GlassTheme.bodyMedium),
                 ],
               ),
             ),
@@ -263,10 +253,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Notifications',
-                    style: GlassTheme.titleSmall,
-                  ),
+                  Text('Notifications', style: GlassTheme.titleSmall),
                   const SizedBox(height: 2),
                   Text(
                     'Manage your notification preferences',
@@ -316,10 +303,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Privacy & Security',
-                    style: GlassTheme.titleSmall,
-                  ),
+                  Text('Privacy & Security', style: GlassTheme.titleSmall),
                   const SizedBox(height: 2),
                   Text(
                     'Control your privacy settings',
@@ -369,10 +353,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Change Password',
-                    style: GlassTheme.titleSmall,
-                  ),
+                  Text('Change Password', style: GlassTheme.titleSmall),
                   const SizedBox(height: 2),
                   Text(
                     'Update your account password',
@@ -431,10 +412,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Data & Storage',
-                    style: GlassTheme.titleSmall,
-                  ),
+                  Text('Data & Storage', style: GlassTheme.titleSmall),
                   const SizedBox(height: 2),
                   Text(
                     'Manage app data and storage',
@@ -493,10 +471,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Help & Support',
-                    style: GlassTheme.titleSmall,
-                  ),
+                  Text('Help & Support', style: GlassTheme.titleSmall),
                   const SizedBox(height: 2),
                   Text(
                     'Get help and contact support',
@@ -530,18 +505,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
-              title: Text(
-                'About Request App',
-                style: GlassTheme.titleMedium,
-              ),
+              title: Text('About Request App', style: GlassTheme.titleMedium),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Version 1.0.0',
-                    style: GlassTheme.bodyMedium,
-                  ),
+                  Text('Version 1.0.0', style: GlassTheme.bodyMedium),
                   const SizedBox(height: 8),
                   Text(
                     'A modern request and response platform built with Flutter.',
@@ -557,10 +526,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: Text(
-                    'Close',
-                    style: GlassTheme.accent,
-                  ),
+                  child: Text('Close', style: GlassTheme.accent),
                 ),
               ],
             ),
@@ -590,10 +556,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'About',
-                    style: GlassTheme.titleSmall,
-                  ),
+                  Text('About', style: GlassTheme.titleSmall),
                   const SizedBox(height: 2),
                   Text(
                     'App information and version',
