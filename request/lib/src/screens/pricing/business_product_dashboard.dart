@@ -29,6 +29,7 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
       []; // Available variables from country table
   bool _isSearching = false;
   bool _isLoadingMyPrices = false;
+  bool _isSaving = false; // Add loading state for save operations
   bool _isSeller = true; // gated after registration check
 
   @override
@@ -1187,28 +1188,44 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                       Expanded(
                         flex: 2,
                         child: ElevatedButton(
-                          onPressed: () async {
-                            await _savePrice(
-                              product: product,
-                              existingListing: existingListing,
-                              price: priceController.text,
-                              whatsapp: whatsappController.text,
-                              website: websiteController.text,
-                              quantity: qtyController.text,
-                              modelNumber: modelController.text,
-                              variables: selectedVariableValues,
-                              newImages: selectedImages,
-                              existingImages: existingImageUrls,
-                            );
-                            if (context.mounted) Navigator.pop(context);
-                          },
+                          onPressed: _isSaving
+                              ? null
+                              : () async {
+                                  setState(() => _isSaving = true);
+                                  try {
+                                    await _savePrice(
+                                      product: product,
+                                      existingListing: existingListing,
+                                      price: priceController.text,
+                                      whatsapp: whatsappController.text,
+                                      website: websiteController.text,
+                                      quantity: qtyController.text,
+                                      modelNumber: modelController.text,
+                                      variables: selectedVariableValues,
+                                      newImages: selectedImages,
+                                      existingImages: existingImageUrls,
+                                    );
+                                    if (context.mounted) Navigator.pop(context);
+                                  } finally {
+                                    if (mounted)
+                                      setState(() => _isSaving = false);
+                                  }
+                                },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: GlassTheme.colors.primaryBlue,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
-                          child:
-                              Text(isEditing ? 'Update Price' : 'Save Price'),
+                          child: _isSaving
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Text(isEditing ? 'Update Price' : 'Save Price'),
                         ),
                       ),
                     ],
