@@ -806,43 +806,16 @@ class _ProductCard extends StatelessWidget {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(16),
                     child: product.images.isNotEmpty
-                        ? Stack(
-                            children: [
-                              Image.network(
-                                product.images.first,
-                                fit: BoxFit.cover,
-                                width: double.infinity,
-                                height: double.infinity,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return _buildModernPlaceholder();
-                                },
-                                loadingBuilder:
-                                    (context, child, loadingProgress) {
-                                  if (loadingProgress == null) return child;
-                                  return _buildModernPlaceholder(
-                                      isLoading: true);
-                                },
-                              ),
-                              // Subtle overlay for better text readability if needed
-                              Positioned(
-                                bottom: 0,
-                                left: 0,
-                                right: 0,
-                                child: Container(
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.bottomCenter,
-                                      end: Alignment.topCenter,
-                                      colors: [
-                                        Colors.black.withOpacity(0.1),
-                                        Colors.transparent,
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
+                        ? Image.network(
+                            product.images.first,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                            errorBuilder: (c, e, st) {
+                              print(
+                                  'DEBUG: Image error for ${product.name}: $e');
+                              return _buildModernPlaceholder();
+                            },
                           )
                         : _buildModernPlaceholder(),
                   ),
