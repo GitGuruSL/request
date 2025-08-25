@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../theme/glass_theme.dart';
+import '../../widgets/glass_page.dart';
 import '../../models/request_model.dart';
 import '../../models/enhanced_user_model.dart';
 import '../../services/enhanced_request_service.dart';
@@ -143,7 +145,7 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
               ),
             );
           },
-          child: Card(
+          child: GlassTheme.glassCard(
             margin: const EdgeInsets.only(bottom: 12),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -175,34 +177,26 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
                           children: [
                             Text(
                               responder?.name ?? fallbackName ?? 'Unknown User',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
+                              style: GlassTheme.titleSmall,
                             ),
                             Text(
                               'Response to ${_getTypeDisplayName(widget.request.type.toString().split('.').last)}',
-                              style: const TextStyle(
-                                color: Colors.black54,
-                                fontSize: 12,
-                              ),
+                              style: GlassTheme.bodySmall,
                             ),
                             if (((responder?.email ?? '').isNotEmpty) ||
                                 ((fallbackEmail ?? '').isNotEmpty)) ...[
                               Text(
                                 responder?.email ?? fallbackEmail ?? '',
-                                style: const TextStyle(
-                                  color: Colors.black45,
-                                  fontSize: 11,
+                                style: GlassTheme.bodySmall.copyWith(
+                                  color: GlassTheme.colors.textTertiary,
                                 ),
                               ),
                             ],
                             if ((fallbackPhone ?? '').isNotEmpty) ...[
                               Text(
                                 fallbackPhone!,
-                                style: const TextStyle(
-                                  color: Colors.black45,
-                                  fontSize: 11,
+                                style: GlassTheme.bodySmall.copyWith(
+                                  color: GlassTheme.colors.textTertiary,
                                 ),
                               ),
                             ],
@@ -227,10 +221,8 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
                   if (response.price != null) ...[
                     Text(
                       '${response.currency ?? 'LKR'} ${_formatPrice(response.price!)}',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                      style: GlassTheme.titleMedium.copyWith(
+                        color: GlassTheme.colors.primaryBlue,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -239,10 +231,7 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
                   // Message preview
                   Text(
                     response.message,
-                    style: const TextStyle(
-                      color: Colors.black87,
-                      fontSize: 14,
-                    ),
+                    style: GlassTheme.bodyMedium,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -254,30 +243,24 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
                     Row(
                       children: [
                         if (response.availableFrom != null) ...[
-                          const Icon(Icons.calendar_today,
-                              size: 14, color: Colors.black54),
+                          Icon(Icons.calendar_today,
+                              size: 14, color: GlassTheme.colors.textSecondary),
                           const SizedBox(width: 4),
                           Text(
                             'From: ${response.availableFrom!.day}/${response.availableFrom!.month}/${response.availableFrom!.year}',
-                            style: const TextStyle(
-                              color: Colors.black54,
-                              fontSize: 12,
-                            ),
+                            style: GlassTheme.bodySmall,
                           ),
                         ],
                         if (response.availableFrom != null &&
                             response.availableUntil != null)
                           const SizedBox(width: 16),
                         if (response.availableUntil != null) ...[
-                          const Icon(Icons.event,
-                              size: 14, color: Colors.black54),
+                          Icon(Icons.event,
+                              size: 14, color: GlassTheme.colors.textSecondary),
                           const SizedBox(width: 4),
                           Text(
                             'Until: ${response.availableUntil!.day}/${response.availableUntil!.month}/${response.availableUntil!.year}',
-                            style: const TextStyle(
-                              color: Colors.black54,
-                              fontSize: 12,
-                            ),
+                            style: GlassTheme.bodySmall,
                           ),
                         ],
                       ],
@@ -289,15 +272,12 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
                   if (response.images.isNotEmpty) ...[
                     Row(
                       children: [
-                        const Icon(Icons.photo,
-                            size: 14, color: Colors.black54),
+                        Icon(Icons.photo,
+                            size: 14, color: GlassTheme.colors.textSecondary),
                         const SizedBox(width: 4),
                         Text(
                           '${response.images.length} image${response.images.length > 1 ? 's' : ''}',
-                          style: const TextStyle(
-                            color: Colors.black54,
-                            fontSize: 12,
-                          ),
+                          style: GlassTheme.bodySmall,
                         ),
                       ],
                     ),
@@ -315,6 +295,11 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
                         onPressed: () => _acceptResponse(response),
                         icon: const Icon(Icons.check),
                         label: const Text('Accept Response'),
+                        style: OutlinedButton.styleFrom(
+                          side:
+                              BorderSide(color: GlassTheme.colors.glassBorder),
+                          foregroundColor: GlassTheme.colors.textPrimary,
+                        ),
                       ),
                     ),
                   ],
@@ -349,29 +334,26 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
 
   Widget _buildStatusBadge(ResponseModel response) {
     if (response.isAccepted) {
-      return const Text(
+      return Text(
         'Accepted',
-        style: TextStyle(
-          color: Colors.black54,
-          fontSize: 12,
+        style: GlassTheme.bodySmall.copyWith(
+          color: GlassTheme.colors.successColor,
           fontWeight: FontWeight.bold,
         ),
       );
     } else if (response.rejectionReason != null) {
-      return const Text(
+      return Text(
         'Rejected',
-        style: TextStyle(
-          color: Colors.black54,
-          fontSize: 12,
+        style: GlassTheme.bodySmall.copyWith(
+          color: GlassTheme.colors.errorColor,
           fontWeight: FontWeight.bold,
         ),
       );
     } else {
-      return const Text(
+      return Text(
         'Pending',
-        style: TextStyle(
-          color: Colors.black54,
-          fontSize: 12,
+        style: GlassTheme.bodySmall.copyWith(
+          color: GlassTheme.colors.textSecondary,
           fontWeight: FontWeight.bold,
         ),
       );
@@ -472,50 +454,47 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Responses (${_responses.length})'),
-        elevation: 0,
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        foregroundColor: Theme.of(context).textTheme.titleLarge?.color,
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              setState(() {
-                _sortBy = value;
-              });
-              _sortResponses();
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'date',
-                child: Text('Sort by Date'),
-              ),
-              const PopupMenuItem(
-                value: 'price_low',
-                child: Text('Price: Low to High'),
-              ),
-              const PopupMenuItem(
-                value: 'price_high',
-                child: Text('Price: High to Low'),
-              ),
-            ],
-            child: const Padding(
-              padding: EdgeInsets.all(8.0),
-              child: Icon(Icons.sort),
+    return GlassPage(
+      title: 'Responses (${_responses.length})',
+      appBarBackgroundColor: GlassTheme.isDarkMode
+          ? const Color(0x1AFFFFFF)
+          : const Color(0xCCFFFFFF),
+      actions: [
+        PopupMenuButton<String>(
+          onSelected: (value) {
+            setState(() {
+              _sortBy = value;
+            });
+            _sortResponses();
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'date',
+              child: Text('Sort by Date'),
             ),
+            const PopupMenuItem(
+              value: 'price_low',
+              child: Text('Price: Low to High'),
+            ),
+            const PopupMenuItem(
+              value: 'price_high',
+              child: Text('Price: High to Low'),
+            ),
+          ],
+          child: const Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Icon(Icons.sort),
           ),
-        ],
-      ),
+        ),
+      ],
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _responses.isEmpty
-              ? const Center(
+              ? Center(
                   child: Text(
                     'No responses yet',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey,
+                    style: GlassTheme.bodyLarge.copyWith(
+                      color: GlassTheme.colors.textSecondary,
                     ),
                   ),
                 )
