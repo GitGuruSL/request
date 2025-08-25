@@ -5,7 +5,7 @@ const authService = require('../services/auth');
 const router = express.Router();
 
 // Stage a price update
-router.post('/stage', authService.verifyToken, async (req, res) => {
+router.post('/stage', authService.authMiddleware(), async (req, res) => {
   try {
     const { priceListingId, price, stockQuantity, isAvailable, whatsappNumber, productLink, modelNumber, selectedVariables } = req.body;
     const businessId = req.user.businessId || req.user.uid;
@@ -52,7 +52,7 @@ router.post('/stage', authService.verifyToken, async (req, res) => {
 });
 
 // Get all staged prices for a business
-router.get('/staged', authService.verifyToken, async (req, res) => {
+router.get('/staged', authService.authMiddleware(), async (req, res) => {
   try {
     const businessId = req.user.businessId || req.user.uid;
     const stagedPrices = await priceStagingService.getBusinessStagedPrices(businessId);
@@ -74,7 +74,7 @@ router.get('/staged', authService.verifyToken, async (req, res) => {
 });
 
 // Cancel a staged price update
-router.delete('/stage/:priceListingId', authService.verifyToken, async (req, res) => {
+router.delete('/stage/:priceListingId', authService.authMiddleware(), async (req, res) => {
   try {
     const { priceListingId } = req.params;
     const businessId = req.user.businessId || req.user.uid;
@@ -96,7 +96,7 @@ router.delete('/stage/:priceListingId', authService.verifyToken, async (req, res
 });
 
 // Get business staging summary
-router.get('/summary', authService.verifyToken, async (req, res) => {
+router.get('/summary', authService.authMiddleware(), async (req, res) => {
   try {
     const businessId = req.user.businessId || req.user.uid;
     const summary = await priceStagingService.getBusinessStagingSummary(businessId);
@@ -121,7 +121,7 @@ router.get('/summary', authService.verifyToken, async (req, res) => {
 });
 
 // Get price update history
-router.get('/history', authService.verifyToken, async (req, res) => {
+router.get('/history', authService.authMiddleware(), async (req, res) => {
   try {
     const businessId = req.user.businessId || req.user.uid;
     const limit = parseInt(req.query.limit) || 50;
@@ -145,7 +145,7 @@ router.get('/history', authService.verifyToken, async (req, res) => {
 });
 
 // Manual trigger for price application (admin only)
-router.post('/apply-now', authService.verifyToken, async (req, res) => {
+router.post('/apply-now', authService.authMiddleware(), async (req, res) => {
   try {
     // Check if user is admin (you might want to add admin verification here)
     const isAdmin = req.user.role === 'admin' || req.user.isAdmin;
