@@ -285,7 +285,12 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        title: const SizedBox.shrink(),
+        title: Text(
+          'Hello, ${_greetingName()}!',
+          style: GlassTheme.titleLarge.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         actions: [
           Stack(
             children: [
@@ -376,18 +381,9 @@ class _HomeScreenState extends State<HomeScreen> {
             },
             child: Column(
               children: [
-                // Header with greeting
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Hello, ${_greetingName()}!',
-                      style: GlassTheme.titleLarge,
-                    ),
-                  ),
-                ),
-
+                const SizedBox(
+                    height:
+                        16), // Add top padding since greeting is now in app bar
                 // Banners carousel - full width with custom padding to match grid
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -783,9 +779,33 @@ class _ProductCard extends StatelessWidget {
                       width: 1,
                     ),
                   ),
-                  child: const Center(
-                    child: Icon(Icons.inventory_2,
-                        size: 38, color: Color(0xFF6366F1)),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: product.images.isNotEmpty
+                        ? Image.network(
+                            product.images.first,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Center(
+                                child: Icon(Icons.inventory_2,
+                                    size: 38, color: Color(0xFF6366F1)),
+                              );
+                            },
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return const Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              );
+                            },
+                          )
+                        : const Center(
+                            child: Icon(Icons.inventory_2,
+                                size: 38, color: Color(0xFF6366F1)),
+                          ),
                   ),
                 ),
               ),

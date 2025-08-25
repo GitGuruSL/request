@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import '../../services/rest_auth_service.dart';
+import '../../services/content_service.dart';
 import '../../theme/glass_theme.dart';
 import '../../theme/app_theme.dart';
 
@@ -129,6 +131,178 @@ class _LoginScreenState extends State<LoginScreen>
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showContentDialog(String title, String contentType) async {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.8,
+            maxWidth: MediaQuery.of(context).size.width * 0.9,
+          ),
+          decoration: BoxDecoration(
+            color: GlassTheme.colors.glassBackground.first,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: GlassTheme.colors.glassBorder,
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: GlassTheme.colors.primaryBlue.withOpacity(0.1),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: GlassTheme.colors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(
+                        Icons.close,
+                        color: GlassTheme.colors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Content
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: FutureBuilder<String>(
+                    future: _loadContent(contentType),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      } else if (snapshot.hasError) {
+                        return Text(
+                          'Error loading content',
+                          style: TextStyle(
+                            color: GlassTheme.colors.textSecondary,
+                          ),
+                        );
+                      } else {
+                        return Text(
+                          _cleanHtmlContent(snapshot.data ?? ''),
+                          style: TextStyle(
+                            color: GlassTheme.colors.textPrimary,
+                            fontSize: 16,
+                            height: 1.6,
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<String> _loadContent(String contentType) async {
+    try {
+      final content = await ContentService.instance.getPageBySlug(contentType);
+      return content?.content ?? _getDefaultContent(contentType);
+    } catch (e) {
+      return _getDefaultContent(contentType);
+    }
+  }
+
+  String _getDefaultContent(String contentType) {
+    if (contentType == 'terms') {
+      return '''
+Terms of Service
+
+Effective Date: August 25, 2025
+
+Welcome to Request! These Terms of Service ("Terms") constitute a legally binding agreement between you and Request Technologies ("Company", "we", "our", or "us") regarding your use of our mobile application and services.
+
+## Acceptance of Terms
+By accessing or using our services, you agree to be bound by these Terms.
+
+## Use of Services
+You may use our services for lawful purposes only. You agree not to use the services for any prohibited activities.
+
+## User Accounts
+You are responsible for maintaining the confidentiality of your account credentials.
+
+## Privacy
+Your privacy is important to us. Please review our Privacy Policy to understand how we collect and use your information.
+
+## Termination
+We may terminate your access to our services at any time for violation of these Terms.
+
+## Contact Us
+If you have questions about these Terms, please contact us.
+''';
+    } else {
+      return '''
+Privacy Policy
+
+Effective Date: August 25, 2025
+
+Our Commitment to Your Privacy
+Welcome to Request! This Privacy Policy explains how Request Technologies ("Company", "we", "our", or "us") collects, uses, and protects your personal information.
+
+## Information We Collect
+We collect information you provide directly to us, such as when you create an account or contact us.
+
+## How We Use Your Information
+We use your information to provide and improve our services, communicate with you, and ensure security.
+
+## Information Sharing
+We do not sell, trade, or otherwise transfer your personal information to third parties without your consent.
+
+## Data Security
+We implement appropriate security measures to protect your personal information.
+
+## Your Rights
+You have the right to access, update, or delete your personal information.
+
+## Contact Us
+If you have questions about this Privacy Policy, please contact us.
+''';
+    }
+  }
+
+  String _cleanHtmlContent(String content) {
+    return content
+        .replaceAll(RegExp(r'<[^>]*>'), '') // Remove HTML tags
+        .replaceAll(RegExp(r'#{1,6}\s*'), '') // Remove markdown headers
+        .replaceAll(RegExp(r'\*\*([^*]*)\*\*'), r'$1') // Remove bold markdown
+        .replaceAll(RegExp(r'\*([^*]*)\*'), r'$1') // Remove italic markdown
+        .replaceAll(RegExp(r'\n\s*\n'), '\n\n') // Normalize paragraph breaks
+        .trim();
   }
 
   @override
@@ -412,21 +586,27 @@ class _LoginScreenState extends State<LoginScreen>
                               color: AppTheme.textSecondary,
                               fontSize: 14,
                             ),
-                            children: const [
+                            children: [
                               TextSpan(
                                 text: 'Terms of Service',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.blue,
                                   fontWeight: FontWeight.w600,
                                 ),
+                                recognizer: TapGestureRecognizer()
+                                  ..onTap = () => _showContentDialog(
+                                      'Terms of Service', 'terms'),
                               ),
-                              TextSpan(text: ' and '),
+                              const TextSpan(text: ' and '),
                               TextSpan(
                                 text: 'Privacy Policy',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.blue,
                                   fontWeight: FontWeight.w600,
                                 ),
+                                recognizer: TapGestureRecognizer()
+                                  ..onTap = () => _showContentDialog(
+                                      'Privacy Policy', 'privacy'),
                               ),
                             ],
                           ),
@@ -434,28 +614,6 @@ class _LoginScreenState extends State<LoginScreen>
                         ),
 
                         const SizedBox(height: 28),
-
-                        // Bottom text
-                        Center(
-                          child: Text.rich(
-                            const TextSpan(
-                              text: "Don't have an account? ",
-                              style: TextStyle(color: AppTheme.textSecondary),
-                              children: [
-                                TextSpan(
-                                  text: 'Sign up',
-                                  style: TextStyle(
-                                    color: Colors.blue,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-
-                        const SizedBox(height: 12),
                       ],
                     ),
                   ),

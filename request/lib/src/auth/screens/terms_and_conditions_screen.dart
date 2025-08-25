@@ -161,10 +161,18 @@ If you have questions about this Privacy Policy, please contact us.
   }
 
   String _getPreviewText(String content) {
-    // Remove markdown headers and get first few lines
-    final lines = content
+    // Remove HTML tags and markdown headers, get first few lines
+    String cleanContent = content
+        .replaceAll(RegExp(r'<[^>]*>'), '') // Remove HTML tags
+        .replaceAll(RegExp(r'#{1,6}\s*'), '') // Remove markdown headers
+        .replaceAll(RegExp(r'\*\*([^*]*)\*\*'), r'$1') // Remove bold markdown
+        .replaceAll(RegExp(r'\*([^*]*)\*'), r'$1') // Remove italic markdown
+        .replaceAll(RegExp(r'\n\s*\n'), '\n') // Remove extra newlines
+        .trim();
+
+    final lines = cleanContent
         .split('\n')
-        .where((line) => line.trim().isNotEmpty && !line.startsWith('#'))
+        .where((line) => line.trim().isNotEmpty)
         .take(3)
         .join(' ');
 
@@ -174,6 +182,17 @@ If you have questions about this Privacy Policy, please contact us.
     return lines;
   }
 
+  String _getFullCleanText(String content) {
+    // Clean the full content for display (remove HTML tags but keep formatting)
+    return content
+        .replaceAll(RegExp(r'<[^>]*>'), '') // Remove HTML tags
+        .replaceAll(RegExp(r'#{1,6}\s*'), '') // Remove markdown headers
+        .replaceAll(RegExp(r'\*\*([^*]*)\*\*'), r'$1') // Remove bold markdown
+        .replaceAll(RegExp(r'\*([^*]*)\*'), r'$1') // Remove italic markdown
+        .replaceAll(RegExp(r'\n\s*\n'), '\n\n') // Normalize paragraph breaks
+        .trim();
+  }
+
   void _viewFullContent(String title, String content) {
     // Use a simple dialog to show the full content with proper Glass theme styling
     showDialog(
@@ -181,15 +200,12 @@ If you have questions about this Privacy Policy, please contact us.
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
         child: Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.8,
+            maxWidth: MediaQuery.of(context).size.width * 0.9,
+          ),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                GlassTheme.colors.glassBackground.first,
-                GlassTheme.colors.glassBackground.last,
-              ],
-            ),
+            color: GlassTheme.colors.glassBackground.first,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: GlassTheme.colors.glassBorder,
@@ -203,32 +219,26 @@ If you have questions about this Privacy Policy, please contact us.
               ),
             ],
           ),
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.8,
-            maxWidth: MediaQuery.of(context).size.width * 0.9,
-          ),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             children: [
               // Header
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color: GlassTheme.colors.glassBorder.withOpacity(0.3),
-                    ),
+                  color: GlassTheme.colors.primaryBlue.withOpacity(0.1),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
                   ),
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
                       child: Text(
                         title,
                         style: TextStyle(
                           fontSize: 20,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.bold,
                           color: GlassTheme.colors.textPrimary,
                         ),
                       ),
@@ -244,15 +254,15 @@ If you have questions about this Privacy Policy, please contact us.
                 ),
               ),
               // Content
-              Flexible(
+              Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(20),
                   child: Text(
-                    content,
+                    _getFullCleanText(content), // Show cleaned full content
                     style: TextStyle(
-                      fontSize: 14,
+                      color: GlassTheme.colors.textPrimary,
+                      fontSize: 16,
                       height: 1.6,
-                      color: GlassTheme.colors.textSecondary,
                     ),
                   ),
                 ),
@@ -290,18 +300,19 @@ If you have questions about this Privacy Policy, please contact us.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              GlassTheme.colors.primaryBlue.withOpacity(0.1),
-              GlassTheme.colors.glassBackground.first.withOpacity(0.8),
-              GlassTheme.colors.primaryPurple.withOpacity(0.1),
-            ],
-          ),
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        title: const Text('Terms & Privacy'),
+        centerTitle: false,
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        foregroundColor: GlassTheme.colors.textPrimary,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: GlassTheme.backgroundGradient,
         ),
+      ),
+      body: GlassTheme.backgroundContainer(
         child: SafeArea(
           child: _loading
               ? const Center(
@@ -312,25 +323,26 @@ If you have questions about this Privacy Policy, please contact us.
                   child: SlideTransition(
                     position: _slideAnimation,
                     child: Padding(
-                      padding: const EdgeInsets.all(24.0),
+                      padding: const EdgeInsets.all(16.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Header
+                          // Welcome message card
                           Container(
-                            padding: const EdgeInsets.all(24),
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
                               color: GlassTheme.colors.glassBackground.first,
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                                 color: GlassTheme.colors.glassBorder,
                                 width: 1,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 8),
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
                                 ),
                               ],
                             ),
@@ -338,9 +350,9 @@ If you have questions about this Privacy Policy, please contact us.
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Terms & Privacy',
+                                  'Terms & Privacy Agreement',
                                   style: TextStyle(
-                                    fontSize: 28,
+                                    fontSize: 20,
                                     fontWeight: FontWeight.bold,
                                     color: GlassTheme.colors.textPrimary,
                                   ),
@@ -349,7 +361,7 @@ If you have questions about this Privacy Policy, please contact us.
                                 Text(
                                   'Please review and accept our terms and privacy policy to continue',
                                   style: TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 14,
                                     color: GlassTheme.colors.textSecondary,
                                     height: 1.4,
                                   ),
@@ -358,7 +370,7 @@ If you have questions about this Privacy Policy, please contact us.
                             ),
                           ),
 
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 16),
 
                           // Content Cards
                           Expanded(
@@ -403,7 +415,7 @@ If you have questions about this Privacy Policy, please contact us.
                             ),
                           ),
 
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 16),
 
                           // Continue Button
                           Container(
@@ -528,7 +540,7 @@ If you have questions about this Privacy Policy, please contact us.
                   .withOpacity(0.3),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: GlassTheme.colors.glassBorderSubtle.withOpacity(0.5),
+                color: GlassTheme.colors.glassBorder.withOpacity(0.5),
               ),
             ),
             child: Text(
