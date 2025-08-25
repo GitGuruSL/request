@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../theme/glass_theme.dart';
 import '../../services/content_service.dart';
-import '../../screens/content_page_screen.dart';
 
 class TermsAndConditionsScreen extends StatefulWidget {
   const TermsAndConditionsScreen({super.key});
@@ -163,12 +162,90 @@ If you have questions about this Privacy Policy, please contact us.
   }
 
   void _viewFullContent(String title, String content) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => _FullContentScreen(
-          title: title,
-          content: content,
+    // Use a simple dialog to show the full content with proper Glass theme styling
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                GlassTheme.colors.glassBackground.first,
+                GlassTheme.colors.glassBackground.last,
+              ],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: GlassTheme.colors.glassBorder,
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.8,
+            maxWidth: MediaQuery.of(context).size.width * 0.9,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: GlassTheme.colors.glassBorder.withOpacity(0.3),
+                    ),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: GlassTheme.colors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(
+                        Icons.close,
+                        color: GlassTheme.colors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Content
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Text(
+                    content,
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.6,
+                      color: GlassTheme.colors.textSecondary,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
