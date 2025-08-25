@@ -24,9 +24,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           surfaceTintColor: Colors.transparent,
           systemOverlayStyle: SystemUiOverlayStyle(
             statusBarColor: Colors.transparent,
-            statusBarIconBrightness: GlassTheme.isDarkMode
-                ? Brightness.light
-                : Brightness.dark,
+            statusBarIconBrightness:
+                GlassTheme.isDarkMode ? Brightness.light : Brightness.dark,
           ),
           leading: IconButton(
             icon: Icon(
@@ -108,52 +107,58 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildThemeSetting() {
     return GlassTheme.glassCard(
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: GlassTheme.colors.primaryPurple.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: GlassTheme.colors.primaryPurple.withOpacity(0.3),
-                width: 1,
+      child: InkWell(
+        onTap: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Theme settings coming soon!',
+                style: GlassTheme.bodyMedium.copyWith(color: Colors.white),
+              ),
+              backgroundColor: GlassTheme.colors.infoColor,
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(20),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: GlassTheme.colors.primaryPurple.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: GlassTheme.colors.primaryPurple.withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: Icon(
+                GlassTheme.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                color: GlassTheme.colors.primaryPurple,
+                size: 24,
               ),
             ),
-            child: Icon(
-              GlassTheme.isDarkMode ? Icons.dark_mode : Icons.light_mode,
-              color: GlassTheme.colors.primaryPurple,
-              size: 24,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Theme', style: GlassTheme.titleSmall),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Light and dark mode settings',
+                    style: GlassTheme.bodyMedium,
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Theme', style: GlassTheme.titleSmall),
-                const SizedBox(height: 2),
-                Text(
-                  GlassTheme.isDarkMode ? 'Dark mode' : 'Light mode',
-                  style: GlassTheme.bodyMedium,
-                ),
-              ],
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: GlassTheme.colors.textTertiary,
             ),
-          ),
-          Switch(
-            value: GlassTheme.isDarkMode,
-            onChanged: (value) {
-              setState(() {
-                GlassTheme.setTheme(value);
-              });
-            },
-            activeThumbColor: GlassTheme.colors.primaryPurple,
-            inactiveThumbColor: GlassTheme.colors.textTertiary,
-            inactiveTrackColor: GlassTheme.colors.textTertiary.withValues(
-              alpha: 0.3,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -277,7 +282,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return GlassTheme.glassCard(
       child: InkWell(
         onTap: () {
-          Navigator.pushNamed(context, '/privacy-policy');
+          // TODO: Navigate to privacy settings
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Privacy & Security settings coming soon!',
+                style: GlassTheme.bodyMedium.copyWith(color: Colors.white),
+              ),
+              backgroundColor: GlassTheme.colors.infoColor,
+            ),
+          );
         },
         borderRadius: BorderRadius.circular(20),
         child: Row(

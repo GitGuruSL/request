@@ -121,19 +121,20 @@ class GlassTheme {
 
   // Glass effect decorations
   static BoxDecoration get glassContainer => BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: colors.glassBackground,
-        ),
+        color: Colors.white, // Solid white background
+        // gradient: LinearGradient(
+        //   begin: Alignment.topLeft,
+        //   end: Alignment.bottomRight,
+        //   colors: colors.glassBackground,
+        // ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: colors.glassBorder,
+          color: const Color(0xFFE5E7EB), // Light gray border
           width: 1.0,
         ),
         boxShadow: [
           BoxShadow(
-            color: colors.shadowPrimary,
+            color: Colors.black.withOpacity(0.1), // Subtle shadow
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -141,19 +142,20 @@ class GlassTheme {
       );
 
   static BoxDecoration get glassContainerSubtle => BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: colors.glassBackgroundSubtle,
-        ),
+        color: Colors.white, // Solid white background
+        // gradient: LinearGradient(
+        //   begin: Alignment.topLeft,
+        //   end: Alignment.bottomRight,
+        //   colors: colors.glassBackgroundSubtle,
+        // ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: colors.glassBorderSubtle,
+          color: const Color(0xFFE5E7EB), // Light gray border
           width: 1.0,
         ),
         boxShadow: [
           BoxShadow(
-            color: colors.shadowPrimary,
+            color: Colors.black.withOpacity(0.08), // Subtle shadow
             blurRadius: 6,
             offset: const Offset(0, 1),
           ),
@@ -185,11 +187,12 @@ class GlassTheme {
 
   // Background gradient
   static BoxDecoration get backgroundGradient => BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: colors.primaryGradient,
-        ),
+        color: const Color(0xFFF5F5F5), // Solid light gray background
+        // gradient: LinearGradient(
+        //   begin: Alignment.topCenter,
+        //   end: Alignment.bottomCenter,
+        //   colors: colors.primaryGradient,
+        // ),
       );
 
   // Text styles
