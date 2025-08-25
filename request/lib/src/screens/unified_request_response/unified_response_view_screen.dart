@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../theme/glass_theme.dart';
+import '../../widgets/glass_page.dart';
 import '../../models/request_model.dart';
 import '../../models/enhanced_user_model.dart';
 import '../../services/enhanced_request_service.dart';
@@ -563,21 +565,14 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Response Details'),
-        ),
+      return GlassPage(
+        title: 'Response Details',
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Response to ${_getTypeDisplayName(widget.request.type)}'),
-        elevation: 0,
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        foregroundColor: Theme.of(context).textTheme.titleLarge?.color,
-      ),
+    return GlassPage(
+      title: 'Response to ${_getTypeDisplayName(widget.request.type)}',
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -599,12 +594,7 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
             const SizedBox(height: 24),
 
             // Responder information
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
+            GlassTheme.glassCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
