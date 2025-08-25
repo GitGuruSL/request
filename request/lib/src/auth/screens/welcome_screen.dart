@@ -557,7 +557,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                     FadeTransition(
                       opacity: _fadeAnimation,
                       child: Text(
-                        'Powered by Alphabet (Pvt) Ltd',
+                        'Powered by Request (Pvt) Ltd',
                         style: TextStyle(
                           fontSize: 12,
                           color: Theme.of(context)
