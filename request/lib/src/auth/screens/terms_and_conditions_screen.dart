@@ -163,15 +163,12 @@ If you have questions about this Privacy Policy, please contact us.
   }
 
   void _viewFullContent(String title, String content) {
-    // Create a temporary slug from the title for ContentPageScreen
-    final slug =
-        title.toLowerCase().replaceAll(' ', '-').replaceAll('&', 'and');
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ContentPageScreen(
-          slug: slug,
+        builder: (context) => _FullContentScreen(
           title: title,
+          content: content,
         ),
       ),
     );
