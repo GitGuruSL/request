@@ -99,21 +99,26 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       // Check if a country was already selected
       final existingCountryCode = _countryService.countryCode;
       if (existingCountryCode != null && mounted) {
-        // Country already selected, navigate directly to login
-        Navigator.of(context).pushReplacementNamed(
-          '/login',
-          arguments: {
-            'countryCode': existingCountryCode,
-            'phoneCode': _countryService.phoneCode,
-            'countryName': _countryService.countryName,
-          },
+        // Set the previously selected country but don't auto-navigate
+        // Find the country in the available countries list
+        final existingCountry = _availableCountries.firstWhere(
+          (country) => country.code == existingCountryCode,
+          orElse: () => Country(
+            code: existingCountryCode,
+            name: _countryService.countryName,
+            flagEmoji: '🌍',
+            phoneCode: _countryService.phoneCode,
+            isEnabled: true,
+          ),
         );
-        return;
+        setState(() {
+          _selectedCountry = existingCountry;
+        });
       }
     } catch (e) {
       debugPrint('Error checking existing country: $e');
     }
-    // No existing country, continue with country selection
+    // Always show the welcome screen for country selection
   }
 
   void _onCountrySelected(Country country) async {
