@@ -305,6 +305,7 @@ router.get('/search', async (req, res) => {
         mp.name as name,
         LOWER(REPLACE(mp.name, ' ', '-')) as slug,
         mp.base_unit as base_unit,
+        mp.images as images,
         NULL as brand_name,
         COUNT(pl.id) as listing_count,
         MIN(pl.price) as min_price,
@@ -338,7 +339,7 @@ router.get('/search', async (req, res) => {
     }
 
     searchQuery += `
-      GROUP BY mp.id, mp.name, mp.base_unit
+      GROUP BY mp.id, mp.name, mp.base_unit, mp.images
     `;
 
     // Order by listing count for popular products, or by name for search results
@@ -361,6 +362,7 @@ router.get('/search', async (req, res) => {
       name: row.name,
       slug: row.slug,
       baseUnit: row.base_unit,
+      images: row.images ? (Array.isArray(row.images) ? row.images : JSON.parse(row.images || '[]')) : [],
       brand: null,
       listingCount: parseInt(row.listing_count) || 0,
       priceRange: {

@@ -76,6 +76,25 @@ class MasterProduct {
   });
 
   factory MasterProduct.fromJson(Map<String, dynamic> json) {
+    // Handle price data from both old and new formats
+    double? minPrice, maxPrice, avgPrice;
+    int? listingCount;
+
+    if (json['priceRange'] != null) {
+      // New format with priceRange object
+      final priceRange = json['priceRange'] as Map<String, dynamic>;
+      minPrice = priceRange['min']?.toDouble();
+      maxPrice = priceRange['max']?.toDouble();
+      avgPrice = priceRange['avg']?.toDouble();
+      listingCount = json['listingCount'];
+    } else {
+      // Old format with direct price fields
+      minPrice = json['minPrice']?.toDouble();
+      maxPrice = json['maxPrice']?.toDouble();
+      avgPrice = json['avgPrice']?.toDouble();
+      listingCount = json['businessListingsCount'] ?? json['listingCount'];
+    }
+
     return MasterProduct(
       id: json['id'] ?? '',
       name: json['name'] ?? '',
@@ -90,16 +109,15 @@ class MasterProduct {
           DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
       updatedAt:
           DateTime.parse(json['updatedAt'] ?? DateTime.now().toIso8601String()),
-      businessListingsCount:
-          json['businessListingsCount'] ?? json['listingCount'] ?? 0,
+      businessListingsCount: listingCount ?? 0,
       // Price comparison fields
       slug: json['slug'],
       baseUnit: json['baseUnit'],
       brandName: json['brandName'],
-      listingCount: json['listingCount'],
-      minPrice: json['minPrice']?.toDouble(),
-      maxPrice: json['maxPrice']?.toDouble(),
-      avgPrice: json['avgPrice']?.toDouble(),
+      listingCount: listingCount,
+      minPrice: minPrice,
+      maxPrice: maxPrice,
+      avgPrice: avgPrice,
     );
   }
 
