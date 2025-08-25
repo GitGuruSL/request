@@ -541,87 +541,95 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
 
   Widget _buildMyPriceCard(dynamic listing) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 8),
       elevation: 0,
       color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.all(12),
+        child: Row(
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        listing.productName ?? 'Product',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        listing.brand ?? '',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    listing.productName ?? 'Product',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
+                  if (listing.brand?.isNotEmpty == true) ...[
+                    const SizedBox(height: 2),
                     Text(
-                      '${listing.currency ?? 'LKR'} ${listing.price?.toStringAsFixed(2) ?? '0.00'}',
+                      listing.brand,
                       style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: GlassTheme.colors.primaryBlue,
+                        fontSize: 12,
+                        color: Colors.grey[600],
                       ),
                     ),
+                  ],
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '${listing.currency ?? 'LKR'} ${listing.price?.toStringAsFixed(2) ?? '0.00'}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: GlassTheme.colors.primaryBlue,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
+                          horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: listing.isAvailable == true
                             ? Colors.green
                             : Colors.red,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         listing.isAvailable == true ? 'ACTIVE' : 'INACTIVE',
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 10,
+                          fontSize: 9,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: IconButton(
+                        onPressed: () => _editPrice(listing),
+                        icon: const Icon(Icons.edit, size: 16),
+                        color: GlassTheme.colors.primaryBlue,
+                        tooltip: 'Edit',
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
+                    SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: IconButton(
+                        onPressed: () => _deletePrice(listing),
+                        icon: const Icon(Icons.delete, size: 16),
+                        color: Colors.red,
+                        tooltip: 'Delete',
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
                   ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                IconButton(
-                  onPressed: () => _editPrice(listing),
-                  icon: const Icon(Icons.edit, size: 20),
-                  color: GlassTheme.colors.primaryBlue,
-                  tooltip: 'Edit',
-                ),
-                IconButton(
-                  onPressed: () => _deletePrice(listing),
-                  icon: const Icon(Icons.delete, size: 20),
-                  color: Colors.red,
-                  tooltip: 'Delete',
                 ),
               ],
             ),
