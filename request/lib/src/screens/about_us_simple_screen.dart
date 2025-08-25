@@ -61,9 +61,9 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
 
   // Minimal API base resolver mirroring ContentService logic
   String get _apiBaseUrl {
-    if (kIsWeb) return 'http://localhost:3001';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://localhost:3001';
+    if (kIsWeb) return 'https://api.alphabet.lk';
+    if (Platform.isAndroid) return 'https://api.alphabet.lk';
+    return 'https://api.alphabet.lk';
   }
 
   Future<String?> _resolveDisplayUrl(String url) async {

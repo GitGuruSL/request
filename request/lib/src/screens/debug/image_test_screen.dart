@@ -15,7 +15,7 @@ class _ImageTestScreenState extends State<ImageTestScreen> {
     'test.txt',
     '/uploads/images/test.txt',
     'uploads/images/test.txt',
-    'http://localhost:3001/uploads/images/test.html',
+    'http://api.alphabet.lk/uploads/images/test.html',
     'test.html',
     '/uploads/images/test.html',
 

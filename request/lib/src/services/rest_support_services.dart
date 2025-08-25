@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io' show Platform; // Safe for mobile builds
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -41,17 +40,8 @@ class CountryService {
     // 1. Compile-time define
     const defined = String.fromEnvironment('API_BASE_URL');
     if (defined.isNotEmpty) return defined;
-    // 2. Web: use current origin
-    if (kIsWeb) {
-      return Uri.base.origin.replaceFirst(RegExp(r'/+$'), '');
-    }
-    // 3. Android emulator special host mapping
-    try {
-      if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-      if (Platform.isIOS) return 'http://localhost:3001';
-    } catch (_) {/* ignore */}
-    // 4. Fallback
-    return 'http://localhost:3001';
+    // 2. Production URLs for all platforms
+    return 'https://api.alphabet.lk';
   }
 
   Future<List<Country>> getAllCountries({bool forceRefresh = false}) async {
