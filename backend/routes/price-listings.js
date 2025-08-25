@@ -55,28 +55,48 @@ async function getBusinessPaymentMethods(businessId) {
 async function formatPriceListing(row, includeBusiness = false) {
   if (!row) return null;
   
+  // Use staged data if available, otherwise use current data
+  const hasStaging = row.has_pending_changes;
+  
   const listing = {
     id: row.id,
     businessId: row.business_id,
     masterProductId: row.master_product_id,
     title: row.title,
     description: row.description,
-    price: parseFloat(row.price) || 0,
+    price: parseFloat(hasStaging ? row.staged_price : row.price) || 0,
     currency: row.currency || 'LKR',
     unit: row.unit,
     deliveryCharge: parseFloat(row.delivery_charge) || 0,
     images: row.images ? (Array.isArray(row.images) ? row.images : JSON.parse(row.images || '[]')) : [],
     website: row.website,
-    whatsapp: row.whatsapp,
+    whatsapp: hasStaging ? (row.staged_whatsapp_number || row.whatsapp) : row.whatsapp,
     cityId: row.city_id,
     countryCode: row.country_code,
-    isActive: row.is_active,
+    isActive: hasStaging ? row.staged_is_available : row.is_active,
+    isAvailable: hasStaging ? row.staged_is_available : row.is_available,
+    stockQuantity: hasStaging ? row.staged_stock_quantity : row.stock_quantity,
+    whatsappNumber: hasStaging ? (row.staged_whatsapp_number || row.whatsapp_number) : row.whatsapp_number,
+    productLink: hasStaging ? (row.staged_product_link || row.product_link) : row.product_link,
+    modelNumber: hasStaging ? (row.staged_model_number || row.model_number) : row.model_number,
     viewCount: row.view_count || 0,
     contactCount: row.contact_count || 0,
     createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    updatedAt: hasStaging ? row.staged_updated_at : row.updated_at,
+    // Add staging status information
+    hasPendingChanges: hasStaging,
+    stagingStatus: hasStaging ? 'pending' : 'active',
     // Add selectedVariables and subcategory fields
-    selectedVariables: row.selected_variables ? (typeof row.selected_variables === 'string' ? JSON.parse(row.selected_variables) : row.selected_variables) : {},
+    selectedVariables: hasStaging ? 
+      (row.staged_selected_variables ? 
+        (typeof row.staged_selected_variables === 'string' ? 
+          JSON.parse(row.staged_selected_variables) : row.staged_selected_variables) : 
+        (row.selected_variables ? 
+          (typeof row.selected_variables === 'string' ? 
+            JSON.parse(row.selected_variables) : row.selected_variables) : {})) :
+      (row.selected_variables ? 
+        (typeof row.selected_variables === 'string' ? 
+          JSON.parse(row.selected_variables) : row.selected_variables) : {}),
     subcategoryId: row.subcategory_id,
     categoryId: row.category_id
   };
@@ -128,7 +148,7 @@ router.get('/', async (req, res) => {
     let queryParams = [];
     let paramIndex = 1;
 
-    // Base query with business and product details
+    // Base query with business and product details, including staged prices
     let query = `
       SELECT 
         pl.*,
@@ -138,11 +158,24 @@ router.get('/', async (req, res) => {
         bv.business_name,
         bv.business_category,
         bv.is_verified as business_verified,
-        c.name as city_name
+        c.name as city_name,
+        ps.staged_price,
+        ps.staged_stock_quantity,
+        ps.staged_is_available,
+        ps.staged_whatsapp_number,
+        ps.staged_product_link,
+        ps.staged_model_number,
+        ps.staged_selected_variables,
+        ps.updated_at as staged_updated_at,
+        CASE 
+          WHEN ps.id IS NOT NULL AND ps.is_processed = false THEN true 
+          ELSE false 
+        END as has_pending_changes
       FROM price_listings pl
       LEFT JOIN country_products cp ON pl.master_product_id = cp.product_id
       LEFT JOIN business_verifications bv ON pl.business_id = bv.user_id
       LEFT JOIN cities c ON pl.city_id = c.id
+      LEFT JOIN price_staging ps ON pl.id = ps.price_listing_id AND ps.is_processed = false
     `;
 
     // Apply filters

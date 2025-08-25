@@ -32,6 +32,8 @@ class PriceStagingService {
    */
   async stagePriceUpdate(businessId, priceListingId, stagedData) {
     try {
+      console.log('DEBUG: stagePriceUpdate called with:', { businessId, priceListingId, stagedData });
+      
       // First check if the price listing belongs to this business
       const checkSql = `
         SELECT pl.*, mp.name as product_name
@@ -39,9 +41,21 @@ class PriceStagingService {
         JOIN master_products mp ON mp.id = pl.master_product_id
         WHERE pl.id = $1 AND pl.business_id = $2
       `;
+      console.log('DEBUG: Executing query with params:', [priceListingId, businessId]);
       const listingResult = await database.query(checkSql, [priceListingId, businessId]);
+      console.log('DEBUG: Query result rows:', listingResult.rows.length);
       
       if (listingResult.rows.length === 0) {
+        // Let's also check what business_id the price listing actually has
+        const debugSql = `
+          SELECT pl.business_id, pl.id, mp.name as product_name
+          FROM price_listings pl
+          JOIN master_products mp ON mp.id = pl.master_product_id
+          WHERE pl.id = $1
+        `;
+        const debugResult = await database.query(debugSql, [priceListingId]);
+        console.log('DEBUG: Price listing exists with business_id:', debugResult.rows);
+        
         throw new Error('Price listing not found or does not belong to this business');
       }
 

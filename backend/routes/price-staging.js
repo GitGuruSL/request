@@ -8,7 +8,9 @@ const router = express.Router();
 router.post('/stage', authService.authMiddleware(), async (req, res) => {
   try {
     const { priceListingId, price, stockQuantity, isAvailable, whatsappNumber, productLink, modelNumber, selectedVariables } = req.body;
-    const businessId = req.user.businessId || req.user.uid;
+    const businessId = req.user.businessId || req.user.uid || req.user.id;
+
+    console.log('DEBUG: Staging request - User:', req.user.id, 'BusinessId:', businessId, 'PriceListingId:', priceListingId);
 
     if (!priceListingId || !price) {
       return res.status(400).json({
