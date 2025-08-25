@@ -217,7 +217,7 @@ class RestAuthService {
   }) async {
     try {
       ApiResponse<Map<String, dynamic>> response;
-      
+
       if (isEmail) {
         // Use legacy email endpoint for now
         response = await _apiClient.post<Map<String, dynamic>>(
@@ -686,6 +686,53 @@ class RestAuthService {
       return AuthResult(
         success: false,
         error: 'Failed to complete profile: ${e.toString()}',
+      );
+    }
+  }
+
+  /// Change user password
+  Future<AuthResult> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      if (kDebugMode) {
+        print('🔐 [changePassword] Attempting to change password');
+      }
+
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        '/api/auth/change-password',
+        data: {
+          'currentPassword': currentPassword,
+          'newPassword': newPassword,
+        },
+      );
+
+      if (response.success && response.data != null) {
+        if (kDebugMode) {
+          print('✅ [changePassword] Password changed successfully');
+        }
+        return AuthResult(
+          success: true,
+          message: response.data!['message'] ?? 'Password changed successfully',
+        );
+      } else {
+        if (kDebugMode) {
+          print('❌ [changePassword] Failed: ${response.error}');
+        }
+        return AuthResult(
+          success: false,
+          error: response.error ?? 'Failed to change password',
+        );
+      }
+    } catch (e, stackTrace) {
+      if (kDebugMode) {
+        print('❌ [changePassword] Exception caught: $e');
+        print('❌ [changePassword] Stack trace: $stackTrace');
+      }
+      return AuthResult(
+        success: false,
+        error: 'Failed to change password: ${e.toString()}',
       );
     }
   }

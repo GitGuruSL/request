@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/glass_theme.dart';
+import '../services/auth_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -754,21 +755,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       setDialogState(() => isLoading = true);
 
                       try {
-                        // TODO: Implement password change API call
-                        await Future.delayed(
-                            const Duration(seconds: 2)); // Simulate API call
+                        // Call the password change API
+                        final result =
+                            await AuthService.instance.changePassword(
+                          currentPassword: currentPasswordController.text,
+                          newPassword: newPasswordController.text,
+                        );
 
                         if (context.mounted) {
                           Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Password changed successfully'),
-                              backgroundColor: Colors.green,
-                            ),
-                          );
+
+                          if (result.isSuccess) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(result.message ??
+                                    'Password changed successfully'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(result.error ??
+                                    'Failed to change password'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
                         }
                       } catch (e) {
                         if (context.mounted) {
+                          Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('Failed to change password: $e'),

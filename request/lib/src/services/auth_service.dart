@@ -11,4 +11,14 @@ class AuthService {
 
   Future<bool> isAuthenticated() => _rest.isAuthenticated();
   Future<void> signOut() => _rest.logout();
+
+  /// Change password
+  Future<AuthResult> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) =>
+      _rest.changePassword(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      );
 }
