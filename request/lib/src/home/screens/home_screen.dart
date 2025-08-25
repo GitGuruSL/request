@@ -398,10 +398,17 @@ class _HomeScreenState extends State<HomeScreen> {
                               setState(() => _currentBanner = i),
                           itemBuilder: (ctx, i) {
                             if (_remoteBanners.isNotEmpty) {
-                              return _NetworkBannerCard(
-                                  item: _remoteBanners[i]);
+                              return SizedBox.expand(
+                                child: _NetworkBannerCard(
+                                  item: _remoteBanners[i],
+                                ),
+                              );
                             }
-                            return _BannerCard(item: _defaultBanners[i]);
+                            return SizedBox.expand(
+                              child: _BannerCard(
+                                item: _defaultBanners[i],
+                              ),
+                            );
                           },
                         ),
                 ),
