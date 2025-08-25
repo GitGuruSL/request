@@ -681,56 +681,65 @@ class _QuickActionsGrid extends StatelessWidget {
       shrinkWrap: true,
       itemCount: items.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        childAspectRatio: 1.05,
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
+        crossAxisCount: 2,
+        childAspectRatio: 2.2,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
       ),
       itemBuilder: (ctx, i) {
         final it = items[i];
         final disabled = !moduleEnabled(it.type);
+        final title = it.title.split(' ').first; // concise title like "Item"
+        final textColor =
+            disabled ? const Color(0xFF9CA3AF) : AppTheme.textPrimary;
+        final subColor =
+            disabled ? const Color(0xFFB8BFC7) : AppTheme.textSecondary;
+
         return InkWell(
           onTap: disabled ? null : () => onTap(it),
           borderRadius: BorderRadius.circular(18),
           child: Container(
             decoration: GlassTheme.glassContainerDisabled(disabled: disabled),
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: disabled
-                        ? Colors.grey.withOpacity(0.1)
-                        : it.color.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: disabled
-                          ? Colors.grey.withOpacity(0.2)
-                          : it.color.withOpacity(0.3),
-                      width: 1,
-                    ),
-                  ),
-                  child: Icon(
-                    it.icon,
-                    color: disabled ? const Color(0xFF9CA3AF) : it.color,
-                    size: 26,
+                // Texts (title + subtitle)
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          color: textColor,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        it.subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: subColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  it.title.split(' ').first,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: disabled
-                        ? const Color(0xFF9CA3AF)
-                        : AppTheme.textPrimary,
-                    fontSize: 13,
-                  ),
-                )
+                const SizedBox(width: 8),
+                // Right illustration/icon (no white box)
+                Icon(
+                  it.icon,
+                  color: disabled ? const Color(0xFFCBD5E1) : it.color,
+                  size: 32,
+                ),
               ],
             ),
           ),
