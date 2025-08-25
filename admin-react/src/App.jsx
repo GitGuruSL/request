@@ -45,6 +45,7 @@ import DebugAuth from './components/DebugAuth';
 import SubscriptionPlansNew from './pages/SubscriptionPlansNew.jsx';
 import BusinessPriceManagement from './pages/BusinessPriceManagement';
 import PriceComparisonPage from './pages/PriceComparisonPage';
+import BannersModule from './pages/BannersModule.jsx';
 
 const theme = createTheme({
   palette: {
@@ -108,6 +109,8 @@ function App() {
               <Route path="promo-codes" element={<PromoCodes />} />
               <Route path="pages" element={<PagesModule />} />
               <Route path="centralized-pages" element={<CentralizedPagesModule />} />
+              <Route path="banners" element={<BannersModule />} />
+              <Route path="global-banners" element={<BannersModule />} />
               
               {/* Country Management Routes */}
               <Route path="country-products" element={<CountryProductManagement />} />

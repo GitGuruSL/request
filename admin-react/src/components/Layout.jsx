@@ -52,7 +52,8 @@ import {
   LocalOffer,
   Message,
   StoreMallDirectory,
-  Compare
+  Compare,
+  Image
 } from '@mui/icons-material';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -182,6 +183,8 @@ const Layout = () => {
     { text: 'Promo Codes', icon: <LocalOffer />, path: '/promo-codes', access: 'all', permission: 'promoCodeManagement' },
     { text: 'Page Management', icon: <Article />, path: '/pages', access: 'all', permission: 'countryPageManagement' },
     { text: 'Global Pages', icon: <Public />, path: '/centralized-pages', access: 'super_admin' },
+  { text: 'Banners', icon: <Image />, path: '/banners', access: 'country_admin' },
+  { text: 'Global Banners', icon: <Image />, path: '/global-banners', access: 'super_admin' },
     { text: 'Divider' },
     { text: 'Country Data', icon: <Public />, path: '/country-data', access: 'super_admin' },
     { text: 'City Management', icon: <LocationCity />, path: '/cities', access: 'all', permission: 'cityManagement' },
