@@ -125,15 +125,11 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: false
-  # Use adaptive icons for Android; legacy image_path optional
   image_path: "assets/icons/Logo.png"
   min_sdk_android: 21
-  remove_alpha_ios: true
-  adaptive_icon_background: "#ffffff"
+  adaptive_icon_background: "#0ABAB5"
   adaptive_icon_foreground: "assets/icons/Logo.png"
-  # Remove monochrome to prevent Android 13+ from theming/tinting the launcher icon
-  # If you later want a themed icon, add a single-color asset via `adaptive_icon_monochrome`
-  remove_existing_icons: true
+  remove_alpha_ios: true
   # web:
   #   generate: true
   #   image_path: "assets/icons/app_icon.png"
