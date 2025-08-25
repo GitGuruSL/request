@@ -3,6 +3,7 @@ const database = require('../services/database');
 const authService = require('../services/auth');
 const multer = require('multer');
 const path = require('path');
+const { getSignedUrl } = require('../services/s3Upload');
 
 const router = express.Router();
 
@@ -357,16 +358,31 @@ router.get('/search', async (req, res) => {
 
     const result = await database.query(searchQuery, queryParams);
     
-    const products = result.rows.map(row => {
+    const products = await Promise.all(result.rows.map(async (row) => {
       const images = row.images ? (Array.isArray(row.images) ? row.images : JSON.parse(row.images || '[]')) : [];
-      console.log(`DEBUG: Product "${row.name}" - Images:`, images);
+      console.log(`DEBUG: Product "${row.name}" - Raw Images:`, images);
+      
+      // Generate signed URLs for S3 images
+      const signedImages = await Promise.all(images.map(async (imageUrl) => {
+        try {
+          if (imageUrl && imageUrl.includes('s3.amazonaws.com')) {
+            const signedUrl = await getSignedUrl(imageUrl, 3600); // 1 hour expiry
+            console.log(`DEBUG: Generated signed URL for ${row.name}:`, signedUrl);
+            return signedUrl;
+          }
+          return imageUrl; // Return as-is if not an S3 URL
+        } catch (error) {
+          console.error(`Error generating signed URL for ${imageUrl}:`, error);
+          return imageUrl; // Fallback to original URL
+        }
+      }));
       
       return {
         id: row.id,
         name: row.name,
         slug: row.slug,
         baseUnit: row.base_unit,
-        images: images,
+        images: signedImages,
         brand: null,
         listingCount: parseInt(row.listing_count) || 0,
         priceRange: {
@@ -375,7 +391,7 @@ router.get('/search', async (req, res) => {
           avg: parseFloat(row.avg_price) || 0
         }
       };
-    });
+    }));
 
     res.json({
       success: true,
