@@ -33,6 +33,7 @@ class GlassPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
+      extendBody: true,
       appBar: AppBar(
         title: Text(title),
         centerTitle: centerTitle,
@@ -45,10 +46,10 @@ class GlassPage extends StatelessWidget {
               GlassTheme.isDarkMode ? Brightness.light : Brightness.dark,
           statusBarBrightness:
               GlassTheme.isDarkMode ? Brightness.dark : Brightness.light,
-          systemNavigationBarColor:
-              GlassTheme.isDarkMode ? const Color(0xFF121212) : Colors.white,
+          systemNavigationBarColor: Colors.transparent,
           systemNavigationBarIconBrightness:
               GlassTheme.isDarkMode ? Brightness.light : Brightness.dark,
+          systemNavigationBarDividerColor: Colors.transparent,
         ),
         actions: actions,
         leading: leading,
@@ -57,6 +58,7 @@ class GlassPage extends StatelessWidget {
       body: GlassTheme.backgroundContainer(
         child: SafeArea(
           top: true,
+          bottom: false,
           child: body,
         ),
       ),
