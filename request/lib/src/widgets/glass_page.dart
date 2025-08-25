@@ -10,6 +10,8 @@ class GlassPage extends StatelessWidget {
   final bool centerTitle;
   final PreferredSizeWidget? bottom;
   final Widget? bottomBar;
+  final Widget? floatingActionButton;
+  final FloatingActionButtonLocation? floatingActionButtonLocation;
 
   const GlassPage({
     super.key,
@@ -20,6 +22,8 @@ class GlassPage extends StatelessWidget {
     this.centerTitle = false,
     this.bottom,
     this.bottomBar,
+    this.floatingActionButton,
+    this.floatingActionButtonLocation,
   });
 
   @override
@@ -49,6 +53,8 @@ class GlassPage extends StatelessWidget {
         ),
       ),
       bottomNavigationBar: bottomBar,
+      floatingActionButton: floatingActionButton,
+      floatingActionButtonLocation: floatingActionButtonLocation,
     );
   }
 }

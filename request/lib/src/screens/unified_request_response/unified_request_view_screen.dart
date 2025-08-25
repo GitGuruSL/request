@@ -673,6 +673,45 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
       );
     }
     final r = _request!;
+    final fab = () {
+      // Check if current user has a response
+      final currentUserId = RestAuthService.instance.currentUser?.uid;
+      rest.ResponseModel? myResponse;
+      if (currentUserId != null) {
+        for (final resp in _responses) {
+          if (resp.userId == currentUserId) {
+            myResponse = resp;
+            break;
+          }
+        }
+      }
+
+      // If user has a response, show edit button
+      if (myResponse != null) {
+        return FloatingActionButton.extended(
+          onPressed: () => _navigateToResponseEdit(myResponse!),
+          backgroundColor: _getTypeColor(_getCurrentRequestType()),
+          foregroundColor: Colors.white,
+          icon: const Icon(Icons.edit),
+          label: const Text('Edit'),
+        );
+      }
+
+      // If user can respond but hasn't yet, show respond button
+      if (_canRespond) {
+        return FloatingActionButton.extended(
+          onPressed: _openCreateResponseSheet,
+          backgroundColor: _getTypeColor(_getCurrentRequestType()),
+          foregroundColor: Colors.white,
+          icon: const Icon(Icons.reply),
+          label: const Text('Respond'),
+        );
+      }
+
+      // No floating action button
+      return null;
+    }();
+
     return GlassPage(
       title: r.title.isNotEmpty ? r.title : 'Request',
       actions: [
@@ -1083,44 +1122,7 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
           ]),
         ),
       ),
-      floatingActionButton: () {
-        // Check if current user has a response
-        final currentUserId = RestAuthService.instance.currentUser?.uid;
-        rest.ResponseModel? myResponse;
-        if (currentUserId != null) {
-          for (final resp in _responses) {
-            if (resp.userId == currentUserId) {
-              myResponse = resp;
-              break;
-            }
-          }
-        }
-
-        // If user has a response, show edit button
-        if (myResponse != null) {
-          return FloatingActionButton.extended(
-            onPressed: () => _navigateToResponseEdit(myResponse!),
-            backgroundColor: _getTypeColor(_getCurrentRequestType()),
-            foregroundColor: Colors.white,
-            icon: const Icon(Icons.edit),
-            label: const Text('Edit'),
-          );
-        }
-
-        // If user can respond but hasn't yet, show respond button
-        if (_canRespond) {
-          return FloatingActionButton.extended(
-            onPressed: _openCreateResponseSheet,
-            backgroundColor: _getTypeColor(_getCurrentRequestType()),
-            foregroundColor: Colors.white,
-            icon: const Icon(Icons.reply),
-            label: const Text('Respond'),
-          );
-        }
-
-        // No floating action button
-        return null;
-      }(),
+      floatingActionButton: fab,
     );
   }
 
