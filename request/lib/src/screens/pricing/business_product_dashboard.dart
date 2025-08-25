@@ -296,6 +296,22 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
             foregroundColor: GlassTheme.colors.textPrimary,
             title: Text('Find Products', style: GlassTheme.titleLarge),
             elevation: 0,
+            actions: [
+              IconButton(
+                onPressed: () async {
+                  await _loadData();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Data refreshed'),
+                      backgroundColor: Colors.green,
+                      duration: Duration(seconds: 1),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.refresh),
+                tooltip: 'Refresh data',
+              ),
+            ],
             bottom: TabBar(
               labelColor: GlassTheme.colors.textPrimary,
               unselectedLabelColor: GlassTheme.colors.textSecondary,
@@ -1388,15 +1404,29 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
 
     if (confirmed == true) {
       try {
-        await _pricingService.deletePriceListing(
+        final success = await _pricingService.deletePriceListing(
             listing.id, listing.masterProductId);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Price deleted successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        await _loadData(); // Refresh data
+
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Price deleted successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          // Delete failed - this could be due to stale data
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'Price listing not found or already deleted. Refreshing data...'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+
+        // Always refresh data after a delete attempt to sync with server
+        await _loadData();
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1404,6 +1434,8 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
             backgroundColor: Colors.red,
           ),
         );
+        // Refresh data even on error to sync with server
+        await _loadData();
       }
     }
   }
