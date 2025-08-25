@@ -67,6 +67,7 @@ const testImageRoutes = require('./routes/test-images'); // TEST
 const subscriptionPlansLegacy = require('./routes/subscription-plans-legacy');
 const subscriptionPlansNew = require('./routes/subscription-plans-new');
 const contentPagesRoutes = require('./routes/content-pages');
+const bannersRoutes = require('./routes/banners'); // NEW - banners CRUD
 console.log('🔧 About to require driver-verifications route');
 const driverVerificationRoutes = require('./routes/driver-verifications'); // NEW
 console.log('🔧 About to require business-verifications route');
@@ -133,6 +134,7 @@ app.use('/api/country-variable-types', countryVariableTypesRoutes);
 app.use('/api/price-listings', priceListingsRoutes);
 app.use('/api/payment-methods', paymentMethodsRoutes);
 app.use('/api/s3', s3Routes);
+app.use('/api/banners', bannersRoutes); // NEW - banners CRUD
 
 app.use('/api/upload', uploadRoutes); // NEW - image upload endpoint
 app.use('/api/uploads', uploadRoutes); // Alias to support admin-react '/uploads/payment-methods'
