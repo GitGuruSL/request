@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Box, Typography, Button, Grid, Card, CardMedia, CardContent, TextField, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Switch, Alert, CircularProgress } from '@mui/material';
+import React, { useEffect, useRef, useState } from 'react';
+import { Box, Typography, Button, Grid, Card, CardMedia, CardContent, TextField, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Switch, Alert, CircularProgress, Stack } from '@mui/material';
 import api from '../services/apiClient';
 import useCountryFilter from '../hooks/useCountryFilter';
 
@@ -10,6 +10,8 @@ export default function BannersModule() {
   const [error, setError] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState({ id: null, title: '', subtitle: '', imageUrl: '', linkUrl: '', active: true, priority: 0 });
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
 
   const country = isSuperAdmin ? null : (adminData?.country || userCountry || 'LK');
 
@@ -71,6 +73,36 @@ export default function BannersModule() {
     }
   };
 
+  const onClickUpload = () => fileInputRef.current?.click();
+
+  const onFileSelected = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploading(true);
+      setError('');
+      const fd = new FormData();
+      fd.append('image', file);
+      // Backend single-image endpoint mounted at /api/upload
+      const res = await api.post('/upload', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const url = res.data?.url;
+      if (url) {
+        setForm((f) => ({ ...f, imageUrl: url }));
+      } else {
+        setError('Upload succeeded but no URL was returned');
+      }
+    } catch (err) {
+      console.error('Upload failed', err);
+      setError(err.response?.data?.error || 'Failed to upload image');
+    } finally {
+      setUploading(false);
+      // reset input to allow re-selecting same file
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
@@ -112,10 +144,42 @@ export default function BannersModule() {
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
             <TextField label="Title" value={form.title} onChange={(e)=>setForm({...form, title: e.target.value})} fullWidth />
             <TextField label="Subtitle" value={form.subtitle} onChange={(e)=>setForm({...form, subtitle: e.target.value})} fullWidth />
-            <TextField label="Image URL" value={form.imageUrl} onChange={(e)=>setForm({...form, imageUrl: e.target.value})} fullWidth placeholder="https://..." />
+            <Stack direction="row" spacing={1} alignItems="center">
+              <TextField
+                label="Image URL"
+                value={form.imageUrl}
+                onChange={(e)=>setForm({...form, imageUrl: e.target.value})}
+                fullWidth
+                placeholder="https://..."
+                helperText="Recommended: 3:1 ratio (e.g., 1200x400 or 1500x500), JPG/PNG/WEBP under 5MB"
+              />
+              <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                style={{ display: 'none' }}
+                onChange={onFileSelected}
+              />
+              <Button onClick={onClickUpload} disabled={uploading} variant="outlined">
+                {uploading ? <CircularProgress size={20} /> : 'Upload'}
+              </Button>
+            </Stack>
+            {form.imageUrl && (
+              <Card variant="outlined" sx={{ mt: 1 }}>
+                <CardMedia
+                  component="img"
+                  height="120"
+                  image={form.imageUrl}
+                  alt="Banner preview"
+                />
+              </Card>
+            )}
             <TextField label="Link URL (optional)" value={form.linkUrl} onChange={(e)=>setForm({...form, linkUrl: e.target.value})} fullWidth placeholder="/price-listings or https://..." />
             <TextField type="number" label="Priority" value={form.priority} onChange={(e)=>setForm({...form, priority: e.target.value})} fullWidth />
             <FormControlLabel control={<Switch checked={form.active} onChange={(e)=>setForm({...form, active: e.target.checked})} />} label="Active" />
+            <Typography variant="caption" color="text.secondary">
+              Tip: The mobile app displays banners at ~140dp height with BoxFit.cover. Use a wide image with safe margins; avoid important text near edges.
+            </Typography>
           </Box>
         </DialogContent>
         <DialogActions>
