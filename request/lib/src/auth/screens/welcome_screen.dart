@@ -106,7 +106,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           orElse: () => Country(
             code: existingCountryCode,
             name: _countryService.countryName,
-            flagEmoji: '🌍',
+            flagEmoji: null, // Don't show fallback globe
             phoneCode: _countryService.phoneCode,
             isEnabled: true,
           ),
@@ -517,8 +517,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                     _onCountrySelected(_selectedCountry!);
                                   },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  Theme.of(context).colorScheme.primary,
+                              backgroundColor: GlassTheme.colors.primaryBlue,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
