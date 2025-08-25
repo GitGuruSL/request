@@ -206,6 +206,68 @@ class _HomeScreenState extends State<HomeScreen> {
       : s.length == 1
           ? s.toUpperCase()
           : s[0].toUpperCase() + s.substring(1);
+
+  Widget _buildModernGreeting() {
+    final userName = _greetingName();
+    final hour = DateTime.now().hour;
+    String greeting;
+    IconData greetingIcon;
+
+    if (hour >= 5 && hour < 12) {
+      greeting = 'Good morning';
+      greetingIcon = Icons.wb_sunny_outlined;
+    } else if (hour >= 12 && hour < 17) {
+      greeting = 'Good afternoon';
+      greetingIcon = Icons.wb_sunny;
+    } else if (hour >= 17 && hour < 21) {
+      greeting = 'Good evening';
+      greetingIcon = Icons.brightness_3;
+    } else {
+      greeting = 'Good night';
+      greetingIcon = Icons.brightness_2;
+    }
+
+    return Row(
+      children: [
+        // Simple greeting text
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    greetingIcon,
+                    size: 16,
+                    color: AppTheme.textSecondary,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    greeting,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                userName.isNotEmpty ? userName : 'User',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
   // Quick create bottom sheet removed from Home.
 
   bool _moduleEnabled(String type) {
@@ -285,12 +347,7 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        title: Text(
-          'Hello, ${_greetingName()}!',
-          style: GlassTheme.titleLarge.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        title: _buildModernGreeting(),
         actions: [
           Stack(
             children: [
