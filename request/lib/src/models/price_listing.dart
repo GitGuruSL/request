@@ -89,6 +89,13 @@ class PriceListing {
     final methods = (pmList ?? [])
         .map((e) => PaymentMethodRef.fromJson(e as Map<String, dynamic>))
         .toList();
+
+    // Parse staging data
+    final hasPending =
+        json['hasPendingChanges'] ?? json['has_pending_changes'] ?? false;
+    final stagingStatus =
+        json['stagingStatus'] ?? json['staging_status'] ?? 'active';
+
     return PriceListing(
       id: json['id'] ?? '',
       businessId: json['business_id'] ?? json['businessId'] ?? '',
@@ -123,10 +130,8 @@ class PriceListing {
       country: json['country_code'] ?? json['country'],
       countryName: json['countryName'],
       paymentMethods: methods,
-      hasPendingChanges:
-          json['hasPendingChanges'] ?? json['has_pending_changes'] ?? false,
-      stagingStatus:
-          json['stagingStatus'] ?? json['staging_status'] ?? 'active',
+      hasPendingChanges: hasPending,
+      stagingStatus: stagingStatus,
     );
   }
 

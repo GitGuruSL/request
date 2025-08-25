@@ -93,14 +93,14 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
   Future<void> _loadMyPriceListings() async {
     setState(() => _isLoadingMyPrices = true);
     try {
-      // Try multiple ways to get the user ID
-      String? userId = _userService.currentUser?.uid;
+      // Get the correct database user ID from the authenticated user
+      String? userId = RestAuthService.instance.currentUser?.id;
 
       if (userId == null) {
-        // Try getting from auth service
-        final authUser = RestAuthService.instance.currentUser;
+        // Fallback to enhanced user service
+        final authUser = _userService.currentUser;
         userId = authUser?.id;
-        print('DEBUG: Got user ID from auth service: $userId');
+        print('DEBUG: Got user ID from enhanced user service: $userId');
       }
 
       if (userId == null) {
@@ -113,6 +113,13 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
       await for (final listings
           in _pricingService.getBusinessPriceListings(userId).take(1)) {
         print('DEBUG: Loaded ${listings.length} price listings');
+
+        // Debug staging status for each listing
+        for (var listing in listings) {
+          print(
+              'DEBUG: Listing ${listing.productName} - hasPendingChanges: ${listing.hasPendingChanges}, stagingStatus: ${listing.stagingStatus}, price: ${listing.price}');
+        }
+
         setState(() {
           _myPriceListings = listings;
           _isLoadingMyPrices = false;
@@ -603,7 +610,7 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                         listing.hasPendingChanges
                             ? 'PENDING'
                             : (listing.isAvailable == true
-                                ? 'ACTIVE'
+                                ? 'LIVE'
                                 : 'INACTIVE'),
                         style: const TextStyle(
                           color: Colors.white,
