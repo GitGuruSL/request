@@ -26,7 +26,6 @@ import 'src/screens/content_page_screen.dart';
 import 'src/screens/legal_page_screen.dart';
 import 'src/screens/privacy_policy_screen.dart';
 import 'src/screens/terms_conditions_screen.dart';
-import 'src/auth/screens/terms_and_conditions_screen.dart';
 import 'src/theme/app_theme.dart';
 import 'src/screens/chat/chat_conversations_screen.dart';
 import 'src/screens/notification_screen.dart';
@@ -225,17 +224,6 @@ class MyApp extends StatelessWidget {
           case '/terms-conditions':
             return MaterialPageRoute(
               builder: (context) => const TermsConditionsScreen(),
-            );
-          case '/terms-acceptance':
-            final args = settings.arguments as Map<String, dynamic>?;
-            return MaterialPageRoute(
-              builder: (context) => TermsAndConditionsScreen(
-                emailOrPhone: args?['emailOrPhone'],
-                isNewUser: args?['isNewUser'],
-                isEmail: args?['isEmail'],
-                countryCode: args?['countryCode'],
-                otpToken: args?['otpToken'],
-              ),
             );
           case '/legal':
             return MaterialPageRoute(
