@@ -755,9 +755,30 @@ class _ProductCard extends StatelessWidget {
       width: 170,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         child: Container(
-          decoration: GlassTheme.glassContainer,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 20,
+                offset: const Offset(0, 4),
+                spreadRadius: 0,
+              ),
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 6,
+                offset: const Offset(0, 1),
+                spreadRadius: 0,
+              ),
+            ],
+            border: Border.all(
+              color: Colors.grey.shade100,
+              width: 1,
+            ),
+          ),
           padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -769,43 +790,61 @@ class _ProductCard extends StatelessWidget {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        Colors.white.withOpacity(0.7),
-                        Colors.white.withOpacity(0.5),
+                        Colors.grey.shade50,
+                        Colors.grey.shade100,
                       ],
                     ),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.4),
-                      width: 1,
-                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(16),
                     child: product.images.isNotEmpty
-                        ? Image.network(
-                            product.images.first,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: double.infinity,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Center(
-                                child: Icon(Icons.inventory_2,
-                                    size: 38, color: Color(0xFF6366F1)),
-                              );
-                            },
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return const Center(
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
+                        ? Stack(
+                            children: [
+                              Image.network(
+                                product.images.first,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: double.infinity,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return _buildModernPlaceholder();
+                                },
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return _buildModernPlaceholder(
+                                      isLoading: true);
+                                },
+                              ),
+                              // Subtle overlay for better text readability if needed
+                              Positioned(
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                child: Container(
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.bottomCenter,
+                                      end: Alignment.topCenter,
+                                      colors: [
+                                        Colors.black.withOpacity(0.1),
+                                        Colors.transparent,
+                                      ],
+                                    ),
+                                  ),
                                 ),
-                              );
-                            },
+                              ),
+                            ],
                           )
-                        : const Center(
-                            child: Icon(Icons.inventory_2,
-                                size: 38, color: Color(0xFF6366F1)),
-                          ),
+                        : _buildModernPlaceholder(),
                   ),
                 ),
               ),
@@ -831,22 +870,31 @@ class _ProductCard extends StatelessWidget {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: GlassTheme.colors.primaryBlue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: GlassTheme.colors.primaryBlue.withOpacity(0.2),
-                    width: 1,
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF6366F1),
+                      const Color(0xFF8B5CF6),
+                    ],
                   ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF6366F1).withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: Text(
                   _formatPriceRange(context, product),
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontWeight: FontWeight.w700,
-                    color: GlassTheme.colors.primaryBlue,
+                    color: Colors.white,
                     fontSize: 12,
                   ),
                 ),
@@ -854,6 +902,73 @@ class _ProductCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildModernPlaceholder({bool isLoading = false}) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.grey.shade50,
+            Colors.grey.shade100,
+          ],
+        ),
+      ),
+      child: Stack(
+        children: [
+          // Modern geometric pattern background
+          Positioned.fill(
+            child: CustomPaint(
+              painter: _GeometricPatternPainter(),
+            ),
+          ),
+          // Center content
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (isLoading)
+                  const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(Color(0xFF6366F1)),
+                    ),
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6366F1).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.shopping_bag_outlined,
+                      size: 32,
+                      color: Color(0xFF6366F1),
+                    ),
+                  ),
+                if (!isLoading) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'No Image',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -866,6 +981,48 @@ class _ProductCard extends StatelessWidget {
     if (min == max) return cs.formatPrice(min);
     return '${cs.formatPrice(min)} - ${cs.formatPrice(max)}';
   }
+}
+
+class _GeometricPatternPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.grey.shade200.withOpacity(0.3)
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke;
+
+    // Draw subtle geometric pattern
+    final step = size.width / 6;
+    for (int i = 0; i < 7; i++) {
+      for (int j = 0; j < 7; j++) {
+        final x = i * step;
+        final y = j * step;
+
+        // Draw small circles
+        canvas.drawCircle(
+          Offset(x, y),
+          2,
+          paint
+            ..style = PaintingStyle.fill
+            ..color = Colors.grey.shade200.withOpacity(0.2),
+        );
+
+        // Draw connecting lines
+        if (i < 6) {
+          canvas.drawLine(
+            Offset(x + 2, y),
+            Offset(x + step - 2, y),
+            paint
+              ..style = PaintingStyle.stroke
+              ..color = Colors.grey.shade200.withOpacity(0.1),
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 // Removed _RequestTypeTile (legacy bottom sheet entry).
