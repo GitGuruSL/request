@@ -11,15 +11,14 @@ class ApiClient {
   // Platform-specific base URLs
   static String get _baseUrl {
     if (kIsWeb) {
-      return 'https://api.alphabet.lk'; // Production Web
+      return 'http://54.144.9.22:3001'; // EC2 with port 3001
     } else if (Platform.isAndroid) {
-      // For production release
-      return 'https://api.alphabet.lk';
-      // For development: return 'http://10.0.2.2:3001'; // Android emulator
+      // For testing with EC2
+      return 'http://54.144.9.22:3001'; // EC2 with port 3001
     } else if (Platform.isIOS) {
-      return 'https://api.alphabet.lk'; // Production iOS
+      return 'http://54.144.9.22:3001'; // EC2 with port 3001
     } else {
-      return 'https://api.alphabet.lk'; // Production Desktop/other
+      return 'http://54.144.9.22:3001'; // EC2 with port 3001
     }
   }
 
