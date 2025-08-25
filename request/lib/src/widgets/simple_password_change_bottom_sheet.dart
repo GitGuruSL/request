@@ -172,11 +172,23 @@ class _SimplePasswordChangeBottomSheetState
           TextField(
             controller: _newPasswordController,
             obscureText: !_isNewPasswordVisible,
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.black87, // Dark text for visibility
+              fontWeight: FontWeight.w500,
+            ),
             decoration: InputDecoration(
               labelText: 'New Password',
               hintText: 'Enter new password',
+              labelStyle: TextStyle(
+                color: GlassTheme.colors.primaryBlue,
+                fontWeight: FontWeight.w500,
+              ),
+              hintStyle: TextStyle(
+                color: Colors.grey[500],
+              ),
               filled: true,
-              fillColor: Colors.white.withOpacity(0.9),
+              fillColor: Colors.white,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: GlassTheme.colors.primaryBlue),
@@ -217,11 +229,23 @@ class _SimplePasswordChangeBottomSheetState
           TextField(
             controller: _confirmPasswordController,
             obscureText: !_isConfirmPasswordVisible,
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.black87, // Dark text for visibility
+              fontWeight: FontWeight.w500,
+            ),
             decoration: InputDecoration(
               labelText: 'Confirm Password',
               hintText: 'Confirm new password',
+              labelStyle: TextStyle(
+                color: GlassTheme.colors.primaryBlue,
+                fontWeight: FontWeight.w500,
+              ),
+              hintStyle: TextStyle(
+                color: Colors.grey[500],
+              ),
               filled: true,
-              fillColor: Colors.white.withOpacity(0.9),
+              fillColor: Colors.white,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: GlassTheme.colors.primaryBlue),
@@ -269,12 +293,15 @@ class _SimplePasswordChangeBottomSheetState
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
+                    foregroundColor:
+                        GlassTheme.colors.primaryBlue, // Visible color
                   ),
                   child: const Text(
                     'Cancel',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
+                      color: Colors.black87, // Dark text for visibility
                     ),
                   ),
                 ),

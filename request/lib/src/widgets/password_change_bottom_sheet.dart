@@ -228,8 +228,9 @@ class _PasswordChangeBottomSheetState extends State<PasswordChangeBottomSheet> {
                       onPressed:
                           _isLoading ? null : () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        side: const BorderSide(color: Colors.white54),
+                        foregroundColor: Colors.black87,
+                        side: BorderSide(color: GlassTheme.colors.primaryBlue.withOpacity(0.5)),
+                        backgroundColor: Colors.white.withOpacity(0.9),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -279,17 +280,28 @@ class _PasswordChangeBottomSheetState extends State<PasswordChangeBottomSheet> {
     int? maxLength,
   }) {
     return Container(
-      decoration: GlassTheme.glassContainerSubtle.copyWith(
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: GlassTheme.colors.primaryBlue.withOpacity(0.3),
+        ),
       ),
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
         maxLength: maxLength,
-        style: const TextStyle(color: Colors.white),
+        style: const TextStyle(
+          color: Colors.black87,
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+        ),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(color: Colors.white70),
+          labelStyle: TextStyle(
+            color: GlassTheme.colors.primaryBlue,
+            fontWeight: FontWeight.w500,
+          ),
           counterText: '',
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
@@ -310,16 +322,27 @@ class _PasswordChangeBottomSheetState extends State<PasswordChangeBottomSheet> {
     required VoidCallback onToggleVisibility,
   }) {
     return Container(
-      decoration: GlassTheme.glassContainerSubtle.copyWith(
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: GlassTheme.colors.primaryBlue.withOpacity(0.3),
+        ),
       ),
       child: TextField(
         controller: controller,
         obscureText: !isVisible,
-        style: const TextStyle(color: Colors.white),
+        style: const TextStyle(
+          color: Colors.black87,
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+        ),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(color: Colors.white70),
+          labelStyle: TextStyle(
+            color: GlassTheme.colors.primaryBlue,
+            fontWeight: FontWeight.w500,
+          ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
@@ -330,7 +353,7 @@ class _PasswordChangeBottomSheetState extends State<PasswordChangeBottomSheet> {
           suffixIcon: IconButton(
             icon: Icon(
               isVisible ? Icons.visibility_off : Icons.visibility,
-              color: Colors.white70,
+              color: GlassTheme.colors.primaryBlue,
             ),
             onPressed: onToggleVisibility,
           ),
