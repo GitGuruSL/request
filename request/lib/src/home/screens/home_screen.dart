@@ -15,6 +15,8 @@ import '../../screens/notification_screen.dart';
 import '../../screens/account/user_profile_screen.dart';
 import '../../theme/glass_theme.dart';
 import '../../theme/app_theme.dart';
+import '../../services/banner_service.dart';
+import '../../models/banner_item.dart' as model;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -31,7 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final PageController _bannerController =
       PageController(viewportFraction: 0.9);
   int _currentBanner = 0;
-  final List<_BannerItem> _banners = const [
+  final List<_BannerItem> _defaultBanners = const [
     _BannerItem(
       title: 'Find what you need',
       subtitle: 'Post a request and let others help',
@@ -51,6 +53,8 @@ class _HomeScreenState extends State<HomeScreen> {
       icon: Icons.local_shipping,
     ),
   ];
+  List<model.BannerItem> _remoteBanners = const [];
+  bool _loadingBanners = false;
 
   final PricingService _pricing = PricingService();
   List<MasterProduct> _popularProducts = const [];
@@ -62,12 +66,33 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadModules();
     _loadUnreadCounts();
     _loadPopularProducts();
+    _loadBanners();
   }
 
   @override
   void dispose() {
     _bannerController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadBanners() async {
+    if (_loadingBanners) return;
+    setState(() => _loadingBanners = true);
+    try {
+      // Ensure country is loaded (loadModules also ensures, but banners can load independently)
+      final cs = CountryService.instance;
+      if (cs.countryCode == null) {
+        await cs.loadPersistedCountry();
+      }
+      final items = await BannerService.instance.getCountryBanners(limit: 6);
+      if (!mounted) return;
+      setState(() => _remoteBanners = items);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _remoteBanners = const []);
+    } finally {
+      if (mounted) setState(() => _loadingBanners = false);
+    }
   }
 
   Future<void> _loadModules() async {
@@ -361,18 +386,31 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Banners carousel
                 SizedBox(
                   height: 140,
-                  child: PageView.builder(
-                    controller: _bannerController,
-                    itemCount: _banners.length,
-                    onPageChanged: (i) => setState(() => _currentBanner = i),
-                    itemBuilder: (ctx, i) => _BannerCard(item: _banners[i]),
-                  ),
+                  child: _loadingBanners
+                      ? const Center(child: CircularProgressIndicator())
+                      : PageView.builder(
+                          controller: _bannerController,
+                          itemCount: _remoteBanners.isNotEmpty
+                              ? _remoteBanners.length
+                              : _defaultBanners.length,
+                          onPageChanged: (i) =>
+                              setState(() => _currentBanner = i),
+                          itemBuilder: (ctx, i) {
+                            if (_remoteBanners.isNotEmpty) {
+                              return _NetworkBannerCard(
+                                  item: _remoteBanners[i]);
+                            }
+                            return _BannerCard(item: _defaultBanners[i]);
+                          },
+                        ),
                 ),
                 const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(
-                    _banners.length,
+                    _remoteBanners.isNotEmpty
+                        ? _remoteBanners.length
+                        : _defaultBanners.length,
                     (i) => AnimatedContainer(
                       duration: const Duration(milliseconds: 250),
                       width: _currentBanner == i ? 18 : 6,
@@ -554,6 +592,109 @@ class _BannerCard extends StatelessWidget {
                 ],
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NetworkBannerCard extends StatelessWidget {
+  final model.BannerItem item;
+  const _NetworkBannerCard({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 10),
+      child: GestureDetector(
+        onTap: () {
+          // If linkUrl present, try to navigate via Navigator route or launch URL
+          final link = item.linkUrl;
+          if (link == null || link.isEmpty) return;
+          // For now, attempt named route; otherwise ignore silently
+          try {
+            if (link.startsWith('/')) {
+              Navigator.of(context).pushNamed(link);
+            }
+          } catch (_) {}
+        },
+        child: GlassTheme.glassCard(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // Background image
+                Image.network(
+                  item.imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (c, e, st) => Container(
+                    color: Colors.white.withOpacity(0.4),
+                    alignment: Alignment.centerLeft,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(
+                      item.title ?? 'Banner',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+                // Gradient overlay for legibility
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.0),
+                          Colors.black.withOpacity(0.25),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                // Optional captions
+                if ((item.title ?? '').isNotEmpty ||
+                    (item.subtitle ?? '').isNotEmpty)
+                  Positioned(
+                    left: 16,
+                    right: 16,
+                    bottom: 16,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if ((item.title ?? '').isNotEmpty)
+                          Text(
+                            item.title!,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              height: 1.2,
+                            ),
+                          ),
+                        if ((item.subtitle ?? '').isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              item.subtitle!,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white70,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
