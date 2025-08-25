@@ -87,7 +87,7 @@ class _OTPScreenState extends State<OTPScreen> {
         if (!mounted) return;
         Navigator.pushReplacementNamed(
           context,
-          '/profile',
+          '/terms-acceptance',
           arguments: {
             'isNewUser': widget.isNewUser,
             'emailOrPhone': widget.emailOrPhone,

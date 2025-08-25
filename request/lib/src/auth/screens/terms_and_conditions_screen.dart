@@ -3,7 +3,20 @@ import '../../theme/glass_theme.dart';
 import '../../services/content_service.dart';
 
 class TermsAndConditionsScreen extends StatefulWidget {
-  const TermsAndConditionsScreen({super.key});
+  final String? emailOrPhone;
+  final bool? isNewUser;
+  final bool? isEmail;
+  final String? countryCode;
+  final String? otpToken;
+
+  const TermsAndConditionsScreen({
+    super.key,
+    this.emailOrPhone,
+    this.isNewUser,
+    this.isEmail,
+    this.countryCode,
+    this.otpToken,
+  });
 
   @override
   State<TermsAndConditionsScreen> createState() =>
@@ -251,12 +264,18 @@ If you have questions about this Privacy Policy, please contact us.
     );
   }
 
-  void _proceedToHome() {
+  void _proceedToProfile() {
     if (_termsAccepted && _privacyAccepted) {
-      Navigator.pushNamedAndRemoveUntil(
+      Navigator.pushReplacementNamed(
         context,
-        '/home',
-        (route) => false,
+        '/profile',
+        arguments: {
+          'isNewUser': widget.isNewUser,
+          'emailOrPhone': widget.emailOrPhone,
+          'isEmail': widget.isEmail,
+          'countryCode': widget.countryCode,
+          'otpToken': widget.otpToken,
+        },
       );
     }
   }
@@ -420,7 +439,7 @@ If you have questions about this Privacy Policy, please contact us.
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(16),
                                 onTap: _termsAccepted && _privacyAccepted
-                                    ? _proceedToHome
+                                    ? _proceedToProfile
                                     : null,
                                 child: Center(
                                   child: Text(

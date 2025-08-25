@@ -227,8 +227,15 @@ class MyApp extends StatelessWidget {
               builder: (context) => const TermsConditionsScreen(),
             );
           case '/terms-acceptance':
+            final args = settings.arguments as Map<String, dynamic>?;
             return MaterialPageRoute(
-              builder: (context) => const TermsAndConditionsScreen(),
+              builder: (context) => TermsAndConditionsScreen(
+                emailOrPhone: args?['emailOrPhone'],
+                isNewUser: args?['isNewUser'],
+                isEmail: args?['isEmail'],
+                countryCode: args?['countryCode'],
+                otpToken: args?['otpToken'],
+              ),
             );
           case '/legal':
             return MaterialPageRoute(
