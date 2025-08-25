@@ -592,13 +592,19 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: listing.isAvailable == true
-                            ? Colors.green
-                            : Colors.red,
+                        color: listing.hasPendingChanges
+                            ? Colors.orange // Orange for pending changes
+                            : (listing.isAvailable == true
+                                ? Colors.green
+                                : Colors.red),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        listing.isAvailable == true ? 'ACTIVE' : 'INACTIVE',
+                        listing.hasPendingChanges
+                            ? 'PENDING'
+                            : (listing.isAvailable == true
+                                ? 'ACTIVE'
+                                : 'INACTIVE'),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 9,

@@ -48,6 +48,8 @@ class PriceListing {
   final String? country; // Country code (e.g., "LK")
   final String? countryName; // Country name (e.g., "Sri Lanka")
   final List<PaymentMethodRef> paymentMethods;
+  final bool hasPendingChanges; // True if price has pending staging changes
+  final String stagingStatus; // 'pending' or 'active'
 
   PriceListing({
     required this.id,
@@ -76,6 +78,8 @@ class PriceListing {
     this.country,
     this.countryName,
     this.paymentMethods = const [],
+    this.hasPendingChanges = false,
+    this.stagingStatus = 'active',
   });
 
   factory PriceListing.fromJson(Map<String, dynamic> json) {
@@ -119,6 +123,10 @@ class PriceListing {
       country: json['country_code'] ?? json['country'],
       countryName: json['countryName'],
       paymentMethods: methods,
+      hasPendingChanges:
+          json['hasPendingChanges'] ?? json['has_pending_changes'] ?? false,
+      stagingStatus:
+          json['stagingStatus'] ?? json['staging_status'] ?? 'active',
     );
   }
 
@@ -178,6 +186,8 @@ class PriceListing {
     String? country,
     String? countryName,
     List<PaymentMethodRef>? paymentMethods,
+    bool? hasPendingChanges,
+    String? stagingStatus,
   }) {
     return PriceListing(
       id: id ?? this.id,
@@ -206,6 +216,8 @@ class PriceListing {
       country: country ?? this.country,
       countryName: countryName ?? this.countryName,
       paymentMethods: paymentMethods ?? this.paymentMethods,
+      hasPendingChanges: hasPendingChanges ?? this.hasPendingChanges,
+      stagingStatus: stagingStatus ?? this.stagingStatus,
     );
   }
 
