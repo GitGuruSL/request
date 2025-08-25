@@ -373,6 +373,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onRefresh: () async {
               await _loadModules();
               await _loadPopularProducts();
+              await _loadBanners(); // also refresh banners
             },
             child: ListView(
               padding: const EdgeInsets.all(16),
