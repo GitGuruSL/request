@@ -12,6 +12,7 @@ class GlassPage extends StatelessWidget {
   final Widget? bottomBar;
   final Widget? floatingActionButton;
   final FloatingActionButtonLocation? floatingActionButtonLocation;
+  final Color? appBarBackgroundColor;
 
   const GlassPage({
     super.key,
@@ -24,6 +25,7 @@ class GlassPage extends StatelessWidget {
     this.bottomBar,
     this.floatingActionButton,
     this.floatingActionButtonLocation,
+    this.appBarBackgroundColor,
   });
 
   @override
@@ -34,13 +36,19 @@ class GlassPage extends StatelessWidget {
       appBar: AppBar(
         title: Text(title),
         centerTitle: centerTitle,
-        backgroundColor: Colors.transparent,
+        backgroundColor: appBarBackgroundColor ?? Colors.transparent,
         elevation: 0,
         foregroundColor: GlassTheme.colors.textPrimary,
-        systemOverlayStyle: const SystemUiOverlayStyle(
+        systemOverlayStyle: SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.light,
-          statusBarBrightness: Brightness.dark,
+          statusBarIconBrightness:
+              GlassTheme.isDarkMode ? Brightness.light : Brightness.dark,
+          statusBarBrightness:
+              GlassTheme.isDarkMode ? Brightness.dark : Brightness.light,
+          systemNavigationBarColor:
+              GlassTheme.isDarkMode ? const Color(0xFF121212) : Colors.white,
+          systemNavigationBarIconBrightness:
+              GlassTheme.isDarkMode ? Brightness.light : Brightness.dark,
         ),
         actions: actions,
         leading: leading,

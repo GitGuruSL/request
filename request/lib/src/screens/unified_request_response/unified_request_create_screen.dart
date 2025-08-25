@@ -171,6 +171,9 @@ class _UnifiedRequestCreateScreenState
   Widget build(BuildContext context) {
     return GlassPage(
       title: 'Create ${_getTypeDisplayName(_selectedType)}',
+      appBarBackgroundColor: GlassTheme.isDarkMode
+          ? const Color(0x1AFFFFFF)
+          : const Color(0xCCFFFFFF),
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(

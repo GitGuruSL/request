@@ -714,6 +714,9 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
 
     return GlassPage(
       title: r.title.isNotEmpty ? r.title : 'Request',
+      appBarBackgroundColor: GlassTheme.isDarkMode
+          ? const Color(0x1AFFFFFF)
+          : const Color(0xCCFFFFFF),
       actions: [
         IconButton(
             onPressed: _load,
