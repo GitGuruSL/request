@@ -8,6 +8,8 @@ class GlassPage extends StatelessWidget {
   final List<Widget>? actions;
   final Widget? leading;
   final bool centerTitle;
+  final PreferredSizeWidget? bottom;
+  final Widget? bottomBar;
 
   const GlassPage({
     super.key,
@@ -16,6 +18,8 @@ class GlassPage extends StatelessWidget {
     this.actions,
     this.leading,
     this.centerTitle = false,
+    this.bottom,
+    this.bottomBar,
   });
 
   @override
@@ -36,6 +40,7 @@ class GlassPage extends StatelessWidget {
         ),
         actions: actions,
         leading: leading,
+        bottom: bottom,
       ),
       body: GlassTheme.backgroundContainer(
         child: SafeArea(
@@ -43,6 +48,7 @@ class GlassPage extends StatelessWidget {
           child: body,
         ),
       ),
+      bottomNavigationBar: bottomBar,
     );
   }
 }
