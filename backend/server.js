@@ -37,6 +37,7 @@ const globalResponsesRoutes = require('./routes/responses-global');
 const smsRoutes = require('./routes/sms');
 const notificationsRoutes = require('./routes/notifications');
 const contactRoutes = require('./routes/contact');
+const bannersRoutes = require('./routes/banners'); // NEW - Banners CRUD
 
 // New country-specific routes
 const countryProductRoutes = require('./routes/country-products');
@@ -189,6 +190,7 @@ app.use('/api/notifications', notificationsRoutes);
 app.use('/api/modules', modulesRoutes); // Module management endpoints
 app.use('/api/price-listings', priceListingsRoutes); // Price listings endpoints
 app.use('/api/payment-methods', paymentMethodsRoutes); // Payment methods endpoints
+app.use('/api/banners', bannersRoutes); // NEW - Banners CRUD
 
 // Country-specific routes
 app.use('/api/country-products', countryProductRoutes);
