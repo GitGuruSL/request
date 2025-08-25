@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../services/rest_auth_service.dart';
 import '../../theme/glass_theme.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/password_change_bottom_sheet.dart';
 
 class PasswordScreen extends StatefulWidget {
   final bool isNewUser;
@@ -157,32 +156,23 @@ class _PasswordScreenState extends State<PasswordScreen>
     });
 
     try {
-      final result = await RestAuthService.instance.sendOTP(
-        emailOrPhone: widget.emailOrPhone,
-        countryCode: widget.countryCode ?? '',
-        isEmail: widget.isEmail,
+      // Navigate to the existing OTP screen with password reset purpose
+      Navigator.pushNamed(
+        context,
+        '/otp',
+        arguments: {
+          'emailOrPhone': widget.emailOrPhone,
+          'isEmail': widget.isEmail,
+          'isNewUser': false,
+          'countryCode': widget.countryCode ?? '+94',
+          'purpose':
+              'password_reset', // This tells OTP screen it's for password reset
+        },
       );
-
+    } finally {
       setState(() {
         _isLoading = false;
       });
-
-      if (result.success) {
-        // Show password reset bottom sheet with OTP field
-        showPasswordChangeBottomSheet(
-          context: context,
-          isResetMode: true,
-          emailOrPhone: widget.emailOrPhone,
-          isEmail: widget.isEmail,
-        );
-      } else {
-        _showErrorSnackBar(result.error ?? 'Failed to send OTP');
-      }
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      _showErrorSnackBar('Failed to send reset OTP. Please try again.');
     }
   }
 

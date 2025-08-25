@@ -12,6 +12,33 @@ class AuthService {
   Future<bool> isAuthenticated() => _rest.isAuthenticated();
   Future<void> signOut() => _rest.logout();
 
+  /// Send OTP for password reset
+  Future<OTPResult> sendOtp({
+    required String emailOrPhone,
+    required bool isEmail,
+  }) =>
+      _rest.sendOTP(
+        emailOrPhone: emailOrPhone,
+        isEmail: isEmail,
+        countryCode:
+            '+94', // Default country code, you can make this configurable
+      );
+
+  /// Verify OTP without consuming it (for password reset flow)
+  Future<AuthResult> verifyOtp({
+    required String emailOrPhone,
+    required String otp,
+    required bool isEmail,
+  }) async {
+    // For verification, we can use the verifyOTP method with empty otpToken
+    // This is just to check if OTP is valid without consuming it
+    return _rest.verifyOTP(
+      emailOrPhone: emailOrPhone,
+      otp: otp,
+      otpToken: '', // Empty token for standalone verification
+    );
+  }
+
   /// Change password
   Future<AuthResult> changePassword({
     required String currentPassword,

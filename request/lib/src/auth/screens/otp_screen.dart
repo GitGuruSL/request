@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../services/rest_auth_service.dart';
 import '../../theme/glass_theme.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/simple_password_change_bottom_sheet.dart';
 
 class OTPScreen extends StatefulWidget {
   final String emailOrPhone;
@@ -125,126 +126,14 @@ class _OTPScreenState extends State<OTPScreen> {
   }
 
   void _showPasswordResetDialog(String otp) {
-    final TextEditingController passwordController = TextEditingController();
-    final TextEditingController confirmPasswordController =
-        TextEditingController();
-    bool isObscured = true;
-    bool isConfirmObscured = true;
-    bool isLoading = false;
+    setState(() => _isLoading = false); // Reset loading state
 
-    showDialog(
+    // Use the glass-themed bottom sheet for password reset
+    showSimplePasswordChangeBottomSheet(
       context: context,
-      barrierDismissible: false,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Reset Password'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Enter your new password:'),
-              const SizedBox(height: 16),
-              TextField(
-                controller: passwordController,
-                obscureText: isObscured,
-                decoration: InputDecoration(
-                  labelText: 'New Password',
-                  border: const OutlineInputBorder(),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                        isObscured ? Icons.visibility : Icons.visibility_off),
-                    onPressed: () =>
-                        setDialogState(() => isObscured = !isObscured),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: confirmPasswordController,
-                obscureText: isConfirmObscured,
-                decoration: InputDecoration(
-                  labelText: 'Confirm Password',
-                  border: const OutlineInputBorder(),
-                  suffixIcon: IconButton(
-                    icon: Icon(isConfirmObscured
-                        ? Icons.visibility
-                        : Icons.visibility_off),
-                    onPressed: () => setDialogState(
-                        () => isConfirmObscured = !isConfirmObscured),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: isLoading ? null : () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: isLoading
-                  ? null
-                  : () async {
-                      final password = passwordController.text;
-                      final confirmPassword = confirmPasswordController.text;
-
-                      if (password.isEmpty) {
-                        _showMessage('Please enter a new password');
-                        return;
-                      }
-
-                      if (password.length < 6) {
-                        _showMessage('Password must be at least 6 characters');
-                        return;
-                      }
-
-                      if (password != confirmPassword) {
-                        _showMessage('Passwords do not match');
-                        return;
-                      }
-
-                      setDialogState(() => isLoading = true);
-
-                      try {
-                        final result =
-                            await RestAuthService.instance.resetPassword(
-                          emailOrPhone: widget.emailOrPhone,
-                          otp: otp,
-                          newPassword: password,
-                          isEmail: widget.isEmail,
-                        );
-
-                        if (result.success) {
-                          Navigator.pop(context); // Close dialog
-                          _showMessage(
-                              'Password reset successfully! You can now login with your new password.',
-                              isError: false);
-
-                          // Navigate back to login
-                          if (mounted) {
-                            Navigator.pushNamedAndRemoveUntil(
-                                context, '/login', (route) => false);
-                          }
-                        } else {
-                          _showMessage(
-                              result.error ?? 'Failed to reset password');
-                        }
-                      } catch (e) {
-                        _showMessage('Error resetting password: $e');
-                      } finally {
-                        setDialogState(() => isLoading = false);
-                      }
-                    },
-              child: isLoading
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Reset Password'),
-            ),
-          ],
-        ),
-      ),
+      emailOrPhone: widget.emailOrPhone,
+      otp: otp,
+      isEmail: widget.isEmail,
     );
   }
 
