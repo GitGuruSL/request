@@ -1306,18 +1306,18 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     switch (type) {
       case 'Delivery':
         return _TypeStyle(
-            Icons.local_shipping, _Palette.vibrantTeal, Colors.white);
+            Icons.local_shipping, const Color(0xFF4CAF50), Colors.white);
       case 'Ride':
         return _TypeStyle(
-            Icons.directions_car, _Palette.primaryBlue, Colors.white);
+            Icons.directions_car, const Color(0xFF3B82F6), Colors.white);
       case 'Service':
-        return _TypeStyle(Icons.build, _Palette.deepPurple, Colors.white);
+        return _TypeStyle(Icons.build, const Color(0xFF00BCD4), Colors.white);
       case 'Rent':
-        return _TypeStyle(Icons.weekend, _Palette.warmOrange, Colors.white);
+        return _TypeStyle(Icons.vpn_key, const Color(0xFF2196F3), Colors.white);
       case 'Items':
       default:
         return _TypeStyle(
-            Icons.shopping_bag, _Palette.sunnyYellow, _Palette.primaryText);
+            Icons.shopping_bag, const Color(0xFFFF6B35), Colors.white);
     }
   }
 }
@@ -1452,10 +1452,6 @@ class _TypeStyle {
 class _Palette {
   // Primary & Accents
   static const primaryBlue = Color(0xFF007AFF);
-  static const vibrantTeal = Color(0xFF30D158);
-  static const warmOrange = Color(0xFFFF9500);
-  static const deepPurple = Color(0xFF5856D6);
-  static const sunnyYellow = Color(0xFFFFCC00);
 
   // Neutrals
   static const primaryText = Color(0xFF1C1C1E);
