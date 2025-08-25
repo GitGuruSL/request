@@ -386,7 +386,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 // Banners carousel
                 SizedBox(
-                  height: 140,
+                  height: 180,
                   child: _loadingBanners
                       ? const Center(child: CircularProgressIndicator())
                       : PageView.builder(
@@ -503,103 +503,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _BannerItem {
-  final String title;
-  final String subtitle;
-  final Color color;
-  final IconData icon;
-  const _BannerItem(
-      {required this.title,
-      required this.subtitle,
-      required this.color,
-      required this.icon});
-}
-
-class _BannerCard extends StatelessWidget {
-  final _BannerItem item;
-  const _BannerCard({required this.item});
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 10),
-      child: GlassTheme.glassCard(
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: Stack(
-            children: [
-              // Subtle pattern overlay
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        item.color.withOpacity(0.05),
-                        item.color.withOpacity(0.02),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Row(
-                children: [
-                  const SizedBox(width: 20),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.title,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: AppTheme.textPrimary,
-                            height: 1.2,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          item.subtitle,
-                          style: TextStyle(
-                            color: AppTheme.textSecondary,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(right: 20),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: item.color.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: item.color.withOpacity(0.3),
-                          width: 1,
-                        ),
-                      ),
-                      child: Icon(
-                        item.icon,
-                        size: 32,
-                        color: item.color,
-                      ),
-                    ),
-                  )
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _NetworkBannerCard extends StatelessWidget {
   final model.BannerItem item;
   const _NetworkBannerCard({required this.item});
@@ -610,92 +513,170 @@ class _NetworkBannerCard extends StatelessWidget {
       padding: const EdgeInsets.only(right: 10),
       child: GestureDetector(
         onTap: () {
-          // If linkUrl present, try to navigate via Navigator route or launch URL
           final link = item.linkUrl;
           if (link == null || link.isEmpty) return;
-          // For now, attempt named route; otherwise ignore silently
           try {
             if (link.startsWith('/')) {
               Navigator.of(context).pushNamed(link);
             }
           } catch (_) {}
         },
-        child: GlassTheme.glassCard(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                // Background image
-                Image.network(
-                  item.imageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (c, e, st) => Container(
-                    color: Colors.white.withOpacity(0.4),
-                    alignment: Alignment.centerLeft,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Text(
-                      item.title ?? 'Banner',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: AppTheme.textPrimary,
-                      ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.network(
+                item.imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (c, e, st) => Container(
+                  color: Colors.black12,
+                  alignment: Alignment.center,
+                  child: Text(
+                    item.title ?? 'Banner',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black54,
                     ),
                   ),
                 ),
-                // Gradient overlay for legibility
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withOpacity(0.0),
-                          Colors.black.withOpacity(0.25),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                // Optional captions
-                if ((item.title ?? '').isNotEmpty ||
-                    (item.subtitle ?? '').isNotEmpty)
-                  Positioned(
-                    left: 16,
-                    right: 16,
-                    bottom: 16,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if ((item.title ?? '').isNotEmpty)
-                          Text(
-                            item.title!,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                              height: 1.2,
-                            ),
-                          ),
-                        if ((item.subtitle ?? '').isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text(
-                              item.subtitle!,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white70,
-                              ),
-                            ),
-                          ),
+              ),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withOpacity(0.0),
+                        Colors.black.withOpacity(0.25),
                       ],
                     ),
                   ),
+                ),
+              ),
+              if ((item.title ?? '').isNotEmpty ||
+                  (item.subtitle ?? '').isNotEmpty)
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  bottom: 16,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if ((item.title ?? '').isNotEmpty)
+                        Text(
+                          item.title!,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            height: 1.2,
+                          ),
+                        ),
+                      if ((item.subtitle ?? '').isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            item.subtitle!,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Fallback static banner types for defaults
+class _BannerItem {
+  final String title;
+  final String subtitle;
+  final Color color;
+  final IconData icon;
+  const _BannerItem({
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.icon,
+  });
+}
+
+class _BannerCard extends StatelessWidget {
+  final _BannerItem item;
+  const _BannerCard({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 10),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                item.color.withOpacity(0.9),
+                item.color.withOpacity(0.7),
               ],
             ),
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Align(
+                alignment: Alignment.bottomRight,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Icon(
+                    item.icon,
+                    size: 96,
+                    color: Colors.white.withOpacity(0.25),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: 16,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      item.title,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      item.subtitle,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),

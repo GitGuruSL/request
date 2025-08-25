@@ -36,10 +36,32 @@ class BannerService {
     return list.map((e) {
       final raw = BannerItem.fromJson(_toMap(e));
       final img = raw.imageUrl;
-      final normalized =
-          (img.startsWith('http://') || img.startsWith('https://'))
-              ? img
-              : '$base${img.startsWith('/') ? '' : '/'}$img';
+      String normalized;
+      if (img.startsWith('http://') || img.startsWith('https://')) {
+        // If the admin saved an absolute URL pointing to localhost/127.0.0.1,
+        // rewrite it to use the app's API host so Android emulator/devices can load it.
+        try {
+          final u = Uri.parse(img);
+          if (u.host == 'localhost' || u.host == '127.0.0.1') {
+            final b = Uri.parse(base);
+            final rebuilt = Uri(
+              scheme: b.scheme,
+              host: b.host,
+              port: b.port,
+              path: u.path.startsWith('/') ? u.path : '/${u.path}',
+              query: u.query.isEmpty ? null : u.query,
+              fragment: u.fragment.isEmpty ? null : u.fragment,
+            );
+            normalized = rebuilt.toString();
+          } else {
+            normalized = img;
+          }
+        } catch (_) {
+          normalized = img;
+        }
+      } else {
+        normalized = '$base${img.startsWith('/') ? '' : '/'}$img';
+      }
       return BannerItem(
         id: raw.id,
         imageUrl: normalized,
