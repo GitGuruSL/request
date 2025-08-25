@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/glass_theme.dart';
-import '../services/auth_service.dart';
 import '../widgets/password_change_bottom_sheet.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -628,7 +627,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showChangePasswordDialog() {
     showPasswordChangeBottomSheet(
       context: context,
-      mode: PasswordChangeMode.change,
+      isResetMode: false, // Change password mode
     );
   }
 }
