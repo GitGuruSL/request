@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../../services/rest_vehicle_type_service.dart';
 import '../../../services/country_filtered_data_service.dart';
 import '../../../services/rest_ride_request_service.dart';
@@ -24,6 +25,28 @@ class CreateRideRequestScreen extends StatefulWidget {
 }
 
 class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
+  bool _myLocationEnabled = false;
+
+  Future<void> _initLocationPermission() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() => _myLocationEnabled = false);
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      final granted = permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always;
+      if (mounted) setState(() => _myLocationEnabled = granted);
+    } catch (_) {
+      if (mounted) setState(() => _myLocationEnabled = false);
+    }
+  }
   // final _formKey = GlobalKey<FormState>(); // Removed unused form key (UI fully custom)
 
   // Form Controllers
@@ -68,6 +91,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
   void initState() {
     super.initState();
     _loadVehicleTypes();
+    _initLocationPermission();
     // If the Google Map doesn't call onMapCreated within 6s, show a hint
     Timer(const Duration(seconds: 6), () {
       if (mounted && !_mapReady) {
@@ -93,6 +117,9 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                 name: vt['name']?.toString() ?? '',
                 description: vt['description']?.toString(),
                 iconUrl: vt['icon']?.toString(),
+        passengerCapacity: int.tryParse(
+          (vt['passengerCapacity'] ?? vt['capacity'] ?? '1')
+            .toString()),
                 isActive: vt['isActive'] == true,
                 countryEnabled:
                     true, // These are already filtered to be country enabled
@@ -394,10 +421,16 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
               markers: _markers,
               polylines: _polylines,
               onTap: _onMapTapped,
-              myLocationEnabled: true,
+              myLocationEnabled: _myLocationEnabled,
               myLocationButtonEnabled: false,
               zoomControlsEnabled: false,
               mapToolbarEnabled: false,
+              liteModeEnabled: true,
+              buildingsEnabled: false,
+              indoorViewEnabled: false,
+              compassEnabled: false,
+              trafficEnabled: false,
+              mapType: MapType.normal,
             ),
           ),
 
@@ -688,7 +721,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                           ),
                           const Spacer(),
                           Text(
-                            ' ', // passenger capacity not in REST model yet
+                            '${vehicle.passengerCapacity ?? 1}',
                             style: GlassTheme.labelMedium,
                           ),
                         ],

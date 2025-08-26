@@ -5,6 +5,7 @@ class VehicleType {
   final String name;
   final String? description;
   final String? iconUrl;
+  final int? passengerCapacity;
   final bool isActive;
   final bool? countryEnabled;
   final DateTime createdAt;
@@ -15,6 +16,7 @@ class VehicleType {
     required this.name,
     this.description,
     this.iconUrl,
+    this.passengerCapacity,
     required this.isActive,
     this.countryEnabled,
     required this.createdAt,
@@ -26,11 +28,13 @@ class VehicleType {
       id: json['id'].toString(),
       name: json['name'] ?? '',
       description: json['description'],
-      iconUrl: json['icon_url'],
-      isActive: json['is_active'] ?? true,
-      countryEnabled: json['country_enabled'],
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      // Support both snake_case and camelCase keys
+      iconUrl: (json['icon_url'] ?? json['icon']) as String?,
+      passengerCapacity: (json['passenger_capacity'] ?? json['passengerCapacity'] ?? json['capacity']) as int?,
+      isActive: (json['is_active'] ?? json['isActive'] ?? true) as bool,
+      countryEnabled: (json['country_enabled'] ?? json['countryEnabled']) as bool?,
+      createdAt: DateTime.parse((json['created_at'] ?? json['createdAt']).toString()),
+      updatedAt: DateTime.parse((json['updated_at'] ?? json['updatedAt']).toString()),
     );
   }
 
@@ -40,6 +44,7 @@ class VehicleType {
       'name': name,
       'description': description,
       'icon_url': iconUrl,
+      'passenger_capacity': passengerCapacity,
       'is_active': isActive,
       'country_enabled': countryEnabled,
       'created_at': createdAt.toIso8601String(),
