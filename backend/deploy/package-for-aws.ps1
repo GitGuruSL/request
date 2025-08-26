@@ -8,31 +8,40 @@ if (Test-Path "deploy-package") {
 }
 New-Item -ItemType Directory -Name "deploy-package" | Out-Null
 
-# Copy essential files
-Write-Host "📁 Copying backend files..." -ForegroundColor Yellow
+Write-Host "📁 Copying runtime backend files..." -ForegroundColor Yellow
 
-# Copy JavaScript files
-Copy-Item "*.js" "deploy-package/" -ErrorAction SilentlyContinue
+# Entry file (prefer app.js, fallback to server.js)
+if (Test-Path "app.js") {
+    Copy-Item "app.js" "deploy-package/"
+} elseif (Test-Path "server.js") {
+    Copy-Item "server.js" "deploy-package/"
+} else {
+    Write-Error "❌ No entry file (app.js/server.js) found"; exit 1
+}
+
+# Package manifests
 Copy-Item "package.json" "deploy-package/" -ErrorAction SilentlyContinue
+if (Test-Path "package-lock.json") { Copy-Item "package-lock.json" "deploy-package/" }
 
-# Copy directories if they exist
-$directories = @("routes", "controllers", "middleware", "models", "config", "utils", "uploads")
-foreach ($dir in $directories) {
+# Runtime folders only
+$runtimeDirs = @("routes", "services", "middleware", "utils", "config", "database")
+foreach ($dir in $runtimeDirs) {
     if (Test-Path $dir) {
         Copy-Item -Recurse $dir "deploy-package/" -ErrorAction SilentlyContinue
-        Write-Host "✅ Copied $dir directory" -ForegroundColor Green
+        Write-Host "✅ Copied $dir" -ForegroundColor Green
     } else {
-        Write-Host "⚠️ No $dir directory found" -ForegroundColor Yellow
+        Write-Host "⚠️  $dir not found" -ForegroundColor Yellow
     }
 }
 
-# Copy deployment files
-if (Test-Path "deploy") {
-    Copy-Item "deploy/*.env" "deploy-package/" -ErrorAction SilentlyContinue
-    Copy-Item "deploy/*.sh" "deploy-package/" -ErrorAction SilentlyContinue
-    Copy-Item "deploy/*.md" "deploy-package/" -ErrorAction SilentlyContinue
-    Write-Host "✅ Copied deployment files" -ForegroundColor Green
+# Optionally include migrations
+if ($env:INCLUDE_MIGRATIONS -eq "1" -and (Test-Path "migrations")) {
+    Copy-Item -Recurse "migrations" "deploy-package/"
+    Write-Host "✅ Included migrations/ (requested)" -ForegroundColor Green
 }
+
+# Exclude heavy/unnecessary content
+if (Test-Path "deploy-package/node_modules") { Remove-Item -Recurse -Force "deploy-package/node_modules" }
 
 # Create a simple archive (using built-in compression)
 Write-Host "🗜️ Creating deployment archive..." -ForegroundColor Yellow
@@ -47,9 +56,9 @@ Remove-Item -Recurse -Force "deploy-package"
 
 Write-Host "🚀 Ready for AWS deployment!" -ForegroundColor Green
 
-# Show package contents
-Write-Host "`n📋 Package contents:" -ForegroundColor Cyan
+# Show package size
+Write-Host "`n📋 Package created:" -ForegroundColor Cyan
 if (Test-Path "request-backend-deploy.zip") {
     $size = (Get-Item "request-backend-deploy.zip").Length / 1MB
-    Write-Host "   Size: $([math]::Round($size, 2)) MB" -ForegroundColor White
+    Write-Host ("   Size: {0} MB" -f ([math]::Round($size, 2))) -ForegroundColor White
 }

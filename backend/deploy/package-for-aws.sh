@@ -6,22 +6,34 @@ echo "📦 Packaging Request Backend for AWS deployment..."
 # Create deployment directory
 mkdir -p deploy-package
 
-# Copy essential files
-echo "📁 Copying backend files..."
-cp -r *.js deploy-package/
-cp package.json deploy-package/
-cp -r routes/ deploy-package/ 2>/dev/null || echo "No routes directory"
-cp -r controllers/ deploy-package/ 2>/dev/null || echo "No controllers directory"
-cp -r middleware/ deploy-package/ 2>/dev/null || echo "No middleware directory"
-cp -r models/ deploy-package/ 2>/dev/null || echo "No models directory"
-cp -r config/ deploy-package/ 2>/dev/null || echo "No config directory"
-cp -r utils/ deploy-package/ 2>/dev/null || echo "No utils directory"
-cp -r uploads/ deploy-package/ 2>/dev/null || echo "No uploads directory"
+echo "📁 Copying runtime backend files..."
 
-# Copy deployment files
-cp deploy/*.env deploy-package/
-cp deploy/*.sh deploy-package/
-cp deploy/*.md deploy-package/
+# Entry file (prefer app.js, fallback to server.js)
+if [ -f app.js ]; then
+	cp app.js deploy-package/
+elif [ -f server.js ]; then
+	cp server.js deploy-package/
+else
+	echo "❌ No entry file (app.js/server.js) found" && exit 1
+fi
+
+# Package manifests
+cp package.json deploy-package/
+[ -f package-lock.json ] && cp package-lock.json deploy-package/
+
+# Runtime folders only
+for d in routes services middleware utils config database; do
+	[ -d "$d" ] && cp -r "$d" deploy-package/ && echo "✅ Copied $d" || echo "⚠️  $d not found"
+done
+
+# Optional: include migrations if explicitly requested
+if [ "$INCLUDE_MIGRATIONS" = "1" ] && [ -d migrations ]; then
+	cp -r migrations deploy-package/
+	echo "✅ Included migrations/ (requested)"
+fi
+
+# Do NOT include node_modules, tests, mock data, scripts, deploy docs, uploads, etc.
+rm -rf deploy-package/node_modules 2>/dev/null || true
 
 # Create archive
 echo "🗜️ Creating deployment archive..."
