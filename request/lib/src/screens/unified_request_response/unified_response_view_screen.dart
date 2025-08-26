@@ -573,314 +573,338 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
 
     return GlassPage(
       title: 'Response to ${_getTypeDisplayName(widget.request.type)}',
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Response status badge
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Response Status',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                _buildStatusBadge(),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Responder information
-            GlassTheme.glassCard(
+      body: LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight - 32),
+            child: IntrinsicHeight(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Responder Information',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 12),
+                  // Response status badge
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      CircleAvatar(
-                        radius: 30,
-                        backgroundColor: Colors.blue[100],
-                        child: Text(
-                          (_responder != null && _responder!.name.isNotEmpty)
-                              ? _responder!.name[0]
-                              : (_responderNameFallback != null &&
-                                      _responderNameFallback!.isNotEmpty
-                                  ? _responderNameFallback![0]
-                                  : 'U'),
-                          style: TextStyle(
-                            color: Colors.blue[700],
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
-                          ),
-                        ),
+                      Text(
+                        'Response Status',
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _responder?.name ??
-                                  _responderNameFallback ??
-                                  'Unknown User',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                              ),
-                            ),
-                            // Email (if available)
-                            if (((_responder?.email ?? '').isNotEmpty) ||
-                                ((_responderEmailFallback ?? '')
-                                    .isNotEmpty)) ...[
-                              const SizedBox(height: 4),
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Icon(Icons.email,
-                                      size: 14, color: Colors.grey),
-                                  const SizedBox(width: 4),
-                                  Expanded(
-                                    child: Text(
-                                      _responder?.email ??
-                                          _responderEmailFallback ??
-                                          '',
-                                      style: TextStyle(
-                                        color: Colors.grey[600],
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                            // Phone (only if available)
-                            if (((_responder?.phoneNumber ?? '').isNotEmpty) ||
-                                ((_responderPhoneFallback ?? '')
-                                    .isNotEmpty)) ...[
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  const Icon(Icons.phone,
-                                      size: 14, color: Colors.grey),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    _responder?.phoneNumber ??
-                                        _responderPhoneFallback ??
-                                        '',
-                                    style: TextStyle(
-                                      color: Colors.grey[600],
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                            if (widget.response
-                                        .additionalInfo['location_address'] !=
-                                    null ||
-                                widget.response
-                                        .additionalInfo['locationAddress'] !=
-                                    null) ...[
-                              const SizedBox(height: 6),
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Icon(Icons.location_on,
-                                      size: 16, color: Colors.redAccent),
-                                  const SizedBox(width: 4),
-                                  Expanded(
-                                    child: Text(
-                                      widget
-                                              .response
-                                              .additionalInfo[
-                                                  'location_address']
-                                              ?.toString() ??
-                                          widget.response
-                                              .additionalInfo['locationAddress']
-                                              ?.toString() ??
-                                          '',
-                                      style: TextStyle(
-                                          color: Colors.grey[700],
-                                          fontSize: 13),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      // Message button
-                      IconButton(
-                        onPressed: () => _startConversation(),
-                        icon: Icon(
-                          Icons.message,
-                          color: _getTypeColor(widget.request.type),
-                        ),
-                      ),
+                      _buildStatusBadge(),
                     ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
+                  const SizedBox(height: 24),
 
-            // Response details
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Response Details',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                  // Responder information
+                  GlassTheme.glassCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Responder Information',
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                         ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 30,
+                              backgroundColor: Colors.blue[100],
+                              child: Text(
+                                (_responder != null &&
+                                        _responder!.name.isNotEmpty)
+                                    ? _responder!.name[0]
+                                    : (_responderNameFallback != null &&
+                                            _responderNameFallback!.isNotEmpty
+                                        ? _responderNameFallback![0]
+                                        : 'U'),
+                                style: TextStyle(
+                                  color: Colors.blue[700],
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _responder?.name ??
+                                        _responderNameFallback ??
+                                        'Unknown User',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                    ),
+                                  ),
+                                  // Email (if available)
+                                  if (((_responder?.email ?? '').isNotEmpty) ||
+                                      ((_responderEmailFallback ?? '')
+                                          .isNotEmpty)) ...[
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Icon(Icons.email,
+                                            size: 14, color: Colors.grey),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            _responder?.email ??
+                                                _responderEmailFallback ??
+                                                '',
+                                            style: TextStyle(
+                                              color: Colors.grey[600],
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                  // Phone (only if available)
+                                  if (((_responder?.phoneNumber ?? '')
+                                          .isNotEmpty) ||
+                                      ((_responderPhoneFallback ?? '')
+                                          .isNotEmpty)) ...[
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.phone,
+                                            size: 14, color: Colors.grey),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          _responder?.phoneNumber ??
+                                              _responderPhoneFallback ??
+                                              '',
+                                          style: TextStyle(
+                                            color: Colors.grey[600],
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                  if (widget.response.additionalInfo[
+                                              'location_address'] !=
+                                          null ||
+                                      widget.response.additionalInfo[
+                                              'locationAddress'] !=
+                                          null) ...[
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Icon(Icons.location_on,
+                                            size: 16, color: Colors.redAccent),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            widget
+                                                    .response
+                                                    .additionalInfo[
+                                                        'location_address']
+                                                    ?.toString() ??
+                                                widget
+                                                    .response
+                                                    .additionalInfo[
+                                                        'locationAddress']
+                                                    ?.toString() ??
+                                                '',
+                                            style: TextStyle(
+                                                color: Colors.grey[700],
+                                                fontSize: 13),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            // Message button
+                            IconButton(
+                              onPressed: () => _startConversation(),
+                              icon: Icon(
+                                Icons.message,
+                                color: _getTypeColor(widget.request.type),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 16),
 
-                  // Price
-                  if (widget.response.price != null) ...[
-                    _buildDetailRow('Price',
-                        '${widget.response.currency ?? 'LKR'} ${_formatPrice(widget.response.price!)}'),
-                    const SizedBox(height: 12),
+                  // Response details
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Response Details',
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Price
+                        if (widget.response.price != null) ...[
+                          _buildDetailRow('Price',
+                              '${widget.response.currency ?? 'LKR'} ${_formatPrice(widget.response.price!)}'),
+                          const SizedBox(height: 12),
+                        ],
+
+                        // Message
+                        _buildDetailRow('Message', widget.response.message),
+                        const SizedBox(height: 12),
+
+                        // Availability
+                        if (widget.response.availableFrom != null ||
+                            widget.response.availableUntil != null) ...[
+                          if (widget.response.availableFrom != null)
+                            _buildDetailRow('Available From',
+                                '${widget.response.availableFrom!.day}/${widget.response.availableFrom!.month}/${widget.response.availableFrom!.year}'),
+                          const SizedBox(height: 8),
+                          if (widget.response.availableUntil != null)
+                            _buildDetailRow('Available Until',
+                                '${widget.response.availableUntil!.day}/${widget.response.availableUntil!.month}/${widget.response.availableUntil!.year}'),
+                          const SizedBox(height: 12),
+                        ],
+
+                        // Type-specific details
+                        _buildTypeSpecificDetails(),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Images (if any)
+                  if (widget.response.images.isNotEmpty ||
+                      (widget.response.additionalInfo['images'] is List &&
+                          (widget.response.additionalInfo['images'] as List)
+                              .isNotEmpty)) ...[
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Images',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            height: 120,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: (widget.response.images.isNotEmpty
+                                      ? widget.response.images
+                                      : List<String>.from(widget.response
+                                          .additionalInfo['images'] as List))
+                                  .length,
+                              itemBuilder: (context, index) {
+                                final images = widget.response.images.isNotEmpty
+                                    ? widget.response.images
+                                    : List<String>.from(widget.response
+                                        .additionalInfo['images'] as List);
+                                return Container(
+                                  width: 120,
+                                  margin: const EdgeInsets.only(right: 8),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.network(
+                                      images[index],
+                                      fit: BoxFit.cover,
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                        return Container(
+                                          color: Colors.grey[200],
+                                          child: const Icon(
+                                            Icons.image_not_supported,
+                                            color: Colors.grey,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                   ],
 
-                  // Message
-                  _buildDetailRow('Message', widget.response.message),
-                  const SizedBox(height: 12),
-
-                  // Availability
-                  if (widget.response.availableFrom != null ||
-                      widget.response.availableUntil != null) ...[
-                    if (widget.response.availableFrom != null)
-                      _buildDetailRow('Available From',
-                          '${widget.response.availableFrom!.day}/${widget.response.availableFrom!.month}/${widget.response.availableFrom!.year}'),
-                    const SizedBox(height: 8),
-                    if (widget.response.availableUntil != null)
-                      _buildDetailRow('Available Until',
-                          '${widget.response.availableUntil!.day}/${widget.response.availableUntil!.month}/${widget.response.availableUntil!.year}'),
-                    const SizedBox(height: 12),
+                  // Rejection reason (if any)
+                  if (widget.response.rejectionReason != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.red[50],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Rejection Reason',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.red[700],
+                                ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            widget.response.rejectionReason!,
+                            style: TextStyle(color: Colors.red[600]),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                   ],
 
-                  // Type-specific details
-                  _buildTypeSpecificDetails(),
+                  // Action buttons
+                  const Spacer(),
+                  _buildActionButtons(),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-
-            // Images (if any)
-            if (widget.response.images.isNotEmpty ||
-                (widget.response.additionalInfo['images'] is List &&
-                    (widget.response.additionalInfo['images'] as List)
-                        .isNotEmpty)) ...[
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Images',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 120,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: (widget.response.images.isNotEmpty
-                                ? widget.response.images
-                                : List<String>.from(widget
-                                    .response.additionalInfo['images'] as List))
-                            .length,
-                        itemBuilder: (context, index) {
-                          final images = widget.response.images.isNotEmpty
-                              ? widget.response.images
-                              : List<String>.from(widget
-                                  .response.additionalInfo['images'] as List);
-                          return Container(
-                            width: 120,
-                            margin: const EdgeInsets.only(right: 8),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                images[index],
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    color: Colors.grey[200],
-                                    child: const Icon(
-                                      Icons.image_not_supported,
-                                      color: Colors.grey,
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            // Rejection reason (if any)
-            if (widget.response.rejectionReason != null) ...[
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.red[50],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Rejection Reason',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.red[700],
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      widget.response.rejectionReason!,
-                      style: TextStyle(color: Colors.red[600]),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            // Action buttons
-            _buildActionButtons(),
-            const SizedBox(height: 24),
-          ],
+          ),
         ),
       ),
       floatingActionButton: (_currentUser?.id == widget.response.responderId &&

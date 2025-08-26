@@ -218,25 +218,72 @@ class AuthService {
      * Send OTP for email verification
      */
     async sendEmailOTP(email) {
-        const otp = this.generateOTP();
-        const expiresAt = new Date(Date.now() + this.otpExpiry);
+        // Cooldown to prevent duplicate emails from rapid repeat taps or concurrent requests
+        const COOLDOWN_SECONDS = parseInt(process.env.EMAIL_OTP_COOLDOWN_SEC || '60', 10);
+        const now = new Date();
 
-                // Ensure table exists (defensive in case migrations not run yet)
-                await dbService.query(`CREATE TABLE IF NOT EXISTS email_otp_verifications (
-                    email VARCHAR(255) PRIMARY KEY,
-                    otp VARCHAR(6) NOT NULL,
-                    expires_at TIMESTAMPTZ NOT NULL,
-                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                    attempts INT NOT NULL DEFAULT 0,
-                    verified BOOLEAN NOT NULL DEFAULT FALSE,
-                    verified_at TIMESTAMPTZ
-                )`);
-    // Add missing columns if the table existed without them (older baseline)
-    await dbService.query(`ALTER TABLE email_otp_verifications ADD COLUMN IF NOT EXISTS verified BOOLEAN NOT NULL DEFAULT FALSE`);
-    await dbService.query(`ALTER TABLE email_otp_verifications ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ`);
+        // Ensure table exists (defensive in case migrations not run yet)
+        await dbService.query(`CREATE TABLE IF NOT EXISTS email_otp_verifications (
+            email VARCHAR(255) PRIMARY KEY,
+            otp VARCHAR(6) NOT NULL,
+            expires_at TIMESTAMPTZ NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            attempts INT NOT NULL DEFAULT 0,
+            verified BOOLEAN NOT NULL DEFAULT FALSE,
+            verified_at TIMESTAMPTZ
+        )`);
+        // Add missing columns if the table existed without them (older baseline)
+        await dbService.query(`ALTER TABLE email_otp_verifications ADD COLUMN IF NOT EXISTS verified BOOLEAN NOT NULL DEFAULT FALSE`);
+        await dbService.query(`ALTER TABLE email_otp_verifications ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ`);
 
-                // Store OTP (manual UPSERT to tolerate environments where primary key wasn't created yet)
-                await dbService.query(`
+        let otpToSend = null;
+        let expiresAt = null;
+
+        // Serialize per-email using Postgres advisory locks to avoid concurrent double-send
+        const txResult = await dbService.transaction(async (client) => {
+            // Acquire transaction-scoped advisory lock on this connection
+            await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [email]);
+
+            // Check existing unverified & unexpired OTP
+            const existing = await client.query(
+                `SELECT email, otp, expires_at, created_at, verified
+                 FROM email_otp_verifications WHERE email = $1`,
+                [email]
+            );
+
+            if (existing.rows.length > 0) {
+                const row = existing.rows[0];
+                const isVerified = row.verified === true;
+                const exp = row.expires_at ? new Date(row.expires_at) : null;
+                const createdAt = row.created_at ? new Date(row.created_at) : now;
+                const ageSec = Math.floor((now.getTime() - createdAt.getTime()) / 1000);
+
+                // If there's an unverified, unexpired OTP recently created, don't send again
+                if (!isVerified && exp && exp > now && ageSec < COOLDOWN_SECONDS) {
+                    return {
+                        earlyReturn: true,
+                        message: `OTP already sent. Please wait ${COOLDOWN_SECONDS - ageSec}s before requesting again`,
+                        otpSent: false,
+                        emailMeta: { messageId: null, fallback: false, error: null }
+                    };
+                }
+
+                // Reuse existing OTP if still unverified (extend expiry and refresh created_at)
+                if (!isVerified && exp && exp > now) {
+                    otpToSend = row.otp;
+                    expiresAt = new Date(now.getTime() + this.otpExpiry);
+                    await client.query(
+                        `UPDATE email_otp_verifications SET expires_at = $2, created_at = $3 WHERE email = $1`,
+                        [email, expiresAt, now]
+                    );
+                }
+            }
+
+            // No reusable OTP, generate a new one and upsert
+            if (!otpToSend) {
+                otpToSend = this.generateOTP();
+                expiresAt = new Date(now.getTime() + this.otpExpiry);
+                await client.query(`
                     WITH updated AS (
                         UPDATE email_otp_verifications
                             SET otp = $2, expires_at = $3, created_at = $4, attempts = 0, verified = FALSE
@@ -246,19 +293,34 @@ class AuthService {
                     INSERT INTO email_otp_verifications (email, otp, expires_at, created_at)
                     SELECT $1, $2, $3, $4
                     WHERE NOT EXISTS (SELECT 1 FROM updated);
-                `, [email, otp, expiresAt, new Date()]);
+                `, [email, otpToSend, expiresAt, now]);
+            }
 
+            return { earlyReturn: false };
+        });
+
+        if (txResult && txResult.earlyReturn) {
+            return {
+                message: txResult.message,
+                otpSent: false,
+                channel: 'email',
+                email: txResult.emailMeta,
+                reused: true
+            };
+        }
+
+        // If we decided not to send (because of cooldown), we would have returned above
         // Send email via SES (with dev fallback handled inside email service)
         let emailMeta = { messageId: null, fallback: false, error: null };
         try {
-            const sendRes = await emailService.sendOTP(email, otp, 'login');
+            const sendRes = await emailService.sendOTP(email, otpToSend, 'login');
             emailMeta.messageId = sendRes.messageId;
             emailMeta.fallback = !!sendRes.fallback;
             emailMeta.error = sendRes.error || null;
         } catch (e) {
             emailMeta.error = e.message;
             console.warn('Email send failed, OTP logged for debugging:', e.message);
-            console.log(`Email OTP fallback (dev) for ${email}: ${otp}`);
+            console.log(`Email OTP fallback (dev) for ${email}: ${otpToSend}`);
         }
 
         return { message: 'OTP sent to email', otpSent: true, channel: 'email', email: emailMeta };

@@ -58,7 +58,7 @@ class GlassPage extends StatelessWidget {
       body: GlassTheme.backgroundContainer(
         child: SafeArea(
           top: true,
-          bottom: false,
+          bottom: true,
           child: body,
         ),
       ),
