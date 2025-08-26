@@ -8,13 +8,13 @@ mkdir -p deploy-package
 
 echo "📁 Copying runtime backend files..."
 
-# Entry file (prefer app.js, fallback to server.js)
-if [ -f app.js ]; then
-	cp app.js deploy-package/
-elif [ -f server.js ]; then
+# Entry file (prefer server.js for PM2, fallback to app.js)
+if [ -f server.js ]; then
 	cp server.js deploy-package/
+elif [ -f app.js ]; then
+	cp app.js deploy-package/
 else
-	echo "❌ No entry file (app.js/server.js) found" && exit 1
+	echo "❌ No entry file (server.js/app.js) found" && exit 1
 fi
 
 # Package manifests
