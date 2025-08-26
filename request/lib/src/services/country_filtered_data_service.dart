@@ -9,6 +9,7 @@ import 'rest_request_service.dart'
     show RestRequestService, RequestModel, RequestsResponse;
 import 'country_service.dart';
 import 'user_registration_service.dart';
+import 'api_client.dart';
 
 /// Provides country-scoped data streams for all app content
 /// Ensures users only see content from their selected country
@@ -510,28 +511,22 @@ class CountryFilteredDataService {
     }
 
     try {
-      // Get base URL from platform configuration
-      String baseUrl;
-      if (kIsWeb) {
-        baseUrl = 'http://localhost:3001';
-      } else if (Platform.isAndroid) {
-        baseUrl = 'http://10.0.2.2:3001';
-      } else if (Platform.isIOS) {
-        baseUrl = 'http://localhost:3001';
-      } else {
-        baseUrl = 'http://localhost:3001';
-      }
+      // Use centralized, production-safe base URL
+      // Avoid localhost/10.0.2.2 which causes hangs on real devices
+      final String baseUrl = ApiClient.baseUrlPublic;
 
       final url =
           Uri.parse('$baseUrl/api/vehicle-types/available/$currentCountry');
 
       final response = await http.get(
         url,
-        headers: {
+        headers: const {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-      );
+      )
+          // Add a timeout so UI doesn't hang indefinitely
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);

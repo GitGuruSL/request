@@ -197,13 +197,26 @@ class _RiderBrowseDriversScreenState extends State<RiderBrowseDriversScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: Colors.black.withOpacity(0.06),
-            backgroundImage: img != null ? NetworkImage(img) : null,
-            child: img == null
-                ? Icon(Icons.person, color: GlassTheme.colors.textTertiary)
-                : null,
+          SizedBox(
+            width: 56,
+            height: 56,
+            child: ClipOval(
+              child: Container(
+                color: Colors.black.withOpacity(0.06),
+                child: img == null
+                    ? Icon(Icons.person, color: GlassTheme.colors.textTertiary)
+                    : Image.network(
+                        img,
+                        width: 56,
+                        height: 56,
+                        fit: BoxFit.cover,
+                        cacheWidth: 112,
+                        filterQuality: FilterQuality.low,
+                        errorBuilder: (_, __, ___) => Icon(Icons.person,
+                            color: GlassTheme.colors.textTertiary),
+                      ),
+              ),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
