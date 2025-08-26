@@ -139,8 +139,12 @@ class MyApp extends StatelessWidget {
             );
           case '/main-dashboard':
           case '/home':
+            final args = settings.arguments as Map<String, dynamic>?;
+            final initialIndex = args?['initialIndex'] as int? ?? 0;
             return MaterialPageRoute(
-              builder: (context) => const MainNavigationScreen(),
+              builder: (context) => MainNavigationScreen(
+                initialIndex: initialIndex,
+              ),
             );
           case '/price':
             // Redirect to price comparison screen

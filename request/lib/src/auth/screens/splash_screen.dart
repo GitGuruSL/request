@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../services/service_manager.dart';
 import '../../widgets/custom_logo.dart';
 import '../../theme/glass_theme.dart';
 import '../../theme/app_theme.dart';
@@ -15,6 +17,7 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
+  bool _navigated = false;
 
   @override
   void initState() {
@@ -42,18 +45,41 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    // Navigate to welcome screen after animation
-    Future.delayed(const Duration(milliseconds: 2000), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/welcome');
-      }
-    });
+    // After animation, decide where to go based on auth + last tab
+    _startNavigation();
   }
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  Future<void> _startNavigation() async {
+    // Ensure splash shows for ~2s while we do work
+    final splashDelay = Future.delayed(const Duration(milliseconds: 2000));
+
+    // Check auth and load last tab in parallel
+    final authFuture = ServiceManager.instance.isAuthenticated();
+    final prefsFuture = SharedPreferences.getInstance();
+
+    final results = await Future.wait([authFuture, prefsFuture, splashDelay]);
+    if (!mounted || _navigated) return;
+
+    final bool isAuthed = results[0] as bool;
+    final SharedPreferences prefs = results[1] as SharedPreferences;
+    final int lastTab = prefs.getInt('last_tab_index') ?? 0;
+
+    _navigated = true;
+    if (isAuthed) {
+      // Go to home/main with last tab restored
+      Navigator.of(context).pushReplacementNamed(
+        '/home',
+        arguments: {'initialIndex': lastTab},
+      );
+    } else {
+      Navigator.of(context).pushReplacementNamed('/welcome');
+    }
   }
 
   @override
