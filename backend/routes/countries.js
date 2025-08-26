@@ -68,9 +68,22 @@ function adapt(row){
   return base;
 }
 
-// GET /api/countries
+// GET /api/countries (default: list admin-style; if public=1, return public shape)
 router.get('/', async (req,res) => {
   try {
+    // If mobile app calls /api/countries without /public, serve public shape when requested
+    if (req.query.public === '1' || req.query.format === 'public') {
+      const rows = await db.query('SELECT code,name,default_currency,phone_prefix,locale,tax_rate,flag_url,flag_emoji,coming_soon_message,is_active FROM countries ORDER BY name');
+      const data = rows.rows.map(r=>({
+        code: r.code, name: r.name, phoneCode: r.phone_prefix, currency: r.default_currency,
+        flagUrl: r.flag_url, flagEmoji: r.flag_emoji, isActive: r.is_active,
+        comingSoon: !r.is_active, statusLabel: r.is_active ? 'Active' : 'Coming Soon',
+        comingSoonMessage: !r.is_active ? (r.coming_soon_message || 'This country is coming soon. Please select an active country.') : null
+      }));
+      if (req.query.expectsArray === '1' || req.query.format === 'array') return res.json(data);
+      return res.json({ success:true, data });
+    }
+
     const { search, active, limit = 100, offset = 0 } = req.query;
     const where = [];
     const params = [];
@@ -95,22 +108,38 @@ router.get('/', async (req,res) => {
 });
 
 // Public list for mobile selection (must be BEFORE :codeOrId)
-router.get('/public', async (req,res)=>{
+router.get(['/public', '/public.json', '/list', '/all'], async (req,res)=>{
   try {
     const rows = await db.query('SELECT code,name,default_currency,phone_prefix,locale,tax_rate,flag_url,flag_emoji,coming_soon_message,is_active FROM countries ORDER BY name');
-    const data = rows.rows.map(r=>({
-      code: r.code,
-      name: r.name,
-      phoneCode: r.phone_prefix,
-      currency: r.default_currency,
-      flagUrl: r.flag_url,
-      flagEmoji: r.flag_emoji, // may be null; client can compute fallback
-      isActive: r.is_active,
-      comingSoon: !r.is_active,
-      statusLabel: r.is_active ? 'Active' : 'Coming Soon',
-      comingSoonMessage: !r.is_active ? (r.coming_soon_message || 'This country is coming soon. Please select an active country.') : null
-    }));
-    res.json({ success:true, data });
+    const data = rows.rows.map(r=>{
+      const base = {
+        code: r.code,
+        name: r.name,
+        phoneCode: r.phone_prefix,
+        currency: r.default_currency,
+        flagUrl: r.flag_url,
+        flagEmoji: r.flag_emoji, // may be null; client can compute fallback
+        isActive: r.is_active,
+        comingSoon: !r.is_active,
+        statusLabel: r.is_active ? 'Active' : 'Coming Soon',
+        comingSoonMessage: !r.is_active ? (r.coming_soon_message || 'This country is coming soon. Please select an active country.') : null
+      };
+      // Legacy compatibility aliases
+      base.countryCode = base.code;
+      base.callingCode = base.phoneCode;
+      base.dialCode = base.phoneCode;
+      base.currencyCode = base.currency;
+      base.active = base.isActive;
+      base.enabled = base.isActive;
+      base.flag = base.flagUrl;
+      base.id = base.code;
+      return base;
+    });
+  // Default: return array for legacy mobile clients.
+  // If wrap=1 or format=object, wrap in { success, data } for dashboards.
+  const wantsWrapped = req.query.wrap === '1' || req.query.format === 'object';
+  if (!wantsWrapped) return res.json(data);
+  return res.json({ success:true, data });
   } catch(e){
     console.error('Public countries list error', e);
     res.status(500).json({ success:false, message:'Error loading countries'});

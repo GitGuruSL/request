@@ -8,13 +8,18 @@ mkdir -p deploy-package
 
 echo "📁 Copying runtime backend files..."
 
-# Entry file (prefer server.js for PM2, fallback to app.js)
+# Entry files: include both if present (server.js is preferred for PM2)
+has_any_entry=false
 if [ -f server.js ]; then
 	cp server.js deploy-package/
-elif [ -f app.js ]; then
+	has_any_entry=true
+fi
+if [ -f app.js ]; then
 	cp app.js deploy-package/
-else
-	echo "❌ No entry file (server.js/app.js) found" && exit 1
+	has_any_entry=true
+fi
+if [ "$has_any_entry" = false ]; then
+	echo "❌ No entry file (server.js or app.js) found" && exit 1
 fi
 
 # Package manifests

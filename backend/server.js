@@ -7,6 +7,8 @@ const dotenv = require('dotenv');
 
 // Load environment variables
 dotenv.config({ path: '.env.rds' });
+// Fallback to .env for local development (won't override existing vars)
+dotenv.config();
 
 // Import services
 const dbService = require('./services/database');
@@ -81,6 +83,11 @@ const allowedOrigins = [
   'http://127.0.0.1:3000',
   'http://127.0.0.1:3001',
   'http://10.0.2.2:3001', // Android emulator
+  // Production domains
+  'https://api.alphabet.lk',
+  'https://admin.alphabet.lk',
+  'https://alphabet.lk',
+  // Legacy domains
   'https://admin.requestmarketplace.com',
   'https://requestmarketplace.com'
 ];
@@ -179,6 +186,9 @@ app.use('/api/s3', uploadS3Routes); // S3 upload endpoints
 app.use('/api/chat', chatRoutes); // Chat endpoints
 app.use('/api/country-modules', countryModuleRoutes);
 app.use('/api/countries', countriesRoutes);
+// Aliases for legacy mobile builds
+app.use('/countries', countriesRoutes);
+app.use('/api/v1/countries', countriesRoutes);
 app.use('/api/brands', brandRoutes);
 app.use('/api/master-products', masterProductRoutes);
 app.use('/api/product-sync', productSyncRoutes);
