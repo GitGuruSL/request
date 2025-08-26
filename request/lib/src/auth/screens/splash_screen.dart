@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../services/service_manager.dart';
+import '../../services/api_client.dart';
+import '../../services/rest_support_services.dart' show CountryService;
 import '../../widgets/custom_logo.dart';
 import '../../theme/glass_theme.dart';
 import '../../theme/app_theme.dart';
@@ -59,8 +60,8 @@ class _SplashScreenState extends State<SplashScreen>
     // Ensure splash shows for ~2s while we do work
     final splashDelay = Future.delayed(const Duration(milliseconds: 2000));
 
-    // Check auth and load last tab in parallel
-    final authFuture = ServiceManager.instance.isAuthenticated();
+    // Prefer a local token check to avoid network dependency on cold start
+    final authFuture = ApiClient.instance.isAuthenticated();
     final prefsFuture = SharedPreferences.getInstance();
 
     final results = await Future.wait([authFuture, prefsFuture, splashDelay]);
@@ -69,6 +70,9 @@ class _SplashScreenState extends State<SplashScreen>
     final bool isAuthed = results[0] as bool;
     final SharedPreferences prefs = results[1] as SharedPreferences;
     final int lastTab = prefs.getInt('last_tab_index') ?? 0;
+
+    // Ensure a default country is set to avoid prompts on authenticated relaunches
+    await _ensureDefaultCountryIfMissing(prefs);
 
     _navigated = true;
     if (isAuthed) {
@@ -79,6 +83,29 @@ class _SplashScreenState extends State<SplashScreen>
       );
     } else {
       Navigator.of(context).pushReplacementNamed('/welcome');
+    }
+  }
+
+  Future<void> _ensureDefaultCountryIfMissing(SharedPreferences prefs) async {
+    const key = 'selected_country_code';
+    var code = prefs.getString(key);
+    if (code == null || code.isEmpty) {
+      // Default to Sri Lanka (LK) to keep UX seamless; user can change later in settings
+      await prefs.setString('selected_country_code', 'LK');
+      await prefs.setString('selected_country_phone_code', '+94');
+      final cs = CountryService.instance;
+      cs.countryCode = 'LK';
+      cs.phoneCode = '+94';
+      cs.currency = 'LKR';
+      cs.countryName = cs.countryName.isNotEmpty ? cs.countryName : 'Sri Lanka';
+    } else {
+      // Sync runtime cache from persisted values if needed
+      final cs = CountryService.instance;
+      if (cs.countryCode == null) {
+        cs.countryCode = code;
+        cs.phoneCode =
+            prefs.getString('selected_country_phone_code') ?? cs.phoneCode;
+      }
     }
   }
 
