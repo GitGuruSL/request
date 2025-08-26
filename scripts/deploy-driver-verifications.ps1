@@ -68,11 +68,8 @@ function Invoke-SCP {
 
 # Backup remote file
 $Timestamp = (Get-Date -Format "yyyy-MM-dd_HHmmss")
-$BackupCmd = @"
-set -e;
-cd "$AppDir";
-cp routes/driver-verifications.js routes/driver-verifications.js.bak_$Timestamp;
-"@
+# Single-line remote command to avoid CRLF issues on bash
+$BackupCmd = "set -e; cd '$AppDir'; if [ -f routes/driver-verifications.js ]; then cp routes/driver-verifications.js routes/driver-verifications.js.bak_$Timestamp; fi"
 
 Write-Step "Backing up remote file..."
 Invoke-SSH -SshHost $Server -SshCommand $BackupCmd
