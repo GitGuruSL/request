@@ -320,6 +320,7 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
                         labelText: '',
                         hintText: 'Pickup location',
                         isRequired: true,
+                        enableCurrentLocationTap: true,
                         onLocationSelected: (address, lat, lng) {
                           setState(() {
                             _pickupLat = lat;

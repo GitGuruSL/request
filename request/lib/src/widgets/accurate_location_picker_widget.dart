@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/google_places_service.dart';
 import '../utils/address_utils.dart';
 import 'dart:async';
+import 'package:geolocator/geolocator.dart';
 
 class AccurateLocationPickerWidget extends StatefulWidget {
   final TextEditingController controller;
@@ -11,6 +12,8 @@ class AccurateLocationPickerWidget extends StatefulWidget {
   final Function(String address, double lat, double lng)? onLocationSelected;
   final IconData prefixIcon;
   final String? countryCode; // optional ISO code to filter autocomplete
+  final bool
+      enableCurrentLocationTap; // make prefix icon tap fetch current location
 
   const AccurateLocationPickerWidget({
     super.key,
@@ -21,6 +24,7 @@ class AccurateLocationPickerWidget extends StatefulWidget {
     this.onLocationSelected,
     this.prefixIcon = Icons.location_on,
     this.countryCode,
+    this.enableCurrentLocationTap = false,
   });
 
   @override
@@ -173,6 +177,53 @@ class _AccurateLocationPickerWidgetState
     _overlayEntry = null;
   }
 
+  Future<void> _useCurrentLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Location services are disabled')),
+        );
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.deniedForever ||
+          permission == LocationPermission.denied) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Location permission not granted')),
+        );
+        return;
+      }
+
+      setState(() => _isLoading = true);
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+        timeLimit: const Duration(seconds: 8),
+      );
+
+      final addr = await GooglePlacesService.getAddressFromCoordinates(
+        pos.latitude,
+        pos.longitude,
+      );
+
+      final cleaned = AddressUtils.cleanAddress(addr ?? '');
+      widget.controller.text = cleaned;
+      if (widget.onLocationSelected != null) {
+        widget.onLocationSelected!(cleaned, pos.latitude, pos.longitude);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not get current location: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   Future<void> _selectPlace(PlaceSuggestion suggestion) async {
     setState(() {
       _isLoading = true;
@@ -231,7 +282,16 @@ class _AccurateLocationPickerWidgetState
         decoration: InputDecoration(
           labelText: widget.labelText,
           hintText: widget.hintText,
-          prefixIcon: Icon(widget.prefixIcon),
+          prefixIcon: widget.enableCurrentLocationTap
+              ? InkWell(
+                  onTap: _useCurrentLocation,
+                  borderRadius: BorderRadius.circular(22),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Icon(widget.prefixIcon),
+                  ),
+                )
+              : Icon(widget.prefixIcon),
           suffixIcon: _isLoading
               ? Container(
                   width: 20,

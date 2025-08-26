@@ -539,6 +539,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                   hintText: 'Pickup location',
                   isRequired: true,
                   prefixIcon: Icons.my_location,
+                  enableCurrentLocationTap: true,
                   onLocationSelected: (address, lat, lng) {
                     setState(() {
                       _pickupLat = lat;
