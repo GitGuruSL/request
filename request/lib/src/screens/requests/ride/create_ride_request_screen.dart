@@ -117,9 +117,9 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                 name: vt['name']?.toString() ?? '',
                 description: vt['description']?.toString(),
                 iconUrl: vt['icon']?.toString(),
-        passengerCapacity: int.tryParse(
-          (vt['passengerCapacity'] ?? vt['capacity'] ?? '1')
-            .toString()),
+                passengerCapacity: int.tryParse(
+                    (vt['passengerCapacity'] ?? vt['capacity'] ?? '1')
+                        .toString()),
                 isActive: vt['isActive'] == true,
                 countryEnabled:
                     true, // These are already filtered to be country enabled

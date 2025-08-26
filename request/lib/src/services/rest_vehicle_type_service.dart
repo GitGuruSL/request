@@ -30,11 +30,16 @@ class VehicleType {
       description: json['description'],
       // Support both snake_case and camelCase keys
       iconUrl: (json['icon_url'] ?? json['icon']) as String?,
-      passengerCapacity: (json['passenger_capacity'] ?? json['passengerCapacity'] ?? json['capacity']) as int?,
+      passengerCapacity: (json['passenger_capacity'] ??
+          json['passengerCapacity'] ??
+          json['capacity']) as int?,
       isActive: (json['is_active'] ?? json['isActive'] ?? true) as bool,
-      countryEnabled: (json['country_enabled'] ?? json['countryEnabled']) as bool?,
-      createdAt: DateTime.parse((json['created_at'] ?? json['createdAt']).toString()),
-      updatedAt: DateTime.parse((json['updated_at'] ?? json['updatedAt']).toString()),
+      countryEnabled:
+          (json['country_enabled'] ?? json['countryEnabled']) as bool?,
+      createdAt:
+          DateTime.parse((json['created_at'] ?? json['createdAt']).toString()),
+      updatedAt:
+          DateTime.parse((json['updated_at'] ?? json['updatedAt']).toString()),
     );
   }
 
@@ -147,8 +152,8 @@ class RestVehicleTypeService {
     return vehicleTypes.where((vehicleType) {
       return vehicleType.name.toLowerCase().contains(query.toLowerCase()) ||
           (vehicleType.description?.toLowerCase().contains(
-                query.toLowerCase(),
-              ) ??
+                    query.toLowerCase(),
+                  ) ??
               false);
     }).toList();
   }

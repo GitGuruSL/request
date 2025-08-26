@@ -5,6 +5,7 @@ import '../../models/enhanced_user_model.dart';
 import '../../services/messaging_service.dart';
 import '../../services/enhanced_user_service.dart';
 import '../unified_request_response/unified_request_view_screen.dart';
+import '../../theme/glass_theme.dart';
 
 class ConversationScreen extends StatefulWidget {
   final ConversationModel conversation;
@@ -125,32 +126,35 @@ class _ConversationScreenState extends State<ConversationScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        body: GlassTheme.backgroundContainer(
+          child: const Center(child: CircularProgressIndicator()),
+        ),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
+        backgroundColor: Colors.transparent,
+        foregroundColor: GlassTheme.colors.textPrimary,
+        elevation: 0.0,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               _otherUser?.name ?? 'Unknown User',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              style: GlassTheme.titleSmall,
             ),
             Text(
               widget.conversation.requestTitle,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+              style: GlassTheme.bodySmall,
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.info_outline),
+            icon: Icon(Icons.info_outline,
+                color: GlassTheme.colors.textSecondary),
             onPressed: () {
               // Show request details
               if (widget.request != null) {
@@ -160,141 +164,135 @@ class _ConversationScreenState extends State<ConversationScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Request header - clickable
-          GestureDetector(
-            onTap: _navigateToRequest,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              margin: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.blue[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue[200]!),
+      body: GlassTheme.backgroundContainer(
+        child: Column(
+          children: [
+            // Request header - clickable
+            GestureDetector(
+              onTap: _navigateToRequest,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.all(12),
+                decoration: GlassTheme.glassContainerSubtle,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'About this request:',
+                            style: GlassTheme.labelMedium.copyWith(
+                              color: GlassTheme.colors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            widget.conversation.requestTitle,
+                            style: GlassTheme.titleSmall,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Tap to view request details',
+                            style: GlassTheme.bodySmall.copyWith(
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16,
+                      color: GlassTheme.colors.textTertiary,
+                    ),
+                  ],
+                ),
               ),
+            ),
+
+            // Messages
+            Expanded(
+              child: StreamBuilder<List<MessageModel>>(
+                stream:
+                    _messagingService.getMessagesStream(widget.conversation.id),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                        'Error: ${snapshot.error}',
+                        style: GlassTheme.bodyMedium,
+                      ),
+                    );
+                  }
+
+                  final messages = snapshot.data ?? [];
+
+                  if (messages.isEmpty) {
+                    return Center(
+                      child: Text(
+                        'No messages yet. Start the conversation!',
+                        style: GlassTheme.bodyMedium,
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    controller: _scrollController,
+                    reverse: true,
+                    padding: const EdgeInsets.all(16),
+                    itemCount: messages.length,
+                    itemBuilder: (context, index) {
+                      final message = messages[index];
+                      return _buildMessageBubble(message);
+                    },
+                  );
+                },
+              ),
+            ),
+
+            // Message input
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
               child: Row(
                 children: [
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'About this request:',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.blue[700],
+                    child: Container(
+                      decoration: GlassTheme.glassContainerSubtle,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: TextField(
+                        controller: _messageController,
+                        decoration: InputDecoration(
+                          hintText: 'Type a message...',
+                          hintStyle: TextStyle(
+                            color: GlassTheme.colors.textTertiary,
                           ),
+                          border: InputBorder.none,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          widget.conversation.requestTitle,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.blue[800],
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Tap to view request details',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.blue[600],
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      ],
+                        onSubmitted: (_) => _sendMessage(),
+                        textCapitalization: TextCapitalization.sentences,
+                        style: TextStyle(color: GlassTheme.colors.textPrimary),
+                        minLines: 1,
+                        maxLines: 4,
+                      ),
                     ),
                   ),
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    size: 16,
-                    color: Colors.blue[600],
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: _sendMessage,
+                    style: GlassTheme.primaryButton,
+                    child: const Icon(Icons.send, color: Colors.white),
                   ),
                 ],
               ),
             ),
-          ),
-
-          // Messages
-          Expanded(
-            child: StreamBuilder<List<MessageModel>>(
-              stream:
-                  _messagingService.getMessagesStream(widget.conversation.id),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
-
-                final messages = snapshot.data ?? [];
-
-                if (messages.isEmpty) {
-                  return const Center(
-                    child: Text('No messages yet. Start the conversation!'),
-                  );
-                }
-
-                return ListView.builder(
-                  controller: _scrollController,
-                  reverse: true,
-                  padding: const EdgeInsets.all(16),
-                  itemCount: messages.length,
-                  itemBuilder: (context, index) {
-                    final message = messages[index];
-                    return _buildMessageBubble(message);
-                  },
-                );
-              },
-            ),
-          ),
-
-          // Message input
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(top: BorderSide(color: Colors.grey, width: 0.2)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: InputDecoration(
-                      hintText: 'Type a message...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey[100],
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                    ),
-                    onSubmitted: (_) => _sendMessage(),
-                    textCapitalization: TextCapitalization.sentences,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                FloatingActionButton(
-                  mini: true,
-                  onPressed: _sendMessage,
-                  backgroundColor: Theme.of(context).primaryColor,
-                  child: const Icon(Icons.send, color: Colors.white),
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -306,20 +304,14 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
     if (isSystem) {
       return Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
+        margin: const EdgeInsets.symmetric(vertical: 6),
         child: Center(
-          child: Container(
+          child: GlassTheme.glassCard(
+            subtle: true,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.grey[200],
-              borderRadius: BorderRadius.circular(12),
-            ),
             child: Text(
               message.text,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
+              style: GlassTheme.bodySmall,
             ),
           ),
         ),
@@ -337,17 +329,26 @@ class _ConversationScreenState extends State<ConversationScreen> {
               maxWidth: MediaQuery.of(context).size.width * 0.75,
             ),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: isMe ? Theme.of(context).primaryColor : Colors.grey[200],
-              borderRadius: BorderRadius.circular(18),
-            ),
+            decoration: isMe
+                ? BoxDecoration(
+                    color: GlassTheme.colors.primaryBlue,
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.12),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  )
+                : GlassTheme.glassContainerSubtle,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   message.text,
                   style: TextStyle(
-                    color: isMe ? Colors.white : Colors.black87,
+                    color: isMe ? Colors.white : GlassTheme.colors.textPrimary,
                     fontSize: 16,
                   ),
                 ),
@@ -355,7 +356,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 Text(
                   _formatTime(message.timestamp),
                   style: TextStyle(
-                    color: isMe ? Colors.white70 : Colors.grey[600],
+                    color:
+                        isMe ? Colors.white70 : GlassTheme.colors.textTertiary,
                     fontSize: 12,
                   ),
                 ),
@@ -391,29 +393,27 @@ class _ConversationScreenState extends State<ConversationScreen> {
       ),
       builder: (context) => Container(
         padding: const EdgeInsets.all(24),
+        decoration: GlassTheme.glassContainer,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Request Details',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
+            Text('Request Details', style: GlassTheme.titleMedium),
             const SizedBox(height: 16),
             Text(
               widget.conversation.requestTitle,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              style: GlassTheme.titleSmall,
             ),
             const SizedBox(height: 8),
             if (widget.request != null) ...[
               Text(
                 widget.request!.description,
-                style: const TextStyle(fontSize: 14),
+                style: GlassTheme.bodyMedium,
               ),
               const SizedBox(height: 12),
               Text(
                 'Type: ${widget.request!.type.name.toUpperCase()}',
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                style: GlassTheme.bodySmall,
               ),
             ],
           ],
