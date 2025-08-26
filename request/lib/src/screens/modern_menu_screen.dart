@@ -350,6 +350,12 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
         route: '/notifications',
         badgeCount: _unreadTotal,
       ),
+      _MenuItem(
+        title: 'Find Drivers',
+        icon: Icons.directions_car_filled,
+        color: const Color(0xFF3B82F6), // Blue
+        route: '/rider/browse-drivers',
+      ),
       if (_isDriver)
         _MenuItem(
           title: 'Ride Alerts',

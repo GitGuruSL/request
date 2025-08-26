@@ -29,6 +29,7 @@ import 'src/screens/terms_conditions_screen.dart';
 import 'src/theme/app_theme.dart';
 import 'src/screens/chat/chat_conversations_screen.dart';
 import 'src/screens/notification_screen.dart';
+import 'src/screens/ride/rider_browse_drivers_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -166,6 +167,10 @@ class MyApp extends StatelessWidget {
           case '/notifications':
             return MaterialPageRoute(
               builder: (context) => const NotificationScreen(),
+            );
+          case '/rider/browse-drivers':
+            return MaterialPageRoute(
+              builder: (context) => const RiderBrowseDriversScreen(),
             );
           case '/business-pricing':
             return MaterialPageRoute(

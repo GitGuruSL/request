@@ -7,6 +7,102 @@ const { getSignedUrl } = require('../services/s3Upload');
 
 console.log('🔧 Driver verifications route loaded');
 
+// Normalize image/asset URLs to production host
+function normalizeUrl(u) {
+  if (!u) return u;
+  try {
+    const s = String(u);
+    // If already https or s3, keep
+    if (s.startsWith('https://requestappbucket.s3') || s.startsWith('https://api.alphabet.lk')) return s;
+    // Replace local dev hosts with production API host
+    return s.replace(/http:\/\/(10\.0\.2\.2|localhost|127\.0\.0\.1)(:3001)?/g, 'https://api.alphabet.lk');
+  } catch (_) {
+    return u;
+  }
+}
+
+// Public: list approved drivers/vehicles for rider discovery
+// GET /api/driver-verifications/public?country=LK&vehicleType=<name>&city=<name>&page=1&limit=20
+router.get('/public', async (req, res) => {
+  try {
+    const { country = 'LK', vehicleType, city, page = 1, limit = 20 } = req.query;
+    const pageNum = Math.max(parseInt(page) || 1, 1);
+    const lim = Math.min(Math.max(parseInt(limit) || 20, 1), 100);
+    const offset = (pageNum - 1) * lim;
+
+    const where = ['dv.status = $1', 'dv.country = $2'];
+    const params = ['approved', country];
+    let p = 3;
+    if (vehicleType) { where.push(`(vt.name ILIKE $${p} OR dv.vehicle_type_name ILIKE $${p})`); params.push(`%${vehicleType}%`); p++; }
+    if (city) { where.push(`(dv.city_name ILIKE $${p} OR c.name ILIKE $${p})`); params.push(`%${city}%`); p++; }
+
+    const sql = `
+      SELECT 
+        dv.id,
+        dv.user_id,
+        dv.full_name,
+        dv.city_name,
+        dv.country,
+        dv.vehicle_model,
+        dv.vehicle_year,
+        dv.vehicle_color,
+        dv.vehicle_number,
+        COALESCE(dv.vehicle_type_name, vt.name) AS vehicle_type_name,
+        dv.driver_image_url,
+        dv.nic_front_url,
+        dv.nic_back_url,
+        dv.license_front_url,
+        dv.license_back_url,
+        dv.vehicle_registration_url,
+        dv.insurance_document_url,
+        dv.billing_proof_url,
+        dv.vehicle_image_urls,
+        dv.vehicle_image_verification,
+        dv.created_at
+      FROM driver_verifications dv
+      LEFT JOIN cities c ON dv.city_id = c.id
+      LEFT JOIN vehicle_types vt ON dv.vehicle_type_id = vt.id
+      WHERE ${where.join(' AND ')}
+      ORDER BY dv.created_at DESC
+      LIMIT ${lim} OFFSET ${offset}`;
+
+    const rows = await database.query(sql, params);
+
+    const items = rows.rows.map((row) => {
+      let images = row.vehicle_image_urls;
+      if (typeof images === 'string' && images.trim().startsWith('[')) {
+        try { images = JSON.parse(images); } catch (_) { /* keep raw */ }
+      }
+      const imgArr = Array.isArray(images) ? images.map(normalizeUrl) : [];
+      return {
+        id: row.id,
+        userId: row.user_id,
+        name: row.full_name,
+        city: row.city_name,
+        country: row.country,
+        vehicleType: row.vehicle_type_name,
+        vehicleModel: row.vehicle_model,
+        vehicleYear: row.vehicle_year,
+        vehicleColor: row.vehicle_color,
+        vehicleNumber: row.vehicle_number,
+        driverImageUrl: normalizeUrl(row.driver_image_url),
+        vehicleImageUrls: imgArr,
+      };
+    });
+
+    // Count
+    const countRow = await database.queryOne(
+      `SELECT COUNT(*)::int AS total FROM driver_verifications dv LEFT JOIN cities c ON dv.city_id=c.id LEFT JOIN vehicle_types vt ON dv.vehicle_type_id=vt.id WHERE ${where.join(' AND ')}`,
+      params
+    );
+
+    res.json({ success: true, data: items, pagination: { page: pageNum, limit: lim, total: countRow?.total || items.length, totalPages: Math.ceil((countRow?.total || items.length) / lim) } });
+  } catch (e) {
+    console.error('driver-verifications/public error', e);
+    res.status(500).json({ success: false, message: 'Failed to list drivers' });
+  }
+});
+
 // Helper function to normalize phone numbers for consistent comparison
 function normalizePhoneNumber(phone) {
   if (!phone) return null;
