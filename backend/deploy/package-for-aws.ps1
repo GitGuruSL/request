@@ -10,14 +10,11 @@ New-Item -ItemType Directory -Name "deploy-package" | Out-Null
 
 Write-Host "📁 Copying runtime backend files..." -ForegroundColor Yellow
 
-# Entry file (prefer app.js, fallback to server.js)
-if (Test-Path "app.js") {
-    Copy-Item "app.js" "deploy-package/"
-} elseif (Test-Path "server.js") {
-    Copy-Item "server.js" "deploy-package/"
-} else {
-    Write-Error "❌ No entry file (app.js/server.js) found"; exit 1
-}
+# Entry files: include both if present (server.js is preferred for PM2)
+$hasAnyEntry = $false
+if (Test-Path "server.js") { Copy-Item "server.js" "deploy-package/"; $hasAnyEntry = $true }
+if (Test-Path "app.js") { Copy-Item "app.js" "deploy-package/"; $hasAnyEntry = $true }
+if (-not $hasAnyEntry) { Write-Error "❌ No entry file (server.js or app.js) found"; exit 1 }
 
 # Package manifests
 Copy-Item "package.json" "deploy-package/" -ErrorAction SilentlyContinue
@@ -43,13 +40,16 @@ if ($env:INCLUDE_MIGRATIONS -eq "1" -and (Test-Path "migrations")) {
 # Exclude heavy/unnecessary content
 if (Test-Path "deploy-package/node_modules") { Remove-Item -Recurse -Force "deploy-package/node_modules" }
 
-# Create a simple archive (using built-in compression)
-Write-Host "🗜️ Creating deployment archive..." -ForegroundColor Yellow
+# Create archives (ZIP for Windows; TAR.GZ for Linux-friendly extraction)
+Write-Host "🗜️ Creating deployment archives..." -ForegroundColor Yellow
 Compress-Archive -Path "deploy-package\*" -DestinationPath "request-backend-deploy.zip" -Force
-
-Write-Host "✅ Deployment package created: request-backend-deploy.zip" -ForegroundColor Green
-Write-Host "📤 Upload this file to your EC2 instance using:" -ForegroundColor Cyan
-Write-Host "   scp -i your-key.pem request-backend-deploy.zip ubuntu@YOUR-EC2-IP:~/" -ForegroundColor White
+try {
+    tar -czf request-backend-deploy.tar.gz -C deploy-package .
+    Write-Host "✅ Deployment packages created: request-backend-deploy.zip and request-backend-deploy.tar.gz" -ForegroundColor Green
+} catch {
+    Write-Host "⚠️ tar.exe not available; only ZIP created" -ForegroundColor Yellow
+    Write-Host "✅ Deployment package created: request-backend-deploy.zip" -ForegroundColor Green
+}
 
 # Clean up
 Remove-Item -Recurse -Force "deploy-package"
@@ -60,5 +60,9 @@ Write-Host "🚀 Ready for AWS deployment!" -ForegroundColor Green
 Write-Host "`n📋 Package created:" -ForegroundColor Cyan
 if (Test-Path "request-backend-deploy.zip") {
     $size = (Get-Item "request-backend-deploy.zip").Length / 1MB
-    Write-Host ("   Size: {0} MB" -f ([math]::Round($size, 2))) -ForegroundColor White
+    Write-Host ("   ZIP Size: {0} MB" -f ([math]::Round($size, 2))) -ForegroundColor White
+}
+if (Test-Path "request-backend-deploy.tar.gz") {
+    $size2 = (Get-Item "request-backend-deploy.tar.gz").Length / 1MB
+    Write-Host ("   TAR.GZ Size: {0} MB" -f ([math]::Round($size2, 2))) -ForegroundColor White
 }

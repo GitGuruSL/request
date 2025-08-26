@@ -29,7 +29,9 @@ app.use(morgan('combined'));
 // Health check endpoint
 app.get('/health', async (req, res) => {
   try {
-    const { pool } = require('./database');
+    // Use the shared database service
+    const dbService = require('./services/database');
+    const pool = dbService.pool;
     const result = await pool.query('SELECT NOW()');
     res.json({
       status: 'healthy',
@@ -97,6 +99,30 @@ const s3Routes = require('./routes/uploadS3');
 
 console.log('🔧 About to register driver-verifications route');
 
+// Helper: safely mount routers without crashing if a module isn't a middleware
+function safeUse(path, mod, name) {
+  try {
+    if (mod && typeof mod === 'function') {
+      app.use(path, mod);
+      console.log(`✅ Mounted ${name} at ${path}`);
+      return;
+    }
+    if (mod && mod.router && typeof mod.router === 'function') {
+      app.use(path, mod.router);
+      console.log(`✅ Mounted ${name}.router at ${path}`);
+      return;
+    }
+    if (mod && typeof mod.default === 'function') {
+      app.use(path, mod.default);
+      console.log(`✅ Mounted ${name}.default at ${path}`);
+      return;
+    }
+    console.error(`❌ Skipping mount for ${name} at ${path}: not a middleware (got ${typeof mod})`);
+  } catch (e) {
+    console.error(`❌ Error mounting ${name} at ${path}:`, e.message);
+  }
+}
+
 // Serve static files (uploaded images)
 app.use('/uploads', express.static('uploads', {
   setHeaders: (res, path) => {
@@ -107,48 +133,48 @@ app.use('/uploads', express.static('uploads', {
   }
 }));
 
-// Use routes
-app.use('/api/auth', authRoutes);
-app.use('/api/auth', flutterAuthRoutes); // NEW - adds Flutter-specific endpoints
-app.use('/api/users', usersRoutes); // NEW - user profile management
-app.use('/api/categories', categoryRoutes);
-app.use('/api/cities', cityRoutes);
-app.use('/api/vehicle-types', vehicleTypeRoutes);
-app.use('/api/requests', requestRoutes);
-app.use('/api/countries', countryRoutes);
+// Use routes (safely)
+safeUse('/api/auth', authRoutes, 'authRoutes');
+safeUse('/api/auth', flutterAuthRoutes, 'flutterAuthRoutes'); // NEW - adds Flutter-specific endpoints
+safeUse('/api/users', usersRoutes, 'usersRoutes'); // NEW - user profile management
+safeUse('/api/categories', categoryRoutes, 'categoryRoutes');
+safeUse('/api/cities', cityRoutes, 'cityRoutes');
+safeUse('/api/vehicle-types', vehicleTypeRoutes, 'vehicleTypeRoutes');
+safeUse('/api/requests', requestRoutes, 'requestRoutes');
+safeUse('/api/countries', countryRoutes, 'countryRoutes');
 
 // Centralized data routes (Super Admin)
-app.use('/api/master-products', masterProductsRoutes);
-app.use('/api/brands', brandsRoutes);
-app.use('/api/subcategories', subcategoriesRoutes);
-app.use('/api/variable-types', variableTypesRoutes);
+safeUse('/api/master-products', masterProductsRoutes, 'masterProductsRoutes');
+safeUse('/api/brands', brandsRoutes, 'brandsRoutes');
+safeUse('/api/subcategories', subcategoriesRoutes, 'subcategoriesRoutes');
+safeUse('/api/variable-types', variableTypesRoutes, 'variableTypesRoutes');
 
 // Country-specific routes
-app.use('/api/country-products', countryProductsRoutes);
-app.use('/api/country-brands', countryBrandsRoutes);
-app.use('/api/country-categories', countryCategoriesRoutes);
-app.use('/api/country-subcategories', countrySubcategoriesRoutes);
-app.use('/api/country-variable-types', countryVariableTypesRoutes);
+safeUse('/api/country-products', countryProductsRoutes, 'countryProductsRoutes');
+safeUse('/api/country-brands', countryBrandsRoutes, 'countryBrandsRoutes');
+safeUse('/api/country-categories', countryCategoriesRoutes, 'countryCategoriesRoutes');
+safeUse('/api/country-subcategories', countrySubcategoriesRoutes, 'countrySubcategoriesRoutes');
+safeUse('/api/country-variable-types', countryVariableTypesRoutes, 'countryVariableTypesRoutes');
 
 // Price comparison routes  
-app.use('/api/price-listings', priceListingsRoutes);
-app.use('/api/payment-methods', paymentMethodsRoutes);
-app.use('/api/s3', s3Routes);
-app.use('/api/banners', bannersRoutes); // NEW - banners CRUD
+safeUse('/api/price-listings', priceListingsRoutes, 'priceListingsRoutes');
+safeUse('/api/payment-methods', paymentMethodsRoutes, 'paymentMethodsRoutes');
+safeUse('/api/s3', s3Routes, 's3Routes');
+safeUse('/api/banners', bannersRoutes, 'bannersRoutes'); // NEW - banners CRUD
 
-app.use('/api/upload', uploadRoutes); // NEW - image upload endpoint
-app.use('/api/uploads', uploadRoutes); // Alias to support admin-react '/uploads/payment-methods'
-app.use('/api/s3', uploadS3Routes); // NEW - S3 upload + signed URL endpoints
-app.use('/api/test-images', testImageRoutes); // TEST - image serving test
-app.use('/api', subscriptionPlansLegacy); // legacy paths /subscription-plans, /user-subscriptions
-app.use('/api', subscriptionPlansNew); // new CRUD under /subscription-plans-new
-app.use('/api/content-pages', contentPagesRoutes); // content pages management
-app.use('/api/driver-verifications', driverVerificationRoutes); // NEW - driver verification management
-app.use('/api/business-verifications', businessVerificationRoutes); // NEW - business verification management
-app.use('/api/business-types', businessTypesRoutes); // NEW - admin business types management
-app.use('/api/business-categories', businessCategoriesRoutes); // NEW - business categories management  
-app.use('/api/business-registration', businessRegistrationFormRoutes); // NEW - business registration form data
-app.use('/api/modules', modulesRoutes); // NEW - module management
+safeUse('/api/upload', uploadRoutes, 'uploadRoutes'); // NEW - image upload endpoint
+safeUse('/api/uploads', uploadRoutes, 'uploadRoutes(alias)'); // Alias to support admin-react '/uploads/payment-methods'
+safeUse('/api/s3', uploadS3Routes, 'uploadS3Routes'); // NEW - S3 upload + signed URL endpoints
+safeUse('/api/test-images', testImageRoutes, 'testImageRoutes'); // TEST - image serving test
+safeUse('/api', subscriptionPlansLegacy, 'subscriptionPlansLegacy'); // legacy paths /subscription-plans, /user-subscriptions
+safeUse('/api', subscriptionPlansNew, 'subscriptionPlansNew'); // new CRUD under /subscription-plans-new
+safeUse('/api/content-pages', contentPagesRoutes, 'contentPagesRoutes'); // content pages management
+safeUse('/api/driver-verifications', driverVerificationRoutes, 'driverVerificationRoutes'); // NEW - driver verification management
+safeUse('/api/business-verifications', businessVerificationRoutes, 'businessVerificationRoutes'); // NEW - business verification management
+safeUse('/api/business-types', businessTypesRoutes, 'businessTypesRoutes'); // NEW - admin business types management
+safeUse('/api/business-categories', businessCategoriesRoutes, 'businessCategoriesRoutes'); // NEW - business categories management  
+safeUse('/api/business-registration', businessRegistrationFormRoutes, 'businessRegistrationFormRoutes'); // NEW - business registration form data
+safeUse('/api/modules', modulesRoutes, 'modulesRoutes'); // NEW - module management
 console.log('🔧 Driver-verifications route registered at /api/driver-verifications');
 console.log('🔧 Business-verifications route registered at /api/business-verifications');
 console.log('🔧 Business-types route registered at /api/business-types');
