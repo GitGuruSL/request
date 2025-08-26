@@ -395,7 +395,18 @@ class RestAuthService {
       );
 
       if (response.isSuccess && response.data != null) {
-        _currentUser = UserModel.fromJson(response.data!);
+        // Accept either flat user or wrapped { success, data: { user fields } }
+        final raw = response.data!;
+        Map<String, dynamic>? userMap;
+        if (raw.containsKey('data') && raw['data'] is Map<String, dynamic>) {
+          userMap = raw['data'] as Map<String, dynamic>;
+        } else if (raw.containsKey('user') &&
+            raw['user'] is Map<String, dynamic>) {
+          userMap = raw['user'] as Map<String, dynamic>;
+        } else {
+          userMap = raw; // fallback
+        }
+        _currentUser = UserModel.fromJson(userMap);
 
         return AuthResult(
           success: true,

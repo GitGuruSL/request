@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/api_client.dart';
 import '../../services/rest_support_services.dart' show CountryService;
+import '../../services/rest_auth_service.dart';
 import '../../widgets/custom_logo.dart';
 import '../../theme/glass_theme.dart';
 import '../../theme/app_theme.dart';
@@ -69,35 +70,59 @@ class _SplashScreenState extends State<SplashScreen>
 
     final bool isAuthed = results[0] as bool;
     final SharedPreferences prefs = results[1] as SharedPreferences;
-    final int lastTab = prefs.getInt('last_tab_index') ?? 0;
 
-    // Ensure a default country is set to avoid prompts on authenticated relaunches
-    await _ensureDefaultCountryIfMissing(prefs);
+    bool goHome = false;
+    // If we have a token, validate by loading profile so we keep the SAME account
+    if (isAuthed) {
+      final profile = await RestAuthService.instance.getUserProfile();
+      if (profile.success && RestAuthService.instance.currentUser != null) {
+        goHome = true;
+        // Prefer user's country, otherwise ensure default LK
+        final user = RestAuthService.instance.currentUser!;
+        await _ensureDefaultCountryIfMissing(prefs,
+            preferCode: user.countryCode);
+      } else {
+        // Token invalid: clear it to avoid ghost sessions
+        await RestAuthService.instance.logout();
+      }
+    } else {
+      // Not authed; ensure default country for smoother onboarding
+      await _ensureDefaultCountryIfMissing(prefs);
+    }
 
     _navigated = true;
-    if (isAuthed) {
+    if (goHome) {
       // Go to home/main with last tab restored
       Navigator.of(context).pushReplacementNamed(
         '/home',
-        arguments: {'initialIndex': lastTab},
+        // Cold start should always land on Home tab (index 0)
+        arguments: {'initialIndex': 0},
       );
     } else {
       Navigator.of(context).pushReplacementNamed('/welcome');
     }
   }
 
-  Future<void> _ensureDefaultCountryIfMissing(SharedPreferences prefs) async {
+  Future<void> _ensureDefaultCountryIfMissing(SharedPreferences prefs,
+      {String? preferCode}) async {
     const key = 'selected_country_code';
     var code = prefs.getString(key);
     if (code == null || code.isEmpty) {
-      // Default to Sri Lanka (LK) to keep UX seamless; user can change later in settings
-      await prefs.setString('selected_country_code', 'LK');
-      await prefs.setString('selected_country_phone_code', '+94');
+      // Prefer user's country if provided; otherwise default to LK
+      final toSet =
+          (preferCode != null && preferCode.isNotEmpty) ? preferCode : 'LK';
+      final phone = toSet.toUpperCase() == 'LK'
+          ? '+94'
+          : (prefs.getString('selected_country_phone_code') ?? '+94');
+      await prefs.setString('selected_country_code', toSet);
+      await prefs.setString('selected_country_phone_code', phone);
       final cs = CountryService.instance;
-      cs.countryCode = 'LK';
-      cs.phoneCode = '+94';
-      cs.currency = 'LKR';
-      cs.countryName = cs.countryName.isNotEmpty ? cs.countryName : 'Sri Lanka';
+      cs.countryCode = toSet;
+      cs.phoneCode = phone;
+      cs.currency = toSet.toUpperCase() == 'LK' ? 'LKR' : cs.currency;
+      if (cs.countryName.isEmpty && toSet.toUpperCase() == 'LK') {
+        cs.countryName = 'Sri Lanka';
+      }
     } else {
       // Sync runtime cache from persisted values if needed
       final cs = CountryService.instance;
