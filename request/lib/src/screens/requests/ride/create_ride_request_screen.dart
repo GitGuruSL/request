@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -57,6 +58,8 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
   Set<Polyline> _polylines = {};
 
   bool _isLoading = false;
+  bool _mapReady = false;
+  bool _mapInitTimedOut = false;
 
   // Dynamic vehicle types from database
   List<VehicleType> _vehicleTypes = [];
@@ -65,6 +68,14 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
   void initState() {
     super.initState();
     _loadVehicleTypes();
+    // If the Google Map doesn't call onMapCreated within 6s, show a hint
+    Timer(const Duration(seconds: 6), () {
+      if (mounted && !_mapReady) {
+        setState(() {
+          _mapInitTimedOut = true;
+        });
+      }
+    });
   }
 
   Future<void> _loadVehicleTypes() async {
@@ -378,6 +389,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
               initialCameraPosition: _initialPosition,
               onMapCreated: (GoogleMapController controller) {
                 _mapController = controller;
+                if (mounted) setState(() => _mapReady = true);
               },
               markers: _markers,
               polylines: _polylines,
@@ -388,6 +400,27 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
               mapToolbarEnabled: false,
             ),
           ),
+
+          // Helpful overlay if map failed to initialize (likely missing API key)
+          if (_mapInitTimedOut && !_mapReady)
+            Positioned(
+              top: 16,
+              left: 16,
+              right: 16,
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'Map not available. For Android emulator, ensure:\n'
+                  '• A valid MAPS_API_KEY is set in android/key.properties or env\n'
+                  '• Emulator image includes Google Play services',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ),
 
           // Bottom Sheet with ride details (Glass style)
           DraggableScrollableSheet(
