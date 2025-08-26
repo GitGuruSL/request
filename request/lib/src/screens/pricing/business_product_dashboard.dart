@@ -429,24 +429,25 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
 
     if (_countryProducts.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.search_off,
-              size: 64,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No products found',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w500,
+        child: Container(
+          margin: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
+          decoration: GlassTheme.glassContainer,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.search_off,
+                  size: 56, color: GlassTheme.colors.textTertiary),
+              const SizedBox(height: 12),
+              Text('No products found', style: GlassTheme.titleSmall),
+              const SizedBox(height: 6),
+              Text(
+                'Try another keyword.',
+                style: GlassTheme.bodyMedium,
+                textAlign: TextAlign.center,
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     }
@@ -467,11 +468,9 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
     final hasExistingPrice = _myPriceListings
         .any((listing) => listing.masterProductId == product.id);
 
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      decoration: GlassTheme.glassContainer,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -482,19 +481,13 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                 children: [
                   Text(
                     name,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: GlassTheme.titleSmall,
                   ),
                   if (brand.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
                       brand,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
+                      style: GlassTheme.bodyMedium,
                     ),
                   ],
                   if (hasExistingPrice) ...[
@@ -503,7 +496,7 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.green,
+                        color: GlassTheme.colors.successColor,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Text(
@@ -521,11 +514,12 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
             ),
             ElevatedButton(
               onPressed: () => _addEditPrice(product),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: hasExistingPrice
-                    ? Colors.orange
-                    : GlassTheme.colors.primaryBlue,
-                foregroundColor: Colors.white,
+              style: GlassTheme.primaryButton.copyWith(
+                backgroundColor: WidgetStatePropertyAll(
+                  hasExistingPrice
+                      ? GlassTheme.colors.warningColor
+                      : GlassTheme.colors.primaryBlue,
+                ),
               ),
               child: Text(hasExistingPrice ? 'Edit Price' : 'Add Price'),
             ),
@@ -581,11 +575,9 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
   }
 
   Widget _buildMyPriceCard(dynamic listing) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      decoration: GlassTheme.glassContainer,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(
@@ -596,19 +588,13 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                 children: [
                   Text(
                     listing.productName ?? 'Product',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: GlassTheme.titleSmall,
                   ),
                   if (listing.brand?.isNotEmpty == true) ...[
                     const SizedBox(height: 2),
                     Text(
                       listing.brand,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
+                      style: GlassTheme.bodyMedium,
                     ),
                   ],
                 ],
@@ -634,10 +620,10 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                           horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: listing.hasPendingChanges
-                            ? Colors.orange // Orange for pending changes
+                            ? GlassTheme.colors.warningColor // pending
                             : (listing.isAvailable == true
-                                ? Colors.green
-                                : Colors.red),
+                                ? GlassTheme.colors.successColor
+                                : GlassTheme.colors.errorColor),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -675,8 +661,9 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                                 ? Icons.visibility_off
                                 : Icons.visibility,
                             size: 16),
-                        color:
-                            listing.isAvailable ? Colors.orange : Colors.green,
+                        color: listing.isAvailable
+                            ? GlassTheme.colors.warningColor
+                            : GlassTheme.colors.successColor,
                         tooltip:
                             listing.isAvailable ? 'Deactivate' : 'Activate',
                         padding: EdgeInsets.zero,
@@ -688,7 +675,7 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                       child: IconButton(
                         onPressed: () => _permanentlyDeletePrice(listing),
                         icon: const Icon(Icons.delete_forever, size: 16),
-                        color: Colors.red,
+                        color: GlassTheme.colors.errorColor,
                         tooltip: 'Delete Permanently',
                         padding: EdgeInsets.zero,
                       ),
