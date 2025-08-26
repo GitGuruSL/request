@@ -11,14 +11,14 @@ class ApiClient {
   // Platform-specific base URLs
   static String get _baseUrl {
     if (kIsWeb) {
-      return 'http://api.alphabet.lk'; // Production Web (HTTP for now)
+      return 'https://api.alphabet.lk'; // Production Web
     } else if (Platform.isAndroid) {
       // For production release
-      return 'http://api.alphabet.lk';
+      return 'https://api.alphabet.lk';
     } else if (Platform.isIOS) {
-      return 'http://api.alphabet.lk'; // Production iOS (HTTP for now)
+      return 'https://api.alphabet.lk'; // Production iOS
     } else {
-      return 'http://api.alphabet.lk'; // Production Desktop/other (HTTP for now)
+      return 'https://api.alphabet.lk'; // Production Desktop/other
     }
   }
 
