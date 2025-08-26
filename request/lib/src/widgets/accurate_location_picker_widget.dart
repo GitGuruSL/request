@@ -19,8 +19,8 @@ class AccurateLocationPickerWidget extends StatefulWidget {
     this.hintText = 'Search for a location',
     this.isRequired = false,
     this.onLocationSelected,
-  this.prefixIcon = Icons.location_on,
-  this.countryCode,
+    this.prefixIcon = Icons.location_on,
+    this.countryCode,
   });
 
   @override

@@ -26,48 +26,48 @@ class GooglePlacesService {
 
     try {
       final response = await http.get(url);
-      
-  if (response.statusCode == 200) {
+
+      if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        
+
         if (data['status'] == 'OK') {
           List<PlaceSuggestion> suggestions = [];
-          
+
           for (var prediction in data['predictions']) {
             suggestions.add(PlaceSuggestion(
               placeId: prediction['place_id'],
               description: prediction['description'],
               mainText: prediction['structured_formatting']['main_text'] ?? '',
-              secondaryText: prediction['structured_formatting']['secondary_text'] ?? '',
+              secondaryText:
+                  prediction['structured_formatting']['secondary_text'] ?? '',
             ));
           }
-          
+
           return suggestions;
         }
       }
     } catch (e) {
       print('Error searching places: $e');
     }
-    
+
     return [];
   }
 
   // Get place details including coordinates
   static Future<PlaceDetails?> getPlaceDetails(String placeId) async {
     final url = Uri.parse(
-      '$_baseUrl/place/details/json?place_id=$placeId&fields=name,formatted_address,geometry&key=$_apiKey'
-    );
+        '$_baseUrl/place/details/json?place_id=$placeId&fields=name,formatted_address,geometry&key=$_apiKey');
 
     try {
       final response = await http.get(url);
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        
+
         if (data['status'] == 'OK') {
           final result = data['result'];
           final geometry = result['geometry']['location'];
-          
+
           return PlaceDetails(
             placeId: placeId,
             name: result['name'] ?? '',
@@ -80,22 +80,22 @@ class GooglePlacesService {
     } catch (e) {
       print('Error getting place details: $e');
     }
-    
+
     return null;
   }
 
   // Reverse geocoding - get address from coordinates
-  static Future<String?> getAddressFromCoordinates(double lat, double lng) async {
-    final url = Uri.parse(
-      '$_baseUrl/geocode/json?latlng=$lat,$lng&key=$_apiKey'
-    );
+  static Future<String?> getAddressFromCoordinates(
+      double lat, double lng) async {
+    final url =
+        Uri.parse('$_baseUrl/geocode/json?latlng=$lat,$lng&key=$_apiKey');
 
     try {
       final response = await http.get(url);
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        
+
         if (data['status'] == 'OK' && data['results'].isNotEmpty) {
           return data['results'][0]['formatted_address'];
         }
@@ -103,7 +103,7 @@ class GooglePlacesService {
     } catch (e) {
       print('Error reverse geocoding: $e');
     }
-    
+
     return null;
   }
 }

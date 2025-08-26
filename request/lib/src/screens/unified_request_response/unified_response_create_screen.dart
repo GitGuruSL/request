@@ -6,10 +6,10 @@ import '../../models/enhanced_user_model.dart';
 import '../../services/centralized_request_service.dart';
 import '../../services/enhanced_user_service.dart';
 import '../../services/user_registration_service.dart';
-import '../../services/country_service.dart';
 import '../../widgets/image_upload_widget.dart';
 import '../../utils/currency_helper.dart';
 import '../../widgets/accurate_location_picker_widget.dart';
+import '../../services/country_service.dart';
 
 class UnifiedResponseCreateScreen extends StatefulWidget {
   final RequestModel request;
@@ -419,6 +419,7 @@ class _UnifiedResponseCreateScreenState
               const SizedBox(height: 8),
               AccurateLocationPickerWidget(
                 controller: _locationAddressController,
+                countryCode: CountryService.instance.countryCode,
                 labelText: '',
                 hintText: 'Tap to pick responder location',
                 isRequired: true,
