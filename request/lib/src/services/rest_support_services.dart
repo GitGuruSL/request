@@ -58,8 +58,18 @@ class CountryService {
       if (resp.statusCode != 200) {
         throw Exception('HTTP ${resp.statusCode}');
       }
-      final decoded = json.decode(resp.body) as Map<String, dynamic>;
-      final List data = (decoded['data'] ?? []) as List;
+      final dynamic decoded = json.decode(resp.body);
+      final List data;
+      if (decoded is List) {
+        data = decoded;
+      } else if (decoded is Map<String, dynamic>) {
+        data = (decoded['data'] ??
+            decoded['countries'] ??
+            decoded['items'] ??
+            []) as List;
+      } else {
+        throw Exception('Unexpected response shape');
+      }
       _cache
         ..clear()
         ..addAll(data.map((e) => Country.fromJson(e as Map<String, dynamic>)));
