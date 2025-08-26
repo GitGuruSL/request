@@ -135,11 +135,12 @@ router.get(['/public', '/public.json', '/list', '/all'], async (req,res)=>{
       base.id = base.code;
       return base;
     });
-  // Default: return array for legacy mobile clients.
-  // If wrap=1 or format=object, wrap in { success, data } for dashboards.
-  const wantsWrapped = req.query.wrap === '1' || req.query.format === 'object';
-  if (!wantsWrapped) return res.json(data);
-  return res.json({ success:true, data });
+    // Default: return { success, data } for current Flutter client
+    // If expectsArray or format=array is provided, return the plain array for older clients
+    if (req.query.expectsArray === '1' || req.query.format === 'array') {
+      return res.json(data);
+    }
+    return res.json({ success:true, data });
   } catch(e){
     console.error('Public countries list error', e);
     res.status(500).json({ success:false, message:'Error loading countries'});
