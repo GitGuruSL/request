@@ -244,41 +244,61 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
   @override
   Widget build(BuildContext context) {
     if (!_isSeller) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Product Dashboard'),
-        ),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.verified_outlined,
-                    size: 72, color: Colors.orange),
-                const SizedBox(height: 16),
-                const Text(
-                  'Become a verified business to add prices',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Submit your business verification. Once approved, you can add and manage your product prices.',
-                  style: TextStyle(color: Colors.grey[600]),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () =>
-                      Navigator.pushNamed(context, '/business-registration'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: GlassTheme.colors.primaryBlue,
-                    foregroundColor: Colors.white,
+      return Container(
+        decoration: GlassTheme.backgroundGradient,
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            foregroundColor: GlassTheme.colors.textPrimary,
+            title: Text('Product Dashboard', style: GlassTheme.titleLarge),
+          ),
+          body: SafeArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 480),
+                  child: Container(
+                    decoration: GlassTheme.glassContainer,
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.verified_outlined,
+                          size: 72,
+                          color: GlassTheme.colors.warningColor,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Become a verified business to add prices',
+                          style: GlassTheme.titleMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Submit your business verification. Once approved, you can add and manage your product prices.',
+                          style: GlassTheme.bodyMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 20),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.pushNamed(
+                                context, '/business-registration'),
+                            style: GlassTheme.primaryButton,
+                            child: const Text('Register Business'),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  child: const Text('Register Business'),
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -343,24 +363,22 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
 
   Widget _buildSearchSection() {
     return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       padding: const EdgeInsets.all(16),
+      decoration: GlassTheme.glassContainer,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Search products to add your prices',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          Text('Search products to add your prices',
+              style: GlassTheme.titleSmall),
           const SizedBox(height: 12),
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
               hintText: 'Find requests by skill, item, or service',
-              hintStyle: TextStyle(color: Colors.grey[500]),
-              prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
+              hintStyle: TextStyle(color: GlassTheme.colors.textSecondary),
+              prefixIcon:
+                  Icon(Icons.search, color: GlassTheme.colors.textTertiary),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear),
@@ -372,15 +390,15 @@ class _BusinessProductDashboardState extends State<BusinessProductDashboard> {
                   : null,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+                borderSide: BorderSide(color: Colors.black12.withOpacity(0.05)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey[400]!),
+                borderSide: BorderSide(color: Colors.black26.withOpacity(0.08)),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+                borderSide: BorderSide(color: Colors.black12.withOpacity(0.05)),
               ),
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
