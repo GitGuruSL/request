@@ -10,6 +10,7 @@ class AccurateLocationPickerWidget extends StatefulWidget {
   final bool isRequired;
   final Function(String address, double lat, double lng)? onLocationSelected;
   final IconData prefixIcon;
+  final String? countryCode; // optional ISO code to filter autocomplete
 
   const AccurateLocationPickerWidget({
     super.key,
@@ -18,7 +19,8 @@ class AccurateLocationPickerWidget extends StatefulWidget {
     this.hintText = 'Search for a location',
     this.isRequired = false,
     this.onLocationSelected,
-    this.prefixIcon = Icons.location_on,
+  this.prefixIcon = Icons.location_on,
+  this.countryCode,
   });
 
   @override
@@ -78,7 +80,10 @@ class _AccurateLocationPickerWidgetState
     });
 
     try {
-      final suggestions = await GooglePlacesService.searchPlaces(query);
+      final suggestions = await GooglePlacesService.searchPlaces(
+        query,
+        countryCode: widget.countryCode,
+      );
       setState(() {
         _suggestions = suggestions;
         _isLoading = false;

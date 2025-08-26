@@ -6,6 +6,7 @@ import '../../models/enhanced_user_model.dart';
 import '../../services/enhanced_user_service.dart';
 import '../../services/rest_request_service.dart' as rest;
 import '../../widgets/image_upload_widget.dart';
+import '../../services/country_service.dart';
 import '../../widgets/accurate_location_picker_widget.dart';
 import '../../widgets/category_picker.dart';
 import '../../utils/currency_helper.dart';
@@ -500,6 +501,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
               const SizedBox(height: 8),
               AccurateLocationPickerWidget(
                 controller: _locationController,
+                countryCode: CountryService.instance.countryCode,
                 labelText: '',
                 hintText: 'Enter item pickup location',
                 isRequired: true,
@@ -690,6 +692,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
               const SizedBox(height: 8),
               AccurateLocationPickerWidget(
                 controller: _locationController,
+                countryCode: CountryService.instance.countryCode,
                 labelText: '',
                 hintText: 'Enter service location',
                 isRequired: true,

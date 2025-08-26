@@ -5,18 +5,29 @@ class GooglePlacesService {
   static const String _baseUrl = 'https://maps.googleapis.com/maps/api';
   static const String _apiKey = 'AIzaSyAZhdbNcSuvrrNzyAYmdHy5kH9drDEHgw8';
 
-  // Search places by text input
-  static Future<List<PlaceSuggestion>> searchPlaces(String query) async {
+  // Search places by text input (optionally filter by country ISO code)
+  static Future<List<PlaceSuggestion>> searchPlaces(
+    String query, {
+    String? countryCode,
+  }) async {
     if (query.isEmpty) return [];
 
-    final url = Uri.parse(
-      '$_baseUrl/place/autocomplete/json?input=$query&key=$_apiKey&language=en'
-    );
+    final params = <String, String>{
+      'input': query,
+      'key': _apiKey,
+      'language': 'en',
+    };
+    if (countryCode != null && countryCode.trim().isNotEmpty) {
+      params['components'] = 'country:${countryCode.toUpperCase()}';
+    }
+
+    final url = Uri.parse('$_baseUrl/place/autocomplete/json')
+        .replace(queryParameters: params);
 
     try {
       final response = await http.get(url);
       
-      if (response.statusCode == 200) {
+  if (response.statusCode == 200) {
         final data = json.decode(response.body);
         
         if (data['status'] == 'OK') {

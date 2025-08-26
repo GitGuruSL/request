@@ -10,6 +10,7 @@ import '../../../services/rest_ride_request_service.dart';
 import '../../../services/rest_auth_service.dart';
 import '../../../utils/address_utils.dart';
 import '../../../widgets/accurate_location_picker_widget.dart';
+import '../../../services/country_service.dart';
 import '../../../utils/currency_helper.dart';
 import '../../../utils/distance_calculator.dart';
 import '../../../services/google_directions_service.dart';
@@ -533,6 +534,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
               Expanded(
                 child: AccurateLocationPickerWidget(
                   controller: _pickupLocationController,
+                  countryCode: CountryService.instance.countryCode,
                   labelText: '',
                   hintText: 'Pickup location',
                   isRequired: true,
@@ -575,6 +577,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
               Expanded(
                 child: AccurateLocationPickerWidget(
                   controller: _destinationController,
+                  countryCode: CountryService.instance.countryCode,
                   labelText: '',
                   hintText: 'Where to?',
                   isRequired: true,
