@@ -1,4 +1,5 @@
 import 'api_client.dart';
+import 'rest_auth_service.dart';
 
 // Robust converter for numeric fields that may arrive as int, double, String or null.
 double? _asDouble(dynamic v) {
@@ -524,12 +525,14 @@ class RestRequestService {
     String sortBy = 'created_at',
     String sortOrder = 'DESC',
   }) async {
-    // This will automatically filter by the authenticated user's ID on the backend
+    // Filter by authenticated user's ID; backend will return only their requests
+    final uid = RestAuthService.instance.currentUser?.uid;
     return await getRequests(
       page: page,
       limit: limit,
       sortBy: sortBy,
       sortOrder: sortOrder,
+      userId: uid,
     );
   }
 
