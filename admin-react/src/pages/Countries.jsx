@@ -253,7 +253,7 @@ const Countries = () => {
 
   const fetchCountries = async () => {
     try {
-      const res = await api.get('/countries');
+  const res = await api.get('/countries');
       const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
       const normalized = list.map(c=>({
         ...c,

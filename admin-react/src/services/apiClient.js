@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-// NOTE: Backend runs on port 3001 by default.
-// Prefer setting VITE_API_BASE_URL in a .env file at project root (e.g., .env.development) to override.
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+// Prefer setting VITE_API_BASE_URL in .env files.
+// Default to production API so builds work out of the box.
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'https://api.alphabet.lk').replace(/\/$/, '');
 
 let accessToken = null;
 let refreshToken = null;
@@ -29,6 +29,10 @@ export function clearAuthSession() {
 })();
 
 const api = axios.create({ baseURL: API_BASE_URL + '/api', timeout: 15000 });
+if (typeof window !== 'undefined') {
+  // Minimal visibility into which API host the admin is using
+  console.info('[Admin API] Base URL:', API_BASE_URL + '/api');
+}
 
 api.interceptors.request.use(cfg => { if (accessToken) cfg.headers.Authorization = `Bearer ${accessToken}`; return cfg; });
 
