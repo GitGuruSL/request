@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Prefer setting VITE_API_BASE_URL in .env files.
 // Default to production API so builds work out of the box.
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'https://api.alphabet.lk').replace(/\/$/, '');
+export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'https://api.alphabet.lk').replace(/\/$/, '');
 
 let accessToken = null;
 let refreshToken = null;

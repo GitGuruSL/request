@@ -12,6 +12,10 @@ const app = express();
 app.use(helmet());
 app.use(cors());
 
+// Trust reverse proxy (so req.protocol honors X-Forwarded-Proto)
+// This ensures generated absolute URLs use https when behind Nginx/SSL
+app.set('trust proxy', 1);
+
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes

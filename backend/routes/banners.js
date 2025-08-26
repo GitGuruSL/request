@@ -26,6 +26,34 @@ async function ensureTable() {
   await db.query(`CREATE INDEX IF NOT EXISTS idx_${TABLE}_active ON ${TABLE}(active)`);
 }
 
+function absoluteBase(req) {
+  const proto = (req.protocol || 'http').toLowerCase();
+  const host = req.get('host');
+  const finalProto = process.env.NODE_ENV === 'production' ? 'https' : proto;
+  return `${finalProto}://${host}`;
+}
+
+function normalizeImageUrl(req, url) {
+  if (!url) return url;
+  try {
+    // If already absolute https/http, return as-is but avoid localhost in production
+    if (/^https?:\/\//i.test(url)) {
+      if (process.env.NODE_ENV === 'production' && /:\/\/localhost[:/]/i.test(url)) {
+        // Replace localhost with current host
+        const base = absoluteBase(req);
+        return url.replace(/^https?:\/\/localhost(?::\d+)?/i, base);
+      }
+      return url;
+    }
+    // If path-like (e.g. /uploads/images/...), prefix with current base
+    if (url.startsWith('/')) return absoluteBase(req) + url;
+    // Otherwise treat as uploads relative filename
+    return `${absoluteBase(req)}/uploads/images/${url}`;
+  } catch {
+    return url;
+  }
+}
+
 // List banners (optional country filter)
 router.get('/', async (req, res) => {
   try {
@@ -41,7 +69,13 @@ router.get('/', async (req, res) => {
     const lim = parseInt(limit, 10);
     if (!isNaN(lim) && lim > 0) sql += ` LIMIT ${lim}`;
     const result = await db.query(sql, params);
-    res.json({ success: true, data: result.rows });
+    const base = absoluteBase(req);
+    const rows = result.rows.map((r) => {
+      // Ensure imageUrl is absolute and not pointing to localhost
+      const imageUrl = normalizeImageUrl(req, r.imageUrl || r.image_url);
+      return { ...r, imageUrl };
+    });
+    res.json({ success: true, data: rows });
   } catch (e) {
     console.error('[banners] list error', e);
     res.status(500).json({ success: false, message: 'Failed to fetch banners' });
@@ -52,8 +86,9 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     await ensureTable();
-    const { country = null, title = null, subtitle = null, imageUrl, linkUrl = null, priority = 0, active = true } = req.body || {};
+  let { country = null, title = null, subtitle = null, imageUrl, linkUrl = null, priority = 0, active = true } = req.body || {};
     if (!imageUrl) return res.status(400).json({ success: false, message: 'imageUrl is required' });
+  imageUrl = normalizeImageUrl(req, imageUrl);
     const row = await db.insert(TABLE, {
       country,
       title,
@@ -66,7 +101,7 @@ router.post('/', async (req, res) => {
       updated_at: new Date(),
     });
     // Normalize keys to camelCase
-    const out = { ...row, imageUrl: row.image_url, linkUrl: row.link_url };
+  const out = { ...row, imageUrl: row.image_url, linkUrl: row.link_url };
     delete out.image_url; delete out.link_url;
     res.json({ success: true, data: out });
   } catch (e) {
@@ -79,13 +114,13 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     await ensureTable();
-    const { id } = req.params;
-    const { country, title, subtitle, imageUrl, linkUrl, priority, active } = req.body || {};
+  const { id } = req.params;
+  let { country, title, subtitle, imageUrl, linkUrl, priority, active } = req.body || {};
     const data = {};
     if (country !== undefined) data.country = country;
     if (title !== undefined) data.title = title;
     if (subtitle !== undefined) data.subtitle = subtitle;
-    if (imageUrl !== undefined) data.image_url = imageUrl;
+  if (imageUrl !== undefined) data.image_url = normalizeImageUrl(req, imageUrl);
     if (linkUrl !== undefined) data.link_url = linkUrl;
     if (priority !== undefined) data.priority = Number(priority) || 0;
     if (active !== undefined) data.active = !!active;

@@ -45,6 +45,15 @@ const upload = multer({
   }
 });
 
+function absoluteBase(req) {
+  // With trust proxy enabled, req.protocol reflects X-Forwarded-Proto
+  const proto = (req.protocol || 'http').toLowerCase();
+  const host = req.get('host');
+  // Prefer https in production even if transient http appears internally
+  const finalProto = process.env.NODE_ENV === 'production' ? 'https' : proto;
+  return `${finalProto}://${host}`;
+}
+
 // Upload multiple product images (expects field name 'files')
 router.post('/products', (req, res, next) => {
   // Create a multer instance to accept multiple files under uploads/images
@@ -69,7 +78,7 @@ router.post('/products', (req, res, next) => {
     if (err) return res.status(400).json({ error: err.message });
     const files = req.files || [];
     if (!files.length) return res.status(400).json({ error: 'No image files provided' });
-    const base = `${req.protocol}://${req.get('host')}/uploads/images/`;
+  const base = `${absoluteBase(req)}/uploads/images/`;
     const data = files.map((f) => ({ url: base + f.filename, filename: f.filename, size: f.size }));
     return res.json({ success: true, files: data });
   });
@@ -82,8 +91,8 @@ router.post('/', upload.single('image'), (req, res) => {
       return res.status(400).json({ error: 'No image file provided' });
     }
 
-    // Generate URL for the uploaded image
-    const imageUrl = `${req.protocol}://${req.get('host')}/uploads/images/${req.file.filename}`;
+  // Generate URL for the uploaded image
+  const imageUrl = `${absoluteBase(req)}/uploads/images/${req.file.filename}`;
     
     console.log('Image uploaded successfully:', imageUrl);
     
@@ -121,7 +130,7 @@ router.post('/payment-methods', (req, res, next) => {
   uploader.single('file')(req, res, (err) => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'No image file provided' });
-    const imageUrl = `${req.protocol}://${req.get('host')}/uploads/images/${req.file.filename}`;
+  const imageUrl = `${absoluteBase(req)}/uploads/images/${req.file.filename}`;
     return res.json({ success: true, url: imageUrl, filename: req.file.filename });
   });
 });

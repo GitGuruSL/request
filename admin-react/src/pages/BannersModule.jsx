@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Box, Typography, Button, Grid, Card, CardMedia, CardContent, TextField, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Switch, Alert, CircularProgress, Stack } from '@mui/material';
-import api from '../services/apiClient';
+import api, { API_BASE_URL } from '../services/apiClient';
 import useCountryFilter from '../hooks/useCountryFilter';
 
 export default function BannersModule() {
@@ -21,9 +21,9 @@ export default function BannersModule() {
       setError('');
       const params = {};
       if (country) params.country = country;
-      const res = await api.get('/banners', { params });
-      const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
-      setBanners(list);
+  const res = await api.get('/banners', { params });
+  const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+  setBanners(list);
     } catch (e) {
       console.error('Failed to load banners', e);
       setError('Failed to load banners');
@@ -37,6 +37,21 @@ export default function BannersModule() {
   const openCreate = () => { setForm({ id: null, title: '', subtitle: '', imageUrl: '', linkUrl: '', active: true, priority: 0 }); setDialogOpen(true); };
   const openEdit = (b) => { setForm({ id: b.id, title: b.title || '', subtitle: b.subtitle || '', imageUrl: b.imageUrl || b.image || '', linkUrl: b.linkUrl || b.link || '', active: b.active !== false, priority: b.priority || 0 }); setDialogOpen(true); };
   const closeDialog = () => setDialogOpen(false);
+
+  const resolveImage = (url) => {
+    if (!url) return url;
+    try {
+      if (/^https?:\/\//i.test(url)) {
+        // Replace localhost with API base
+        return url.replace(/^https?:\/\/localhost(?::\d+)?/i, API_BASE_URL);
+      }
+      if (url.startsWith('/')) return API_BASE_URL + url;
+      // bare filename => uploads/images
+      return `${API_BASE_URL}/uploads/images/${url}`;
+    } catch {
+      return url;
+    }
+  };
 
   const save = async () => {
     try {
@@ -133,7 +148,7 @@ export default function BannersModule() {
                 <Box key={b.id || b._id}>
                   <Card>
                     {(b.imageUrl || b.image) && (
-                      <CardMedia component="img" height="140" image={b.imageUrl || b.image} alt={b.title || 'Banner'} />
+                      <CardMedia component="img" height="140" image={resolveImage(b.imageUrl || b.image)} alt={b.title || 'Banner'} />
                     )}
                     <CardContent>
                       <Typography variant="subtitle1" fontWeight={700}>{b.title || 'Untitled'}</Typography>
@@ -183,7 +198,7 @@ export default function BannersModule() {
                 <CardMedia
                   component="img"
                   height="120"
-                  image={form.imageUrl}
+                  image={resolveImage(form.imageUrl)}
                   alt="Banner preview"
                 />
               </Card>
