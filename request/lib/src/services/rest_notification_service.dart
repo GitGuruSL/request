@@ -1,6 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
+// No platform-specific imports needed; base URL comes from ApiClient
 import 'package:http/http.dart' as http;
 import '../models/notification_model.dart';
 import 'api_client.dart';
@@ -11,11 +10,8 @@ class RestNotificationService {
   static RestNotificationService get instance =>
       _inst ??= RestNotificationService._();
 
-  static String get _baseUrl {
-    if (kIsWeb) return 'http://localhost:3001';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://localhost:3001';
-  }
+  // Use the centralized ApiClient base to ensure correct HTTPS host in all envs
+  static String get _baseUrl => ApiClient.baseUrlPublic;
 
   Future<List<NotificationModel>> fetchMyNotifications() async {
     final token = await ApiClient.instance.getToken();

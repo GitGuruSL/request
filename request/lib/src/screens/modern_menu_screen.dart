@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/enhanced_user_service.dart';
@@ -35,59 +36,99 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
   int _unreadMessages = 0;
   // Removed admin/business gating; keep Ride Alerts gated by driver status only.
 
+  // Lightweight in-memory cache to avoid refetching every time tab opens
+  static DateTime? _lastCountsFetchAt;
+  static int _lastUnreadTotal = 0;
+  static int _lastUnreadMessages = 0;
+  static bool? _lastIsDriver;
+
   @override
   void initState() {
     super.initState();
-    _loadData();
+    // Seed UI immediately from locally cached auth user to avoid spinner
+    final authUser = _authService.currentUser;
+    if (authUser != null) {
+      final json = authUser.toJson();
+      // Ensure we have a 'name' key for UI header fallback
+      json['name'] = authUser.fullName;
+      _currentUser = json;
+    }
+    _isLoading = false; // render UI instantly; fill details in background
+    // Kick off background refresh
+    scheduleMicrotask(_refreshMenuData);
   }
 
-  Future<void> _loadData() async {
+  Future<void> _refreshMenuData() async {
     try {
-      setState(() => _isLoading = true);
+      // Start all async work in parallel with short timeouts
+      final futures = <Future<void>>[];
 
-      // Load user data
+      // Fresh user profile (non-blocking; falls back to existing values)
       final user = _authService.currentUser;
       if (user != null) {
-        final userData = await _userService.getUserById(user.uid);
-        setState(() {
-          _currentUser = userData?.toMap();
-          _profileImageUrl = null; // No profile image in current model
-        });
+        futures.add(_userService
+            .getCurrentUserModel()
+            .timeout(const Duration(seconds: 3))
+            .then((fresh) {
+          if (fresh != null && mounted) {
+            setState(() => _currentUser = fresh.toMap());
+          }
+        }).catchError((_) {}));
       }
 
-      // Determine role flags from REST auth user
-      // Roles/Products are now always visible; no role gating needed here.
+      // Driver registration (cached in service for 5 minutes)
+      futures.add(UserRegistrationService.instance
+          .getUserRegistrations()
+          .timeout(const Duration(seconds: 3))
+          .then((regs) {
+        final isDriver = regs?.isApprovedDriver == true;
+        _lastIsDriver = isDriver;
+        if (mounted) setState(() => _isDriver = isDriver);
+      }).catchError((_) {
+        if (_lastIsDriver != null && mounted)
+          setState(() => _isDriver = _lastIsDriver!);
+      }));
 
-      // Check driver registration to gate Ride Alerts and product seller status
-      bool isDriver = false;
-      try {
-        final regs =
-            await UserRegistrationService.instance.getUserRegistrations();
-        isDriver = regs?.isApprovedDriver == true;
-      } catch (_) {}
-
-      // Fetch unread counts
-      int unreadTotal = 0;
-      int unreadMessages = 0;
-      try {
-        final counts = await RestNotificationService.instance.unreadCounts();
-        unreadTotal = counts.total;
-        unreadMessages = counts.messages;
-      } catch (_) {}
-
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _isDriver = isDriver;
-          _unreadTotal = unreadTotal;
-          _unreadMessages = unreadMessages;
-        });
+      // Unread counts with a tiny TTL to reduce chattiness
+      final now = DateTime.now();
+      final withinTtl = _lastCountsFetchAt != null &&
+          now.difference(_lastCountsFetchAt!) < const Duration(seconds: 30);
+      if (withinTtl) {
+        if (mounted) {
+          setState(() {
+            _unreadTotal = _lastUnreadTotal;
+            _unreadMessages = _lastUnreadMessages;
+          });
+        }
+      } else {
+        futures.add(RestNotificationService.instance
+            .unreadCounts()
+            .timeout(const Duration(seconds: 3))
+            .then((counts) {
+          _lastCountsFetchAt = DateTime.now();
+          _lastUnreadTotal = counts.total;
+          _lastUnreadMessages = counts.messages;
+          if (mounted) {
+            setState(() {
+              _unreadTotal = counts.total;
+              _unreadMessages = counts.messages;
+            });
+          }
+        }).catchError((_) {
+          if (mounted) {
+            setState(() {
+              _unreadTotal = _lastUnreadTotal;
+              _unreadMessages = _lastUnreadMessages;
+            });
+          }
+        }));
       }
+
+      // Wait for all background tasks, but don't block UI
+      await Future.wait(futures);
     } catch (e) {
       print('Error loading menu data: $e');
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      // Keep whatever we have on screen
     }
   }
 
@@ -369,9 +410,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                       await Navigator.pushNamed(context, item.route!);
                     }
                     // Refresh badges after returning
-                    if (mounted) {
-                      _loadData();
-                    }
+                    if (mounted) _refreshMenuData();
                   }
                 },
                 borderRadius: BorderRadius.circular(16),
