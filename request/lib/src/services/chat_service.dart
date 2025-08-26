@@ -1,22 +1,27 @@
 import 'dart:convert';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/chat_models.dart';
+import 'api_client.dart';
 
 class ChatService {
   ChatService._();
   static final instance = ChatService._();
 
-  static String get _baseUrl {
-    if (kIsWeb) return 'http://localhost:3001';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://localhost:3001';
+  // Use centralized ApiClient base (https://api.alphabet.lk)
+  static String get _baseUrl => ApiClient.baseUrlPublic;
+
+  Future<Map<String, String>> _authHeaders() async {
+    final token = await ApiClient.instance.getToken();
+    return {
+      if (token != null) 'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
   }
 
   Future<List<Conversation>> listConversations({required String userId}) async {
     final uri = Uri.parse('$_baseUrl/api/chat/conversations?userId=$userId');
-    final resp = await http.get(uri);
+    final resp = await http.get(uri, headers: await _authHeaders());
     if (resp.statusCode != 200) {
       throw Exception(
           'Failed to list conversations: ${resp.statusCode} - ${resp.body}');
@@ -35,7 +40,7 @@ class ChatService {
   }) async {
     final uri = Uri.parse('$_baseUrl/api/chat/open');
     final resp = await http.post(uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: await _authHeaders(),
         body: jsonEncode({
           'requestId': requestId,
           'currentUserId': currentUserId,
@@ -69,7 +74,7 @@ class ChatService {
   Future<List<ChatMessage>> getMessages(
       {required String conversationId}) async {
     final uri = Uri.parse('$_baseUrl/api/chat/messages/$conversationId');
-    final resp = await http.get(uri);
+    final resp = await http.get(uri, headers: await _authHeaders());
     if (resp.statusCode != 200) {
       throw Exception(
           'Failed to get messages: ${resp.statusCode} - ${resp.body}');
@@ -93,7 +98,7 @@ class ChatService {
         '🔥 [ChatService] payload: conversationId=$conversationId, senderId=$senderId, content="$content"');
 
     final resp = await http.post(uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: await _authHeaders(),
         body: jsonEncode({
           'conversationId': conversationId,
           'senderId': senderId,

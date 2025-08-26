@@ -18,10 +18,21 @@ class RestNotificationService {
     final resp =
         await http.get(Uri.parse('$_baseUrl/api/notifications'), headers: {
       if (token != null) 'Authorization': 'Bearer $token',
+      'Accept': 'application/json',
     });
     if (resp.statusCode != 200) return [];
-    final list = (jsonDecode(resp.body)['data'] as List?) ?? [];
-    return list.map((j) => _fromJson(j as Map<String, dynamic>)).toList();
+    try {
+      final decoded = jsonDecode(resp.body);
+      final list = (decoded is Map && decoded['data'] is List)
+          ? (decoded['data'] as List)
+          : (decoded is List ? decoded : const []);
+      return list
+          .whereType<Map>()
+          .map((j) => _fromJson(j.cast<String, dynamic>()))
+          .toList();
+    } catch (_) {
+      return [];
+    }
   }
 
   Future<void> markAllRead() async {
@@ -49,10 +60,13 @@ class RestNotificationService {
 
   NotificationModel _fromJson(Map<String, dynamic> j) {
     final typeStr = (j['type'] as String?) ?? 'systemMessage';
-    final statusStr = (j['status'] as String?) ?? 'unread';
+    // Support legacy boolean is_read flag
+    final statusStr = j.containsKey('is_read')
+        ? ((j['is_read'] == true) ? 'read' : 'unread')
+        : ((j['status'] as String?) ?? 'unread');
     return NotificationModel(
       id: j['id'].toString(),
-      recipientId: j['recipient_id']?.toString() ?? '',
+      recipientId: (j['recipient_id'] ?? j['user_id'])?.toString() ?? '',
       senderId: j['sender_id']?.toString() ?? '',
       senderName: null,
       type: NotificationType.values.firstWhere(
@@ -60,9 +74,13 @@ class RestNotificationService {
         orElse: () => NotificationType.systemMessage,
       ),
       title: j['title']?.toString() ?? '',
-      message: j['message']?.toString() ?? '',
-      data: (j['data'] as Map?)?.map((k, v) => MapEntry(k.toString(), v)) ??
-          <String, dynamic>{},
+      // message field may be 'message' (new) or 'body' (legacy)
+      message: (j['message'] ?? j['body'])?.toString() ?? '',
+      data: (j['data'] is Map)
+          ? (j['data'] as Map)
+              .map((k, v) => MapEntry(k.toString(), v))
+              .cast<String, dynamic>()
+          : <String, dynamic>{},
       status: NotificationStatus.values.firstWhere(
         (s) => s.name.toLowerCase() == statusStr.toLowerCase(),
         orElse: () => NotificationStatus.unread,
