@@ -128,7 +128,8 @@ function safeUse(path, mod, name) {
 }
 
 // Serve static files (uploaded images)
-app.use('/uploads', express.static('uploads', {
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   setHeaders: (res, path) => {
     // Set CORS headers for images
     res.setHeader('Access-Control-Allow-Origin', '*');
