@@ -550,7 +550,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 16),
                       Row(
                         children: [
-                          Text('Popular Products',
+                          Text('Best Sellers',
                               style: Theme.of(context)
                                   .textTheme
                                   .titleMedium
@@ -795,10 +795,12 @@ class _QuickActionsGrid extends StatelessWidget {
             cardRadius = const BorderRadius.only(topRight: Radius.circular(20));
           } else if (isLastRow && isFirstColumn) {
             // Bottom-left card - only bottom-left corner rounded
-            cardRadius = const BorderRadius.only(bottomLeft: Radius.circular(20));
+            cardRadius =
+                const BorderRadius.only(bottomLeft: Radius.circular(20));
           } else if (isLastRow && isLastColumn) {
             // Bottom-right card - only bottom-right corner rounded
-            cardRadius = const BorderRadius.only(bottomRight: Radius.circular(20));
+            cardRadius =
+                const BorderRadius.only(bottomRight: Radius.circular(20));
           } else {
             // Middle cards - no rounded corners
             cardRadius = BorderRadius.zero;
@@ -940,25 +942,24 @@ class _ProductCard extends StatelessWidget {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
+              // "Today's Lowest Price" label
+              Text(
+                "Today's Lowest Price",
+                style: TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 4),
+              // Price display with charcoal background container
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      const Color(0xFF6366F1),
-                      const Color(0xFF8B5CF6),
-                    ],
-                  ),
+                  color: GlassTheme.colors.primaryBlue, // Charcoal color
                   borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF6366F1).withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
                 ),
                 child: Text(
                   _formatPriceRange(context, product),
