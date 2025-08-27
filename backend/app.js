@@ -7,6 +7,13 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 
 const app = express();
+// Entitlements (usage limits)
+let entitlements;
+try {
+  entitlements = require('./entitlements');
+} catch (e) {
+  // optional
+}
 
 // Security middleware
 app.use(helmet());
@@ -57,6 +64,19 @@ app.get('/health', async (req, res) => {
     });
   }
 });
+
+// Minimal entitlement probe (optional route)
+if (entitlements) {
+  app.get('/me/subscription', async (req, res) => {
+    try {
+      const user = req.user || {}; // assume auth middleware elsewhere
+      const data = await entitlements.getEntitlements(user.id, user.role);
+      res.json(data);
+    } catch (e) {
+      res.status(500).json({ error: 'failed' });
+    }
+  });
+}
 
 // Import routes
 const authRoutes = require('./routes/auth');
