@@ -9,6 +9,7 @@ async function main() {
   const cwd = process.cwd();
   const candidates = [
     path.join(cwd, 'production.env'),
+  path.join(cwd, 'deploy', 'production.env'),
     path.join(cwd, '.env.rds'),
     path.join(cwd, '.env'),
   ];
@@ -45,8 +46,8 @@ async function main() {
       host: process.env.DB_HOST,
       port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : undefined,
       database: process.env.DB_NAME,
-      user: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD,
+      user: process.env.DB_USERNAME || process.env.DB_USER,
+      password: process.env.DB_PASSWORD || process.env.DB_PASS,
       ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
     };
   } else if (process.env.PGHOST) {

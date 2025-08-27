@@ -17,9 +17,18 @@ Write-Host "[SSH] Running migration on $remote"
 $script = @"
 set -e
 cd /opt/request-backend
-# Normalize line endings for env files if present (dos2unix alternative)
+# Ensure dos2unix is available and normalize env files (handles CRLF)
+if ! command -v dos2unix >/dev/null 2>&1; then
+  if command -v apt-get >/dev/null 2>&1; then
+    sudo apt-get update -y >/dev/null 2>&1 || true
+    sudo apt-get install -y dos2unix >/dev/null 2>&1 || true
+  elif command -v yum >/dev/null 2>&1; then
+    sudo yum install -y dos2unix >/dev/null 2>&1 || true
+  fi
+fi
 for f in production.env deploy/production.env .env.rds; do
   if [ -f "$f" ]; then
+    dos2unix "$f" >/dev/null 2>&1 || true
     sed -i 's/\r$//' "$f" || true
   fi
 done
@@ -29,8 +38,9 @@ if [ -f production.env ]; then
   set +a
 fi
 if [ -f deploy/production.env ]; then
+  awk '{ sub(/\r$/, ""); print }' deploy/production.env > /tmp/prod.env
   set -a
-  . ./deploy/production.env
+  . /tmp/prod.env
   set +a
 fi
 if [ -f .env.rds ]; then
