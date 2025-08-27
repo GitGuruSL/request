@@ -231,7 +231,7 @@ router.get('/image-url/:id', async (req, res) => {
       try {
         const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
         const { GetObjectCommand } = require('@aws-sdk/client-s3');
-        const { s3Client } = require('../services/s3');
+        const { s3Client } = require('../services/s3Upload');
         
         const command = new GetObjectCommand({
           Bucket: 'requestappbucket',
