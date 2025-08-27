@@ -14,7 +14,8 @@ class SMSService {
       twilio: TwilioProvider,
       aws: AWSSNSProvider,
       vonage: VonageProvider,
-      local: LocalProvider
+      local: LocalProvider,
+      hutch_mobile: HutchMobileProvider
     };
   }
 
@@ -446,6 +447,69 @@ class LocalProvider {
       };
     } catch (error) {
       throw new Error(`Local provider SMS failed: ${error.message}`);
+    }
+  }
+}
+
+/**
+ * 🇱🇰 Hutch Mobile Provider (Sri Lanka)
+ */
+class HutchMobileProvider {
+  constructor(config) {
+    const hutchConfig = config.hutchMobileConfig;
+    if (!hutchConfig) {
+      throw new Error('Hutch Mobile provider configuration not found');
+    }
+
+    this.apiUrl = hutchConfig.apiUrl || 'https://bsms.hutch.lk/api/send';
+    this.username = hutchConfig.username;
+    this.password = hutchConfig.password;
+    this.senderId = hutchConfig.senderId || 'HUTCH';
+    this.messageType = hutchConfig.messageType || 'text';
+
+    if (!this.username || !this.password) {
+      throw new Error('Hutch Mobile username and password are required');
+    }
+  }
+
+  async sendSMS(to, message) {
+    try {
+      // Format phone number for Hutch Mobile (remove + and country code if present)
+      const cleanPhone = to.replace(/^\+?94/, '').replace(/^0/, '');
+      
+      // Hutch Mobile API payload
+      const payload = {
+        username: this.username,
+        password: this.password,
+        to: cleanPhone,
+        message: message,
+        sender_id: this.senderId,
+        message_type: this.messageType
+      };
+
+      const response = await axios.post(this.apiUrl, payload, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        timeout: 15000 // 15 second timeout
+      });
+
+      // Handle Hutch Mobile response format
+      if (response.data && response.data.status === 'success') {
+        return {
+          success: true,
+          messageId: response.data.message_id || `hutch_${Date.now()}`,
+          cost: 0.012, // Estimated cost for Sri Lanka
+          provider: 'hutch_mobile',
+          response: response.data
+        };
+      } else {
+        throw new Error(response.data?.message || 'SMS sending failed');
+      }
+    } catch (error) {
+      console.error('Hutch Mobile SMS Error:', error.response?.data || error.message);
+      throw new Error(`Hutch Mobile SMS failed: ${error.response?.data?.message || error.message}`);
     }
   }
 }
