@@ -40,19 +40,31 @@ function absoluteBase(req) {
 function normalizeImageUrl(req, url) {
   if (!url) return url;
   try {
-    // If already absolute https/http, return as-is but avoid localhost in production
+    // If already absolute https/http, check if we need to migrate to S3
     if (/^https?:\/\//i.test(url)) {
-      if (process.env.NODE_ENV === 'production' && /:\/\/localhost[:/]/i.test(url)) {
-        // Replace localhost with current host
-        const base = absoluteBase(req);
-        return url.replace(/^https?:\/\/localhost(?::\d+)?/i, base);
+      // Convert old local storage URLs to S3 URLs
+      if (url.includes('/uploads/images/') || url.includes('ec2-54-144-9-226') || url.includes('localhost')) {
+        const filename = url.split('/').pop();
+        const s3Bucket = process.env.AWS_S3_BUCKET || 'requestappbucket';
+        return `https://${s3Bucket}.s3.amazonaws.com/banners/${filename}`;
       }
       return url;
     }
-    // If path-like (e.g. /uploads/images/...), prefix with current base
-    if (url.startsWith('/')) return absoluteBase(req) + url;
-    // Otherwise treat as uploads relative filename
-    return `${absoluteBase(req)}/uploads/images/${url}`;
+    // If path-like (e.g. /uploads/images/...), convert to S3 URL
+    if (url.startsWith('/uploads/images/')) {
+      const filename = url.split('/').pop();
+      const s3Bucket = process.env.AWS_S3_BUCKET || 'requestappbucket';
+      return `https://${s3Bucket}.s3.amazonaws.com/banners/${filename}`;
+    }
+    // If path-like, convert to S3
+    if (url.startsWith('/')) {
+      const filename = url.split('/').pop();
+      const s3Bucket = process.env.AWS_S3_BUCKET || 'requestappbucket';
+      return `https://${s3Bucket}.s3.amazonaws.com/banners/${filename}`;
+    }
+    // Otherwise treat as filename and convert to S3 URL
+    const s3Bucket = process.env.AWS_S3_BUCKET || 'requestappbucket';
+    return `https://${s3Bucket}.s3.amazonaws.com/banners/${url}`;
   } catch {
     return url;
   }
