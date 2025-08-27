@@ -633,13 +633,7 @@ class _NetworkBannerCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-          ],
+          // Removed shadows for flat design
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(18),
@@ -709,13 +703,7 @@ class _BannerCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        // Removed shadows for flat design
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(18),
@@ -763,79 +751,123 @@ class _QuickActionsGrid extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
-      physics: const NeverScrollableScrollPhysics(),
-      shrinkWrap: true,
-      itemCount: items.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        // Slightly higher aspect ratio -> shorter cards (more content fits)
-        childAspectRatio: 2.6,
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(20),
+        // One unified flat container for all cards
       ),
-      itemBuilder: (ctx, i) {
-        final it = items[i];
-        final disabled = !moduleEnabled(it.type);
-        // Show a single concise word (split by space or &)
-        final title = it.title
-            .split(RegExp(r'\s|&'))
-            .first; // e.g., "Tours & Travel" -> "Tours"
-        final textColor =
-            disabled ? const Color(0xFF9CA3AF) : AppTheme.textPrimary;
-        final subColor =
-            disabled ? const Color(0xFFB8BFC7) : AppTheme.textSecondary;
+      child: GridView.builder(
+        physics: const NeverScrollableScrollPhysics(),
+        shrinkWrap: true,
+        itemCount: items.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          // Slightly higher aspect ratio -> shorter cards (more content fits)
+          childAspectRatio: 2.6,
+          mainAxisSpacing: 1,
+          crossAxisSpacing: 1,
+        ),
+        itemBuilder: (ctx, i) {
+          final it = items[i];
+          final disabled = !moduleEnabled(it.type);
+          // Show a single concise word (split by space or &)
+          final title = it.title
+              .split(RegExp(r'\s|&'))
+              .first; // e.g., "Tours & Travel" -> "Tours"
+          final textColor =
+              disabled ? const Color(0xFF9CA3AF) : AppTheme.textPrimary;
+          final subColor =
+              disabled ? const Color(0xFFB8BFC7) : AppTheme.textSecondary;
 
-        return InkWell(
-          onTap: disabled ? null : () => onTap(it),
-          borderRadius: BorderRadius.circular(18),
-          child: Container(
-            decoration: GlassTheme.glassContainerDisabled(disabled: disabled),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Row(
-              children: [
-                // Texts (title + subtitle)
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          color: textColor,
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        it.subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: subColor,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
+          // Determine which corners should be rounded based on position
+          BorderRadius cardRadius;
+          final isFirstRow = i < 2;
+          final isLastRow = i >= items.length - 2;
+          final isFirstColumn = i % 2 == 0;
+          final isLastColumn = i % 2 == 1;
+
+          if (isFirstRow && isFirstColumn) {
+            // Top-left card - only top-left corner rounded
+            cardRadius = const BorderRadius.only(topLeft: Radius.circular(20));
+          } else if (isFirstRow && isLastColumn) {
+            // Top-right card - only top-right corner rounded
+            cardRadius = const BorderRadius.only(topRight: Radius.circular(20));
+          } else if (isLastRow && isFirstColumn) {
+            // Bottom-left card - only bottom-left corner rounded
+            cardRadius = const BorderRadius.only(bottomLeft: Radius.circular(20));
+          } else if (isLastRow && isLastColumn) {
+            // Bottom-right card - only bottom-right corner rounded
+            cardRadius = const BorderRadius.only(bottomRight: Radius.circular(20));
+          } else {
+            // Middle cards - no rounded corners
+            cardRadius = BorderRadius.zero;
+          }
+
+          return InkWell(
+            onTap: disabled ? null : () => onTap(it),
+            borderRadius: cardRadius,
+            child: Container(
+              decoration: BoxDecoration(
+                color: disabled ? Colors.grey.shade50 : Colors.white,
+                borderRadius: cardRadius,
+                // Only outer corners rounded, inner dividers visible
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: [
+                  // Colored icon container (like Play Store style)
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: disabled
+                          ? Colors.grey.shade200
+                          : it.color.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      it.icon,
+                      color: disabled ? Colors.grey.shade400 : it.color,
+                      size: 24,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 6),
-                // Right illustration/icon (no white box)
-                Icon(
-                  it.icon,
-                  color: disabled ? const Color(0xFFCBD5E1) : it.color,
-                  size: 28,
-                ),
-              ],
+                  const SizedBox(width: 12),
+                  // Texts (title + subtitle)
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: textColor,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          it.subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: subColor,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
@@ -855,24 +887,7 @@ class _ProductCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 20,
-                offset: const Offset(0, 4),
-                spreadRadius: 0,
-              ),
-              BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 6,
-                offset: const Offset(0, 1),
-                spreadRadius: 0,
-              ),
-            ],
-            border: Border.all(
-              color: Colors.grey.shade100,
-              width: 1,
-            ),
+            // Removed shadows and borders for flat design
           ),
           padding: const EdgeInsets.all(12),
           child: Column(
@@ -881,22 +896,9 @@ class _ProductCard extends StatelessWidget {
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.grey.shade50,
-                        Colors.grey.shade100,
-                      ],
-                    ),
+                    color: Colors.grey.shade50,
                     borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                    // Removed shadows for flat design
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(16),
