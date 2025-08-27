@@ -92,12 +92,64 @@ class _NotificationScreenState extends State<NotificationScreen> {
               separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final n = notifications[index];
-                return _buildCard(n);
+                return _buildDismissibleCard(n);
               },
             ),
           );
         },
       ),
+    );
+  }
+
+  Widget _buildDismissibleCard(NotificationModel n) {
+    return Dismissible(
+      key: Key('notification_${n.id}'),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        decoration: BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: const Icon(
+          Icons.delete,
+          color: Colors.white,
+          size: 24,
+        ),
+      ),
+      confirmDismiss: (direction) async {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Delete Notification'),
+            content: const Text(
+                'Are you sure you want to delete this notification?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child:
+                    const Text('Delete', style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          ),
+        );
+        return confirmed ?? false;
+      },
+      onDismissed: (direction) async {
+        await _restNotifications.delete(n.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Notification deleted')),
+          );
+          await _refresh();
+        }
+      },
+      child: _buildCard(n),
     );
   }
 

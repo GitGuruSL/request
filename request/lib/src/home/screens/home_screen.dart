@@ -473,14 +473,12 @@ class _HomeScreenState extends State<HomeScreen> {
             },
             child: Column(
               children: [
-                const SizedBox(
-                    height:
-                        16), // Add top padding since greeting is now in app bar
+                const SizedBox(height: 8), // tighter top padding
                 // Banners carousel - full width with custom padding to match grid
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: SizedBox(
-                    height: 150,
+                    height: 128,
                     child: _loadingBanners
                         ? const Center(child: CircularProgressIndicator())
                         : PageView.builder(
@@ -505,7 +503,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(
@@ -514,9 +512,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         : _defaultBanners.length,
                     (i) => AnimatedContainer(
                       duration: const Duration(milliseconds: 250),
-                      width: _currentBanner == i ? 18 : 6,
-                      height: 6,
-                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      width: _currentBanner == i ? 14 : 5,
+                      height: 5,
+                      margin: const EdgeInsets.symmetric(horizontal: 2),
                       decoration: BoxDecoration(
                         color: _currentBanner == i
                             ? AppTheme.textPrimary
@@ -530,7 +528,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Rest of content in scrollable area
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                     children: [
                       const SizedBox(height: 4),
 
@@ -541,14 +540,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                     fontWeight: FontWeight.w700,
                                     color: AppTheme.textPrimary,
                                   )),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 10),
                       _QuickActionsGrid(
                         items: _requestTypes,
                         moduleEnabled: _moduleEnabled,
                         onTap: _handleTap,
                       ),
 
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
                       Row(
                         children: [
                           Text('Popular Products',
@@ -602,7 +601,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 itemCount: _popularProducts.length,
                               ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
                     ],
                   ),
                 ),
