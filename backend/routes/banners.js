@@ -70,6 +70,31 @@ function normalizeImageUrl(req, url) {
   }
 }
 
+// Helper function to check if URL is S3 and needs signing
+function isS3Url(url) {
+  return url && (
+    url.includes('requestappbucket.s3') ||
+    url.includes('s3.amazonaws.com') ||
+    url.includes('.s3.us-east-1.amazonaws.com')
+  );
+}
+
+// Helper function to generate signed URL for S3 images
+async function processImageUrl(imageUrl) {
+  if (!imageUrl || !isS3Url(imageUrl)) {
+    return imageUrl; // Return as-is if not S3
+  }
+  
+  try {
+    const signedUrl = await getSignedUrl(imageUrl, 3600); // 1 hour expiry
+    console.log('✅ Generated signed URL for banner image');
+    return signedUrl;
+  } catch (error) {
+    console.error('❌ Failed to generate signed URL for banner:', error.message);
+    return imageUrl; // Fallback to original URL
+  }
+}
+
 // List banners (optional country filter)
 router.get('/', async (req, res) => {
   try {
@@ -86,12 +111,18 @@ router.get('/', async (req, res) => {
     if (!isNaN(lim) && lim > 0) sql += ` LIMIT ${lim}`;
     const result = await db.query(sql, params);
     const base = absoluteBase(req);
-    const rows = result.rows.map((r) => {
-      // Ensure imageUrl is absolute and not pointing to localhost
-      const imageUrl = normalizeImageUrl(req, r.imageUrl || r.image_url);
-      return { ...r, imageUrl };
-    });
-    res.json({ success: true, data: rows });
+    
+    // Process each banner to generate signed URLs for S3 images
+    const processedRows = await Promise.all(
+      result.rows.map(async (r) => {
+        // Ensure imageUrl is absolute and not pointing to localhost
+        const normalizedUrl = normalizeImageUrl(req, r.imageUrl || r.image_url);
+        const finalImageUrl = await processImageUrl(normalizedUrl);
+        return { ...r, imageUrl: finalImageUrl };
+      })
+    );
+    
+    res.json({ success: true, data: processedRows });
   } catch (e) {
     console.error('[banners] list error', e);
     res.status(500).json({ success: false, message: 'Failed to fetch banners' });
@@ -116,8 +147,9 @@ router.post('/', async (req, res) => {
       created_at: new Date(),
       updated_at: new Date(),
     });
-    // Normalize keys to camelCase
-    const out = { ...row, imageUrl: row.image_url, linkUrl: row.link_url };
+    // Normalize keys to camelCase and generate signed URL
+    const processedImageUrl = await processImageUrl(row.image_url);
+    const out = { ...row, imageUrl: processedImageUrl, linkUrl: row.link_url };
     delete out.image_url; delete out.link_url;
     res.json({ success: true, data: out });
   } catch (e) {
@@ -142,7 +174,8 @@ router.put('/:id', async (req, res) => {
     if (active !== undefined) data.active = !!active;
     // Note: updated_at is automatically handled by DatabaseService.update()
     const row = await db.update(TABLE, id, data);
-    const out = { ...row, imageUrl: row.image_url, linkUrl: row.link_url };
+    const processedImageUrl = await processImageUrl(row.image_url);
+    const out = { ...row, imageUrl: processedImageUrl, linkUrl: row.link_url };
     delete out.image_url; delete out.link_url;
     res.json({ success: true, data: out });
   } catch (e) {
