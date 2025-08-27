@@ -47,4 +47,29 @@ Notes
 <!-- ci: trigger backend build - 2025-08-27 -->
  - GHCR repository owner must be lowercase; the workflow normalizes owner for tags, but set GHCR_USER secret in lowercase to avoid auth issues.
 
+Simple SCP deployment (no CI)
+
+Windows PowerShell
+```powershell
+$env:DEPLOY_HOST = "your.server.ip"     # e.g., 203.0.113.10
+$env:DEPLOY_USER = "ubuntu"             # your SSH user
+$env:DEPLOY_KEY_PATH = "$env:USERPROFILE\.ssh\request_deploy"  # optional key path
+cd $PSScriptRoot
+npm run deploy:scp:ps --prefix ./backend
+```
+
+Bash (macOS/Linux)
+```bash
+export DEPLOY_HOST=your.server.ip   # e.g., 203.0.113.10
+export DEPLOY_USER=ubuntu           # your SSH user
+export DEPLOY_KEY_PATH=$HOME/.ssh/request_deploy  # optional
+(cd backend && npm run deploy:scp:sh)
+```
+
+What it does
+- Creates a tarball of `backend/` (excluding node_modules, .env*, uploads, .git).
+- Copies it to the server at `/tmp/request-backend.tgz`.
+- Extracts to `/opt/request-backend` (override with DEPLOY_PATH).
+- Installs production deps and restarts/starts via PM2 (`PM2_NAME` env to change name).
+
 <!-- ci: trigger backend deploy - 2025-08-27T00:00Z -->
