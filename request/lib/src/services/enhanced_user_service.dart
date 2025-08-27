@@ -48,7 +48,7 @@ class EnhancedUserService {
             lastName: userData['last_name'],
             email: userData['email'] ?? authUser.email,
             phoneNumber: userData['phone'],
-            profilePictureUrl: userData['profile_picture_url'],
+            profilePictureUrl: userData['photo_url'],
             dateOfBirth: userData['date_of_birth'] != null
                 ? DateTime.tryParse(userData['date_of_birth'].toString())
                 : null,
@@ -148,7 +148,7 @@ class EnhancedUserService {
           lastName: userData['last_name'],
           email: userData['email'],
           phoneNumber: userData['phone'],
-          profilePictureUrl: userData['profile_picture_url'],
+          profilePictureUrl: userData['photo_url'],
           dateOfBirth: userData['date_of_birth'] != null
               ? DateTime.tryParse(userData['date_of_birth'].toString())
               : null,
@@ -205,8 +205,7 @@ class EnhancedUserService {
       if (phoneNumber != null) updateData['phone'] = phoneNumber;
       if (email != null) updateData['email'] = email;
       if (displayName != null) updateData['display_name'] = displayName;
-      if (profilePictureUrl != null)
-        updateData['profile_picture_url'] = profilePictureUrl;
+      if (profilePictureUrl != null) updateData['photoUrl'] = profilePictureUrl;
       if (dateOfBirth != null)
         updateData['date_of_birth'] =
             dateOfBirth.toIso8601String().split('T')[0]; // Send as YYYY-MM-DD

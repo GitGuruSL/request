@@ -3,7 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../services/enhanced_user_service.dart';
 import '../../services/rest_auth_service.dart' hide UserModel;
 import '../../services/contact_verification_service.dart';
-import '../../services/image_upload_service.dart';
+import '../../services/s3_image_upload_service.dart';
 import '../../models/enhanced_user_model.dart';
 
 class UserProfileScreen extends StatefulWidget {
@@ -661,11 +661,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         ),
       );
 
-      // Upload image using the ImageUploadService
-      final ImageUploadService uploadService = ImageUploadService();
-      final uploadedUrl = await uploadService.uploadImage(
+      // Upload image using the S3ImageUploadService
+      final S3ImageUploadService uploadService = S3ImageUploadService();
+      final uploadedUrl = await uploadService.uploadImageToS3(
         imageFile,
         'profile-pictures',
+        userId: _currentUser?.id,
       );
 
       if (uploadedUrl != null) {
@@ -748,6 +749,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             child: CircularProgressIndicator(),
           ),
         );
+
+        // Delete from S3 if there's an existing profile picture
+        if (_currentUser?.profilePictureUrl != null &&
+            _currentUser!.profilePictureUrl!.isNotEmpty &&
+            _currentUser!.profilePictureUrl!.contains('amazonaws.com')) {
+          final S3ImageUploadService uploadService = S3ImageUploadService();
+          await uploadService
+              .deleteImageFromS3(_currentUser!.profilePictureUrl!);
+        }
 
         // Update user profile with null image URL
         final success = await _userService.updateProfile(
