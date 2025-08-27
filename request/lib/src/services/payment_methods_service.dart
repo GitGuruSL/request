@@ -136,4 +136,23 @@ class PaymentMethodsService {
       return false;
     }
   }
+
+  // Get signed URL for payment method image
+  static Future<String?> getPaymentMethodImageUrl(
+      String paymentMethodId) async {
+    try {
+      final response = await _api
+          .get<dynamic>('/api/payment-methods/image-url/$paymentMethodId');
+      if (response.isSuccess && response.data != null) {
+        final data = response.data;
+        if (data is Map<String, dynamic> && data['signedUrl'] != null) {
+          return data['signedUrl'] as String;
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error getting payment method image URL: $e');
+      return null;
+    }
+  }
 }

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../models/price_listing.dart';
 import '../../services/pricing_service.dart';
+import '../../services/payment_methods_service.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/glass_theme.dart';
-import '../../utils/image_url_helper.dart';
 
 class PriceComparisonScreen extends StatefulWidget {
   const PriceComparisonScreen({super.key});
@@ -878,10 +878,7 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                         spacing: 8,
                         runSpacing: 8,
                         children: listing.paymentMethods.take(8).map((pm) {
-                          final imgUrl = pm.imageUrl != null
-                              ? ImageUrlHelper.getFullImageUrl(pm.imageUrl!)
-                              : null;
-                          return _buildPaymentMethodChip(pm.name, imgUrl);
+                          return _buildPaymentMethodChip(pm.name, pm.id);
                         }).toList(),
                       ),
                     ],
@@ -970,27 +967,37 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
     );
   }
 
-  Widget _buildPaymentMethodChip(String name, String? imageUrl) {
-    // Image-only circular icon, no borders or labels
-    final hasImage = imageUrl != null && imageUrl.isNotEmpty;
+  Future<String?> _getPaymentMethodImageUrl(String paymentMethodId) async {
+    return await PaymentMethodsService.getPaymentMethodImageUrl(
+        paymentMethodId);
+  }
+
+  Widget _buildPaymentMethodChip(String name, String paymentMethodId) {
     return SizedBox(
       width: 28,
       height: 28,
       child: ClipOval(
-        child: hasImage
-            ? Image.network(
-                imageUrl,
+        child: FutureBuilder<String?>(
+          future: _getPaymentMethodImageUrl(paymentMethodId),
+          builder: (context, snapshot) {
+            if (snapshot.hasData && snapshot.data != null) {
+              return Image.network(
+                snapshot.data!,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Container(
                   color: Colors.grey[200],
                   child:
                       const Icon(Icons.payment, size: 16, color: Colors.grey),
                 ),
-              )
-            : Container(
+              );
+            } else {
+              return Container(
                 color: Colors.grey[200],
                 child: const Icon(Icons.payment, size: 16, color: Colors.grey),
-              ),
+              );
+            }
+          },
+        ),
       ),
     );
   }
