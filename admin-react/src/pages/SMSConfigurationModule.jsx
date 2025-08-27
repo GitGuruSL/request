@@ -376,25 +376,42 @@ const SMSConfigurationModule = () => {
           <Grid container spacing={3}>
             {provider.fields.map((field) => (
               <Grid item xs={12} md={6} key={field.key}>
-                <TextField
-                  fullWidth
-                  label={field.label}
-                  placeholder={field.placeholder}
-                  type={field.type === 'password' && !showCredentials[field.key] ? 'password' : 'text'}
-                  value={providerConfig[field.key] || ''}
-                  onChange={(e) => handleConfigChange(field.key, e.target.value)}
-                  required={field.required}
-                  InputProps={field.type === 'password' ? {
-                    endAdornment: (
-                      <IconButton
-                        onClick={() => toggleCredentialVisibility(field.key)}
-                        edge="end"
-                      >
-                        {showCredentials[field.key] ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    )
-                  } : undefined}
-                />
+                {field.type === 'select' ? (
+                  <TextField
+                    fullWidth
+                    select
+                    label={field.label}
+                    value={providerConfig[field.key] || field.defaultValue || ''}
+                    onChange={(e) => handleConfigChange(field.key, e.target.value)}
+                    required={field.required}
+                  >
+                    {field.options.map((option) => (
+                      <MenuItem key={option} value={option}>
+                        {option}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                ) : (
+                  <TextField
+                    fullWidth
+                    label={field.label}
+                    placeholder={field.placeholder}
+                    type={field.type === 'password' && !showCredentials[field.key] ? 'password' : 'text'}
+                    value={providerConfig[field.key] || ''}
+                    onChange={(e) => handleConfigChange(field.key, e.target.value)}
+                    required={field.required}
+                    InputProps={field.type === 'password' ? {
+                      endAdornment: (
+                        <IconButton
+                          onClick={() => toggleCredentialVisibility(field.key)}
+                          edge="end"
+                        >
+                          {showCredentials[field.key] ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      )
+                    } : undefined}
+                  />
+                )}
               </Grid>
             ))}
           </Grid>

@@ -33,6 +33,7 @@ router.get('/sms-configurations', auth.authMiddleware(), auth.roleMiddleware(['s
         sc.aws_config,
         sc.vonage_config,
         sc.local_config,
+        sc.hutch_mobile_config,
         sc.total_sms_sent,
         sc.total_cost,
         sc.cost_per_sms,
@@ -87,6 +88,7 @@ router.post('/sms-configurations', auth.authMiddleware(), auth.roleMiddleware(['
       awsConfig,
       vonageConfig,
       localConfig,
+      hutchMobileConfig,
       isActive
     } = req.body;
 
@@ -128,11 +130,12 @@ router.post('/sms-configurations', auth.authMiddleware(), auth.roleMiddleware(['
           aws_config = $5,
           vonage_config = $6,
           local_config = $7,
-          approval_status = $8,
-          submitted_by = $9,
+          hutch_mobile_config = $8,
+          approval_status = $9,
+          submitted_by = $10,
           submitted_at = NOW(),
-          approved_by = $10,
-          approved_at = $11,
+          approved_by = $11,
+          approved_at = $12,
           updated_at = NOW()
         WHERE country_code = $1
         RETURNING *
@@ -144,6 +147,7 @@ router.post('/sms-configurations', auth.authMiddleware(), auth.roleMiddleware(['
         awsConfig ? JSON.stringify(awsConfig) : null,
         vonageConfig ? JSON.stringify(vonageConfig) : null,
         localConfig ? JSON.stringify(localConfig) : null,
+        hutchMobileConfig ? JSON.stringify(hutchMobileConfig) : null,
         status,
         adminId,
         approvedBy,
@@ -180,9 +184,9 @@ router.post('/sms-configurations', auth.authMiddleware(), auth.roleMiddleware(['
       result = await database.query(`
         INSERT INTO sms_configurations (
           country_code, country_name, active_provider, is_active,
-          twilio_config, aws_config, vonage_config, local_config,
+          twilio_config, aws_config, vonage_config, local_config, hutch_mobile_config,
           approval_status, submitted_by, submitted_at, approved_by, approved_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), $11, $12)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), $12, $13)
         RETURNING *
       `, [
         countryCode,
@@ -193,6 +197,7 @@ router.post('/sms-configurations', auth.authMiddleware(), auth.roleMiddleware(['
         awsConfig ? JSON.stringify(awsConfig) : null,
         vonageConfig ? JSON.stringify(vonageConfig) : null,
         localConfig ? JSON.stringify(localConfig) : null,
+        hutchMobileConfig ? JSON.stringify(hutchMobileConfig) : null,
         status,
         adminId,
         approvedBy,
@@ -403,6 +408,7 @@ router.get('/sms-configurations/pending', auth.authMiddleware(), auth.roleMiddle
         sc.aws_config,
         sc.vonage_config,
         sc.local_config,
+        sc.hutch_mobile_config,
         submitter.email as submitted_by_email
       FROM sms_configurations sc
       LEFT JOIN admin_users submitter ON sc.submitted_by = submitter.id

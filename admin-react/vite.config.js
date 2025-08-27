@@ -8,11 +8,11 @@ export default defineConfig({
     port: 5173,
     host: true,
     proxy: {
-      // Proxy API calls to the backend Express server
+      // Proxy API calls to the AWS EC2 production server
       '/api': {
-        target: 'http://localhost:3001', // Backend server (server.js)
+        target: 'https://api.alphabet.lk', // AWS EC2 production server
         changeOrigin: true,
-        secure: false,
+        secure: true, // Enable SSL verification for HTTPS
         // Avoid Vite rewriting or serving index.html for API routes
         configure: (proxy) => {
           proxy.on('proxyReq', (proxyReq) => {

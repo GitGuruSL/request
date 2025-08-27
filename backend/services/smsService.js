@@ -247,7 +247,8 @@ class SMSService {
       twilioConfig: config.twilio_config ? JSON.parse(config.twilio_config) : null,
       awsConfig: config.aws_config ? JSON.parse(config.aws_config) : null,
       vonageConfig: config.vonage_config ? JSON.parse(config.vonage_config) : null,
-      localConfig: config.local_config ? JSON.parse(config.local_config) : null
+      localConfig: config.local_config ? JSON.parse(config.local_config) : null,
+      hutchMobileConfig: config.hutch_mobile_config ? JSON.parse(config.hutch_mobile_config) : null
     };
   }
 
