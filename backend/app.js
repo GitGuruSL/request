@@ -81,6 +81,7 @@ if (entitlements) {
 // Import routes
 const authRoutes = require('./routes/auth');
 const flutterAuthRoutes = require('./routes/flutter-auth'); // NEW
+const awsDiagnosticRoutes = require('./routes/aws-diagnostic'); // TEMP - AWS diagnostic
 const usersRoutes = require('./routes/users'); // NEW - user profile management
 const categoryRoutes = require('./routes/categories');
 const cityRoutes = require('./routes/cities');
@@ -163,6 +164,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
 // Use routes (safely)
 safeUse('/api/auth', authRoutes, 'authRoutes');
 safeUse('/api/auth', flutterAuthRoutes, 'flutterAuthRoutes'); // NEW - adds Flutter-specific endpoints
+safeUse('/api/diagnostic', awsDiagnosticRoutes, 'awsDiagnosticRoutes'); // TEMP - AWS diagnostic
 safeUse('/api/users', usersRoutes, 'usersRoutes'); // NEW - user profile management
 safeUse('/api/categories', categoryRoutes, 'categoryRoutes');
 safeUse('/api/cities', cityRoutes, 'cityRoutes');
@@ -240,5 +242,3 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 module.exports = app;
-/ /   A W S   c r e d e n t i a l s   u p d a t e :   0 8 / 2 7 / 2 0 2 5   1 5 : 0 2 : 4 4  
- 
