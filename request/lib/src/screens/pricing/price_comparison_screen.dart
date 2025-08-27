@@ -560,53 +560,35 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: () {
-                        print(
-                            '🏢 [BusinessLogo-Check] Business: ${listing.businessName}');
-                        print(
-                            '🏢 [BusinessLogo-Check] Logo URL: "${listing.businessLogo}"');
-                        print(
-                            '🏢 [BusinessLogo-Check] Logo isEmpty: ${listing.businessLogo.isEmpty}');
-                        print(
-                            '🏢 [BusinessLogo-Check] Logo isNotEmpty: ${listing.businessLogo.isNotEmpty}');
-
-                        return listing.businessLogo.isNotEmpty
-                            ? FutureBuilder<String?>(
-                                future: () {
-                                  print(
-                                      '🏢 [BusinessLogo] Business: ${listing.businessName}, Logo URL: "${listing.businessLogo}"');
-                                  return _getBusinessLogoUrl(
-                                      listing.businessLogo);
-                                }(),
-                                builder: (context, snapshot) {
-                                  print(
-                                      '🏢 [BusinessLogo] FutureBuilder state: hasData=${snapshot.hasData}, data=${snapshot.data}, error=${snapshot.error}');
-                                  if (snapshot.hasData &&
-                                      snapshot.data != null) {
-                                    return Image.network(
-                                      snapshot.data!,
-                                      fit: BoxFit.cover,
-                                      errorBuilder:
-                                          (context, error, stackTrace) {
-                                        print(
-                                            '❌ [BusinessLogo] Image.network error: $error');
-                                        return _buildBusinessLogoPlaceholder(
-                                            listing.businessName);
-                                      },
-                                    );
-                                  } else {
-                                    return _buildBusinessLogoPlaceholder(
-                                        listing.businessName);
-                                  }
-                                },
-                              )
-                            : () {
+                      child: listing.businessLogo.isNotEmpty
+                          ? FutureBuilder<String?>(
+                              future: () {
                                 print(
-                                    '🏢 [BusinessLogo-Check] Using placeholder for ${listing.businessName} - logo is empty');
-                                return _buildBusinessLogoPlaceholder(
-                                    listing.businessName);
-                              }();
-                      }(),
+                                    '🏢 [BusinessLogo] Business: ${listing.businessName}, Logo URL: "${listing.businessLogo}"');
+                                return _getBusinessLogoUrl(
+                                    listing.businessLogo);
+                              }(),
+                              builder: (context, snapshot) {
+                                print(
+                                    '🏢 [BusinessLogo] FutureBuilder state: hasData=${snapshot.hasData}, data=${snapshot.data}, error=${snapshot.error}');
+                                if (snapshot.hasData && snapshot.data != null) {
+                                  return Image.network(
+                                    snapshot.data!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      print(
+                                          '❌ [BusinessLogo] Image.network error: $error');
+                                      return _buildBusinessLogoPlaceholder(
+                                          listing.businessName);
+                                    },
+                                  );
+                                } else {
+                                  return _buildBusinessLogoPlaceholder(
+                                      listing.businessName);
+                                }
+                              },
+                            )
+                          : _buildBusinessLogoPlaceholder(listing.businessName),
                     ),
                   ),
                 ),
