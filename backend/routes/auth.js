@@ -107,6 +107,58 @@ router.post('/send-phone-otp', async (req, res) => {
     }
 });
 
+// Unified send OTP endpoint (for Flutter compatibility)
+router.post('/send-otp', async (req, res) => {
+    try {
+        const { emailOrPhone, isEmail, countryCode } = req.body;
+        
+        if (!emailOrPhone) {
+            return res.status(400).json({
+                success: false,
+                error: 'Email or phone number is required'
+            });
+        }
+
+        let result;
+        
+        if (isEmail) {
+            // Send email OTP
+            result = await authService.sendEmailOTP(emailOrPhone);
+        } else {
+            // Send phone OTP
+            // Try to get userId from token if provided (optional authentication)
+            let userId = null;
+            try {
+                const authHeader = req.headers.authorization;
+                if (authHeader && authHeader.startsWith('Bearer ')) {
+                    const token = authHeader.substring(7);
+                    const decoded = authService.verifyToken(token);
+                    userId = decoded.id;
+                    console.log(`📱 Unified OTP: Request from authenticated user ${userId}`);
+                }
+            } catch (authError) {
+                // Ignore auth errors - this endpoint works for both authenticated and unauthenticated users
+                console.log(`📱 Unified OTP: Unauthenticated request or invalid token - proceeding`);
+            }
+
+            result = await authService.sendPhoneOTP(emailOrPhone, countryCode, userId);
+        }
+
+        res.json({
+            success: true,
+            message: result.message,
+            otpToken: result.otpToken || result.verificationId,
+            ...result
+        });
+    } catch (error) {
+        console.error('Unified send OTP error:', error.message);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 // Verify email OTP endpoint
 router.post('/verify-email-otp', async (req, res) => {
     try {

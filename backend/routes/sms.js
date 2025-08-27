@@ -6,6 +6,19 @@ const auth = require('../services/auth');
 
 console.log('📱 SMS routes loaded');
 
+// Helper function to clean and validate phone numbers
+function cleanPhoneNumber(phoneNumber) {
+  // Remove all spaces and other formatting
+  const cleaned = phoneNumber.replace(/\s+/g, '');
+  const phoneRegex = /^\+[1-9]\d{1,14}$/;
+  
+  if (!phoneRegex.test(cleaned)) {
+    throw new Error('Invalid phone number format. Expected format: +94xxxxxxxxx');
+  }
+  
+  return cleaned;
+}
+
 /**
  * @route POST /api/sms/send-otp
  * @desc Send OTP to phone number
@@ -24,7 +37,7 @@ router.post('/send-otp', async (req, res) => {
 
     // Validate phone number format
     const phoneRegex = /^\+[1-9]\d{1,14}$/;
-    if (!phoneRegex.test(phoneNumber)) {
+    const cleanedPhone = phoneNumber.replace(/\s+/g, ""); if (!phoneRegex.test(cleanedPhone)) {
       return res.status(400).json({
         success: false,
         message: 'Invalid phone number format'
@@ -33,7 +46,7 @@ router.post('/send-otp', async (req, res) => {
 
     console.log(`📱 Sending OTP to ${phoneNumber} for purpose: ${purpose}`);
 
-    const result = await smsService.sendOTP(phoneNumber, countryCode);
+    const result = await smsService.sendOTP(cleanedPhone, countryCode);
 
     res.json({
       success: true,
@@ -481,7 +494,7 @@ router.post('/send-otp', async (req, res) => {
 
     // Validate phone number format
     const phoneRegex = /^\+[1-9]\d{1,14}$/;
-    if (!phoneRegex.test(phoneNumber)) {
+    const cleanedPhone = phoneNumber.replace(/\s+/g, ""); if (!phoneRegex.test(cleanedPhone)) {
       return res.status(400).json({
         success: false,
         message: 'Invalid phone number format'
@@ -490,7 +503,7 @@ router.post('/send-otp', async (req, res) => {
 
     console.log(`📱 Sending OTP to ${phoneNumber} for purpose: ${purpose}`);
 
-    const result = await smsService.sendOTP(phoneNumber, countryCode);
+    const result = await smsService.sendOTP(cleanedPhone, countryCode);
 
     res.json({
       success: true,
