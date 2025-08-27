@@ -88,6 +88,27 @@ If you use Nginx, ensure it proxies `/api` to `http://127.0.0.1:3001` and test y
 - Health check fails: check `pm2 logs request-backend` and confirm DB/env values.
 - Don’t overwrite `/opt/request-backend/production.env` when deploying.
 
+### Windows: fix PEM permissions (OpenSSH "UNPROTECTED PRIVATE KEY FILE!")
+If SSH fails with a message like "UNPROTECTED PRIVATE KEY FILE!" or mentions `NT AUTHORITY\\Authenticated Users`, tighten the ACLs on the `.pem` file:
+
+PowerShell (replace with your path):
+```powershell
+$KEY = "E:\MyDrive\Documents\Request\Cloud Services\AWS E3\request-backend-key.pem.pem"
+$ME  = "$env:USERDOMAIN\\$env:USERNAME"
+${perm} = "$ME:(R)"  # avoid PowerShell parsing issues with colon
+
+icacls "$KEY" /inheritance:r | Out-Null
+icacls "$KEY" /grant:r ${perm} | Out-Null
+icacls "$KEY" /remove "NT AUTHORITY\\Authenticated Users" "Authenticated Users" "BUILTIN\\Users" "Users" "Everyone" | Out-Null
+
+# Verify
+icacls "$KEY"
+```
+Then retry:
+```powershell
+ssh -i "$KEY" ubuntu@<EC2_PUBLIC_DNS> "echo SSH_OK"
+```
+
 ## Security tips
 - Never commit PEM or env files to git.
 - Restrict SSH security group to your IP.
