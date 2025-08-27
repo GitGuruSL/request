@@ -46,3 +46,5 @@ Notes
 
 <!-- ci: trigger backend build - 2025-08-27 -->
  - GHCR repository owner must be lowercase; the workflow normalizes owner for tags, but set GHCR_USER secret in lowercase to avoid auth issues.
+
+<!-- ci: trigger backend deploy - 2025-08-27T00:00Z -->
