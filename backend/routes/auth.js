@@ -1,654 +1,569 @@
-const express = require('express');
-const authService = require('../services/auth');
-const dbService = require('../services/database');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const dbService = require('./database');
+const emailService = require('./email');
+const SMSService = require('./smsService'); // Use country-specific SMS service
 
-const router = express.Router();
-
-/**
- * @route POST /api/auth/register
- * @desc Register a new user
- */
-router.post('/register', async (req, res) => {
-    try {
-        const { email, phone, password, displayName } = req.body;
-
-        // Validate input
-        if (!email && !phone) {
-            return res.status(400).json({ 
-                error: 'Either email or phone is required' 
-            });
-        }
-
-        const result = await authService.register({
-            email,
-            phone,
-            password,
-            displayName
-        });
-
-        res.status(201).json({
-            success: true,
-            message: 'User registered successfully',
-            ...result
-        });
-    } catch (error) {
-        console.error('Registration error:', error);
-        res.status(400).json({
-            success: false,
-            error: error.message
-        });
+class AuthService {
+    constructor() {
+        this.jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key';
+        this.jwtExpiry = process.env.JWT_EXPIRY || '24h';
+        this.otpExpiry = 5 * 60 * 1000; // 5 minutes in milliseconds
+    this.refreshExpiryMs = 30 * 24 * 60 * 60 * 1000; // 30 days
     }
-});
 
-/**
- * @route POST /api/auth/login
- * @desc Login user
- */
-router.post('/login', async (req, res) => {
-    try {
-        const { email, phone, password } = req.body;
-
-        const result = await authService.login({
-            email,
-            phone,
-            password
-        });
-
-        res.json({
-            success: true,
-            message: 'Login successful',
-            data: result
-        });
-    } catch (error) {
-        console.error('Login error:', error);
-        res.status(401).json({
-            success: false,
-            error: error.message
-        });
-    }
-});
-
-/**
- * @route POST /api/auth/refresh
- * @desc Rotate refresh token and issue new access & refresh tokens
- */
-router.post('/refresh', async (req, res) => {
-    try {
-        const { userId, refreshToken } = req.body;
-        if (!userId || !refreshToken) {
-            return res.status(400).json({ success: false, error: 'userId and refreshToken required' });
-        }
-        // Verify user exists
-        const users = await authService.sanitizeUser(await require('../services/database').findById('users', userId));
-        if (!users) return res.status(401).json({ success: false, error: 'Invalid user' });
-        const newRawRefresh = await authService.verifyAndRotateRefreshToken(userId, refreshToken);
-        const newAccess = authService.generateToken({ id: userId, email: users.email, phone: users.phone, role: users.role, email_verified: users.email_verified, phone_verified: users.phone_verified });
-        res.json({ success: true, message: 'Token refreshed', data: { token: newAccess, refreshToken: newRawRefresh } });
-    } catch (error) {
-        console.error('Refresh error:', error);
-        res.status(401).json({ success: false, error: error.message });
-    }
-});
-
-/**
- * @route POST /api/auth/send-email-otp
- * @desc Send OTP to email
- */
-router.post('/send-email-otp', async (req, res) => {
-    try {
-        const { email } = req.body;
-
-        if (!email) {
-            return res.status(400).json({ 
-                error: 'Email is required' 
-            });
-        }
-
-    const result = await authService.sendEmailOTP(email);
-    res.json({ success: true, message: result.message, channel: result.channel, email: result.email });
-    } catch (error) {
-        console.error('Send email OTP error:', error);
-        res.status(400).json({
-            success: false,
-            error: error.message
-        });
-    }
-});
-
-/**
- * @route POST /api/auth/send-phone-otp
- * @desc Send OTP to phone
- */
-router.post('/send-phone-otp', async (req, res) => {
-    try {
-        const { phone, countryCode } = req.body;
-
-        if (!phone) {
-            return res.status(400).json({ 
-                error: 'Phone number is required' 
-            });
-        }
-
-        const result = await authService.sendPhoneOTP(phone, countryCode);
-
-        res.json({
-            success: true,
-            message: result.message,
-            channel: result.channel,
-            sms: result.sms
-        });
-    } catch (error) {
-        console.error('Send phone OTP error:', error);
-        res.status(400).json({
-            success: false,
-            error: error.message
-        });
-    }
-});
-
-/**
- * @route POST /api/auth/verify-email-otp
- * @desc Verify email OTP
- */
-router.post('/verify-email-otp', async (req, res) => {
-    try {
-        const { email, otp } = req.body;
-
-        if (!email || !otp) {
-            return res.status(400).json({ 
-                error: 'Email and OTP are required' 
-            });
-        }
-
-        const result = await authService.verifyEmailOTP(email, otp);
-        res.json({
-            success: true,
-            message: result.message,
-            data: {
-                verified: result.verified,
-                user: result.user,
-                token: result.token,
-                refreshToken: result.refreshToken
-            }
-        });
-    } catch (error) {
-        console.error('Verify email OTP error:', error);
-        res.status(400).json({
-            success: false,
-            error: error.message
-        });
-    }
-});
-
-/**
- * @route POST /api/auth/verify-phone-otp
- * @desc Verify phone OTP
- */
-router.post('/verify-phone-otp', async (req, res) => {
-    try {
-        const { phone, otp } = req.body;
-
-        if (!phone || !otp) {
-            return res.status(400).json({ 
-                error: 'Phone and OTP are required' 
-            });
-        }
-
-        const result = await authService.verifyPhoneOTP(phone, otp);
-        res.json({
-            success: true,
-            message: result.message,
-            data: {
-                verified: result.verified,
-                user: result.user,
-                token: result.token,
-                refreshToken: result.refreshToken
-            }
-        });
-    } catch (error) {
-        console.error('Verify phone OTP error:', error);
-        res.status(400).json({
-            success: false,
-            error: error.message
-        });
-    }
-});
-
-/**
- * @route GET /api/auth/profile
- * @desc Get user profile
- */
-router.get('/profile', authService.authMiddleware(), async (req, res) => {
-    try {
-        res.json({
-            success: true,
-            data: { ...req.user, permissions: req.user.permissions || {} }
-        });
-    } catch (error) {
-        console.error('Get profile error:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
-    }
-});
-
-/**
- * @route PUT /api/auth/profile
- * @desc Update user profile
- */
-router.put('/profile', authService.authMiddleware(), async (req, res) => {
-    try {
-        const { displayName, photoUrl, firstName, lastName, first_name, last_name, password } = req.body;
-
-        // Support both camelCase and snake_case field names
-        const updateData = {
-            displayName,
-            photoUrl,
-            firstName: firstName || first_name,
-            lastName: lastName || last_name,
-            password
+    /**
+     * Generate JWT token
+     */
+    generateToken(user) {
+        const payload = {
+            userId: user.id,
+            email: user.email,
+            phone: user.phone,
+            role: user.role,
+            verified: user.email_verified || user.phone_verified
         };
 
-        // Remove undefined values
-        Object.keys(updateData).forEach(key => {
-            if (updateData[key] === undefined) {
-                delete updateData[key];
-            }
-        });
-
-        const updatedUser = await authService.updateProfile(req.user.id, updateData);
-
-        res.json({
-            success: true,
-            message: 'Profile updated successfully',
-            user: updatedUser
-        });
-    } catch (error) {
-        console.error('Update profile error:', error);
-        res.status(400).json({
-            success: false,
-            error: error.message
-        });
+        return jwt.sign(payload, this.jwtSecret, { expiresIn: this.jwtExpiry });
     }
-});
 
-/**
- * @route POST /api/auth/change-password
- * @desc Change user password
- */
-router.post('/change-password', authService.authMiddleware(), async (req, res) => {
-    try {
-        const { currentPassword, newPassword } = req.body;
-
-        if (!newPassword) {
-            return res.status(400).json({ 
-                error: 'New password is required' 
-            });
-        }
-
-        const result = await authService.changePassword(
-            req.user.id, 
-            currentPassword, 
-            newPassword
-        );
-
-        res.json({
-            success: true,
-            message: result.message
-        });
-    } catch (error) {
-        console.error('Change password error:', error);
-        res.status(400).json({
-            success: false,
-            error: error.message
-        });
-    }
-});
-
-/**
- * @route POST /api/auth/reset-password
- * @desc Reset password using OTP verification
- */
-router.post('/reset-password', async (req, res) => {
-    try {
-        const { emailOrPhone, otp, newPassword, isEmail } = req.body;
-
-        if (!emailOrPhone || !otp || !newPassword) {
-            return res.status(400).json({ 
-                error: 'Email/phone, OTP, and new password are required' 
-            });
-        }
-
-        if (newPassword.length < 6) {
-            return res.status(400).json({ 
-                error: 'New password must be at least 6 characters' 
-            });
-        }
-
-        // Find user by email or phone first
-        const user = await dbService.query(
-            isEmail 
-                ? 'SELECT * FROM users WHERE email = $1' 
-                : 'SELECT * FROM users WHERE phone = $1',
-            [emailOrPhone]
-        );
-
-        if (user.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                error: 'User not found'
-            });
-        }
-
-        const userId = user.rows[0].id;
-
-        // Verify OTP without consuming it
-        if (isEmail) {
-            // Check email OTP validity
-            const otpResult = await dbService.query(`
-                SELECT * FROM email_otp_verifications 
-                WHERE email = $1 AND otp = $2 AND expires_at > NOW() AND verified = false
-            `, [emailOrPhone, otp]);
-
-            if (otpResult.rows.length === 0) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Invalid or expired OTP'
-                });
-            }
-
-            // Update password and mark OTP as verified in transaction
-            await dbService.query('BEGIN');
-            try {
-                const hashedPassword = await authService.hashPassword(newPassword);
-                
-                // Update user password
-                await dbService.update('users', userId, {
-                    password_hash: hashedPassword
-                });
-
-                // Mark OTP as verified
+        /**
+         * Generate a secure refresh token (random string) and store hashed version
+         */
+        async generateAndStoreRefreshToken(userId) {
+                const raw = crypto.randomBytes(48).toString('hex');
+                const hash = crypto.createHash('sha256').update(raw).digest('hex');
+                // Persist (one active per user for simplicity) - upsert pattern
                 await dbService.query(`
-                    UPDATE email_otp_verifications 
-                    SET verified = true, verified_at = NOW() 
-                    WHERE email = $1 AND otp = $2
-                `, [emailOrPhone, otp]);
-
-                await dbService.query('COMMIT');
-            } catch (error) {
-                await dbService.query('ROLLBACK');
-                throw error;
-            }
-        } else {
-            // For phone OTP, use SMS service verification
-            const smsService = require('../services/smsService');
-            const verificationResult = await smsService.verifyOTP(emailOrPhone, otp);
-            
-            if (!verificationResult.verified) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Invalid or expired OTP'
-                });
-            }
-
-            const hashedPassword = await authService.hashPassword(newPassword);
-            
-            // Update user password
-            await dbService.update('users', userId, {
-                password_hash: hashedPassword
-            });
+                    INSERT INTO user_refresh_tokens (user_id, token_hash, expires_at, created_at)
+                    VALUES ($1,$2,$3,NOW())
+                    ON CONFLICT (user_id)
+                    DO UPDATE SET token_hash = EXCLUDED.token_hash, expires_at = EXCLUDED.expires_at, created_at = NOW()
+                `, [userId, hash, new Date(Date.now() + this.refreshExpiryMs)]);
+                return raw; // return raw to client (only time we reveal it)
         }
 
-        res.json({
-            success: true,
-            message: 'Password reset successfully'
-        });
-    } catch (error) {
-        console.error('Reset password error:', error);
-        res.status(400).json({
-            success: false,
-            error: error.message
-        });
+        async verifyAndRotateRefreshToken(userId, providedToken) {
+                const hash = crypto.createHash('sha256').update(providedToken).digest('hex');
+                const row = await dbService.query(`
+                    SELECT * FROM user_refresh_tokens WHERE user_id=$1 AND token_hash=$2 AND expires_at > NOW()
+                `, [userId, hash]);
+                if (row.rows.length === 0) throw new Error('Invalid or expired refresh token');
+                // Rotate (invalidate old by replacing)
+                return await this.generateAndStoreRefreshToken(userId);
+        }
+
+    /**
+     * Verify JWT token
+     */
+    verifyToken(token) {
+        try {
+            return jwt.verify(token, this.jwtSecret);
+        } catch (error) {
+            throw new Error('Invalid or expired token');
+        }
     }
-});
 
-/**
- * @route POST /api/auth/logout
- * @desc Logout user (client-side token removal)
- */
-router.post('/logout', authService.authMiddleware(), async (req, res) => {
-    try {
-        // In JWT, logout is handled client-side by removing the token
-        // For enhanced security, you could implement a token blacklist
-        
-        res.json({
-            success: true,
-            message: 'Logged out successfully'
-        });
-    } catch (error) {
-        console.error('Logout error:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
+    /**
+     * Hash password
+     */
+    async hashPassword(password) {
+        const saltRounds = 12;
+        return await bcrypt.hash(password, saltRounds);
     }
-});
 
-/**
- * @route POST /api/auth/dev/seed-admin
- * @desc Development helper: create a default super admin user if none exists
- * Body (optional): { email, password, displayName }
- * Safeguards: Disabled in production (NODE_ENV==='production')
- */
-router.post('/dev/seed-admin', async (req, res) => {
-    try {
-        if (process.env.NODE_ENV === 'production') {
-            return res.status(403).json({ success: false, error: 'Not available in production' });
-        }
-        const {
-            email = 'admin@example.com',
-            password = 'Admin123!',
-            displayName = 'Super Admin'
-        } = req.body || {};
+    /**
+     * Verify password
+     */
+    async verifyPassword(password, hashedPassword) {
+        return await bcrypt.compare(password, hashedPassword);
+    }
 
-        // Check existing super admin
-        const existingAdmins = await dbService.query(`SELECT id, email FROM users WHERE role = 'super_admin' LIMIT 1`);
-        if (existingAdmins.rows.length > 0) {
-            return res.json({ success: true, message: 'Super admin already exists', data: existingAdmins.rows[0] });
-        }
+    /**
+     * Generate OTP
+     */
+    generateOTP() {
+        return Math.floor(100000 + Math.random() * 900000).toString();
+    }
 
-        // Check existing by email
-        const existingByEmail = await dbService.findMany('users', { email });
-        if (existingByEmail.length > 0) {
-            // Promote existing user
-            const promoted = await dbService.update('users', existingByEmail[0].id, {
-                role: 'super_admin',
-                email_verified: true,
-                is_active: true,
-                updated_at: new Date().toISOString()
-            });
-            const token = authService.generateToken(promoted);
-            const refreshToken = await authService.generateAndStoreRefreshToken(promoted.id);
-            return res.json({ success: true, message: 'Existing user promoted to super_admin', data: { user: authService.sanitizeUser(promoted), token, refreshToken } });
+    /**
+     * Register new user
+     */
+    async register(userData) {
+        const { email, phone, password, displayName, role = 'user', first_name, last_name } = userData;
+
+        // Validate required fields
+        if (!email && !phone) {
+            throw new Error('Either email or phone is required');
         }
 
-        // Create fresh user (manual to ensure role & verification flags)
-        const passwordHash = password ? await authService.hashPassword(password) : null;
+        if (password && password.length < 6) {
+            throw new Error('Password must be at least 6 characters');
+        }
+
+        // Check if user already exists
+        let existingUser = null;
+        if (email) {
+            existingUser = await dbService.findMany('users', { email });
+        }
+        if (!existingUser && phone) {
+            existingUser = await dbService.findMany('users', { phone });
+        }
+
+        if (existingUser && existingUser.length > 0) {
+            throw new Error('User already exists with this email or phone');
+        }
+
+        // Hash password if provided
+        const hashedPassword = password ? await this.hashPassword(password) : null;
+
+        // Create user
         const newUser = await dbService.insert('users', {
-            email,
-            phone: null,
-            password_hash: passwordHash,
-            display_name: displayName,
-            first_name: displayName.split(' ')[0],
-            last_name: displayName.split(' ').slice(1).join(' ') || null,
-            role: 'super_admin',
+            email: email || null,
+            phone: phone || null,
+            password_hash: hashedPassword,
+            display_name: displayName || null,
+            first_name: first_name || (displayName ? displayName.split(' ')[0] : null),
+            last_name: last_name || (displayName ? displayName.split(' ').slice(1).join(' ') : null),
+            role,
             is_active: true,
-            email_verified: true,
+            email_verified: false,
             phone_verified: false,
             country_code: 'LK',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
         });
-        const token = authService.generateToken(newUser);
-        const refreshToken = await authService.generateAndStoreRefreshToken(newUser.id);
-        res.status(201).json({ success: true, message: 'Super admin user created', data: { user: authService.sanitizeUser(newUser), token, refreshToken, credentials: { email, password } } });
-    } catch (error) {
-        console.error('Seed admin error:', error);
-        res.status(500).json({ success: false, error: error.message });
+
+        // Generate token
+        const token = this.generateToken(newUser);
+    const refreshToken = await this.generateAndStoreRefreshToken(newUser.id);
+
+        return {
+            user: this.sanitizeUser(newUser),
+            token,
+            refreshToken
+        };
     }
-});
 
-/**
- * @route POST /api/auth/profile/send-phone-otp
- * @desc Send OTP to verify phone number for profile update
- */
-router.post('/profile/send-phone-otp', authService.authMiddleware(), async (req, res) => {
-    try {
-        const { phoneNumber, countryCode } = req.body;
-        const userId = req.user.id;
+    /**
+     * Login user
+     */
+    async login(loginData) {
+        const { email, phone, password } = loginData;
 
-        if (!phoneNumber) {
-            return res.status(400).json({ 
-                success: false,
-                error: 'Phone number is required' 
-            });
+        if (!email && !phone) {
+            throw new Error('Email or phone is required');
         }
 
-        // Normalize phone number
-        function normalizePhoneNumber(phone) {
-            if (!phone) return null;
-            let normalized = phone.replace(/[^\d+]/g, '');
-            if (normalized.startsWith('+94')) return normalized;
-            if (normalized.startsWith('94') && normalized.length === 11) return '+' + normalized;
-            if (normalized.startsWith('0') && normalized.length === 10) return '+94' + normalized.substring(1);
-            if (normalized.length === 9) return '+94' + normalized;
-            return normalized;
+        // Find user - check both regular users and admin users
+        let user = null;
+        let isAdmin = false;
+        
+        if (email) {
+            // First check regular users table
+            const users = await dbService.findMany('users', { email });
+            user = users[0];
+            
+            // If not found in users, check admin_users table
+            if (!user) {
+                const adminUsers = await dbService.findMany('admin_users', { email });
+                if (adminUsers[0]) {
+                    user = adminUsers[0];
+                    isAdmin = true;
+                }
+            }
+        } else if (phone) {
+            const users = await dbService.findMany('users', { phone });
+            user = users[0];
         }
 
-        const normalizedPhone = normalizePhoneNumber(phoneNumber);
-        console.log(`📱 Profile: Sending OTP for phone update - Phone: ${phoneNumber} → ${normalizedPhone}, User: ${userId}`);
+        if (!user) {
+            throw new Error('User not found');
+        }
 
-        // Use country-specific SMS service
-        const SMSService = require('../services/smsService');
+        if (!user.is_active) {
+            throw new Error('Account is deactivated');
+        }
+
+        // Verify password if provided
+        if (password) {
+            if (!user.password_hash) {
+                throw new Error('Password login not available for this account');
+            }
+
+            const isValidPassword = await this.verifyPassword(password, user.password_hash);
+            if (!isValidPassword) {
+                throw new Error('Invalid password');
+            }
+        }
+
+        // Generate token
+        const token = this.generateToken(user);
+        
+        // Skip refresh token for admin users to avoid foreign key constraint
+        let refreshToken = null;
+        if (!isAdmin) {
+            refreshToken = await this.generateAndStoreRefreshToken(user.id);
+        }
+        
+        return {
+            user: this.sanitizeUser(user),
+            token,
+            refreshToken
+        };
+    }
+
+    /**
+     * Send OTP for email verification
+     */
+    async sendEmailOTP(email) {
+        const otp = this.generateOTP();
+        const expiresAt = new Date(Date.now() + this.otpExpiry);
+
+                // Ensure table exists (defensive in case migrations not run yet)
+                await dbService.query(`CREATE TABLE IF NOT EXISTS email_otp_verifications (
+                    email VARCHAR(255) PRIMARY KEY,
+                    otp VARCHAR(6) NOT NULL,
+                    expires_at TIMESTAMPTZ NOT NULL,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    attempts INT NOT NULL DEFAULT 0,
+                    verified BOOLEAN NOT NULL DEFAULT FALSE,
+                    verified_at TIMESTAMPTZ
+                )`);
+    // Add missing columns if the table existed without them (older baseline)
+    await dbService.query(`ALTER TABLE email_otp_verifications ADD COLUMN IF NOT EXISTS verified BOOLEAN NOT NULL DEFAULT FALSE`);
+    await dbService.query(`ALTER TABLE email_otp_verifications ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ`);
+
+                // Store OTP (manual UPSERT to tolerate environments where primary key wasn't created yet)
+                await dbService.query(`
+                    WITH updated AS (
+                        UPDATE email_otp_verifications
+                            SET otp = $2, expires_at = $3, created_at = $4, attempts = 0, verified = FALSE
+                            WHERE email = $1
+                            RETURNING email
+                    )
+                    INSERT INTO email_otp_verifications (email, otp, expires_at, created_at)
+                    SELECT $1, $2, $3, $4
+                    WHERE NOT EXISTS (SELECT 1 FROM updated);
+                `, [email, otp, expiresAt, new Date()]);
+
+        // Send email via SES (with dev fallback handled inside email service)
+        let emailMeta = { messageId: null, fallback: false, error: null };
+        try {
+            const sendRes = await emailService.sendOTP(email, otp, 'login');
+            emailMeta.messageId = sendRes.messageId;
+            emailMeta.fallback = !!sendRes.fallback;
+            emailMeta.error = sendRes.error || null;
+        } catch (e) {
+            emailMeta.error = e.message;
+            console.warn('Email send failed, OTP logged for debugging:', e.message);
+            console.log(`Email OTP fallback (dev) for ${email}: ${otp}`);
+        }
+
+        return { message: 'OTP sent to email', otpSent: true, channel: 'email', email: emailMeta };
+    }
+
+    /**
+     * Send OTP for phone verification
+     */
+    async sendPhoneOTP(phone, countryCode = null) {
+        console.log(`📱 Auth: Sending OTP to ${phone}, country: ${countryCode}`);
+        
+        // Initialize country-specific SMS service
         const smsService = new SMSService();
         
         // Auto-detect country if not provided
-        const detectedCountry = countryCode || smsService.detectCountry(normalizedPhone);
-        console.log(`🌍 Profile: Using country: ${detectedCountry} for SMS delivery`);
+        const detectedCountry = countryCode || smsService.detectCountry(phone);
+        console.log(`🌍 Auth: Using country: ${detectedCountry} for SMS delivery`);
 
-        // Send OTP using country-specific SMS provider
-        const result = await smsService.sendOTP(normalizedPhone, detectedCountry);
-
-        // Store additional metadata for profile phone verification
-        await dbService.query(
-            `UPDATE phone_otp_verifications 
-             SET user_id = $1, verification_type = 'profile_phone_update'
-             WHERE phone = $2 AND otp_id = $3`,
-            [userId, normalizedPhone, result.otpId]
-        );
-
-        console.log(`✅ OTP sent via ${result.provider} for profile phone update: ${normalizedPhone}`);
-
-        res.json({
-            success: true,
-            message: 'OTP sent successfully for phone verification',
-            phoneNumber: normalizedPhone,
-            otpId: result.otpId,
-            provider: result.provider,
-            countryCode: detectedCountry,
-            expiresIn: result.expiresIn
-        });
-    } catch (error) {
-        console.error('Error sending profile phone OTP:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
+        try {
+            // Use country-specific SMS service to send OTP
+            const result = await smsService.sendOTP(phone, detectedCountry);
+            
+            console.log(`✅ Auth: OTP sent via ${result.provider} for login: ${phone}`);
+            
+            return { 
+                message: 'OTP sent to phone', 
+                otpSent: true, 
+                channel: 'sms',
+                provider: result.provider,
+                countryCode: detectedCountry,
+                expiresIn: result.expiresIn,
+                sms: { 
+                    success: true, 
+                    provider: result.provider,
+                    otpId: result.otpId
+                }
+            };
+        } catch (error) {
+            console.error('Auth SMS service error:', error);
+            throw new Error(`Failed to send OTP: ${error.message}`);
+        }
     }
-});
 
-/**
- * @route POST /api/auth/profile/verify-phone-otp
- * @desc Verify OTP and update user's phone number
- */
-router.post('/profile/verify-phone-otp', authService.authMiddleware(), async (req, res) => {
-    try {
-        const { phoneNumber, otp, otpId } = req.body;
-        const userId = req.user.id;
+    /**
+     * Verify email OTP
+     */
+    async verifyEmailOTP(email, otp) {
+        const result = await dbService.query(`
+            SELECT * FROM email_otp_verifications 
+            WHERE email = $1 AND otp = $2 AND expires_at > NOW() AND verified = false
+        `, [email, otp]);
 
-        if (!phoneNumber || !otp) {
-            return res.status(400).json({
-                success: false,
-                error: 'Phone number and OTP are required'
-            });
+        if (result.rows.length === 0) {
+            // Increment attempts
+            await dbService.query(`
+                UPDATE email_otp_verifications 
+                SET attempts = attempts + 1 
+                WHERE email = $1
+            `, [email]);
+            
+            throw new Error('Invalid or expired OTP');
         }
 
-        // Normalize phone number
-        function normalizePhoneNumber(phone) {
-            if (!phone) return null;
-            let normalized = phone.replace(/[^\d+]/g, '');
-            if (normalized.startsWith('+94')) return normalized;
-            if (normalized.startsWith('94') && normalized.length === 11) return '+' + normalized;
-            if (normalized.startsWith('0') && normalized.length === 10) return '+94' + normalized.substring(1);
-            if (normalized.length === 9) return '+94' + normalized;
-            return normalized;
+        // Mark OTP as verified
+        await dbService.query(`
+            UPDATE email_otp_verifications 
+            SET verified = true, verified_at = NOW() 
+            WHERE email = $1
+        `, [email]);
+
+        // Update user email verification status
+        await dbService.query(`
+            UPDATE users 
+            SET email_verified = true, updated_at = NOW() 
+            WHERE email = $1
+        `, [email]);
+        // Fetch updated user
+        const userRows = await dbService.findMany('users', { email });
+        const user = userRows[0];
+        let token = null; let refreshToken = null;
+        if (user) {
+            token = this.generateToken(user);
+            refreshToken = await this.generateAndStoreRefreshToken(user.id);
         }
+        return { message: 'Email verified successfully', verified: true, user: this.sanitizeUser(user), token, refreshToken };
+    }
 
-        const normalizedPhone = normalizePhoneNumber(phoneNumber);
-        console.log(`🔍 Profile: Verifying OTP for phone update - Phone: ${phoneNumber} → ${normalizedPhone}, OTP: ${otp}, User: ${userId}`);
-
-        // Use country-specific SMS service for verification
-        const SMSService = require('../services/smsService');
+    /**
+     * Verify phone OTP
+     */
+    async verifyPhoneOTP(phone, otp) {
+        console.log(`🔍 Auth: Verifying OTP for ${phone}, OTP: ${otp}`);
+        
+        // Initialize country-specific SMS service
         const smsService = new SMSService();
         
-        const verificationResult = await smsService.verifyOTP(normalizedPhone, otp, otpId);
-
-        if (verificationResult.verified) {
-            // Update user's phone number and mark as verified
-            await dbService.query(
-                `UPDATE users 
-                 SET phone = $1, phone_verified = true, updated_at = NOW() 
-                 WHERE id = $2`,
-                [normalizedPhone, userId]
-            );
-
-            // Add or update phone in user_phone_numbers table (align with schema: label, is_verified)
-            await dbService.query(
-                `INSERT INTO user_phone_numbers (user_id, phone_number, label, is_verified, verified_at, purpose, created_at)
-                 VALUES ($1, $2, 'personal', true, NOW(), 'profile_update', NOW())
-                 ON CONFLICT (user_id, phone_number) DO UPDATE SET
-                 is_verified = true, verified_at = NOW(), label = 'personal', purpose = 'profile_update'`,
-                [userId, normalizedPhone]
-            );
-
-            // Get updated user data
-            const updatedUserResult = await dbService.query('SELECT * FROM users WHERE id = $1', [userId]);
-            const updatedUser = updatedUserResult.rows[0];
-
-            console.log(`✅ Phone verified and updated for user profile: ${normalizedPhone}`);
-
-            res.json({
-                success: true,
-                message: 'Phone number verified and updated successfully',
-                phoneNumber: normalizedPhone,
-                verified: true,
-                provider: verificationResult.provider,
-                user: authService.sanitizeUser(updatedUser)
-            });
-        } else {
-            res.status(400).json({
-                success: false,
-                error: verificationResult.message || 'Invalid or expired OTP'
-            });
+        try {
+            // Use country-specific SMS service to verify OTP
+            const verificationResult = await smsService.verifyOTP(phone, otp);
+            
+            if (verificationResult.verified) {
+                // Update user phone verification status
+                await dbService.query(`
+                    UPDATE users 
+                    SET phone_verified = true, updated_at = NOW() 
+                    WHERE phone = $1
+                `, [phone]);
+                
+                // Fetch updated user
+                const userRows = await dbService.findMany('users', { phone });
+                const user = userRows[0];
+                
+                let token = null; 
+                let refreshToken = null;
+                
+                if (user) {
+                    token = this.generateToken(user);
+                    refreshToken = await this.generateAndStoreRefreshToken(user.id);
+                    
+                    console.log(`✅ Auth: Phone verified successfully for user ${user.id}: ${phone}`);
+                }
+                
+                return { 
+                    message: 'Phone verified successfully', 
+                    verified: true, 
+                    user: this.sanitizeUser(user), 
+                    token, 
+                    refreshToken,
+                    provider: verificationResult.provider
+                };
+            } else {
+                throw new Error(verificationResult.message || 'Invalid or expired OTP');
+            }
+        } catch (error) {
+            console.error('Auth OTP verification error:', error);
+            throw new Error(`Failed to verify OTP: ${error.message}`);
         }
-    } catch (error) {
-        console.error('Error verifying profile phone OTP:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
     }
-});
 
-module.exports = router;
+    /**
+     * Update user profile
+     */
+    async updateProfile(userId, updateData) {
+        console.log('🔄 updateProfile called with:', { userId, updateData });
+        
+        const { displayName, photoUrl, firstName, lastName, password } = updateData;
+        
+        const updateFields = {};
+        
+        if (displayName !== undefined) updateFields.display_name = displayName;
+        if (photoUrl !== undefined) updateFields.photo_url = photoUrl;
+        if (firstName !== undefined) updateFields.first_name = firstName;
+        if (lastName !== undefined) updateFields.last_name = lastName;
+        
+        console.log('🔄 updateFields prepared:', updateFields);
+        
+        // Handle password separately with hashing
+        if (password !== undefined && password !== null && password.trim() !== '') {
+            if (password.length < 6) {
+                throw new Error('Password must be at least 6 characters');
+            }
+            updateFields.password_hash = await this.hashPassword(password.trim());
+            console.log('🔄 Password hashed and added to updateFields');
+        }
+
+        console.log('🔄 Final updateFields:', updateFields);
+        const user = await dbService.update('users', userId, updateFields);
+        console.log('🔄 Updated user from DB:', user);
+
+        const sanitized = this.sanitizeUser(user);
+        console.log('🔄 Sanitized user:', sanitized);
+        return sanitized;
+    }
+
+    /**
+     * Change password
+     */
+    async changePassword(userId, currentPassword, newPassword) {
+        const user = await dbService.findById('users', userId);
+        
+        if (!user) {
+            throw new Error('User not found');
+        }
+
+        if (user.password_hash) {
+            const isValidPassword = await this.verifyPassword(currentPassword, user.password_hash);
+            if (!isValidPassword) {
+                throw new Error('Current password is incorrect');
+            }
+        }
+
+        if (newPassword.length < 6) {
+            throw new Error('New password must be at least 6 characters');
+        }
+
+        const hashedPassword = await this.hashPassword(newPassword);
+        
+        await dbService.update('users', userId, {
+            password_hash: hashedPassword
+        });
+
+        return { message: 'Password updated successfully' };
+    }
+
+    /**
+     * Remove sensitive data from user object and convert nulls to empty strings
+     */
+    sanitizeUser(user) {
+        if (!user) return null;
+        
+        const { password_hash, ...sanitizedUser } = user;
+        
+        // Convert null values to empty strings for Flutter compatibility
+        return {
+            ...sanitizedUser,
+            email: sanitizedUser.email || '',
+            phone: sanitizedUser.phone || '',
+            display_name: sanitizedUser.display_name || '',
+            first_name: sanitizedUser.first_name || '',
+            last_name: sanitizedUser.last_name || '',
+            country_code: sanitizedUser.country_code || '',
+            photo_url: sanitizedUser.photo_url || '',
+            firebase_uid: sanitizedUser.firebase_uid || '',
+            permissions: sanitizedUser.permissions || {}
+        };
+    }
+
+    /**
+     * Middleware to verify JWT token
+     */
+    authMiddleware() {
+        return async (req, res, next) => {
+            try {
+                const authHeader = req.headers.authorization;
+                
+                if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                    return res.status(401).json({ error: 'No token provided' });
+                }
+
+                const token = authHeader.substring(7);
+                const decoded = this.verifyToken(token);
+                
+                // Get user from database - check both users and admin_users tables
+                let user = await dbService.findById('users', decoded.userId);
+                let isAdmin = false;
+                
+                // If not found in users table, check admin_users table
+                if (!user) {
+                    user = await dbService.findById('admin_users', decoded.userId);
+                    isAdmin = true;
+                }
+                
+                if (!user || !user.is_active) {
+                    return res.status(401).json({ error: 'User not found or inactive' });
+                }
+
+                req.user = this.sanitizeUser(user);
+                req.isAdmin = isAdmin; // Add flag to indicate if this is an admin user
+                next();
+            } catch (error) {
+                res.status(401).json({ error: error.message });
+            }
+        };
+    }
+
+    /**
+     * Middleware to check user role
+     */
+    roleMiddleware(requiredRoles) {
+        return (req, res, next) => {
+            if (!req.user) {
+                return res.status(401).json({ error: 'Authentication required' });
+            }
+
+            const userRole = req.user.role;
+            if (!requiredRoles.includes(userRole)) {
+                return res.status(403).json({ error: 'Insufficient permissions' });
+            }
+
+            next();
+        };
+    }
+
+    /**
+     * Alias for roleMiddleware for convenience
+     */
+    requireRole(requiredRoles) {
+        return this.roleMiddleware(requiredRoles);
+    }
+
+    /**
+     * Permission middleware (expects users.permissions JSONB column)
+     */
+    permissionMiddleware(permissionKey) {
+        return (req, res, next) => {
+            if (!req.user) {
+                return res.status(401).json({ error: 'Authentication required' });
+            }
+            const perms = req.user.permissions || req.user.permission || req.user.perms || {};
+            if (perms[permissionKey] === true) return next();
+            return res.status(403).json({ error: 'Permission denied' });
+        };
+    }
+
+    requirePermission(permissionKey) { return this.permissionMiddleware(permissionKey); }
+}
+
+module.exports = new AuthService();
