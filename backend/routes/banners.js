@@ -27,6 +27,10 @@ async function ensureTable() {
 }
 
 function absoluteBase(req) {
+  // Use SERVER_URL environment variable if available (for production deployment)
+  if (process.env.SERVER_URL) {
+    return process.env.SERVER_URL;
+  }
   const proto = (req.protocol || 'http').toLowerCase();
   const host = req.get('host');
   const finalProto = process.env.NODE_ENV === 'production' ? 'https' : proto;
