@@ -204,7 +204,8 @@ class SMSService {
 
     const count = parseInt(result.rows[0].count);
     
-    if (count >= 3) {
+    // Increased limit for development and testing (was 3, now 10)
+    if (count >= 10) {
       throw new Error('Too many OTP requests. Please try again later.');
     }
   }
