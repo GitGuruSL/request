@@ -1,8 +1,9 @@
 // Mobile App API - Get Country Modules Configuration
-// This would be deployed as a Firebase Cloud Function or API endpoint
+// This calls the backend REST API endpoint
 
-// Firestore removed: this module should call backend REST endpoint instead.
+// Updated to use REST API instead of Firestore
 import api from '../services/apiClient';
+import { BUSINESS_MODULES } from '../constants/businessModules';
 
 /**
  * Get enabled modules and configuration for a specific country

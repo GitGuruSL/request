@@ -87,6 +87,7 @@ import {
 } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
 import useCountryFilter from '../hooks/useCountryFilter';
+import api from '../services/apiClient';
 
 const SuperAdminSMSManagement = () => {
   const { adminData, isSuperAdmin } = useCountryFilter();
@@ -134,15 +135,11 @@ const SuperAdminSMSManagement = () => {
     }
   };
 
-  // Fetch all SMS configurations from Firestore
+  // Fetch all SMS configurations from REST API
   const fetchAllSMSConfigurations = async () => {
     try {
-      // TODO: Replace with actual Firestore query
-      // const configsSnapshot = await db.collection('sms_configurations').get();
-      // return configsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
-      // Return empty array until Firebase integration is complete
-      return [];
+      const response = await api.get('/api/sms-configurations');
+      return response.data || [];
     } catch (error) {
       console.error('Error fetching SMS configurations:', error);
       return [];
@@ -151,14 +148,8 @@ const SuperAdminSMSManagement = () => {
 
   const fetchPendingRequests = async () => {
     try {
-      // TODO: Replace with actual Firestore query
-      // const pendingSnapshot = await db.collection('sms_configuration_requests')
-      //   .where('status', '==', 'pending')
-      //   .get();
-      // return pendingSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
-      // Return empty array until Firebase integration is complete
-      return [];
+      const response = await api.get('/api/sms-configuration-requests?status=pending');
+      return response.data || [];
     } catch (error) {
       console.error('Error fetching pending requests:', error);
       return [];
@@ -167,10 +158,8 @@ const SuperAdminSMSManagement = () => {
 
   const fetchUsageStatistics = async () => {
     try {
-      // TODO: Replace with actual Firestore aggregation
-      // Calculate stats from all countries' SMS configurations
-      
-      return {
+      const response = await api.get('/api/sms-statistics');
+      return response.data || {
         totalCountries: 0,
         activeConfigurations: 0,
         pendingApprovals: 0,
@@ -195,10 +184,8 @@ const SuperAdminSMSManagement = () => {
 
   const fetchCostAnalytics = async () => {
     try {
-      // TODO: Replace with actual Firestore aggregation
-      // Calculate cost trends and provider breakdown
-      
-      return {
+      const response = await api.get('/api/sms-cost-analytics');
+      return response.data || {
         monthlyTrend: [],
         providerBreakdown: []
       };

@@ -11,10 +11,10 @@ export class CountryDataService {
 
   /**
    * Get country-filtered query based on user role
-   * @param {string} collectionName - Firestore collection name
+   * @param {string} collectionName - Collection name
    * @param {Object} adminData - Admin user data { role, country }
    * @param {Array} additionalFilters - Additional query filters
-   * @returns {Query} Firestore query with country filtering applied
+   * @returns {Object} Query parameters with country filtering applied
    */
   getCountryFilteredQuery(collectionName, adminData) {
     // For REST we just build query params. Keeping method for backward compatibility.
@@ -144,11 +144,12 @@ export class CountryDataService {
    * Get admin users (super admin only)
    */
   async getAdminUsers(adminData, additionalFilters = []) {
+    const params = {};
     if (adminData?.role !== 'super_admin') {
       // Country admin can only see admins from their country
-      additionalFilters.push(where('country', '==', adminData?.country));
+      params.country = adminData?.country;
     }
-    return this.getFilteredData('admin_users', adminData, additionalFilters);
+    return this.getFilteredData('admin_users', adminData, additionalFilters, params);
   }
 
   /**
