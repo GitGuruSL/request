@@ -3,16 +3,30 @@
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS pgcrypto; -- for gen_random_uuid()
 
-CREATE TABLE IF NOT EXISTS subscription_plans (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  audience TEXT NOT NULL CHECK (audience IN ('normal','business')),
-  model TEXT NOT NULL CHECK (model IN ('monthly','ppc')),
-  price_cents INTEGER,
-  currency TEXT,
-  is_active BOOLEAN NOT NULL DEFAULT true,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+-- Compatibility view to align with existing subscription_plans_new
+-- Maps:
+--  type -> audience ('rider' => 'normal', 'business' => 'business')
+--  plan_type -> model ('monthly'|'pay_per_click' -> 'monthly'|'ppc')
+--  price (decimal) -> price_cents (integer) best-effort conversion
+CREATE OR REPLACE VIEW subscription_plans AS
+SELECT
+  spn.id,
+  spn.name,
+  CASE spn.type
+    WHEN 'rider' THEN 'normal'
+    WHEN 'business' THEN 'business'
+    ELSE 'normal'
+  END AS audience,
+  CASE spn.plan_type
+    WHEN 'pay_per_click' THEN 'ppc'
+    ELSE spn.plan_type
+  END AS model,
+  CASE WHEN spn.price IS NOT NULL THEN (spn.price * 100)::int ELSE NULL END AS price_cents,
+  spn.currency,
+  spn.is_active,
+  spn.created_at
+FROM subscription_plans_new spn
+WHERE spn.is_active = true;
 
 CREATE TABLE IF NOT EXISTS subscriptions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

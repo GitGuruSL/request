@@ -49,6 +49,15 @@ async function main() {
       password: process.env.DB_PASSWORD,
       ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
     };
+  } else if (process.env.PGHOST) {
+    clientConfig = {
+      host: process.env.PGHOST,
+      port: process.env.PGPORT ? parseInt(process.env.PGPORT, 10) : undefined,
+      database: process.env.PGDATABASE,
+      user: process.env.PGUSER,
+      password: process.env.PGPASSWORD,
+      ssl: (process.env.PGSSL === 'true') ? { rejectUnauthorized: false } : false,
+    };
   } else {
     console.error('[migrate] DATABASE_URL or DB_* variables missing in environment');
     process.exit(1);

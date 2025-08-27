@@ -17,9 +17,20 @@ Write-Host "[SSH] Running migration on $remote"
 $script = @"
 set -e
 cd /opt/request-backend
+# Normalize line endings for env files if present (dos2unix alternative)
+for f in production.env deploy/production.env .env.rds; do
+  if [ -f "$f" ]; then
+    sed -i 's/\r$//' "$f" || true
+  fi
+done
 if [ -f production.env ]; then
   set -a
   . ./production.env
+  set +a
+fi
+if [ -f deploy/production.env ]; then
+  set -a
+  . ./deploy/production.env
   set +a
 fi
 if [ -f .env.rds ]; then
