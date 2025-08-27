@@ -9,7 +9,7 @@ on:
 jobs:
   deploy-backend:
     runs-on: ubuntu-latest
-  if: contains(github.event.head_commit.modified, 'backend/') && secrets.EC2_HOST != '' && secrets.EC2_SSH_KEY != ''
+    if: contains(github.event.head_commit.modified, 'backend/')
     
     steps:
     - uses: actions/checkout@v3
