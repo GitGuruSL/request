@@ -6,7 +6,7 @@ const db = require('./database');
  */
 class SMSService {
   constructor() {
-    this.supportedProviders = new Set(['dev', 'twilio', 'aws_sns', 'vonage', 'local_http']);
+    this.supportedProviders = new Set(['dev', 'twilio', 'aws_sns', 'vonage', 'local_http', 'hutch_mobile']);
     this._initialized = false;
   }
 
