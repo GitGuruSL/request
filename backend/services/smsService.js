@@ -105,6 +105,7 @@ class SMSService {
       return {
         success: true,
         otpId,
+        otpToken: otpId, // Add otpToken for Flutter app compatibility
         expiresIn: 300, // 5 minutes
         provider: config.provider,
         message: 'OTP sent successfully'
@@ -474,6 +475,7 @@ class LocalProvider {
 
 /**
  * 🇱🇰 Hutch Mobile Provider (Sri Lanka)
+ * Uses Hutch BSMS API with authentication flow
  */
 class HutchMobileProvider {
   constructor(config) {
@@ -482,43 +484,94 @@ class HutchMobileProvider {
       throw new Error('Hutch Mobile provider configuration not found');
     }
 
-    this.apiUrl = hutchConfig.apiUrl || 'https://webbsms.hutch.lk/';
+    this.apiBaseUrl = 'https://bsms.hutch.lk/api';
     this.username = hutchConfig.username;
     this.password = hutchConfig.password;
-    this.senderId = hutchConfig.senderId || 'HUTCH';
+    this.senderId = hutchConfig.senderId || 'ALPHABET';
     this.messageType = hutchConfig.messageType || 'text';
+    this.authToken = null; // Will store authentication token
 
     if (!this.username || !this.password) {
       throw new Error('Hutch Mobile username and password are required');
     }
   }
 
+  /**
+   * Authenticate with Hutch API and get access token
+   */
+  async authenticate() {
+    try {
+      console.log(`🔐 Authenticating with Hutch API for user: ${this.username}`);
+      
+      const loginResponse = await axios.post(`${this.apiBaseUrl}/login`, {
+        email: this.username,
+        password: this.password
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        timeout: 15000
+      });
+
+      console.log('🔐 Hutch Login Response Status:', loginResponse.status);
+      console.log('🔐 Hutch Login Response:', loginResponse.data);
+
+      if (loginResponse.data && loginResponse.data.access_token) {
+        this.authToken = loginResponse.data.access_token;
+        console.log('✅ Hutch authentication successful');
+        return this.authToken;
+      } else {
+        throw new Error('Authentication failed - no access token received');
+      }
+    } catch (error) {
+      console.error('❌ Hutch Authentication Error:', error.response?.data || error.message);
+      throw new Error(`Hutch authentication failed: ${error.response?.data?.message || error.message}`);
+    }
+  }
+
   async sendSMS(to, message) {
     try {
-      // Format phone number for Hutch Mobile (remove + and country code if present)
-      const cleanPhone = to.replace(/^\+?94/, '').replace(/^0/, '');
+      // Ensure we have a valid auth token
+      if (!this.authToken) {
+        await this.authenticate();
+      }
+
+      // Format phone number for Hutch Mobile (remove + and ensure country code)
+      let cleanPhone = to.replace(/[^\d+]/g, '');
+      if (cleanPhone.startsWith('+94')) {
+        cleanPhone = cleanPhone.substring(3);
+      } else if (cleanPhone.startsWith('94')) {
+        cleanPhone = cleanPhone.substring(2);
+      }
+      if (cleanPhone.startsWith('0')) {
+        cleanPhone = cleanPhone.substring(1);
+      }
       
-      // Hutch Mobile API uses GET method with URL parameters
-      const params = new URLSearchParams({
-        username: this.username,
-        password: this.password,
-        to: cleanPhone,
+      console.log(`📱 Sending SMS via Hutch API to: ${cleanPhone}`);
+
+      // Prepare SMS data
+      const smsData = {
+        recipient: cleanPhone,
         message: message,
         sender_id: this.senderId,
         message_type: this.messageType
+      };
+
+      const response = await axios.post(`${this.apiBaseUrl}/sms/send`, smsData, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${this.authToken}`
+        },
+        timeout: 15000
       });
 
-      const fullUrl = `${this.apiUrl}?${params.toString()}`;
-      console.log(`📱 Hutch Mobile API URL: ${this.apiUrl}?username=${this.username}&to=${cleanPhone}&message=[HIDDEN]&sender_id=${this.senderId}`);
+      console.log('📱 Hutch SMS API Response Status:', response.status);
+      console.log('📱 Hutch SMS API Response:', response.data);
 
-      const response = await axios.get(fullUrl, {
-        timeout: 15000 // 15 second timeout
-      });
-
-      console.log('📱 Hutch Mobile API Response:', response.data);
-
-      // Handle Hutch Mobile response format
-      if (response.data && (response.data.status === 'success' || response.status === 200)) {
+      // Handle successful response
+      if (response.status === 200 || response.status === 201) {
         return {
           success: true,
           messageId: response.data.message_id || response.data.id || `hutch_${Date.now()}`,
@@ -530,7 +583,21 @@ class HutchMobileProvider {
         throw new Error(response.data?.message || response.data?.error || 'SMS sending failed');
       }
     } catch (error) {
-      console.error('Hutch Mobile SMS Error:', error.response?.data || error.message);
+      console.error('❌ Hutch Mobile SMS Error:', error.response?.data || error.message);
+      
+      // If auth error, try to re-authenticate once
+      if (error.response?.status === 401 && this.authToken) {
+        console.log('🔄 Auth token expired, trying to re-authenticate...');
+        this.authToken = null;
+        try {
+          await this.authenticate();
+          // Retry SMS sending after re-authentication
+          return await this.sendSMS(to, message);
+        } catch (retryError) {
+          throw new Error(`Hutch SMS failed after re-auth: ${retryError.message}`);
+        }
+      }
+      
       throw new Error(`Hutch Mobile SMS failed: ${error.response?.data?.message || error.message}`);
     }
   }
