@@ -200,10 +200,10 @@ class _HomeScreenState extends State<HomeScreen> {
           color: const Color(0xFFFFC107),
         ),
         _RequestType(
-          type: 'moving',
-          title: 'Moving & Logistics',
-          subtitle: 'House/office shifting, trucks',
-          icon: Icons.moving,
+          type: 'jobs',
+          title: 'Jobs & Employment',
+          subtitle: 'Find work, hire talent',
+          icon: Icons.work,
           color: const Color(0xFF0EA5E9),
         ),
         _RequestType(
@@ -305,7 +305,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (type == 'tours' ||
         type == 'construction' ||
         type == 'events' ||
-        type == 'moving' ||
+        type == 'jobs' ||
         type == 'education') return false;
 
     final key = switch (type) {

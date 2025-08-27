@@ -101,39 +101,53 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        systemOverlayStyle: const SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.dark,
-          statusBarBrightness: Brightness.light,
-        ),
+    return PopScope(
+      canPop: _selectedProductId == null,
+      onPopInvoked: (didPop) {
+        if (!didPop && _selectedProductId != null) {
+          _clearSelection();
+        }
+      },
+      child: Scaffold(
         backgroundColor: Colors.transparent,
-        foregroundColor: AppTheme.textPrimary,
-        title: Text('Price Comparison',
-            style: TextStyle(color: AppTheme.textPrimary)),
-        elevation: 0,
-        actions: [
-          if (_selectedProductId != null)
-            IconButton(
-              icon: const Icon(Icons.clear),
-              onPressed: _clearSelection,
-            ),
-        ],
-      ),
-      body: GlassTheme.backgroundContainer(
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildSearchSection(),
-              Expanded(
-                child: _selectedProductId == null
-                    ? _buildProductsList()
-                    : _buildPriceComparisonList(),
+        extendBodyBehindAppBar: true,
+        appBar: AppBar(
+          systemOverlayStyle: const SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: Brightness.dark,
+            statusBarBrightness: Brightness.light,
+          ),
+          backgroundColor: Colors.transparent,
+          foregroundColor: AppTheme.textPrimary,
+          title: Text('Price Comparison',
+              style: TextStyle(color: AppTheme.textPrimary)),
+          elevation: 0,
+          leading: _selectedProductId != null
+              ? IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: _clearSelection,
+                )
+              : null,
+          actions: [
+            if (_selectedProductId != null)
+              IconButton(
+                icon: const Icon(Icons.clear),
+                onPressed: _clearSelection,
               ),
-            ],
+          ],
+        ),
+        body: GlassTheme.backgroundContainer(
+          child: SafeArea(
+            child: Column(
+              children: [
+                _buildSearchSection(),
+                Expanded(
+                  child: _selectedProductId == null
+                      ? _buildProductsList()
+                      : _buildPriceComparisonList(),
+                ),
+              ],
+            ),
           ),
         ),
       ),
