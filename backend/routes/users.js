@@ -52,7 +52,7 @@ router.put('/:userId', auth.authMiddleware(), async (req, res) => {
     }
 
     // Add updated_at timestamp
-    updateFields.push(`updated_at = NOW()`);
+    updateFields.push('updated_at = NOW()');
 
     // Execute update query
     const query = `

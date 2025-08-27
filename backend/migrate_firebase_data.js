@@ -106,7 +106,7 @@ async function migrateCategories() {
           metadata = EXCLUDED.metadata,
           updated_at = EXCLUDED.updated_at
       `, [category.firebase_id, category.name, category.slug, category.type, 
-          category.is_active, category.metadata, category.created_at, category.updated_at]);
+        category.is_active, category.metadata, category.created_at, category.updated_at]);
     }
 
     console.log(`✅ Migrated ${categories.length} categories`);
@@ -162,7 +162,7 @@ async function migrateSubcategories() {
             metadata = EXCLUDED.metadata,
             updated_at = EXCLUDED.updated_at
         `, [subcategory.firebase_id, subcategory.category_id, subcategory.name, subcategory.slug, 
-            subcategory.is_active, subcategory.metadata, subcategory.created_at, subcategory.updated_at]);
+          subcategory.is_active, subcategory.metadata, subcategory.created_at, subcategory.updated_at]);
       } else {
         console.log(`⚠️  Skipping subcategory ${subcategory.name} - no matching category`);
       }
@@ -246,7 +246,7 @@ async function migrateVehicleTypes() {
           is_active = EXCLUDED.is_active,
           updated_at = EXCLUDED.updated_at
       `, [vehicleType.firebase_id, vehicleType.name, vehicleType.description, vehicleType.icon, 
-          vehicleType.capacity, vehicleType.is_active, vehicleType.created_at, vehicleType.updated_at]);
+        vehicleType.capacity, vehicleType.is_active, vehicleType.created_at, vehicleType.updated_at]);
     }
 
     console.log(`✅ Migrated ${vehicleTypes.length} vehicle types`);
@@ -309,9 +309,9 @@ async function migrateSubscriptionPlans() {
           requires_country_pricing = EXCLUDED.requires_country_pricing,
           updated_at = EXCLUDED.updated_at
       `, [plan.firebase_id, plan.code, plan.name, plan.type, plan.plan_type, plan.description, 
-          plan.price, plan.currency, plan.duration_days, plan.features, plan.limitations, 
-          plan.countries, plan.pricing_by_country, plan.is_active, plan.is_default_plan, 
-          plan.requires_country_pricing, plan.created_at, plan.updated_at]);
+        plan.price, plan.currency, plan.duration_days, plan.features, plan.limitations, 
+        plan.countries, plan.pricing_by_country, plan.is_active, plan.is_default_plan, 
+        plan.requires_country_pricing, plan.created_at, plan.updated_at]);
     }
 
     console.log(`✅ Migrated ${plans.length} subscription plans`);
@@ -363,7 +363,7 @@ async function migrateMasterProducts() {
           is_active = EXCLUDED.is_active,
           updated_at = EXCLUDED.updated_at
       `, [product.firebase_id, product.brand_id, product.name, product.slug, 
-          product.base_unit, product.is_active, product.created_at, product.updated_at]);
+        product.base_unit, product.is_active, product.created_at, product.updated_at]);
     }
 
     console.log(`✅ Migrated ${products.length} master products`);
@@ -406,7 +406,7 @@ async function migrateVariableTypes() {
           is_active = EXCLUDED.is_active,
           updated_at = EXCLUDED.updated_at
       `, [variable.firebase_id, variable.key, variable.value, variable.type, 
-          variable.description, variable.is_active, variable.created_at, variable.updated_at]);
+        variable.description, variable.is_active, variable.created_at, variable.updated_at]);
     }
 
     console.log(`✅ Migrated ${variables.length} variable types`);

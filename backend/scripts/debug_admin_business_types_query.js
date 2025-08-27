@@ -2,14 +2,14 @@ const db = require('../services/database');
 
 async function run(role = 'super_admin', country = 'LK') {
   // Simulate hasCountryBusinessTypesTable()
-  const hasCountry = await db.query(`SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='country_business_types'`);
+  const hasCountry = await db.query('SELECT 1 FROM information_schema.tables WHERE table_schema=\'public\' AND table_name=\'country_business_types\'');
   const exists = hasCountry.rows.length > 0;
   console.log('hasCountryBusinessTypesTable =', exists);
   const params = [];
   let q = '';
   const conditions = [];
   if (exists) {
-  q = `SELECT cbt.*, 
+    q = `SELECT cbt.*, 
          bt.name as global_name,
          bt.description as global_description,
          bt.icon as global_icon,
@@ -26,7 +26,7 @@ async function run(role = 'super_admin', country = 'LK') {
     if (conditions.length) q += ' WHERE ' + conditions.join(' AND ');
     q += ' ORDER BY cbt.country_code, cbt.display_order, cbt.name';
   } else {
-    q = `SELECT bt.*, NULL::text as created_by_name, NULL::text as updated_by_name FROM business_types bt`;
+    q = 'SELECT bt.*, NULL::text as created_by_name, NULL::text as updated_by_name FROM business_types bt';
     if (role !== 'super_admin') {
       conditions.push('bt.country_code = $1');
       params.push(country);

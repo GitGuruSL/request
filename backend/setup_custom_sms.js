@@ -4,11 +4,11 @@ async function setupCustomSriLankaAPI() {
   try {
     // Custom Sri Lanka SMS API configuration
     const hutchMobileConfig = {
-      apiUrl: "YOUR_CUSTOM_API_ENDPOINT_HERE", // e.g., "https://api.yoursmsservice.lk/v1/send"
-      username: "YOUR_API_USERNAME",
-      password: "YOUR_API_PASSWORD", 
-      senderId: "RequestApp", // Your app name or sender ID
-      messageType: "text"
+      apiUrl: 'YOUR_CUSTOM_API_ENDPOINT_HERE', // e.g., "https://api.yoursmsservice.lk/v1/send"
+      username: 'YOUR_API_USERNAME',
+      password: 'YOUR_API_PASSWORD', 
+      senderId: 'RequestApp', // Your app name or sender ID
+      messageType: 'text'
     };
 
     console.log('Updating Sri Lanka SMS configuration to use custom API...');
@@ -25,7 +25,7 @@ async function setupCustomSriLankaAPI() {
     console.log(`✅ Updated ${result.rowCount} configuration(s)`);
     
     // Verify the update
-    const verification = await db.query("SELECT active_provider, hutch_mobile_config FROM sms_configurations WHERE country_code = 'LK'");
+    const verification = await db.query('SELECT active_provider, hutch_mobile_config FROM sms_configurations WHERE country_code = \'LK\'');
     console.log('\n📋 Updated configuration:');
     console.log(JSON.stringify(verification.rows[0], null, 2));
     

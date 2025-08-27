@@ -27,7 +27,7 @@ function adapt(row){
     type: fromDbType(row.page_type),
     content: row.content,
     countries: row.page_type === 'centralized' ? ['global'] : (row.country_code ? [row.country_code] : []),
-  country: row.country_code || null,
+    country: row.country_code || null,
     keywords: metadata.keywords || [],
     metaDescription: metadata.metaDescription || metadata.meta_description || null,
     requiresApproval: metadata.requiresApproval ?? true,
@@ -108,7 +108,7 @@ router.post('/', auth.authMiddleware(), async (req,res)=>{
     const metadata = {
       ...extraMeta,
       category: b.category ?? extraMeta.category,
-  keywords: (b.keywords ?? (extraMeta.keywords || [])),
+      keywords: (b.keywords ?? (extraMeta.keywords || [])),
       metaDescription: b.metaDescription ?? extraMeta.metaDescription,
       requiresApproval,
       isTemplate: b.isTemplate === true || extraMeta.isTemplate === true,
@@ -213,7 +213,7 @@ router.post('/:id/approve', auth.authMiddleware(), auth.roleMiddleware(['super_a
   try {
     const existing = await db.findById('content_pages', req.params.id);
     if(!existing) return res.status(404).json({ error:'Not found'});
-  const row = await db.update('content_pages', req.params.id, { status:'approved' });
+    const row = await db.update('content_pages', req.params.id, { status:'approved' });
     res.json(adapt(row));
   } catch(e){
     console.error('POST /content-pages/:id/approve error:', e, { id: req.params.id });

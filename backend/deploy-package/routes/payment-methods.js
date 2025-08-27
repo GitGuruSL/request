@@ -25,7 +25,7 @@ router.get('/', async (req, res) => {
   try {
     const { country, active } = req.query;
     const params = [];
-    let where = [];
+    const where = [];
     if (country) { params.push(country); where.push(`country_code = $${params.length}`); }
     if (active === 'true') { where.push('is_active = true'); }
     const sql = `
@@ -109,8 +109,8 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       payload.image_url, payload.link_url, payload.fees, payload.processing_time,
       payload.min_amount, payload.max_amount, payload.is_active
     ];
-  const r = await db.query(sql, vals);
-  res.status(201).json(r.rows[0]);
+    const r = await db.query(sql, vals);
+    res.status(201).json(r.rows[0]);
   } catch (e) {
     console.error('Error creating payment method', e);
     res.status(500).json({ success: false, error: 'Failed to create payment method' });
@@ -128,15 +128,15 @@ router.put('/:id', auth.authMiddleware(), async (req, res) => {
     });
     if (!fields.length) return res.status(400).json({ success: false, error: 'No fields to update' });
     vals.push(req.params.id);
-  const sql = `UPDATE country_payment_methods SET ${fields.join(', ')}, updated_at = NOW() WHERE id = $${vals.length} 
+    const sql = `UPDATE country_payment_methods SET ${fields.join(', ')}, updated_at = NOW() WHERE id = $${vals.length} 
          RETURNING id, country_code AS country, name, description, category,
                image_url AS "imageUrl", link_url AS "linkUrl", fees,
                processing_time AS "processingTime", min_amount AS "minAmount",
                max_amount AS "maxAmount", is_active AS "isActive",
                created_at, updated_at`;
-  const r = await db.query(sql, vals);
-  if (!r.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
-  res.json(r.rows[0]);
+    const r = await db.query(sql, vals);
+    if (!r.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    res.json(r.rows[0]);
   } catch (e) {
     console.error('Error updating payment method', e);
     res.status(500).json({ success: false, error: 'Failed to update payment method' });

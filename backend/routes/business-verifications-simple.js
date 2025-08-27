@@ -11,7 +11,7 @@ console.log('🏢 Simple business verification routes loaded');
 function normalizePhoneNumber(phone) {
   if (!phone) return null;
   // Remove all non-digit characters except +
-  let normalized = phone.replace(/[^\d+]/g, '');
+  const normalized = phone.replace(/[^\d+]/g, '');
   // If starts with +94, keep as is
   if (normalized.startsWith('+94')) {
     return normalized;
@@ -66,7 +66,7 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       business_phone,
       business_address,
       business_type_id, // NEW: Reference to business_types table
-  business_type, // Legacy string (ignored for writes)
+      business_type, // Legacy string (ignored for writes)
       business_category, // Accept business_category from Flutter (deprecated)
       categories, // Array of category IDs for notifications
       registration_number,
@@ -154,9 +154,9 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       // Check which documents are being updated and build status reset fields
       const statusUpdates = [];
       const statusValues = [];
-  // We have 17 fixed params before WHERE (ending with email_verified=$17),
-  // userId is $18, so dynamic status params should start at $19
-  let paramCounter = 18; // Starting after the main update parameters
+      // We have 17 fixed params before WHERE (ending with email_verified=$17),
+      // userId is $18, so dynamic status params should start at $19
+      let paramCounter = 18; // Starting after the main update parameters
 
       // Check if business license is being updated
       if (business_license_url && business_license_url !== currentData.business_license_url) {
@@ -396,7 +396,7 @@ router.get('/', auth.authMiddleware(), async (req, res) => {
     }
     
     // Add ordering and pagination
-    query += ` ORDER BY bv.created_at DESC`;
+    query += ' ORDER BY bv.created_at DESC';
     
     if (limit) {
       paramCount++;
@@ -492,12 +492,12 @@ router.put('/:id/status', auth.authMiddleware(), async (req, res) => {
     const reviewedBy = req.user?.id; // Get admin user ID
     
     console.log(`🔄 AUTHENTICATED: Updating business verification ${id} status to: ${status}`);
-    console.log(`👤 Admin user:`, {
+    console.log('👤 Admin user:', {
       id: req.user?.id,
       email: req.user?.email,
       role: req.user?.role
     });
-    console.log(`📥 Request body:`, req.body);
+    console.log('📥 Request body:', req.body);
     
     // Prepare update query based on status
     let updateQuery, queryParams;
@@ -526,8 +526,8 @@ router.put('/:id/status', auth.authMiddleware(), async (req, res) => {
       queryParams = [status, notes, phone_verified, email_verified, reviewedBy, id];
     }
     
-    console.log(`📝 SQL Query:`, updateQuery);
-    console.log(`📊 Query params:`, queryParams);
+    console.log('📝 SQL Query:', updateQuery);
+    console.log('📊 Query params:', queryParams);
     
     const result = await database.query(updateQuery, queryParams);
 
@@ -540,7 +540,7 @@ router.put('/:id/status', auth.authMiddleware(), async (req, res) => {
     }
 
     console.log(`✅ Business verification ${id} updated successfully to status: ${status}`);
-    console.log(`📋 Updated record:`, result.rows[0]);
+    console.log('📋 Updated record:', result.rows[0]);
 
     // Transform data for response
     const row = result.rows[0];
@@ -729,14 +729,14 @@ router.post('/verify-phone/send-otp', auth.authMiddleware(), async (req, res) =>
       });
     } else {
       console.log(`❌ Business verification: Phone ${normalizedPhone} not verified in any table - sending OTP`);
-      console.log(`📊 Business verification: Checked tables:`, verificationCheck.checkedTables);
+      console.log('📊 Business verification: Checked tables:', verificationCheck.checkedTables);
     }
 
     // Send OTP using country-specific SMS service
     const smsService = require('../services/smsService');
     
-  // Auto-detect country if not provided
-  const detectedCountry = countryCode || smsService.detectCountry(normalizedPhone);
+    // Auto-detect country if not provided
+    const detectedCountry = countryCode || smsService.detectCountry(normalizedPhone);
     console.log(`🌍 Using country: ${detectedCountry} for SMS delivery`);
 
     try {
@@ -833,7 +833,7 @@ router.post('/verify-phone/verify-otp', auth.authMiddleware(), async (req, res) 
       });
     }
 
-  // Verify OTP using country-specific SMS service
+    // Verify OTP using country-specific SMS service
     const smsService = require('../services/smsService');
     
     const normalizedPhone = normalizePhoneNumber(phoneNumber);
@@ -866,7 +866,7 @@ router.post('/verify-phone/verify-otp', auth.authMiddleware(), async (req, res) 
           RETURNING phone, phone_verified
         `, [userId, normalizedPhone]);
 
-        console.log(`📱 User phone updated:`, userUpdateResult.rows[0]);
+        console.log('📱 User phone updated:', userUpdateResult.rows[0]);
 
         // 3. Update any associated business_verifications row(s)
         const businessVerificationUpdate = await database.query(`
@@ -879,7 +879,7 @@ router.post('/verify-phone/verify-otp', auth.authMiddleware(), async (req, res) 
                     is_verified
         `, [userId]);
 
-        let businessVerification = businessVerificationUpdate.rows[0] || null;
+        const businessVerification = businessVerificationUpdate.rows[0] || null;
 
         // 4. If business_verifications row exists, recompute is_verified if all conditions met
         if (businessVerification) {
@@ -898,20 +898,20 @@ router.post('/verify-phone/verify-otp', auth.authMiddleware(), async (req, res) 
 
         return res.json({
           success: true,
-            message: 'Phone number verified successfully',
-            phoneNumber: normalizedPhone,
-            verified: true,
-            provider: verificationResult.provider,
-            verificationSource: 'user_phone_numbers',
-            userPhoneVerified: true,
-            businessVerificationUpdated: !!businessVerification,
-            businessVerification: businessVerification ? {
-              id: businessVerification.id,
-              status: businessVerification.status,
-              phone_verified: businessVerification.phone_verified,
-              email_verified: businessVerification.email_verified,
-              is_verified: businessVerification.is_verified
-            } : null
+          message: 'Phone number verified successfully',
+          phoneNumber: normalizedPhone,
+          verified: true,
+          provider: verificationResult.provider,
+          verificationSource: 'user_phone_numbers',
+          userPhoneVerified: true,
+          businessVerificationUpdated: !!businessVerification,
+          businessVerification: businessVerification ? {
+            id: businessVerification.id,
+            status: businessVerification.status,
+            phone_verified: businessVerification.phone_verified,
+            email_verified: businessVerification.email_verified,
+            is_verified: businessVerification.is_verified
+          } : null
         });
       } else {
         return res.status(400).json({

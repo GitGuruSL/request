@@ -17,7 +17,7 @@ const { Client } = require('pg');
   await c.connect();
   for(const t of tables){
     try {
-      const cols = await c.query("SELECT column_name,data_type FROM information_schema.columns WHERE table_schema='public' AND table_name=$1 ORDER BY ordinal_position", [t]);
+      const cols = await c.query('SELECT column_name,data_type FROM information_schema.columns WHERE table_schema=\'public\' AND table_name=$1 ORDER BY ordinal_position', [t]);
       if(cols.rowCount===0){ console.log(`\nTable ${t} (not found)`); continue; }
       console.log(`\nTable ${t}`); console.table(cols.rows);
     } catch(e){ console.log(`Error reading table ${t}:`, e.message); }

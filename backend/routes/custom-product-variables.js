@@ -18,15 +18,15 @@ function normalize(row){
     id: row.id,
     firebaseId: row.firebase_id || null,
     key: row.key,
-  name: parsed?.name || row.name || row.key,
-  // Provide label alias for legacy frontend expecting 'label'
-  label: parsed?.name || row.name || row.key,
-  description: row.description || parsed?.description || null,
-  type: row.type || parsed?.type || 'text',
-  possibleValues: Array.isArray(parsed?.options) ? parsed.options : [],
-  // Unified aliases
-  options: Array.isArray(parsed?.options) ? parsed.options : [],
-  values: Array.isArray(parsed?.options) ? parsed.options : [],
+    name: parsed?.name || row.name || row.key,
+    // Provide label alias for legacy frontend expecting 'label'
+    label: parsed?.name || row.name || row.key,
+    description: row.description || parsed?.description || null,
+    type: row.type || parsed?.type || 'text',
+    possibleValues: Array.isArray(parsed?.options) ? parsed.options : [],
+    // Unified aliases
+    options: Array.isArray(parsed?.options) ? parsed.options : [],
+    values: Array.isArray(parsed?.options) ? parsed.options : [],
     isRequired: parsed?.isRequired === true,
     isActive: row.is_active !== false,
     createdAt: row.created_at,

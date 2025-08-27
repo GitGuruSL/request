@@ -22,7 +22,7 @@ router.get('/form-data', async (req, res) => {
 
     // 1) Business types (country-aware; fallback to legacy if needed)
     let businessTypesRows = [];
-  if (await hasCountryBusinessTypesTable()) {
+    if (await hasCountryBusinessTypesTable()) {
       const q = `
     SELECT id, name, description, icon, display_order, global_business_type_id
         FROM country_business_types

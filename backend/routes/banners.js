@@ -102,9 +102,9 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     await ensureTable();
-  let { country = null, title = null, subtitle = null, imageUrl, linkUrl = null, priority = 0, active = true } = req.body || {};
+    let { country = null, title = null, subtitle = null, imageUrl, linkUrl = null, priority = 0, active = true } = req.body || {};
     if (!imageUrl) return res.status(400).json({ success: false, message: 'imageUrl is required' });
-  imageUrl = normalizeImageUrl(req, imageUrl);
+    imageUrl = normalizeImageUrl(req, imageUrl);
     const row = await db.insert(TABLE, {
       country,
       title,
@@ -117,7 +117,7 @@ router.post('/', async (req, res) => {
       updated_at: new Date(),
     });
     // Normalize keys to camelCase
-  const out = { ...row, imageUrl: row.image_url, linkUrl: row.link_url };
+    const out = { ...row, imageUrl: row.image_url, linkUrl: row.link_url };
     delete out.image_url; delete out.link_url;
     res.json({ success: true, data: out });
   } catch (e) {
@@ -130,13 +130,13 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     await ensureTable();
-  const { id } = req.params;
-  let { country, title, subtitle, imageUrl, linkUrl, priority, active } = req.body || {};
+    const { id } = req.params;
+    const { country, title, subtitle, imageUrl, linkUrl, priority, active } = req.body || {};
     const data = {};
     if (country !== undefined) data.country = country;
     if (title !== undefined) data.title = title;
     if (subtitle !== undefined) data.subtitle = subtitle;
-  if (imageUrl !== undefined) data.image_url = normalizeImageUrl(req, imageUrl);
+    if (imageUrl !== undefined) data.image_url = normalizeImageUrl(req, imageUrl);
     if (linkUrl !== undefined) data.link_url = linkUrl;
     if (priority !== undefined) data.priority = Number(priority) || 0;
     if (active !== undefined) data.active = !!active;

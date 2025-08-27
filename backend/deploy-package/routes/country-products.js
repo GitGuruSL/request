@@ -88,68 +88,68 @@ router.post('/:id/toggle-country', auth.authMiddleware(), async (req, res) => {
 
 // Create new country product
 router.post('/', auth.authMiddleware(), async (req, res) => {
-    try {
-        // Handle both frontend camelCase and backend snake_case field names
-        const { 
-            master_product_id, 
-            productId, 
-            country_code, 
-            country,
-            is_active, 
-            isActive, 
-            custom_data,
-            productName,
-            countryName
-        } = req.body;
+  try {
+    // Handle both frontend camelCase and backend snake_case field names
+    const { 
+      master_product_id, 
+      productId, 
+      country_code, 
+      country,
+      is_active, 
+      isActive, 
+      custom_data,
+      productName,
+      countryName
+    } = req.body;
 
-        // Use the provided field or fall back to alternative naming
-        const productIdValue = master_product_id || productId;
-        const countryCodeValue = country_code || country;
-        const isActiveValue = is_active !== undefined ? is_active : (isActive !== undefined ? isActive : true);
+    // Use the provided field or fall back to alternative naming
+    const productIdValue = master_product_id || productId;
+    const countryCodeValue = country_code || country;
+    const isActiveValue = is_active !== undefined ? is_active : (isActive !== undefined ? isActive : true);
 
-        const result = await database.query(`
+    const result = await database.query(`
             INSERT INTO country_products (product_id, country_code, is_active)
             VALUES ($1, $2, $3)
             RETURNING *
         `, [productIdValue, countryCodeValue, isActiveValue]);
 
-        res.status(201).json({
-            success: true,
-            message: 'Country product created successfully',
-            data: result.rows[0]
-        });
-    } catch (error) {
-        console.error('Error creating country product:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to create country product'
-        });
-    }
+    res.status(201).json({
+      success: true,
+      message: 'Country product created successfully',
+      data: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error creating country product:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create country product'
+    });
+  }
 });
 
 // Update country product
 router.put('/:id', auth.authMiddleware(), async (req, res) => {
-    try {
-        const { id } = req.params;
-        // Handle both frontend camelCase and backend snake_case field names
-        const { 
-            master_product_id, 
-            productId, 
-            country_code, 
-            country,
-            is_active, 
-            isActive, 
-            custom_data,
-            productName,
-            countryName
-        } = req.body;
+  try {
+    const { id } = req.params;
+    // Handle both frontend camelCase and backend snake_case field names
+    const { 
+      master_product_id, 
+      productId, 
+      country_code, 
+      country,
+      is_active, 
+      isActive, 
+      custom_data,
+      productName,
+      countryName
+    } = req.body;
 
-        // Use the provided field or fall back to alternative naming
-        const productIdValue = master_product_id || productId;
-        const countryCodeValue = country_code || country;
-        const isActiveValue = is_active !== undefined ? is_active : isActive;
+    // Use the provided field or fall back to alternative naming
+    const productIdValue = master_product_id || productId;
+    const countryCodeValue = country_code || country;
+    const isActiveValue = is_active !== undefined ? is_active : isActive;
 
-        const result = await database.query(`
+    const result = await database.query(`
             UPDATE country_products 
             SET product_id = $1, country_code = $2, is_active = $3, 
                 updated_at = CURRENT_TIMESTAMP
@@ -157,54 +157,54 @@ router.put('/:id', auth.authMiddleware(), async (req, res) => {
             RETURNING *
         `, [productIdValue, countryCodeValue, isActiveValue, id]);
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                error: 'Country product not found'
-            });
-        }
-
-        res.json({
-            success: true,
-            message: 'Country product updated successfully',
-            data: result.rows[0]
-        });
-    } catch (error) {
-        console.error('Error updating country product:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to update country product'
-        });
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Country product not found'
+      });
     }
+
+    res.json({
+      success: true,
+      message: 'Country product updated successfully',
+      data: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error updating country product:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update country product'
+    });
+  }
 });
 
 // Delete country product
 router.delete('/:id', auth.authMiddleware(), async (req, res) => {
-    try {
-        const { id } = req.params;
+  try {
+    const { id } = req.params;
 
-        const result = await database.query(`
+    const result = await database.query(`
             DELETE FROM country_products WHERE id = $1 RETURNING *
         `, [id]);
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                error: 'Country product not found'
-            });
-        }
-
-        res.json({
-            success: true,
-            message: 'Country product deleted successfully'
-        });
-    } catch (error) {
-        console.error('Error deleting country product:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to delete country product'
-        });
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Country product not found'
+      });
     }
+
+    res.json({
+      success: true,
+      message: 'Country product deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting country product:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete country product'
+    });
+  }
 });
 
 module.exports = router;

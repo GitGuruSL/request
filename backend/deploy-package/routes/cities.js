@@ -55,7 +55,7 @@ router.get('/:id', async (req, res) => {
       });
     }
 
-  res.json({ success:true, data: adaptCity(city) });
+    res.json({ success:true, data: adaptCity(city) });
   } catch (error) {
     console.error('Error fetching city:', error);
     res.status(500).json({
@@ -133,7 +133,7 @@ router.put('/:id', auth.authMiddleware(), async (req, res) => {
       });
     }
 
-    updates.push(`updated_at = CURRENT_TIMESTAMP`);
+    updates.push('updated_at = CURRENT_TIMESTAMP');
     values.push(cityId);
 
     const query = `
@@ -152,7 +152,7 @@ router.put('/:id', auth.authMiddleware(), async (req, res) => {
       });
     }
 
-  res.json({ success:true, message:'City updated successfully', data: adaptCity(city) });
+    res.json({ success:true, message:'City updated successfully', data: adaptCity(city) });
   } catch (error) {
     console.error('Error updating city:', error);
     
@@ -188,7 +188,7 @@ router.delete('/:id', auth.authMiddleware(), async (req, res) => {
       });
     }
 
-  res.json({ success:true, message:'City deleted successfully', data: adaptCity(city) });
+    res.json({ success:true, message:'City deleted successfully', data: adaptCity(city) });
   } catch (error) {
     console.error('Error deleting city:', error);
     

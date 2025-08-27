@@ -7,7 +7,7 @@ if(!admin.apps.length) admin.initializeApp({credential:admin.credential.cert(sa)
 (async () => {
   const c=new Client({host:process.env.PGHOST||process.env.DB_HOST,user:process.env.PGUSER||process.env.DB_USERNAME,password:process.env.PGPASSWORD||process.env.DB_PASSWORD,database:process.env.PGDATABASE||process.env.DB_NAME,port:process.env.PGPORT||process.env.DB_PORT,ssl:(process.env.PGSSL==='true'||process.env.DB_SSL==='true')?{rejectUnauthorized:false}:undefined});
   await c.connect();
-  const citiesCols = await c.query("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='cities' ORDER BY ordinal_position");
+  const citiesCols = await c.query('SELECT column_name FROM information_schema.columns WHERE table_schema=\'public\' AND table_name=\'cities\' ORDER BY ordinal_position');
   console.log('Cities columns:', citiesCols.rows.map(r=>r.column_name));
   const citiesCount = await c.query('SELECT count(*)::int FROM cities');
   console.log('Cities count:', citiesCount.rows[0].count);

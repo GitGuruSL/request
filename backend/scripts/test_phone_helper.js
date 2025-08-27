@@ -4,7 +4,7 @@
   try {
     console.log('Testing detectPhoneBookSchema...');
     try {
-      const res = await db.query("SELECT column_name FROM information_schema.columns WHERE table_name='user_phone_numbers'");
+      const res = await db.query('SELECT column_name FROM information_schema.columns WHERE table_name=\'user_phone_numbers\'');
       console.log('user_phone_numbers columns:', res.rows.map(x=>x.column_name));
     } catch (e) {
       console.log('user_phone_numbers not accessible:', e.message);

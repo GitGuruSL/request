@@ -89,7 +89,7 @@ router.get('/health', auth.authMiddleware(), async (req, res) => {
     let count = 0;
     let columns = [];
     if (hasCountry) {
-      const c = await database.query(`SELECT COUNT(*)::int AS count FROM country_business_types`);
+      const c = await database.query('SELECT COUNT(*)::int AS count FROM country_business_types');
       count = c.rows[0]?.count || 0;
       const cols = await database.query(`
         SELECT column_name

@@ -20,9 +20,9 @@ router.get('/', async (req, res) => {
       values.push(country);
     }
     if (status === 'accepted') {
-      where.push(`req.accepted_response_id = r.id`);
+      where.push('req.accepted_response_id = r.id');
     } else if (status === 'pending') {
-      where.push(`(req.accepted_response_id IS NULL OR req.accepted_response_id <> r.id)`);
+      where.push('(req.accepted_response_id IS NULL OR req.accepted_response_id <> r.id)');
     }
     if (search) {
       where.push(`(r.message ILIKE $${p} OR req.title ILIKE $${p})`);

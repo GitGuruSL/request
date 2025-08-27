@@ -49,11 +49,11 @@ router.get('/sms-configurations', auth.authMiddleware(), auth.roleMiddleware(['s
     
     if (role === 'country_admin') {
       // Country admin only sees their own country configurations
-      query += ` WHERE sc.country_code = $1`;
+      query += ' WHERE sc.country_code = $1';
       params = [req.user.country || 'US']; // Default to US for now
     }
     
-    query += ` ORDER BY sc.country_name, sc.submitted_at DESC`;
+    query += ' ORDER BY sc.country_name, sc.submitted_at DESC';
 
     const result = await database.query(query, params);
 

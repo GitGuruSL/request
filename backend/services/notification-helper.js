@@ -5,7 +5,7 @@ let schemaCache = null;
 async function detectSchema() {
   if (schemaCache) return schemaCache;
   const colsRes = await db.query(
-    `SELECT column_name FROM information_schema.columns WHERE table_name='notifications'`
+    'SELECT column_name FROM information_schema.columns WHERE table_name=\'notifications\''
   );
   const cols = new Set(colsRes.rows.map(r => r.column_name));
   // Legacy schema observed: user_id, body, is_read
@@ -30,7 +30,7 @@ async function ensureSchema() {
   try { await db.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"'); } catch (_) {}
 
   // Create table if missing, trying gen_random_uuid(), then uuid_generate_v4(), then no default
-  const reg = await db.queryOne("SELECT to_regclass('public.notifications') as tbl");
+  const reg = await db.queryOne('SELECT to_regclass(\'public.notifications\') as tbl');
   if (!reg || !reg.tbl) {
     const commonCols = `
     recipient_id UUID NOT NULL,
@@ -69,11 +69,11 @@ async function ensureSchema() {
   try {
     const sch = await detectSchema();
     if (sch.isLegacy) {
-      await db.query(`CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, created_at)`);
-      await db.query(`CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read)`);
+      await db.query('CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, created_at)');
+      await db.query('CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read)');
     } else {
-      await db.query(`CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON notifications(recipient_id, created_at DESC);`);
-      await db.query(`CREATE INDEX IF NOT EXISTS idx_notifications_status ON notifications(status);`);
+      await db.query('CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON notifications(recipient_id, created_at DESC);');
+      await db.query('CREATE INDEX IF NOT EXISTS idx_notifications_status ON notifications(status);');
     }
   } catch (_) {}
 }
@@ -102,20 +102,20 @@ async function markAsRead(id) {
   await ensureSchema();
   const sch = await detectSchema();
   if (sch.isLegacy) {
-    return db.queryOne(`UPDATE notifications SET is_read=true, read_at=NOW(), updated_at=NOW() WHERE id=$1 RETURNING *`, [id]);
+    return db.queryOne('UPDATE notifications SET is_read=true, read_at=NOW(), updated_at=NOW() WHERE id=$1 RETURNING *', [id]);
   }
   // New schema uses status
-  return db.queryOne(`UPDATE notifications SET status='read', read_at=NOW() WHERE id=$1 RETURNING *`, [id]);
+  return db.queryOne('UPDATE notifications SET status=\'read\', read_at=NOW() WHERE id=$1 RETURNING *', [id]);
 }
 
 async function markAllAsRead(userId) {
   await ensureSchema();
   const sch = await detectSchema();
   if (sch.isLegacy) {
-    await db.query(`UPDATE notifications SET is_read=true, read_at=NOW(), updated_at=NOW() WHERE user_id=$1 AND is_read=false`, [userId]);
+    await db.query('UPDATE notifications SET is_read=true, read_at=NOW(), updated_at=NOW() WHERE user_id=$1 AND is_read=false', [userId]);
     return;
   }
-  await db.query(`UPDATE notifications SET status='read', read_at=NOW() WHERE recipient_id=$1 AND status='unread'`, [userId]);
+  await db.query('UPDATE notifications SET status=\'read\', read_at=NOW() WHERE recipient_id=$1 AND status=\'unread\'', [userId]);
 }
 
 async function listForUser(userId, { limit = 200, offset = 0 } = {}) {
@@ -132,26 +132,26 @@ async function countUnread(userId, { type } = {}) {
   if (sch.isLegacy) {
     if (type) {
       const row = await db.queryOne(
-        `SELECT COUNT(1)::int AS cnt FROM notifications WHERE user_id=$1 AND is_read=false AND type=$2`,
+        'SELECT COUNT(1)::int AS cnt FROM notifications WHERE user_id=$1 AND is_read=false AND type=$2',
         [userId, String(type)]
       );
       return row ? row.cnt : 0;
     }
     const row = await db.queryOne(
-      `SELECT COUNT(1)::int AS cnt FROM notifications WHERE user_id=$1 AND is_read=false`,
+      'SELECT COUNT(1)::int AS cnt FROM notifications WHERE user_id=$1 AND is_read=false',
       [userId]
     );
     return row ? row.cnt : 0;
   } else {
     if (type) {
       const row = await db.queryOne(
-        `SELECT COUNT(1)::int AS cnt FROM notifications WHERE recipient_id=$1 AND status='unread' AND type=$2`,
+        'SELECT COUNT(1)::int AS cnt FROM notifications WHERE recipient_id=$1 AND status=\'unread\' AND type=$2',
         [userId, String(type)]
       );
       return row ? row.cnt : 0;
     }
     const row = await db.queryOne(
-      `SELECT COUNT(1)::int AS cnt FROM notifications WHERE recipient_id=$1 AND status='unread'`,
+      'SELECT COUNT(1)::int AS cnt FROM notifications WHERE recipient_id=$1 AND status=\'unread\'',
       [userId]
     );
     return row ? row.cnt : 0;
@@ -160,7 +160,7 @@ async function countUnread(userId, { type } = {}) {
 
 async function remove(id) {
   await ensureSchema();
-  return db.queryOne(`DELETE FROM notifications WHERE id=$1 RETURNING *`, [id]);
+  return db.queryOne('DELETE FROM notifications WHERE id=$1 RETURNING *', [id]);
 }
 
 module.exports = {

@@ -98,7 +98,7 @@ const expectedColumns = {
 
 async function fetchTableColumns(client, table) {
   const res = await client.query(
-    `SELECT column_name FROM information_schema.columns WHERE table_name = $1 ORDER BY ordinal_position`,
+    'SELECT column_name FROM information_schema.columns WHERE table_name = $1 ORDER BY ordinal_position',
     [table]
   );
   return res.rows.map(r => r.column_name);
@@ -155,14 +155,14 @@ async function main() {
 
   const summary = {
     generated_at: new Date().toISOString(),
-  totals: {
+    totals: {
       mapped: results.filter(r => r.status === 'mapped').length,
       merged: results.filter(r => r.status === 'merged').length,
       partial: results.filter(r => r.status === 'partial').length,
       pending: results.filter(r => r.status === 'pending').length,
       deprecated: results.filter(r => r.status === 'deprecated').length,
     },
-  db_connected: dbConnected,
+    db_connected: dbConnected,
     results
   };
 

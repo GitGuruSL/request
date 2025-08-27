@@ -170,12 +170,12 @@ router.post('/verify-otp', async (req, res) => {
     try {
       if (emailOrPhone.includes('@')) {
         await dbService.query(
-          `UPDATE users SET email_verified = true, updated_at = NOW() WHERE email = $1`,
+          'UPDATE users SET email_verified = true, updated_at = NOW() WHERE email = $1',
           [emailOrPhone]
         );
       } else {
         await dbService.query(
-          `UPDATE users SET phone_verified = true, updated_at = NOW() WHERE phone = $1`,
+          'UPDATE users SET phone_verified = true, updated_at = NOW() WHERE phone = $1',
           [emailOrPhone]
         );
       }

@@ -126,7 +126,7 @@ class SMSService {
         SELECT * FROM phone_otp_verifications 
         WHERE phone = $1 AND otp = $2 AND expires_at > NOW() AND verified = false
       `;
-      let params = [phoneNumber, otp];
+      const params = [phoneNumber, otp];
 
       if (otpId) {
         query += ' AND otp_id = $3';
@@ -248,28 +248,28 @@ class SMSService {
     const providerConfig = config.config;
     
     switch (config.provider) {
-      case 'hutch_mobile':
-        return {
-          hutchMobileConfig: providerConfig
-        };
-      case 'twilio':
-        return {
-          twilioConfig: providerConfig
-        };
-      case 'aws':
-        return {
-          awsConfig: providerConfig
-        };
-      case 'vonage':
-        return {
-          vonageConfig: providerConfig
-        };
-      case 'local':
-        return {
-          localConfig: providerConfig
-        };
-      default:
-        throw new Error(`Unknown provider: ${config.provider}`);
+    case 'hutch_mobile':
+      return {
+        hutchMobileConfig: providerConfig
+      };
+    case 'twilio':
+      return {
+        twilioConfig: providerConfig
+      };
+    case 'aws':
+      return {
+        awsConfig: providerConfig
+      };
+    case 'vonage':
+      return {
+        vonageConfig: providerConfig
+      };
+    case 'local':
+      return {
+        localConfig: providerConfig
+      };
+    default:
+      throw new Error(`Unknown provider: ${config.provider}`);
     }
   }
 

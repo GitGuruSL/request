@@ -124,7 +124,7 @@ class SMSService {
         SELECT * FROM phone_otp_verifications 
         WHERE phone = $1 AND otp = $2 AND expires_at > NOW() AND verified = false
       `;
-      let params = [phoneNumber, otp];
+      const params = [phoneNumber, otp];
 
       if (otpId) {
         query += ' AND otp_id = $3';

@@ -107,7 +107,7 @@ router.get('/public', async (req, res) => {
 function normalizePhoneNumber(phone) {
   if (!phone) return null;
   // Remove all non-digit characters except +
-  let normalized = phone.replace(/[^\d+]/g, '');
+  const normalized = phone.replace(/[^\d+]/g, '');
   // If starts with +94, keep as is
   if (normalized.startsWith('+94')) {
     return normalized;
@@ -281,8 +281,8 @@ router.get('/', auth.authMiddleware(), auth.roleMiddleware(['super_admin', 'coun
         vehicleRegistrationUrl: row.vehicle_registration_url,
         insuranceDocumentUrl: row.insurance_document_url,
         billingProofUrl: row.billing_proof_url,
-  vehicleImageUrls,
-  vehicleImageVerification,
+        vehicleImageUrls,
+        vehicleImageVerification,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
         submissionDate: row.submission_date,
@@ -292,10 +292,10 @@ router.get('/', auth.authMiddleware(), auth.roleMiddleware(['super_admin', 'coun
     }));
 
     // Get total count for pagination
-    let countQuery = `SELECT COUNT(*) FROM driver_verifications WHERE country = $1`;
+    let countQuery = 'SELECT COUNT(*) FROM driver_verifications WHERE country = $1';
     const countParams = [country];
     if (status) {
-      countQuery += ` AND status = $2`;
+      countQuery += ' AND status = $2';
       countParams.push(status);
     }
     
@@ -422,7 +422,7 @@ router.post('/verify-phone/send-otp', auth.authMiddleware(), async (req, res) =>
       });
     } else {
       console.log(`❌ Driver verification: Phone ${normalizedPhone} not verified in any table - sending OTP`);
-      console.log(`📊 Driver verification: Checked tables:`, verificationCheck.checkedTables);
+      console.log('📊 Driver verification: Checked tables:', verificationCheck.checkedTables);
     }
 
     // Use country-specific SMS service
@@ -546,12 +546,12 @@ router.post('/verify-phone/verify-otp', auth.authMiddleware(), async (req, res) 
       `, [userId, normalizedPhone]);
 
       console.log(`✅ Phone verified for driver verification: ${normalizedPhone}, updated driver_verifications table`);
-      console.log(`📝 Database update result:`, updateResult.rows);
-      console.log(`📱 User phone updated:`, userUpdateResult.rows[0]);
+      console.log('📝 Database update result:', updateResult.rows);
+      console.log('📱 User phone updated:', userUpdateResult.rows[0]);
 
       // Get fresh verification status after update
       const freshStatus = await checkPhoneVerificationStatus(userId, normalizedPhone);
-      console.log(`🔍 Fresh verification status:`, freshStatus);
+      console.log('🔍 Fresh verification status:', freshStatus);
 
       res.json({
         success: true,
@@ -965,7 +965,7 @@ router.put('/:id/status', auth.authMiddleware(), auth.roleMiddleware(['super_adm
     if (status === 'approved' && updatedVerification.user_id) {
       try {
         // Get current user data - cast user_id to UUID to ensure type consistency
-        const userQuery = `SELECT * FROM users WHERE id = $1::uuid`;
+        const userQuery = 'SELECT * FROM users WHERE id = $1::uuid';
         const userResult = await database.query(userQuery, [updatedVerification.user_id]);
         
         if (userResult.rows.length > 0) {
@@ -1267,13 +1267,13 @@ router.put('/:id/replace-document', auth.authMiddleware(), async (req, res) => {
     // Build dynamic update; some rejection columns don't exist so guard
     let updateSql = `UPDATE driver_verifications SET ${urlColumn} = $1, ${statusColumn} = 'pending', updated_at = NOW()`;
     const values = [fileUrl, id];
-    const existingColsRes = await database.query("SELECT column_name FROM information_schema.columns WHERE table_name = 'driver_verifications'");
+    const existingColsRes = await database.query('SELECT column_name FROM information_schema.columns WHERE table_name = \'driver_verifications\'');
     const colSet = new Set(existingColsRes.rows.map(r => r.column_name));
     if (colSet.has(rejectionColumn)) {
       updateSql += `, ${rejectionColumn} = NULL`;
     }
     updateSql += ' WHERE id = $2 RETURNING *';
-  const result = await database.query(updateSql, values);
+    const result = await database.query(updateSql, values);
     if (result.rows.length === 0) return res.status(404).json({ success: false, message: 'Driver verification not found' });
 
     // Update JSON document_verification
@@ -1286,7 +1286,7 @@ router.put('/:id/replace-document', auth.authMiddleware(), async (req, res) => {
       'vehicle_insurance': 'vehicleInsurance', 'billing_proof': 'billingProof', 'license_document': 'licenseDocument'
     };
     const frontendKey = backendToFrontendMap[documentType];
-  if (frontendKey) {
+    if (frontendKey) {
       if (!documentVerification || typeof documentVerification !== 'object') documentVerification = {};
       documentVerification[frontendKey] = {
         ...(documentVerification[frontendKey] || {}),
@@ -1297,8 +1297,8 @@ router.put('/:id/replace-document', auth.authMiddleware(), async (req, res) => {
       };
       await database.query('UPDATE driver_verifications SET document_verification = $1 WHERE id = $2', [JSON.stringify(documentVerification), id]);
     }
-  // Audit log
-  await database.query('INSERT INTO driver_document_audit (driver_verification_id, user_id, document_type, action, old_url, new_url, metadata) VALUES ($1,$2,$3,$4,$5,$6,$7)', [id, driver.user_id || null, documentType, 'replace_document', driver[urlColumn] || null, fileUrl, JSON.stringify({ via: 'replace-document-endpoint' })]);
+    // Audit log
+    await database.query('INSERT INTO driver_document_audit (driver_verification_id, user_id, document_type, action, old_url, new_url, metadata) VALUES ($1,$2,$3,$4,$5,$6,$7)', [id, driver.user_id || null, documentType, 'replace_document', driver[urlColumn] || null, fileUrl, JSON.stringify({ via: 'replace-document-endpoint' })]);
     const refreshed = await database.query('SELECT * FROM driver_verifications WHERE id = $1', [id]);
     res.json({ success: true, message: 'Document replaced and reset to pending', data: refreshed.rows[0] });
   } catch (error) {
@@ -1327,9 +1327,9 @@ router.put('/:id/vehicle-images/:index/replace', auth.authMiddleware(), async (r
     if (typeof ver === 'string') { try { ver = JSON.parse(ver); } catch { ver = {}; } }
     if (!ver || typeof ver !== 'object') ver = {};
     ver[imageIndex] = { ...(ver[imageIndex] || {}), status: 'pending', rejectionReason: undefined, replacedAt: new Date().toISOString(), submittedAt: new Date().toISOString() };
-  const oldUrl = rowRes.rows[0].vehicle_image_urls;
-  await database.query('UPDATE driver_verifications SET vehicle_image_urls = $1, vehicle_image_verification = $2, updated_at = NOW() WHERE id = $3', [JSON.stringify(urls), JSON.stringify(ver), id]);
-  await database.query('INSERT INTO driver_document_audit (driver_verification_id, user_id, document_type, action, old_url, new_url, metadata) VALUES ($1,$2,$3,$4,$5,$6,$7)', [id, null, `vehicle_image_${imageIndex}`, 'replace_vehicle_image', Array.isArray(oldUrl)? oldUrl[imageIndex]: null, fileUrl, JSON.stringify({ index: imageIndex })]);
+    const oldUrl = rowRes.rows[0].vehicle_image_urls;
+    await database.query('UPDATE driver_verifications SET vehicle_image_urls = $1, vehicle_image_verification = $2, updated_at = NOW() WHERE id = $3', [JSON.stringify(urls), JSON.stringify(ver), id]);
+    await database.query('INSERT INTO driver_document_audit (driver_verification_id, user_id, document_type, action, old_url, new_url, metadata) VALUES ($1,$2,$3,$4,$5,$6,$7)', [id, null, `vehicle_image_${imageIndex}`, 'replace_vehicle_image', Array.isArray(oldUrl)? oldUrl[imageIndex]: null, fileUrl, JSON.stringify({ index: imageIndex })]);
     const updated = await database.query('SELECT * FROM driver_verifications WHERE id = $1', [id]);
     res.json({ success: true, message: 'Vehicle image replaced and reset to pending', data: updated.rows[0] });
   } catch (error) {
@@ -1344,7 +1344,7 @@ router.get('/:id/audit-logs', auth.authMiddleware(), auth.roleMiddleware(['super
     const { id } = req.params;
     const { documentType, limit = 100 } = req.query;
     const params = [id];
-    let sql = `SELECT * FROM driver_document_audit WHERE driver_verification_id = $1`;
+    let sql = 'SELECT * FROM driver_document_audit WHERE driver_verification_id = $1';
     if (documentType) {
       params.push(documentType);
       sql += ` AND document_type = $${params.length}`;

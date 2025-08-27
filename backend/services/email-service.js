@@ -9,9 +9,9 @@ class EmailService {
       region,
       credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
         ? {
-            accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-          }
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        }
         : undefined,
     });
     
@@ -39,7 +39,7 @@ class EmailService {
     try {
       console.log(`📧 Sending OTP to ${email} for ${purpose}`);
       
-      const subject = `Verify Your Email - Request Marketplace`;
+      const subject = 'Verify Your Email - Request Marketplace';
       const htmlBody = this.generateEmailTemplate(otp, purpose);
       const textBody = `Your verification code is: ${otp}\n\nThis code will expire in 10 minutes.\n\nIf you didn't request this, please ignore this email.`;
       
@@ -66,8 +66,8 @@ class EmailService {
         }
       };
       
-  const result = await this.ses.send(new SendEmailCommand(params));
-  console.log(`✅ Email sent successfully: ${result.MessageId}`);
+      const result = await this.ses.send(new SendEmailCommand(params));
+      console.log(`✅ Email sent successfully: ${result.MessageId}`);
       
       // Store OTP in database
       const otpId = await this.storeOTP(email, otp, purpose);

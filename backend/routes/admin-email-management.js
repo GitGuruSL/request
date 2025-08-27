@@ -369,9 +369,9 @@ router.get('/otp-history', auth.authMiddleware(), auth.roleMiddleware(['super_ad
     const result = await database.query(query, params);
 
     // Get total count
-    let countQuery = `SELECT COUNT(*) as total FROM email_otp_verifications WHERE 1=1`;
+    let countQuery = 'SELECT COUNT(*) as total FROM email_otp_verifications WHERE 1=1';
     if (email) {
-      countQuery += ` AND email ILIKE $1`;
+      countQuery += ' AND email ILIKE $1';
     }
 
     const countResult = await database.query(

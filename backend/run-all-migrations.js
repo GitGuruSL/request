@@ -15,7 +15,7 @@ const pool = new Pool({
 });
 
 async function ensureMigrationsTable() {
-  await pool.query(`CREATE TABLE IF NOT EXISTS schema_migrations (\n    id SERIAL PRIMARY KEY,\n    filename TEXT UNIQUE NOT NULL,\n    applied_at TIMESTAMP NOT NULL DEFAULT NOW()\n  )`);
+  await pool.query('CREATE TABLE IF NOT EXISTS schema_migrations (\n    id SERIAL PRIMARY KEY,\n    filename TEXT UNIQUE NOT NULL,\n    applied_at TIMESTAMP NOT NULL DEFAULT NOW()\n  )');
 }
 
 async function getApplied() {
@@ -56,7 +56,7 @@ async function applyMigration(filePath, filename) {
 }
 
 async function listUsersColumns() {
-  const res = await pool.query(`SELECT column_name FROM information_schema.columns WHERE table_name='users' ORDER BY ordinal_position`);
+  const res = await pool.query('SELECT column_name FROM information_schema.columns WHERE table_name=\'users\' ORDER BY ordinal_position');
   console.log('\n📋 Users table columns:', res.rows.map(r => r.column_name).join(', '));
 }
 

@@ -54,12 +54,12 @@ router.get('/counts', auth.authMiddleware(), async (req, res) => {
     }
     if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
     console.log('[notifications.counts] userId', userId);
-  const total = await notif.countUnread(userId);
-  const messages = await notif.countUnread(userId, { type: 'newMessage' });
+    const total = await notif.countUnread(userId);
+    const messages = await notif.countUnread(userId, { type: 'newMessage' });
     res.json({ success: true, data: { total, messages } });
   } catch (e) {
-  console.error('notifications.counts error', e);
-  res.status(500).json({ success: false, message: 'Failed to get counts', error: e.message });
+    console.error('notifications.counts error', e);
+    res.status(500).json({ success: false, message: 'Failed to get counts', error: e.message });
   }
 });
 

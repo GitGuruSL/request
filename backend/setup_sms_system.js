@@ -161,8 +161,8 @@ async function createSMSSystem() {
         country.code, 
         country.name, 
         JSON.stringify({
-          accountSid: "", 
-          authToken: "", 
+          accountSid: '', 
+          authToken: '', 
           fromNumber: country.phone
         })
       ]);

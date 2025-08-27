@@ -19,9 +19,9 @@ const pages=[
   for(const p of pages){
     const exists=await db.query('SELECT 1 FROM content_pages WHERE slug=$1 LIMIT 1',[p.slug]);
     if(exists.rowCount){ console.log('Skip existing', p.slug); continue; }
-  const q=`INSERT INTO content_pages (slug,title,page_type,country_code,status,metadata,content,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),NOW()) RETURNING id,slug`;
-  const metadata = { seed:true };
-  const params=[p.slug,p.title,p.page_type,p.country_code,p.status,metadata,p.content];
+    const q='INSERT INTO content_pages (slug,title,page_type,country_code,status,metadata,content,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),NOW()) RETURNING id,slug';
+    const metadata = { seed:true };
+    const params=[p.slug,p.title,p.page_type,p.country_code,p.status,metadata,p.content];
     const ins=await db.query(q,params); console.log('Inserted', ins.rows[0]);
   }
 }catch(e){console.error('Seed pages error',e);}finally{process.exit();}})();

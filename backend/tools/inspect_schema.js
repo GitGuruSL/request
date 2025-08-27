@@ -11,7 +11,7 @@ const { Client } = require('pg');
   });
   await c.connect();
   for (const t of ['users','categories','subcategories']) {
-    const cols = await c.query("SELECT column_name,data_type FROM information_schema.columns WHERE table_schema='public' AND table_name=$1 ORDER BY ordinal_position", [t]);
+    const cols = await c.query('SELECT column_name,data_type FROM information_schema.columns WHERE table_schema=\'public\' AND table_name=$1 ORDER BY ordinal_position', [t]);
     console.log('\nTable', t);
     console.table(cols.rows);
   }

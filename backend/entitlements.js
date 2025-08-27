@@ -30,7 +30,7 @@ async function getEntitlements(userId, role, now = new Date()) {
     const audience = sub?.audience || (role === 'business' ? 'business' : 'normal');
 
     const usageRes = await client.query(
-      `SELECT response_count FROM usage_monthly WHERE user_id = $1 AND year_month = $2`,
+      'SELECT response_count FROM usage_monthly WHERE user_id = $1 AND year_month = $2',
       [userId, yearMonth]
     );
     const responseCount = usageRes.rows[0]?.response_count || 0;

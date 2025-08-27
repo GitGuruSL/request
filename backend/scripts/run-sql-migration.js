@@ -9,11 +9,11 @@ async function main() {
   const cwd = process.cwd();
   const candidates = [
   // Prefer the same file the app uses
-  path.join(cwd, '.env.rds'),
-  // Fallbacks
-  path.join(cwd, 'production.env'),
-  path.join(cwd, 'deploy', 'production.env'),
-  path.join(cwd, '.env'),
+    path.join(cwd, '.env.rds'),
+    // Fallbacks
+    path.join(cwd, 'production.env'),
+    path.join(cwd, 'deploy', 'production.env'),
+    path.join(cwd, '.env'),
   ];
   let loaded = null;
   for (const p of candidates) {

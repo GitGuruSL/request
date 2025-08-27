@@ -8,7 +8,7 @@ router.get('/', async (req,res)=>{
   try {
     const { country, entity_type, includeInactive = 'false' } = req.query;
     if (!country || !entity_type) return res.status(400).json({ success:false, error:'country and entity_type required'});
-    let where = { country_code: country, entity_type };
+    const where = { country_code: country, entity_type };
     const rows = await db.findMany('entity_activations', where, { orderBy:'created_at', orderDirection:'DESC' });
     const filtered = includeInactive==='true' ? rows : rows.filter(r=>r.is_active);
     res.json({ success:true, data: filtered });

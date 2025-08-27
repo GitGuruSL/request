@@ -61,7 +61,7 @@ router.put('/:countryCode', auth.authMiddleware(), auth.roleMiddleware(['super_a
             updated_at = NOW()
       RETURNING *
     `, [countryCode.toUpperCase(), JSON.stringify(modules), JSON.stringify(coreDependencies), version]);
-  res.json({ success:true, message:'Configuration saved', data: upsert });
+    res.json({ success:true, message:'Configuration saved', data: upsert });
   } catch (e) {
     console.error('Upsert country modules error', e);
     res.status(500).json({ success:false, message:'Error saving configuration' });

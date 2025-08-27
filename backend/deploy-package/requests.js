@@ -55,7 +55,7 @@ router.get('/', async (req, res) => {
       conditions.push(`r.request_type = $${paramCounter++}`);
       values.push(request_type);
     }
-  if (country_code) { // only filter when explicitly provided
+    if (country_code) { // only filter when explicitly provided
       conditions.push(`r.country_code = $${paramCounter++}`);
       values.push(country_code);
     }
@@ -142,7 +142,7 @@ router.get('/search', async (req, res) => {
       country_code,
       status,
       user_id,
-  has_accepted,
+      has_accepted,
       page = 1,
       limit = 20,
       sort_by = 'created_at',
@@ -174,7 +174,7 @@ router.get('/search', async (req, res) => {
     if (country_code) { conditions.push(`r.country_code = $${paramCounter++}`); values.push(country_code); }
     if (status) { conditions.push(`r.status = $${paramCounter++}`); values.push(status); }
     if (user_id) { conditions.push(`r.user_id = $${paramCounter++}`); values.push(user_id); }
-  if (has_accepted === 'true') { conditions.push('r.accepted_response_id IS NOT NULL'); }
+    if (has_accepted === 'true') { conditions.push('r.accepted_response_id IS NOT NULL'); }
 
     const offset = (page - 1) * limit;
     const validSortColumns = ['created_at', 'updated_at', 'title', 'budget'];
@@ -335,7 +335,7 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       currency,
       deadline,
       image_urls,
-  request_type // Add request_type field (may come as e.g. 'RequestType.item')
+      request_type // Add request_type field (may come as e.g. 'RequestType.item')
     } = req.body;
 
     const user_id = req.user.id;
@@ -346,7 +346,7 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
     console.log('metadata field exists?', 'metadata' in req.body);
     console.log('metadata value:', req.body.metadata);
     console.log('metadata type:', typeof req.body.metadata);
-  console.log('request_type field:', request_type);
+    console.log('request_type field:', request_type);
     console.log('=== LOCATION DATA DEBUG ===');
     console.log('location_address:', location_address);
     console.log('location_latitude:', location_latitude);
@@ -594,7 +594,7 @@ router.put('/:id', auth.authMiddleware(), async (req, res) => {
       });
     }
 
-    updates.push(`updated_at = CURRENT_TIMESTAMP`);
+    updates.push('updated_at = CURRENT_TIMESTAMP');
     values.push(requestId);
 
     const query = `
@@ -684,8 +684,8 @@ router.put('/:id/accept-response', auth.authMiddleware(), async (req, res) => {
     // Ensure response belongs to request
     const resp = await database.queryOne('SELECT * FROM responses WHERE id=$1 AND request_id=$2', [response_id, requestId]);
     if (!resp) return res.status(404).json({ success: false, message: 'Response not found for this request' });
-  // Auto-close if currently active
-  const updated = await database.queryOne("UPDATE requests SET accepted_response_id=$1, status=CASE WHEN status='active' THEN 'closed' ELSE status END, updated_at=NOW() WHERE id=$2 RETURNING *", [response_id, requestId]);
+    // Auto-close if currently active
+    const updated = await database.queryOne('UPDATE requests SET accepted_response_id=$1, status=CASE WHEN status=\'active\' THEN \'closed\' ELSE status END, updated_at=NOW() WHERE id=$2 RETURNING *', [response_id, requestId]);
     try {
       await notify.createNotification({
         recipientId: resp.user_id,
@@ -711,8 +711,8 @@ router.put('/:id/clear-accepted', auth.authMiddleware(), async (req, res) => {
     const request = await database.queryOne('SELECT * FROM requests WHERE id=$1', [requestId]);
     if (!request) return res.status(404).json({ success: false, message: 'Request not found' });
     if (request.user_id !== userId && req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Not permitted' });
-  // Re-open if it was closed due to acceptance
-  const updated = await database.queryOne("UPDATE requests SET accepted_response_id=NULL, status=CASE WHEN status='closed' THEN 'active' ELSE status END, updated_at=NOW() WHERE id=$1 RETURNING *", [requestId]);
+    // Re-open if it was closed due to acceptance
+    const updated = await database.queryOne('UPDATE requests SET accepted_response_id=NULL, status=CASE WHEN status=\'closed\' THEN \'active\' ELSE status END, updated_at=NOW() WHERE id=$1 RETURNING *', [requestId]);
     return res.json({ success: true, message: 'Accepted response cleared', data: updated });
   } catch (error) {
     console.error('Error clearing accepted response:', error);

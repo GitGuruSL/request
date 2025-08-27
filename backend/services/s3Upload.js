@@ -10,9 +10,9 @@ const s3Client = new S3Client({
   // Credentials are automatically read from env vars and shared config; explicit pass-through for clarity
   credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
     ? {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-      }
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    }
     : undefined,
 });
 
@@ -105,48 +105,48 @@ const uploadToS3 = async (file, uploadType, userId, imageIndex) => {
   
   let keyPath;
   switch (uploadType) {
-    case 'driver_photo':
-      keyPath = `drivers/${userId}/driver_photo_${timestamp}.jpg`;
-      break;
-    case 'nic_front':
-      keyPath = `drivers/${userId}/nic_front_${timestamp}.jpg`;
-      break;
-    case 'nic_back':
-      keyPath = `drivers/${userId}/nic_back_${timestamp}.jpg`;
-      break;
-    case 'license_front':
-      keyPath = `drivers/${userId}/license_front_${timestamp}.jpg`;
-      break;
-    case 'license_back':
-      keyPath = `drivers/${userId}/license_back_${timestamp}.jpg`;
-      break;
-    case 'license_document':
-      keyPath = `drivers/${userId}/license_document_${timestamp}${ext}`;
-      break;
-    case 'vehicle_registration':
-      keyPath = `drivers/${userId}/vehicle_registration_${timestamp}${ext}`;
-      break;
-    case 'insurance_document':
-      keyPath = `drivers/${userId}/insurance_document_${timestamp}${ext}`;
-      break;
-    case 'billing_proof':
-      keyPath = `drivers/${userId}/billing_proof_${timestamp}${ext}`;
-      break;
-    case 'vehicle_image':
-      const imgIndex = imageIndex || '1';
-      keyPath = `vehicles/${userId}/${imgIndex}_${timestamp}.jpg`;
-      break;
-    case 'about-us':
-      // Public company assets used in content pages
-      keyPath = `public/about/logo_${timestamp}_${randomString}${ext || '.png'}`;
-      break;
-    case 'master-products':
-      // Centralized master product images (do not depend on userId)
-      keyPath = `public/master-products/file_${timestamp}_${randomString}${ext || '.jpg'}`;
-      break;
-    default:
-      // Fallback path; ensure we don't write to 'undefined'
-      keyPath = `uploads/${userId || 'public'}/${file.fieldname || 'file'}_${timestamp}_${randomString}${ext || '.bin'}`;
+  case 'driver_photo':
+    keyPath = `drivers/${userId}/driver_photo_${timestamp}.jpg`;
+    break;
+  case 'nic_front':
+    keyPath = `drivers/${userId}/nic_front_${timestamp}.jpg`;
+    break;
+  case 'nic_back':
+    keyPath = `drivers/${userId}/nic_back_${timestamp}.jpg`;
+    break;
+  case 'license_front':
+    keyPath = `drivers/${userId}/license_front_${timestamp}.jpg`;
+    break;
+  case 'license_back':
+    keyPath = `drivers/${userId}/license_back_${timestamp}.jpg`;
+    break;
+  case 'license_document':
+    keyPath = `drivers/${userId}/license_document_${timestamp}${ext}`;
+    break;
+  case 'vehicle_registration':
+    keyPath = `drivers/${userId}/vehicle_registration_${timestamp}${ext}`;
+    break;
+  case 'insurance_document':
+    keyPath = `drivers/${userId}/insurance_document_${timestamp}${ext}`;
+    break;
+  case 'billing_proof':
+    keyPath = `drivers/${userId}/billing_proof_${timestamp}${ext}`;
+    break;
+  case 'vehicle_image':
+    const imgIndex = imageIndex || '1';
+    keyPath = `vehicles/${userId}/${imgIndex}_${timestamp}.jpg`;
+    break;
+  case 'about-us':
+    // Public company assets used in content pages
+    keyPath = `public/about/logo_${timestamp}_${randomString}${ext || '.png'}`;
+    break;
+  case 'master-products':
+    // Centralized master product images (do not depend on userId)
+    keyPath = `public/master-products/file_${timestamp}_${randomString}${ext || '.jpg'}`;
+    break;
+  default:
+    // Fallback path; ensure we don't write to 'undefined'
+    keyPath = `uploads/${userId || 'public'}/${file.fieldname || 'file'}_${timestamp}_${randomString}${ext || '.bin'}`;
   }
 
   const params = {

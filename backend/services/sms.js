@@ -22,8 +22,8 @@ class SMSService {
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
     );`);
-    await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_sms_provider_unique ON sms_provider_configs(country_code, provider);`);
-    await db.query(`CREATE INDEX IF NOT EXISTS idx_sms_provider_active ON sms_provider_configs(country_code, is_active);`);
+    await db.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_sms_provider_unique ON sms_provider_configs(country_code, provider);');
+    await db.query('CREATE INDEX IF NOT EXISTS idx_sms_provider_active ON sms_provider_configs(country_code, is_active);');
     this._initialized = true;
   }
 

@@ -97,8 +97,8 @@ router.get('/', optionalAuth(async (req, res) => {
 router.post('/', optionalAuth(async (req, res) => {
   try {
     const requestId = req.params.requestId;
-  const userId = req.user?.id || req.user?.userId; // auth middleware sets id
-  const { message, price, currency, metadata, image_urls, imageUrls, images, location_address, location_latitude, location_longitude, country_code } = req.body || {};
+    const userId = req.user?.id || req.user?.userId; // auth middleware sets id
+    const { message, price, currency, metadata, image_urls, imageUrls, images, location_address, location_latitude, location_longitude, country_code } = req.body || {};
 
     console.log('[responses][create] incoming', {
       requestId,
@@ -212,7 +212,7 @@ router.put('/:responseId', auth.authMiddleware(), async (req, res) => {
 router.delete('/:responseId', auth.authMiddleware(), async (req, res) => {
   try {
     const { requestId, responseId } = req.params;
-  const userId = req.user.id || req.user.userId;
+    const userId = req.user.id || req.user.userId;
 
     const existing = await db.queryOne('SELECT r.*, req.user_id as request_owner FROM responses r JOIN requests req ON r.request_id = req.id WHERE r.id = $1 AND r.request_id = $2', [responseId, requestId]);
     if (!existing) return res.status(404).json({ success: false, message: 'Response not found' });

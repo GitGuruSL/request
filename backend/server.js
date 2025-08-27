@@ -144,7 +144,7 @@ const app = express();
 
 app.use(helmet({
 
-  crossOriginResourcePolicy: { policy: "cross-origin" }
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
 
 }));
 
@@ -312,15 +312,15 @@ app.get('/health', async (req, res) => {
 
 app.get('/test', (req, res) => {
 
-    res.json({ 
+  res.json({ 
 
-        message: 'Server is running!', 
+    message: 'Server is running!', 
 
-        timestamp: new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-        environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development'
 
-    });
+  });
 
 });
 
@@ -476,35 +476,35 @@ try {
 
 app.use((err, req, res, next) => {
 
-    console.error('Global error handler:', err);
+  console.error('Global error handler:', err);
 
     
 
-    if (err.message === 'Not allowed by CORS') {
+  if (err.message === 'Not allowed by CORS') {
 
-        return res.status(403).json({
+    return res.status(403).json({
 
-            success: false,
+      success: false,
 
-            error: 'CORS policy violation',
+      error: 'CORS policy violation',
 
-            origin: req.get('Origin')
-
-        });
-
-    }
-
-    
-
-    res.status(500).json({
-
-        success: false,
-
-        error: 'Internal server error',
-
-        message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+      origin: req.get('Origin')
 
     });
+
+  }
+
+    
+
+  res.status(500).json({
+
+    success: false,
+
+    error: 'Internal server error',
+
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+
+  });
 
 });
 

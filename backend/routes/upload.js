@@ -78,7 +78,7 @@ router.post('/products', (req, res, next) => {
     if (err) return res.status(400).json({ error: err.message });
     const files = req.files || [];
     if (!files.length) return res.status(400).json({ error: 'No image files provided' });
-  const base = `${absoluteBase(req)}/uploads/images/`;
+    const base = `${absoluteBase(req)}/uploads/images/`;
     const data = files.map((f) => ({ url: base + f.filename, filename: f.filename, size: f.size }));
     return res.json({ success: true, files: data });
   });
@@ -91,8 +91,8 @@ router.post('/', upload.single('image'), (req, res) => {
       return res.status(400).json({ error: 'No image file provided' });
     }
 
-  // Generate URL for the uploaded image
-  const imageUrl = `${absoluteBase(req)}/uploads/images/${req.file.filename}`;
+    // Generate URL for the uploaded image
+    const imageUrl = `${absoluteBase(req)}/uploads/images/${req.file.filename}`;
     
     console.log('Image uploaded successfully:', imageUrl);
     
@@ -130,7 +130,7 @@ router.post('/payment-methods', (req, res, next) => {
   uploader.single('file')(req, res, (err) => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'No image file provided' });
-  const imageUrl = `${absoluteBase(req)}/uploads/images/${req.file.filename}`;
+    const imageUrl = `${absoluteBase(req)}/uploads/images/${req.file.filename}`;
     return res.json({ success: true, url: imageUrl, filename: req.file.filename });
   });
 });

@@ -20,7 +20,7 @@ async function getRecentOTPs() {
     } else {
       emailOtps.rows.forEach(otp => {
         const status = otp.used ? '✅ USED' : 
-                      new Date() > new Date(otp.expires_at) ? '❌ EXPIRED' : '🟢 VALID';
+          new Date() > new Date(otp.expires_at) ? '❌ EXPIRED' : '🟢 VALID';
         console.log(`${status} | ${otp.email} | OTP: ${otp.otp} | Created: ${otp.created_at}`);
       });
     }
@@ -41,7 +41,7 @@ async function getRecentOTPs() {
       } else {
         phoneOtps.rows.forEach(otp => {
           const status = otp.used ? '✅ USED' : 
-                        new Date() > new Date(otp.expires_at) ? '❌ EXPIRED' : '🟢 VALID';
+            new Date() > new Date(otp.expires_at) ? '❌ EXPIRED' : '🟢 VALID';
           console.log(`${status} | ${otp.phone} | OTP: ${otp.otp} | Created: ${otp.created_at}`);
         });
       }

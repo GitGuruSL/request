@@ -144,7 +144,7 @@ async function autoActivateCountryData(countryCode, countryName, adminUserId, ad
       }
     ];
     
-  for (const collection of collections) {
+    for (const collection of collections) {
       console.log(`   📋 Processing ${collection.name}...`);
       
       let items;
@@ -229,7 +229,7 @@ async function autoActivateCountryData(countryCode, countryName, adminUserId, ad
       if (tbl.rows.length === 0) {
         console.warn('   ⚠️ Skipping business types seeding: country_business_types table not found');
       } else {
-        const globalTypes = await dbService.query(`SELECT id, name, description, icon, display_order, is_active FROM business_types WHERE is_active = true`);
+        const globalTypes = await dbService.query('SELECT id, name, description, icon, display_order, is_active FROM business_types WHERE is_active = true');
 
         // If no global types exist, seed from a safe built-in default list
         let typesToSeed = globalTypes.rows;
@@ -241,7 +241,7 @@ async function autoActivateCountryData(countryCode, countryName, adminUserId, ad
             { id: null, name: 'Rental Business', description: 'Businesses that rent out items (vehicles, equipment, etc.)', icon: '🏠', display_order: 3, is_active: true },
             { id: null, name: 'Restaurant/Food', description: 'Restaurants, cafes, food delivery businesses', icon: '🍽️', display_order: 4, is_active: true },
             { id: null, name: 'Delivery Service', description: 'Courier, logistics, and delivery companies', icon: '🚚', display_order: 5, is_active: true },
-            { id: null, name: 'Other Business', description: "Businesses that don't fit into other categories", icon: '🏢', display_order: 6, is_active: true }
+            { id: null, name: 'Other Business', description: 'Businesses that don\'t fit into other categories', icon: '🏢', display_order: 6, is_active: true }
           ];
         }
 
@@ -251,7 +251,7 @@ async function autoActivateCountryData(countryCode, countryName, adminUserId, ad
         let btActivated = 0, btSkipped = 0;
         for (const t of typesToSeed) {
           const exists = await dbService.query(
-            `SELECT id FROM country_business_types WHERE country_code = $1 AND (global_business_type_id = $2 OR name = $3)`,
+            'SELECT id FROM country_business_types WHERE country_code = $1 AND (global_business_type_id = $2 OR name = $3)',
             [countryCode, t.id, t.name]
           );
           if (exists.rows.length === 0) {

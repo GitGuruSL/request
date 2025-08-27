@@ -115,9 +115,9 @@ async function formatPriceListing(row, includeBusiness = false) {
   if (row.product_name) {
     listing.product = {
       name: row.product_name,
-  brandId: null,
-  brandName: row.brand_name,
-  baseUnit: row.base_unit
+      brandId: null,
+      brandName: row.brand_name,
+      baseUnit: row.base_unit
     };
   }
   
@@ -144,8 +144,8 @@ router.get('/', async (req, res) => {
       includeInactive = 'false'
     } = req.query;
 
-    let whereConditions = [];
-    let queryParams = [];
+    const whereConditions = [];
+    const queryParams = [];
     let paramIndex = 1;
 
     // Base query with business and product details, including staged prices
@@ -186,7 +186,7 @@ router.get('/', async (req, res) => {
     }
 
     if (includeInactive !== 'true') {
-      whereConditions.push(`pl.is_active = true`);
+      whereConditions.push('pl.is_active = true');
     }
 
     if (masterProductId) {
@@ -245,17 +245,17 @@ router.get('/', async (req, res) => {
     // Add sorting
     let orderBy = '';
     switch (sortBy) {
-      case 'price':
-        orderBy = `pl.price ${sortOrder.toUpperCase()}`;
-        break;
-      case 'rating':
-        orderBy = `bv.business_name ${sortOrder.toUpperCase()}`; // Sort by business name instead of rating
-        break;
-      case 'created_at':
-        orderBy = `pl.created_at ${sortOrder.toUpperCase()}`;
-        break;
-      default:
-        orderBy = `pl.price ASC`;
+    case 'price':
+      orderBy = `pl.price ${sortOrder.toUpperCase()}`;
+      break;
+    case 'rating':
+      orderBy = `bv.business_name ${sortOrder.toUpperCase()}`; // Sort by business name instead of rating
+      break;
+    case 'created_at':
+      orderBy = `pl.created_at ${sortOrder.toUpperCase()}`;
+      break;
+    default:
+      orderBy = 'pl.price ASC';
     }
     query += ` ORDER BY ${orderBy}`;
 
@@ -350,7 +350,7 @@ router.get('/search', async (req, res) => {
       WHERE pl.is_active = true AND pl.country_code = $1
     `;
 
-    let queryParams = [country];
+    const queryParams = [country];
     let paramIndex = 2;
 
     // Add search filter only if we have a search term
@@ -378,9 +378,9 @@ router.get('/search', async (req, res) => {
 
     // Order by listing count for popular products, or by name for search results
     if (isPopularProductsRequest) {
-      searchQuery += ` ORDER BY listing_count DESC, mp.name`;
+      searchQuery += ' ORDER BY listing_count DESC, mp.name';
     } else {
-      searchQuery += ` ORDER BY mp.name, listing_count DESC`;
+      searchQuery += ' ORDER BY mp.name, listing_count DESC';
     }
 
     searchQuery += ` LIMIT $${paramIndex}`;
@@ -559,7 +559,7 @@ router.get('/:id', async (req, res) => {
       WHERE pl.id = $1
     `;
 
-  const result = await database.query(query, [id]);
+    const result = await database.query(query, [id]);
     
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -683,8 +683,8 @@ router.post('/', authService.authMiddleware(), upload.array('images', 5), async 
       JSON.stringify(images), website, whatsapp, cityId, countryCode, JSON.stringify(selectedVariables)
     ];
 
-  const result = await database.query(insertQuery, values);
-  const newListing = await formatPriceListing(result.rows[0]);
+    const result = await database.query(insertQuery, values);
+    const newListing = await formatPriceListing(result.rows[0]);
 
     res.status(201).json({
       success: true,
@@ -833,7 +833,7 @@ router.put('/:id', authService.authMiddleware(), upload.array('images', 5), asyn
     }
 
     // Add updated_at
-    updateFields.push(`updated_at = NOW()`);
+    updateFields.push('updated_at = NOW()');
 
     const updateQuery = `
       UPDATE price_listings 
@@ -844,8 +844,8 @@ router.put('/:id', authService.authMiddleware(), upload.array('images', 5), asyn
     
     updateValues.push(id, userId);
 
-  const result = await database.query(updateQuery, updateValues);
-  const updatedListing = await formatPriceListing(result.rows[0]);
+    const result = await database.query(updateQuery, updateValues);
+    const updatedListing = await formatPriceListing(result.rows[0]);
 
     res.json({
       success: true,
@@ -982,7 +982,7 @@ router.delete('/:id', authService.authMiddleware(), async (req, res) => {
       RETURNING *
     `;
 
-  const result = await database.query(deleteQuery, [id, userId]);
+    const result = await database.query(deleteQuery, [id, userId]);
 
     res.json({
       success: true,

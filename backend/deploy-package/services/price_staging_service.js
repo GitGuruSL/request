@@ -21,7 +21,7 @@ class PriceStagingService {
       }
     }, {
       scheduled: true,
-      timezone: "Asia/Colombo" // Sri Lanka timezone
+      timezone: 'Asia/Colombo' // Sri Lanka timezone
     });
 
     console.log('📅 Daily price update scheduler initialized for 1:00 AM Sri Lanka time');
@@ -117,7 +117,7 @@ class PriceStagingService {
       return {
         success: true,
         staged: stagingResult.rows[0],
-        message: `Price staged successfully. Will be applied at next daily update (1 AM).`
+        message: 'Price staged successfully. Will be applied at next daily update (1 AM).'
       };
     } catch (error) {
       console.error('Error staging price update:', error);

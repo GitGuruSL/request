@@ -58,7 +58,7 @@ async function checkUnifiedPhoneVerification(userId, phoneNumber) {
     const checkedTables = [];
     
     // 1. Check business_verifications table first (highest priority for business verification)
-    console.log(`📱 [UNIFIED] Checking business_verifications table...`);
+    console.log('📱 [UNIFIED] Checking business_verifications table...');
     const businessQuery = `
       SELECT phone_verified, business_phone
       FROM business_verifications 
@@ -68,7 +68,7 @@ async function checkUnifiedPhoneVerification(userId, phoneNumber) {
     checkedTables.push({ table: 'business_verifications', found: businessResult.rows.length > 0 });
     
     if (businessResult.rows.length > 0) {
-      console.log(`✅ [UNIFIED] Phone verification found in business_verifications table!`);
+      console.log('✅ [UNIFIED] Phone verification found in business_verifications table!');
       return { 
         phoneVerified: true, 
         needsUpdate: false, 
@@ -80,7 +80,7 @@ async function checkUnifiedPhoneVerification(userId, phoneNumber) {
     }
 
     // 2. Check driver_verifications table
-    console.log(`📱 [UNIFIED] Checking driver_verifications table...`);
+    console.log('📱 [UNIFIED] Checking driver_verifications table...');
     const driverQuery = `
       SELECT phone_verified, phone_number
       FROM driver_verifications 
@@ -90,7 +90,7 @@ async function checkUnifiedPhoneVerification(userId, phoneNumber) {
     checkedTables.push({ table: 'driver_verifications', found: driverResult.rows.length > 0 });
     
     if (driverResult.rows.length > 0) {
-      console.log(`✅ [UNIFIED] Phone verification found in driver_verifications table!`);
+      console.log('✅ [UNIFIED] Phone verification found in driver_verifications table!');
       return { 
         phoneVerified: true, 
         needsUpdate: true, 
@@ -102,7 +102,7 @@ async function checkUnifiedPhoneVerification(userId, phoneNumber) {
     }
 
     // 3. Check users table
-    console.log(`📱 [UNIFIED] Checking users table...`);
+    console.log('📱 [UNIFIED] Checking users table...');
     const userResult = await database.query(
       'SELECT phone, phone_verified FROM users WHERE id = $1',
       [userId]
@@ -138,7 +138,7 @@ async function checkUnifiedPhoneVerification(userId, phoneNumber) {
 
     // 4. Check OTP verification history if phones match
     if (normalizedUserPhone === normalizedPhone || !user.phone) {
-      console.log(`📱 [UNIFIED] Checking phone_otp_verifications table...`);
+      console.log('📱 [UNIFIED] Checking phone_otp_verifications table...');
       const otpResult = await database.query(
         'SELECT phone, verified FROM phone_otp_verifications WHERE phone = $1 AND verified = true ORDER BY verified_at DESC LIMIT 1',
         [normalizedPhone]
@@ -221,7 +221,7 @@ async function checkUnifiedEmailVerification(userId, email) {
     const checkedTables = [];
 
     // 1. Check business_verifications table first
-    console.log(`📧 [UNIFIED] Checking business_verifications table...`);
+    console.log('📧 [UNIFIED] Checking business_verifications table...');
     const businessQuery = `
       SELECT email_verified, business_email
       FROM business_verifications 
@@ -231,7 +231,7 @@ async function checkUnifiedEmailVerification(userId, email) {
     checkedTables.push({ table: 'business_verifications', found: businessResult.rows.length > 0 });
     
     if (businessResult.rows.length > 0) {
-      console.log(`✅ [UNIFIED] Email verification found in business_verifications table!`);
+      console.log('✅ [UNIFIED] Email verification found in business_verifications table!');
       return { 
         emailVerified: true, 
         needsUpdate: false, 
@@ -243,7 +243,7 @@ async function checkUnifiedEmailVerification(userId, email) {
     }
 
     // 2. Check driver_verifications table
-    console.log(`📧 [UNIFIED] Checking driver_verifications table...`);
+    console.log('📧 [UNIFIED] Checking driver_verifications table...');
     const driverQuery = `
       SELECT email_verified, email
       FROM driver_verifications 
@@ -253,7 +253,7 @@ async function checkUnifiedEmailVerification(userId, email) {
     checkedTables.push({ table: 'driver_verifications', found: driverResult.rows.length > 0 });
     
     if (driverResult.rows.length > 0) {
-      console.log(`✅ [UNIFIED] Email verification found in driver_verifications table!`);
+      console.log('✅ [UNIFIED] Email verification found in driver_verifications table!');
       return { 
         emailVerified: true, 
         needsUpdate: true, 
@@ -265,7 +265,7 @@ async function checkUnifiedEmailVerification(userId, email) {
     }
 
     // 3. Check users table
-    console.log(`📧 [UNIFIED] Checking users table...`);
+    console.log('📧 [UNIFIED] Checking users table...');
     const userResult = await database.query(
       'SELECT email, email_verified FROM users WHERE id = $1',
       [userId]
@@ -300,7 +300,7 @@ async function checkUnifiedEmailVerification(userId, email) {
 
     // 4. Check email OTP verification history if emails match
     if ((user.email && user.email.toLowerCase() === normalizedEmail) || !user.email) {
-      console.log(`📧 [UNIFIED] Checking email_otp_verifications table...`);
+      console.log('📧 [UNIFIED] Checking email_otp_verifications table...');
       const emailVerificationResult = await database.query(
         'SELECT email, verified FROM email_otp_verifications WHERE email = $1 AND verified = true ORDER BY verified_at DESC LIMIT 1',
         [normalizedEmail]

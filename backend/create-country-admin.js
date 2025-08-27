@@ -40,7 +40,7 @@ async function createCountryAdminComplete() {
     );
     
     const newUser = result.rows[0];
-    console.log(`✅ Admin user created successfully`);
+    console.log('✅ Admin user created successfully');
     console.log(`   📧 Email: ${newUser.email}`);
     console.log(`   👤 Name: ${newUser.name}`);
     console.log(`   🌍 Country: ${newUser.country_code}`);

@@ -45,7 +45,7 @@ async function migrateEmailOtpTable() {
     ];
     
     for (const indexSql of indexes) {
-      console.log(`📊 Creating index...`);
+      console.log('📊 Creating index...');
       await database.query(indexSql);
     }
     

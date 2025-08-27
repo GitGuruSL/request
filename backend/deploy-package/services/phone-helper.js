@@ -28,7 +28,7 @@ async function detectPhoneBookSchema() {
   // Check table exists and columns
   const cols = await db
     .query(
-      `SELECT column_name FROM information_schema.columns WHERE table_name = 'user_phone_numbers'`
+      'SELECT column_name FROM information_schema.columns WHERE table_name = \'user_phone_numbers\''
     )
     .then(r => r.rows.map(x => x.column_name))
     .catch(() => []);
