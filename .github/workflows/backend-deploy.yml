@@ -55,15 +55,28 @@ jobs:
           script_stop: true
           script: |
             set -e
+            IMAGE_BASE="ghcr.io/${{ github.repository_owner }}/request-backend"
+            IMAGE_TAG="${{ github.sha }}"
+            IMAGE="$IMAGE_BASE:$IMAGE_TAG"
             echo "[Deploy] Logging into GHCR"
             echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u ${{ secrets.GHCR_USER }} --password-stdin
+
+            echo "[Deploy] Pull image $IMAGE"
+            docker pull "$IMAGE"
 
             echo "[Deploy] Create app directory"
             sudo mkdir -p /opt/request-backend
             sudo chown $USER:$USER /opt/request-backend
 
-            echo "[Deploy] Pull latest image"
-            docker pull ghcr.io/${{ github.repository_owner }}/request-backend:latest
+            # Ensure curl exists for health check
+            if ! command -v curl >/dev/null 2>&1; then
+              echo "[Deploy] Installing curl"
+              if command -v apt-get >/dev/null 2>&1; then
+                sudo apt-get update -y && sudo apt-get install -y curl
+              elif command -v yum >/dev/null 2>&1; then
+                sudo yum install -y curl
+              fi
+            fi
 
             echo "[Deploy] Stop old container if exists"
             if [ "$(docker ps -aq -f name=request-backend)" ]; then
@@ -75,8 +88,66 @@ jobs:
               --name request-backend \
               --restart unless-stopped \
               --env-file /opt/request-backend/production.env \
-              -p 3001:3001 \
-              ghcr.io/${{ github.repository_owner }}/request-backend:latest
+              -p 127.0.0.1:3001:3001 \
+              "$IMAGE"
+
+            echo "[Deploy] Health check"
+            for i in $(seq 1 30); do
+              if curl -fsS http://127.0.0.1:3001/health >/dev/null 2>&1; then
+                echo "[Deploy] Service healthy"
+                break
+              fi
+              echo "[Deploy] Waiting for service... ($i/30)"
+              sleep 2
+            done
+            # Final verification (fail workflow if unhealthy)
+            curl -fsS http://127.0.0.1:3001/health >/dev/null
+
+            echo "[Deploy] Record last successful SHA"
+            echo "$IMAGE_TAG" | sudo tee /opt/request-backend/last_successful.sha > /dev/null
 
             echo "[Deploy] Prune old images"
             docker image prune -f
+
+      - name: Rollback on failure
+        if: ${{ failure() }}
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
+            IMAGE_BASE="ghcr.io/${{ github.repository_owner }}/request-backend"
+            echo "[Rollback] Attempting rollback"
+            if [ -f /opt/request-backend/last_successful.sha ]; then
+              LAST_SHA=$(cat /opt/request-backend/last_successful.sha)
+              IMAGE="$IMAGE_BASE:$LAST_SHA"
+              echo "[Rollback] Pulling $IMAGE"
+              docker pull "$IMAGE"
+              echo "[Rollback] Restarting container"
+              if [ "$(docker ps -aq -f name=request-backend)" ]; then
+                docker rm -f request-backend || true
+              fi
+              docker run -d \
+                --name request-backend \
+                --restart unless-stopped \
+                --env-file /opt/request-backend/production.env \
+                -p 127.0.0.1:3001:3001 \
+                "$IMAGE"
+              echo "[Rollback] Verifying health"
+              for i in $(seq 1 30); do
+                if curl -fsS http://127.0.0.1:3001/health >/dev/null 2>&1; then
+                  echo "[Rollback] Service healthy after rollback"
+                  exit 0
+                fi
+                echo "[Rollback] Waiting for service... ($i/30)"
+                sleep 2
+              done
+              echo "[Rollback] Health check failed after rollback" >&2
+              exit 1
+            else
+              echo "[Rollback] No last_successful.sha found; manual intervention required" >&2
+              exit 1
+            fi

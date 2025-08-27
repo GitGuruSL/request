@@ -23,10 +23,10 @@ Server setup (one-time)
 3) Open port 3001 on firewall or adjust Nginx to proxy to container
 
 How deployments work
-- On push to main: workflow builds image and pushes tags:
+- On push to main: workflow builds image and pushes both tags:
   - ghcr.io/<owner>/request-backend:latest
   - ghcr.io/<owner>/request-backend:<git-sha>
-- Then it SSHes to the server, logs into GHCR, pulls latest, restarts container request-backend.
+- Deploy uses the immutable <git-sha> tag, binds backend to 127.0.0.1:3001, and runs a /health probe post-deploy.
 
 Local development
 - docker compose -f backend/docker-compose.yml up --build
@@ -35,7 +35,7 @@ Rollbacks
 - SSH to server and run:
   docker pull ghcr.io/<owner>/request-backend:<old-sha>
   docker rm -f request-backend
-  docker run -d --name request-backend --restart unless-stopped --env-file /opt/request-backend/production.env -p 3001:3001 ghcr.io/<owner>/request-backend:<old-sha>
+  docker run -d --name request-backend --restart unless-stopped --env-file /opt/request-backend/production.env -p 127.0.0.1:3001:3001 ghcr.io/<owner>/request-backend:<old-sha>
 
 Notes
 - Ensure production.env matches the variables consumed by backend/server.js.
