@@ -7,11 +7,21 @@ const dotenv = require('dotenv');
 
 async function main() {
   const cwd = process.cwd();
-  const envPath = path.join(cwd, 'production.env');
-  if (fs.existsSync(envPath)) {
-    dotenv.config({ path: envPath });
-    console.log(`[migrate] Loaded env from ${envPath}`);
-  } else {
+  const candidates = [
+    path.join(cwd, 'production.env'),
+    path.join(cwd, '.env.rds'),
+    path.join(cwd, '.env'),
+  ];
+  let loaded = null;
+  for (const p of candidates) {
+    if (fs.existsSync(p)) {
+      dotenv.config({ path: p });
+      loaded = p;
+      console.log(`[migrate] Loaded env from ${p}`);
+      break;
+    }
+  }
+  if (!loaded) {
     dotenv.config();
   }
 
@@ -27,13 +37,24 @@ async function main() {
   }
   const sql = fs.readFileSync(sqlPath, 'utf8');
 
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) {
-    console.error('[migrate] DATABASE_URL missing in environment');
+  let clientConfig;
+  if (process.env.DATABASE_URL) {
+    clientConfig = { connectionString: process.env.DATABASE_URL };
+  } else if (process.env.DB_HOST) {
+    clientConfig = {
+      host: process.env.DB_HOST,
+      port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : undefined,
+      database: process.env.DB_NAME,
+      user: process.env.DB_USERNAME,
+      password: process.env.DB_PASSWORD,
+      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+    };
+  } else {
+    console.error('[migrate] DATABASE_URL or DB_* variables missing in environment');
     process.exit(1);
   }
 
-  const client = new Client({ connectionString });
+  const client = new Client(clientConfig);
   await client.connect();
   try {
     console.log(`[migrate] Running migration: ${sqlPath}`);

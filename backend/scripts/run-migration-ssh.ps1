@@ -13,8 +13,27 @@ $sshArgs = @()
 if ($Key) { $sshArgs += @('-i', $Key) }
 $remote = "$User@$RemoteHost"
 
-$cmd = "cd /opt/request-backend && node ./scripts/run-sql-migration.js ./migration/20250827_subscriptions.sql"
 Write-Host "[SSH] Running migration on $remote"
-& ssh @sshArgs $remote $cmd
+$script = @"
+set -e
+cd /opt/request-backend
+if [ -f production.env ]; then
+  set -a
+  . ./production.env
+  set +a
+fi
+if [ -f .env.rds ]; then
+  set -a
+  . ./.env.rds
+  set +a
+fi
+node ./scripts/run-sql-migration.js ./migration/20250827_subscriptions.sql
+"@
+# Normalize to LF and send via base64
+$scriptLF = $script -replace "`r?`n","`n"
+$bytes = [System.Text.Encoding]::UTF8.GetBytes($scriptLF)
+$b64 = [Convert]::ToBase64String($bytes)
+$exec = "echo $b64 | base64 -d > /tmp/run-migrate.sh && chmod +x /tmp/run-migrate.sh && bash /tmp/run-migrate.sh"
+& ssh @sshArgs $remote $exec
 if ($LASTEXITCODE -ne 0) { Write-Error "Migration failed ($LASTEXITCODE)"; exit $LASTEXITCODE }
 Write-Host "[SSH] Migration completed"
