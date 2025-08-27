@@ -202,4 +202,57 @@ router.post('/business/:businessId', auth.authMiddleware(), async (req, res) => 
   }
 });
 
+// GET /api/payment-methods/image-url/:id - Get signed URL for payment method image
+router.get('/image-url/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Get the payment method image URL from database
+    const result = await db.query(
+      'SELECT image_url FROM country_payment_methods WHERE id = $1',
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Payment method not found' });
+    }
+    
+    const imageUrl = result.rows[0].image_url;
+    
+    if (!imageUrl) {
+      return res.status(404).json({ success: false, error: 'No image found for this payment method' });
+    }
+    
+    // If it's already a full URL, extract the S3 key
+    if (imageUrl.startsWith('https://requestappbucket.s3.amazonaws.com/')) {
+      const url = new URL(imageUrl);
+      const s3Key = url.pathname.substring(1); // Remove leading slash
+      
+      try {
+        const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+        const { GetObjectCommand } = require('@aws-sdk/client-s3');
+        const { s3Client } = require('../services/s3');
+        
+        const command = new GetObjectCommand({
+          Bucket: 'requestappbucket',
+          Key: s3Key,
+        });
+        
+        const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // 1 hour
+        
+        res.json({ success: true, signedUrl });
+      } catch (error) {
+        console.error('Error generating signed URL:', error);
+        res.status(500).json({ success: false, error: 'Failed to generate signed URL' });
+      }
+    } else {
+      // Return original URL if it's not an S3 URL
+      res.json({ success: true, signedUrl: imageUrl });
+    }
+  } catch (e) {
+    console.error('Error getting payment method image URL', e);
+    res.status(500).json({ success: false, error: 'Failed to get image URL' });
+  }
+});
+
 module.exports = router;

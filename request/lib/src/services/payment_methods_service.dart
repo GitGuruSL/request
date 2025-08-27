@@ -18,26 +18,42 @@ class PaymentMethod {
     required this.fees,
   });
 
-  /// Get image URL for the payment method (handles both S3 URLs and signed URLs)
+  /// Get image URL for the payment method (uses backend endpoint for signed URLs)
   Future<String?> getImageUrl() async {
     if (imageUrl.isEmpty) return null;
-    
-    // For S3 URLs, return them directly (they should be publicly accessible for payment methods)
+
+    // For S3 URLs, get signed URL from backend
     if (imageUrl.startsWith('https://requestappbucket.s3.amazonaws.com/')) {
-      return imageUrl;
+      try {
+        final response =
+            await PaymentMethodsService._api.get<dynamic>('/api/payment-methods/image-url/$id');
+        if (response.isSuccess && response.data != null) {
+          final data = response.data;
+          if (data is Map<String, dynamic> && data['signedUrl'] != null) {
+            return data['signedUrl'] as String;
+          }
+        }
+        // Fallback to original URL if signed URL fails
+        return imageUrl;
+      } catch (e) {
+        print('Error getting signed URL for payment method $name: $e');
+        return imageUrl; // Fallback to original URL
+      }
     }
-    
+
     // If it's already a full HTTP URL, return as is
     if (imageUrl.startsWith('http')) return imageUrl;
-    
-    // If it's an S3 key, try to get signed URL
+
+    // If it's an S3 key, try to get signed URL from general S3 endpoint
     try {
       return await S3ImageUploadService.getSignedUrlForKey(imageUrl);
     } catch (e) {
       print('Error getting signed URL for payment method $name: $e');
       return null;
     }
-  }  factory PaymentMethod.fromJson(Map<String, dynamic> json) {
+  }
+
+  factory PaymentMethod.fromJson(Map<String, dynamic> json) {
     return PaymentMethod(
       id: json['id']?.toString() ?? '',
       name: json['name'] ?? '',
