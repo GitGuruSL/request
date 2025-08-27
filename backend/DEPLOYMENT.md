@@ -40,4 +40,6 @@ Rollbacks
 Notes
 - Ensure production.env matches the variables consumed by backend/server.js.
 - For Nginx TLS, keep Nginx on host and proxy to http://localhost:3001.
+ 
+<!-- ci: trigger backend build - 2025-08-27 -->
  - GHCR repository owner must be lowercase; the workflow normalizes owner for tags, but set GHCR_USER secret in lowercase to avoid auth issues.
