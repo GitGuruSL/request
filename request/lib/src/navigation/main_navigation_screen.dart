@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../home/screens/home_screen.dart';
 import '../home/screens/browse_requests_screen.dart';
-import '../screens/pricing/price_comparison_screen.dart';
+import '../screens/tours/tours_coming_soon_screen.dart';
 import '../screens/modern_menu_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
@@ -29,10 +29,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       label: 'Browse',
     ),
     _NavigationItem(
-      screen: const PriceComparisonScreen(),
-      icon: Icons.local_offer_outlined,
-      activeIcon: Icons.local_offer,
-      label: 'Prices',
+      screen: const ToursComingSoonScreen(),
+      icon: Icons.flight_outlined,
+      activeIcon: Icons.flight,
+      label: 'Tours',
     ),
     _NavigationItem(
       screen: const ModernMenuScreen(),

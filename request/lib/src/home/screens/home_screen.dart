@@ -178,10 +178,10 @@ class _HomeScreenState extends State<HomeScreen> {
           color: const Color(0xFF3B82F6),
         ),
         _RequestType(
-          type: 'price',
-          title: 'Price Request',
-          subtitle: 'Request price quotes for items or services',
-          icon: Icons.trending_up,
+          type: 'tours',
+          title: 'Tours & Travel',
+          subtitle: 'Book tours and travel packages',
+          icon: Icons.flight,
           color: const Color(0xFF9C27B0),
         ),
       ];
@@ -272,6 +272,9 @@ class _HomeScreenState extends State<HomeScreen> {
   // Quick create bottom sheet removed from Home.
 
   bool _moduleEnabled(String type) {
+    // Tours & Travel is always coming soon
+    if (type == 'tours') return false;
+
     final key = switch (type) {
       'rental' => 'rent',
       _ => type,
@@ -317,10 +320,8 @@ class _HomeScreenState extends State<HomeScreen> {
           MaterialPageRoute(builder: (_) => const CreateRideRequestScreen()),
         );
         break;
-      case 'price':
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const PriceComparisonScreen()),
-        );
+      case 'tours':
+        // Tours & Travel - Coming Soon (this case won't be reached due to _moduleEnabled returning false)
         break;
     }
   }
