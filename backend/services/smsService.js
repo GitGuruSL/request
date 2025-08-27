@@ -24,9 +24,12 @@ class SMSService {
    */
   async getSMSConfig(countryCode) {
     try {
+      // Handle phone codes by converting them to country codes
+      const actualCountryCode = this.phoneCodeToCountryCode(countryCode);
+      
       const result = await database.query(
         'SELECT * FROM sms_provider_configs WHERE country_code = $1 AND is_active = true',
-        [countryCode]
+        [actualCountryCode]
       );
 
       if (result.rows.length === 0) {
@@ -41,11 +44,38 @@ class SMSService {
   }
 
   /**
+   * Convert phone codes to country codes (mobile apps might send phone codes)
+   */
+  phoneCodeToCountryCode(code) {
+    const phoneCodeMap = {
+      '+94': 'LK',  // Sri Lanka
+      '+91': 'IN',  // India
+      '+1': 'US',   // USA
+      '+44': 'UK',  // UK
+      '+971': 'AE', // UAE
+    };
+    
+    // If it's already a country code (2-letter), return as is
+    if (code && code.length === 2 && !code.startsWith('+')) {
+      return code;
+    }
+    
+    // If it's a phone code, convert it
+    if (phoneCodeMap[code]) {
+      return phoneCodeMap[code];
+    }
+    
+    // Default to Sri Lanka if no mapping found (most users are from LK)
+    return 'LK';
+  }
+
+  /**
    * Detect country from phone number
    */
   detectCountry(phoneNumber) {
     const cleanPhone = phoneNumber.replace(/[^\d+]/g, '');
     
+    // Extract phone code from number
     if (cleanPhone.startsWith('+94')) return 'LK'; // Sri Lanka
     if (cleanPhone.startsWith('+91')) return 'IN'; // India
     if (cleanPhone.startsWith('+1')) return 'US';   // USA
@@ -64,6 +94,9 @@ class SMSService {
       if (!countryCode) {
         countryCode = this.detectCountry(phoneNumber);
       }
+
+      // Convert phone codes to country codes (in case mobile app sends phone codes like +94)
+      countryCode = this.phoneCodeToCountryCode(countryCode);
 
       // Check rate limiting
       await this.checkRateLimit(phoneNumber);
@@ -507,59 +540,20 @@ class HutchMobileProvider {
       throw new Error('Hutch Mobile provider configuration not found');
     }
 
-    this.apiBaseUrl = 'https://bsms.hutch.lk/api';
+    // Use the WebbSMS endpoint which works with GET parameters
+    this.apiBaseUrl = hutchConfig.apiUrl || 'https://webbsms.hutch.lk/';
     this.username = hutchConfig.username;
     this.password = hutchConfig.password;
     this.senderId = hutchConfig.senderId || 'ALPHABET';
     this.messageType = hutchConfig.messageType || 'text';
-    this.authToken = null; // Will store authentication token
 
     if (!this.username || !this.password) {
       throw new Error('Hutch Mobile username and password are required');
     }
   }
 
-  /**
-   * Authenticate with Hutch API and get access token
-   */
-  async authenticate() {
-    try {
-      console.log(`🔐 Authenticating with Hutch API for user: ${this.username}`);
-      
-      const loginResponse = await axios.post(`${this.apiBaseUrl}/login`, {
-        email: this.username,
-        password: this.password
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        timeout: 15000
-      });
-
-      console.log('🔐 Hutch Login Response Status:', loginResponse.status);
-      console.log('🔐 Hutch Login Response:', loginResponse.data);
-
-      if (loginResponse.data && loginResponse.data.access_token) {
-        this.authToken = loginResponse.data.access_token;
-        console.log('✅ Hutch authentication successful');
-        return this.authToken;
-      } else {
-        throw new Error('Authentication failed - no access token received');
-      }
-    } catch (error) {
-      console.error('❌ Hutch Authentication Error:', error.response?.data || error.message);
-      throw new Error(`Hutch authentication failed: ${error.response?.data?.message || error.message}`);
-    }
-  }
-
   async sendSMS(to, message) {
     try {
-      // Ensure we have a valid auth token
-      if (!this.authToken) {
-        await this.authenticate();
-      }
-
       // Format phone number for Hutch Mobile (remove + and ensure country code)
       let cleanPhone = to.replace(/[^\d+]/g, '');
       if (cleanPhone.startsWith('+94')) {
@@ -571,57 +565,50 @@ class HutchMobileProvider {
         cleanPhone = cleanPhone.substring(1);
       }
       
-      console.log(`📱 Sending SMS via Hutch API to: ${cleanPhone}`);
+      console.log(`📱 Sending SMS via Hutch WebbSMS to: ${cleanPhone}`);
 
-      // Prepare SMS data
-      const smsData = {
-        recipient: cleanPhone,
+      // Use GET parameters as this is how WebbSMS works
+      const params = new URLSearchParams({
+        username: this.username,
+        password: this.password,
+        to: cleanPhone,
         message: message,
         sender_id: this.senderId,
         message_type: this.messageType
-      };
+      });
 
-      const response = await axios.post(`${this.apiBaseUrl}/sms/send`, smsData, {
+      const fullUrl = `${this.apiBaseUrl}?${params.toString()}`;
+      console.log(`📱 Hutch API URL: ${this.apiBaseUrl}?username=${this.username}&to=${cleanPhone}&message=[HIDDEN]&sender_id=${this.senderId}`);
+
+      const response = await axios.get(fullUrl, {
+        timeout: 15000,
         headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${this.authToken}`
-        },
-        timeout: 15000
+          'User-Agent': 'Request-Marketplace-SMS/1.0'
+        }
       });
 
       console.log('📱 Hutch SMS API Response Status:', response.status);
-      console.log('📱 Hutch SMS API Response:', response.data);
+      console.log('📱 Hutch SMS API Response Type:', typeof response.data);
 
-      // Handle successful response
-      if (response.status === 200 || response.status === 201) {
+      // WebbSMS returns HTML on success (200 status = SMS sent)
+      if (response.status === 200) {
         return {
           success: true,
-          messageId: response.data.message_id || response.data.id || `hutch_${Date.now()}`,
-          cost: 0.012, // Estimated cost for Sri Lanka
+          messageId: `hutch_${Date.now()}_${cleanPhone}`,
+          cost: 0.50, // Estimated cost for Sri Lanka in LKR
           provider: 'hutch_mobile',
-          response: response.data
+          response: {
+            status: 'sent',
+            phone: cleanPhone,
+            timestamp: new Date().toISOString()
+          }
         };
       } else {
-        throw new Error(response.data?.message || response.data?.error || 'SMS sending failed');
+        throw new Error(`Unexpected status code: ${response.status}`);
       }
     } catch (error) {
       console.error('❌ Hutch Mobile SMS Error:', error.response?.data || error.message);
-      
-      // If auth error, try to re-authenticate once
-      if (error.response?.status === 401 && this.authToken) {
-        console.log('🔄 Auth token expired, trying to re-authenticate...');
-        this.authToken = null;
-        try {
-          await this.authenticate();
-          // Retry SMS sending after re-authentication
-          return await this.sendSMS(to, message);
-        } catch (retryError) {
-          throw new Error(`Hutch SMS failed after re-auth: ${retryError.message}`);
-        }
-      }
-      
-      throw new Error(`Hutch Mobile SMS failed: ${error.response?.data?.message || error.message}`);
+      throw new Error(`Hutch Mobile SMS failed: ${error.response?.status || error.message}`);
     }
   }
 }
