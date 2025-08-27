@@ -57,7 +57,7 @@ jobs:
     name: Deploy to Staging Server (SSH)
     runs-on: ubuntu-latest
     needs: build-and-push
-    if: ${{ secrets.STAGING_DEPLOY_HOST != '' && secrets.STAGING_DEPLOY_USER != '' && secrets.STAGING_DEPLOY_SSH_KEY != '' }}
+    if: ${{ github.ref == 'refs/heads/develop' }}
     environment: staging
     concurrency:
       group: backend-deploy-staging
