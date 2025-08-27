@@ -38,6 +38,19 @@ const DOCUMENT_TYPES = [
 const PrivacyTerms = () => {
   const { adminData, isSuperAdmin, userCountry } = useCountryFilter();
   
+  // Initialize state first
+  const [documents, setDocuments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [editingDoc, setEditingDoc] = useState(null);
+  const [formData, setFormData] = useState({
+    type: '',
+    country: '',
+    title: '',
+    content: '',
+    version: '1.0'
+  });
+  
   // Check permissions
   const hasLegalPermission = isSuperAdmin || adminData?.permissions?.legalDocumentManagement;
 
@@ -50,17 +63,6 @@ const PrivacyTerms = () => {
       </Box>
     );
   }
-  const [documents, setDocuments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [editingDoc, setEditingDoc] = useState(null);
-  const [formData, setFormData] = useState({
-    type: '',
-    country: '',
-    title: '',
-    content: '',
-    version: '1.0'
-  });
 
   useEffect(() => {
     loadDocuments();

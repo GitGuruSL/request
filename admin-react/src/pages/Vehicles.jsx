@@ -42,12 +42,24 @@ import api from '../services/apiClient';
 
 const Vehicles = () => {
   const { getFilteredData, adminData, isSuperAdmin, userCountry } = useCountryFilter();
+  
+  // Initialize all state first
   const [vehicles, setVehicles] = useState([]);
   const [countryVehicles, setCountryVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+  // Form state
+  const [formData, setFormData] = useState({
+    name: '',
+    icon: 'DirectionsCar',
+    isActive: true,
+    displayOrder: 1,
+    passengerCapacity: 1,
+    description: ''
+  });
 
   // Check permissions
   const hasVehiclePermission = isSuperAdmin || adminData?.permissions?.vehicleManagement;
@@ -61,16 +73,6 @@ const Vehicles = () => {
       </Box>
     );
   }
-
-    // Form state
-  const [formData, setFormData] = useState({
-    name: '',
-    icon: 'DirectionsCar',
-    isActive: true,
-    displayOrder: 1,
-    passengerCapacity: 1,
-    description: ''
-  });
 
   const vehicleIcons = {
     'TwoWheeler': <TwoWheeler />,

@@ -250,7 +250,11 @@ const Products = () => {
 
     // Always allow re-selecting the same files next time
     if (event.target) {
-      try { event.target.value = ''; } catch {}
+      try { 
+        event.target.value = ''; 
+      } catch (error) {
+        // Ignore errors when resetting file input
+      }
     }
 
     try {

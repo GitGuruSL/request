@@ -35,18 +35,7 @@ import useCountryFilter from '../hooks/useCountryFilter';
 const PaymentMethods = () => {
   const { adminData, isSuperAdmin, userCountry } = useCountryFilter();
   
-  // Check permissions
-  const hasPaymentPermission = isSuperAdmin || adminData?.permissions?.paymentMethodManagement;
-
-  if (!hasPaymentPermission) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Alert severity="error">
-          You don't have permission to access Payment Methods Management. Please contact your administrator.
-        </Alert>
-      </Container>
-    );
-  }
+  // Initialize state first
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [countries, setCountries] = useState([]);
   const [open, setOpen] = useState(false);
@@ -69,11 +58,26 @@ const PaymentMethods = () => {
     maxAmount: ''
   });
 
+  // Check permissions
+  const hasPaymentPermission = isSuperAdmin || adminData?.permissions?.paymentMethodManagement;
+
   useEffect(() => {
-    fetchPaymentMethods();
-    fetchCountries();
+    if (hasPaymentPermission) {
+      fetchPaymentMethods();
+      fetchCountries();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSuperAdmin, userCountry]);
+  }, [isSuperAdmin, userCountry, hasPaymentPermission]);
+
+  if (!hasPaymentPermission) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Alert severity="error">
+          You don't have permission to access Payment Methods Management. Please contact your administrator.
+        </Alert>
+      </Container>
+    );
+  }
 
   const fetchPaymentMethods = async () => {
     try {

@@ -315,9 +315,10 @@ const DriverVerificationEnhanced = () => {
       case 'vehicleRegistration': return driver.vehicleRegistrationStatus || 'pending';
       case 'profileImage': return driver.profileImageStatus || 'pending';
       // Support for new document types from mobile app
-      case 'driverImage': 
+      case 'driverImage': {
         const status = driver.driverImageStatus || driver.driver_image_status || 'pending';
         return status;
+      }
       case 'licenseFront': return driver.licenseFrontStatus || driver.license_front_status || 'pending';
       case 'licenseBack': return driver.licenseBackStatus || driver.license_back_status || 'pending';
       case 'licenseDocument': return driver.licenseDocumentStatus || 'pending';

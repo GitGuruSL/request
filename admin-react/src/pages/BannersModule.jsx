@@ -33,7 +33,7 @@ export default function BannersModule() {
     }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [country]);
+  useEffect(() => { load();   }, [country]);
 
   const openCreate = () => { setForm({ id: null, title: '', subtitle: '', imageUrl: '', linkUrl: '', active: true, priority: 0 }); setDialogOpen(true); };
   const openEdit = (b) => { setForm({ id: b.id, title: b.title || '', subtitle: b.subtitle || '', imageUrl: b.imageUrl || b.image || '', linkUrl: b.linkUrl || b.link || '', active: b.active !== false, priority: b.priority || 0 }); setDialogOpen(true); };
