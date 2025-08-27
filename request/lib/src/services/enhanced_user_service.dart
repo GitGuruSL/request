@@ -205,7 +205,8 @@ class EnhancedUserService {
       if (phoneNumber != null) updateData['phone'] = phoneNumber;
       if (email != null) updateData['email'] = email;
       if (displayName != null) updateData['display_name'] = displayName;
-      if (profilePictureUrl != null) updateData['photoUrl'] = profilePictureUrl;
+      if (profilePictureUrl != null)
+        updateData['photo_url'] = profilePictureUrl;
       if (dateOfBirth != null)
         updateData['date_of_birth'] =
             dateOfBirth.toIso8601String().split('T')[0]; // Send as YYYY-MM-DD

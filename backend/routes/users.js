@@ -29,7 +29,7 @@ router.put('/:userId', auth.authMiddleware(), async (req, res) => {
     // Build dynamic query based on provided fields
     const allowedFields = [
       'first_name', 'last_name', 'phone', 'email', 
-      'display_name', 'date_of_birth', 'gender'
+      'display_name', 'date_of_birth', 'gender', 'photo_url'
     ];
     
     const updateFields = [];
