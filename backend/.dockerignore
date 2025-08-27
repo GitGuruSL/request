@@ -1,0 +1,15 @@
+node_modules
+npm-debug.log
+docker-compose.yml
+Dockerfile
+.git
+.gitignore
+.env*
+*.md
+scripts
+mock_*
+mock_firebase
+request-backend-deploy.zip
+uploads
+**/.vscode
+**/__pycache__

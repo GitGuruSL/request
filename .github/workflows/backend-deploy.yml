@@ -13,9 +13,14 @@ permissions:
   packages: write
 
 jobs:
+  # Avoid overlapping image builds across pushes
+  # (builds can still run concurrently but in separate groups if changed)
   build-and-push:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
+    concurrency:
+      group: backend-build-${{ github.ref }}
+      cancel-in-progress: false
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -45,6 +50,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-and-push
     if: ${{ github.ref == 'refs/heads/main' }}
+    environment: production
+    concurrency:
+      group: backend-deploy-production
+      cancel-in-progress: true
     steps:
       - name: Connect and deploy
         uses: appleboy/ssh-action@v1.0.3
