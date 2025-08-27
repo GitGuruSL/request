@@ -560,26 +560,53 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: listing.businessLogo.isNotEmpty
-                          ? FutureBuilder<String?>(
-                              future: _getBusinessLogoUrl(listing.businessLogo),
-                              builder: (context, snapshot) {
-                                if (snapshot.hasData && snapshot.data != null) {
-                                  return Image.network(
-                                    snapshot.data!,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return _buildBusinessLogoPlaceholder(
-                                          listing.businessName);
-                                    },
-                                  );
-                                } else {
-                                  return _buildBusinessLogoPlaceholder(
-                                      listing.businessName);
-                                }
-                              },
-                            )
-                          : _buildBusinessLogoPlaceholder(listing.businessName),
+                      child: () {
+                        print(
+                            '🏢 [BusinessLogo-Check] Business: ${listing.businessName}');
+                        print(
+                            '🏢 [BusinessLogo-Check] Logo URL: "${listing.businessLogo}"');
+                        print(
+                            '🏢 [BusinessLogo-Check] Logo isEmpty: ${listing.businessLogo.isEmpty}');
+                        print(
+                            '🏢 [BusinessLogo-Check] Logo isNotEmpty: ${listing.businessLogo.isNotEmpty}');
+
+                        return listing.businessLogo.isNotEmpty
+                            ? FutureBuilder<String?>(
+                                future: () {
+                                  print(
+                                      '🏢 [BusinessLogo] Business: ${listing.businessName}, Logo URL: "${listing.businessLogo}"');
+                                  return _getBusinessLogoUrl(
+                                      listing.businessLogo);
+                                }(),
+                                builder: (context, snapshot) {
+                                  print(
+                                      '🏢 [BusinessLogo] FutureBuilder state: hasData=${snapshot.hasData}, data=${snapshot.data}, error=${snapshot.error}');
+                                  if (snapshot.hasData &&
+                                      snapshot.data != null) {
+                                    return Image.network(
+                                      snapshot.data!,
+                                      fit: BoxFit.cover,
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                        print(
+                                            '❌ [BusinessLogo] Image.network error: $error');
+                                        return _buildBusinessLogoPlaceholder(
+                                            listing.businessName);
+                                      },
+                                    );
+                                  } else {
+                                    return _buildBusinessLogoPlaceholder(
+                                        listing.businessName);
+                                  }
+                                },
+                              )
+                            : () {
+                                print(
+                                    '🏢 [BusinessLogo-Check] Using placeholder for ${listing.businessName} - logo is empty');
+                                return _buildBusinessLogoPlaceholder(
+                                    listing.businessName);
+                              }();
+                      }(),
                     ),
                   ),
                 ),
@@ -776,9 +803,15 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                             borderRadius: BorderRadius.circular(14),
                             child: listing.businessLogo.isNotEmpty
                                 ? FutureBuilder<String?>(
-                                    future: _getBusinessLogoUrl(
-                                        listing.businessLogo),
+                                    future: () {
+                                      print(
+                                          '🏢 [BusinessLogo-Modal] Business: ${listing.businessName}, Logo URL: "${listing.businessLogo}"');
+                                      return _getBusinessLogoUrl(
+                                          listing.businessLogo);
+                                    }(),
                                     builder: (context, snapshot) {
+                                      print(
+                                          '🏢 [BusinessLogo-Modal] FutureBuilder state: hasData=${snapshot.hasData}, data=${snapshot.data}');
                                       if (snapshot.hasData &&
                                           snapshot.data != null) {
                                         return Image.network(
@@ -786,6 +819,8 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                                           fit: BoxFit.cover,
                                           errorBuilder:
                                               (context, error, stackTrace) {
+                                            print(
+                                                '❌ [BusinessLogo-Modal] Image.network error: $error');
                                             return _buildBusinessLogoPlaceholder(
                                                 listing.businessName);
                                           },
@@ -997,19 +1032,26 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
   }
 
   Future<String?> _getBusinessLogoUrl(String logoUrl) async {
+    print('🏢 [BusinessLogo] Processing logo URL: $logoUrl');
+
     // If it's already a full HTTP URL, check if it's an S3 URL that needs signing
     if (logoUrl.startsWith('https://requestappbucket.s3.amazonaws.com/')) {
       try {
+        print('🏢 [BusinessLogo] Detected S3 URL, generating signed URL');
         // Extract the S3 key from the URL
         final uri = Uri.parse(logoUrl);
         final s3Key = uri.path.substring(1); // Remove leading slash
-        return await S3ImageUploadService.getSignedUrlForKey(s3Key);
+        print('🏢 [BusinessLogo] S3 Key: $s3Key');
+        final signedUrl = await S3ImageUploadService.getSignedUrlForKey(s3Key);
+        print('🏢 [BusinessLogo] Generated signed URL: $signedUrl');
+        return signedUrl;
       } catch (e) {
-        print('Error getting signed URL for business logo: $e');
+        print('❌ Error getting signed URL for business logo: $e');
         return logoUrl; // Fallback to original URL
       }
     }
     // If it's not an S3 URL, return as-is
+    print('🏢 [BusinessLogo] Non-S3 URL, returning as-is: $logoUrl');
     return logoUrl;
   }
 
