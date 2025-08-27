@@ -7,7 +7,7 @@ Overview
 CI/CD
 - GitHub Actions workflow at .github/workflows/backend-deploy.yml builds Docker image from backend/ and pushes to GHCR.
 - Secrets required in repo settings:
-  - GHCR_USER: your GitHub username or org
+  - GHCR_USER: your GitHub username or org (lowercase)
   - GHCR_TOKEN: a GitHub Personal Access Token with read:packages, write:packages
   - DEPLOY_HOST: server IP or hostname
   - DEPLOY_USER: SSH username
@@ -40,3 +40,4 @@ Rollbacks
 Notes
 - Ensure production.env matches the variables consumed by backend/server.js.
 - For Nginx TLS, keep Nginx on host and proxy to http://localhost:3001.
+ - GHCR repository owner must be lowercase; the workflow normalizes owner for tags, but set GHCR_USER secret in lowercase to avoid auth issues.
