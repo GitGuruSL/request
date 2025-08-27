@@ -20,17 +20,17 @@ class SMSService {
   }
 
   /**
-   * Get SMS configuration for a country (only approved configurations)
+   * Get SMS configuration for a country (from sms_provider_configs table)
    */
   async getSMSConfig(countryCode) {
     try {
       const result = await database.query(
-        'SELECT * FROM sms_configurations WHERE country_code = $1 AND is_active = true AND approval_status = $2',
-        [countryCode, 'approved']
+        'SELECT * FROM sms_provider_configs WHERE country_code = $1 AND is_active = true',
+        [countryCode]
       );
 
       if (result.rows.length === 0) {
-        throw new Error(`No approved SMS configuration found for country: ${countryCode}. Please contact your country admin to set up SMS services.`);
+        throw new Error(`No active SMS provider configuration found for country: ${countryCode}. Please contact your country admin to set up SMS services.`);
       }
 
       return result.rows[0];
@@ -76,12 +76,12 @@ class SMSService {
       const otpId = this.generateOTPId();
       
       // Get provider instance
-      const Provider = this.providers[config.active_provider];
+      const Provider = this.providers[config.provider];
       if (!Provider) {
-        throw new Error(`Unsupported provider: ${config.active_provider}`);
+        throw new Error(`Unsupported provider: ${config.provider}`);
       }
 
-      const provider = new Provider(this.decryptConfig(config));
+      const provider = new Provider(this.formatProviderConfig(config));
       
       // Prepare message
       const message = `Your Request Marketplace verification code is: ${otp}. Valid for 5 minutes.`;
@@ -95,18 +95,18 @@ class SMSService {
         INSERT INTO phone_otp_verifications 
         (otp_id, phone, otp, country_code, expires_at, attempts, max_attempts, created_at, provider_used)
         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8)
-      `, [otpId, phoneNumber, otp, countryCode, expiresAt, 0, 3, config.active_provider]);
+      `, [otpId, phoneNumber, otp, countryCode, expiresAt, 0, 3, config.provider]);
 
       // Update cost tracking
-      await this.updateCostTracking(countryCode, config.active_provider, smsResult.cost);
+      await this.updateCostTracking(countryCode, config.provider, smsResult.cost);
 
-      console.log(`📱 OTP sent to ${phoneNumber} via ${config.active_provider}`);
+      console.log(`📱 OTP sent to ${phoneNumber} via ${config.provider}`);
 
       return {
         success: true,
         otpId,
         expiresIn: 300, // 5 minutes
-        provider: config.active_provider,
+        provider: config.provider,
         message: 'OTP sent successfully'
       };
 
@@ -166,7 +166,8 @@ class SMSService {
       return {
         success: true,
         verified: true,
-        message: 'OTP verified successfully'
+        message: 'OTP verified successfully',
+        provider: otpRecord.provider_used || 'unknown'
       };
 
     } catch (error) {
@@ -238,18 +239,36 @@ class SMSService {
   }
 
   /**
-   * Decrypt provider configuration
+   * Format provider configuration for the specific provider
    */
-  decryptConfig(config) {
-    // For now, return config as-is. In production, implement proper decryption
-    return {
-      provider: config.active_provider,
-      twilioConfig: config.twilio_config ? JSON.parse(config.twilio_config) : null,
-      awsConfig: config.aws_config ? JSON.parse(config.aws_config) : null,
-      vonageConfig: config.vonage_config ? JSON.parse(config.vonage_config) : null,
-      localConfig: config.local_config ? JSON.parse(config.local_config) : null,
-      hutchMobileConfig: config.hutch_mobile_config ? JSON.parse(config.hutch_mobile_config) : null
-    };
+  formatProviderConfig(config) {
+    // The config.config field contains the provider-specific configuration
+    const providerConfig = config.config;
+    
+    switch (config.provider) {
+      case 'hutch_mobile':
+        return {
+          hutchMobileConfig: providerConfig
+        };
+      case 'twilio':
+        return {
+          twilioConfig: providerConfig
+        };
+      case 'aws':
+        return {
+          awsConfig: providerConfig
+        };
+      case 'vonage':
+        return {
+          vonageConfig: providerConfig
+        };
+      case 'local':
+        return {
+          localConfig: providerConfig
+        };
+      default:
+        throw new Error(`Unknown provider: ${config.provider}`);
+    }
   }
 
   /**
@@ -264,7 +283,7 @@ class SMSService {
         throw new Error(`Unsupported provider: ${provider}`);
       }
 
-      const providerInstance = new Provider(this.decryptConfig(config));
+      const providerInstance = new Provider(this.formatProviderConfig(config));
       const testMessage = `Test SMS from Request Marketplace - ${new Date().toISOString()}`;
       
       const result = await providerInstance.sendSMS(testNumber, testMessage);
@@ -478,35 +497,36 @@ class HutchMobileProvider {
       // Format phone number for Hutch Mobile (remove + and country code if present)
       const cleanPhone = to.replace(/^\+?94/, '').replace(/^0/, '');
       
-      // Hutch Mobile API payload
-      const payload = {
+      // Hutch Mobile API uses GET method with URL parameters
+      const params = new URLSearchParams({
         username: this.username,
         password: this.password,
         to: cleanPhone,
         message: message,
         sender_id: this.senderId,
         message_type: this.messageType
-      };
+      });
 
-      const response = await axios.post(this.apiUrl, payload, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
+      const fullUrl = `${this.apiUrl}?${params.toString()}`;
+      console.log(`📱 Hutch Mobile API URL: ${this.apiUrl}?username=${this.username}&to=${cleanPhone}&message=[HIDDEN]&sender_id=${this.senderId}`);
+
+      const response = await axios.get(fullUrl, {
         timeout: 15000 // 15 second timeout
       });
 
+      console.log('📱 Hutch Mobile API Response:', response.data);
+
       // Handle Hutch Mobile response format
-      if (response.data && response.data.status === 'success') {
+      if (response.data && (response.data.status === 'success' || response.status === 200)) {
         return {
           success: true,
-          messageId: response.data.message_id || `hutch_${Date.now()}`,
+          messageId: response.data.message_id || response.data.id || `hutch_${Date.now()}`,
           cost: 0.012, // Estimated cost for Sri Lanka
           provider: 'hutch_mobile',
           response: response.data
         };
       } else {
-        throw new Error(response.data?.message || 'SMS sending failed');
+        throw new Error(response.data?.message || response.data?.error || 'SMS sending failed');
       }
     } catch (error) {
       console.error('Hutch Mobile SMS Error:', error.response?.data || error.message);

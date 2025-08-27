@@ -687,6 +687,12 @@ router.put('/:id/documents/:docType', auth.authMiddleware(), async (req, res) =>
 // Phone verification endpoints for business verification
 router.post('/verify-phone/send-otp', auth.authMiddleware(), async (req, res) => {
   try {
+    console.log('📱 Business verification OTP request received:', {
+      body: req.body,
+      headers: req.headers['content-type'],
+      userId: req.user?.id
+    });
+
     const { phoneNumber, countryCode } = req.body;
     const userId = req.user?.id;
 
@@ -752,6 +758,12 @@ router.post('/verify-phone/send-otp', auth.authMiddleware(), async (req, res) =>
       });
     } catch (error) {
       console.error('SMS service error (business verification):', error.message);
+      console.error('SMS service error details:', {
+        stack: error.stack,
+        errorType: typeof error,
+        errorObject: error
+      });
+      
       // Development fallback: auto-generate OTP when no SMS config
       if (process.env.NODE_ENV !== 'production') {
         try {
@@ -779,7 +791,12 @@ router.post('/verify-phone/send-otp', auth.authMiddleware(), async (req, res) =>
       }
       return res.status(500).json({
         success: false,
-        message: error.message || 'Failed to send OTP'
+        message: typeof error.message === 'string' ? error.message : 'Failed to send OTP',
+        errorDebug: {
+          errorType: typeof error,
+          errorMessage: error.message,
+          errorString: String(error)
+        }
       });
     }
 

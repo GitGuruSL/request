@@ -270,8 +270,8 @@ class AuthService {
     async sendPhoneOTP(phone, countryCode = null) {
         console.log(`📱 Auth: Sending OTP to ${phone}, country: ${countryCode}`);
         
-        // Initialize country-specific SMS service
-        const smsService = new SMSService();
+        // Use the SMS service instance
+        const smsService = SMSService;
         
         // Auto-detect country if not provided
         const detectedCountry = countryCode || smsService.detectCountry(phone);
@@ -352,8 +352,8 @@ class AuthService {
     async verifyPhoneOTP(phone, otp) {
         console.log(`🔍 Auth: Verifying OTP for ${phone}, OTP: ${otp}`);
         
-        // Initialize country-specific SMS service
-        const smsService = new SMSService();
+        // Use the SMS service instance
+        const smsService = SMSService;
         
         try {
             // Use country-specific SMS service to verify OTP
