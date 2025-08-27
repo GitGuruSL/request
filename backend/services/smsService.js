@@ -462,7 +462,7 @@ class HutchMobileProvider {
       throw new Error('Hutch Mobile provider configuration not found');
     }
 
-    this.apiUrl = hutchConfig.apiUrl || 'https://bsms.hutch.lk/api/send';
+    this.apiUrl = hutchConfig.apiUrl || 'https://webbsms.hutch.lk/';
     this.username = hutchConfig.username;
     this.password = hutchConfig.password;
     this.senderId = hutchConfig.senderId || 'HUTCH';

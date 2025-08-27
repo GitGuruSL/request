@@ -156,13 +156,13 @@ const SMS_PROVIDERS = {
     description: 'Sri Lanka Hutch Mobile network SMS gateway',
     cost: '$0.008-0.015/SMS',
     fields: [
-      { key: 'apiUrl', label: 'API URL', type: 'text', required: true, placeholder: 'https://bsms.hutch.lk/api/send' },
+      { key: 'apiUrl', label: 'API URL', type: 'text', required: true, placeholder: 'https://webbsms.hutch.lk/' },
       { key: 'username', label: 'Username', type: 'text', required: true },
       { key: 'password', label: 'Password', type: 'password', required: true },
       { key: 'senderId', label: 'Sender ID', type: 'text', required: false, placeholder: 'HUTCH' },
       { key: 'messageType', label: 'Message Type', type: 'select', options: ['text', 'unicode'], required: false, defaultValue: 'text' }
     ],
-    testEndpoint: 'https://bsms.hutch.lk/api/login',
+    testEndpoint: 'https://webbsms.hutch.lk/',
     documentation: 'Hutch Mobile SMS API Documentation',
     countrySpecific: 'LK'
   }

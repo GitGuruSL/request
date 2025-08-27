@@ -9,7 +9,7 @@ const TEST_PHONE = '+94771234567'; // Test Sri Lankan number
 const HUTCH_CONFIG = {
     provider: 'hutch_mobile',
     country: 'LK',
-    apiUrl: 'https://bsms.hutch.lk/api/send',
+    apiUrl: 'https://webbsms.hutch.lk/',
     username: 'rimas@alphabet.lk',
     password: 'HT3l0b&LH6819',
     senderId: 'ALPHABET',
@@ -134,7 +134,7 @@ async function testCompleteIntegration() {
 
         console.log('\n📞 Configuration Details:');
         console.log('   Provider: Hutch Mobile (Sri Lanka)');
-        console.log('   API URL: https://bsms.hutch.lk/api/send');
+        console.log('   API URL: https://webbsms.hutch.lk/');
         console.log('   Username: rimas@alphabet.lk');
         console.log('   Sender ID: ALPHABET');
         console.log('   Message Type: text');
