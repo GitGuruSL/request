@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../models/price_listing.dart';
 import '../../services/pricing_service.dart';
 import '../../services/payment_methods_service.dart';
+import '../../services/s3_image_upload_service.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/glass_theme.dart';
 
@@ -560,12 +561,22 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: listing.businessLogo.isNotEmpty
-                          ? Image.network(
-                              listing.businessLogo,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return _buildBusinessLogoPlaceholder(
-                                    listing.businessName);
+                          ? FutureBuilder<String?>(
+                              future: _getBusinessLogoUrl(listing.businessLogo),
+                              builder: (context, snapshot) {
+                                if (snapshot.hasData && snapshot.data != null) {
+                                  return Image.network(
+                                    snapshot.data!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return _buildBusinessLogoPlaceholder(
+                                          listing.businessName);
+                                    },
+                                  );
+                                } else {
+                                  return _buildBusinessLogoPlaceholder(
+                                      listing.businessName);
+                                }
                               },
                             )
                           : _buildBusinessLogoPlaceholder(listing.businessName),
@@ -764,12 +775,25 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(14),
                             child: listing.businessLogo.isNotEmpty
-                                ? Image.network(
-                                    listing.businessLogo,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return _buildBusinessLogoPlaceholder(
-                                          listing.businessName);
+                                ? FutureBuilder<String?>(
+                                    future: _getBusinessLogoUrl(
+                                        listing.businessLogo),
+                                    builder: (context, snapshot) {
+                                      if (snapshot.hasData &&
+                                          snapshot.data != null) {
+                                        return Image.network(
+                                          snapshot.data!,
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
+                                            return _buildBusinessLogoPlaceholder(
+                                                listing.businessName);
+                                          },
+                                        );
+                                      } else {
+                                        return _buildBusinessLogoPlaceholder(
+                                            listing.businessName);
+                                      }
                                     },
                                   )
                                 : _buildBusinessLogoPlaceholder(
@@ -970,6 +994,23 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
   Future<String?> _getPaymentMethodImageUrl(String paymentMethodId) async {
     return await PaymentMethodsService.getPaymentMethodImageUrl(
         paymentMethodId);
+  }
+
+  Future<String?> _getBusinessLogoUrl(String logoUrl) async {
+    // If it's already a full HTTP URL, check if it's an S3 URL that needs signing
+    if (logoUrl.startsWith('https://requestappbucket.s3.amazonaws.com/')) {
+      try {
+        // Extract the S3 key from the URL
+        final uri = Uri.parse(logoUrl);
+        final s3Key = uri.path.substring(1); // Remove leading slash
+        return await S3ImageUploadService.getSignedUrlForKey(s3Key);
+      } catch (e) {
+        print('Error getting signed URL for business logo: $e');
+        return logoUrl; // Fallback to original URL
+      }
+    }
+    // If it's not an S3 URL, return as-is
+    return logoUrl;
   }
 
   Widget _buildPaymentMethodChip(String name, String paymentMethodId) {
