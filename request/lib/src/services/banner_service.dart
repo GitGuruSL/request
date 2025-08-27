@@ -2,6 +2,7 @@ import 'dart:convert';
 import '../models/banner_item.dart';
 import 'rest_support_services.dart' show CountryService;
 import 'api_client.dart';
+import 'image_url_service.dart';
 
 class BannerService {
   BannerService._();
@@ -32,45 +33,23 @@ class BannerService {
       list = const [];
     }
 
-    final base = ApiClient.baseUrlPublic;
-    return list.map((e) {
+    final bannerFutures = list.map((e) async {
       final raw = BannerItem.fromJson(_toMap(e));
-      final img = raw.imageUrl;
-      String normalized;
-      if (img.startsWith('http://') || img.startsWith('https://')) {
-        // If the admin saved an absolute URL pointing to localhost/127.0.0.1,
-        // rewrite it to use the app's API host so Android emulator/devices can load it.
-        try {
-          final u = Uri.parse(img);
-          if (u.host == 'localhost' || u.host == '127.0.0.1') {
-            final b = Uri.parse(base);
-            final rebuilt = Uri(
-              scheme: b.scheme,
-              host: b.host,
-              port: b.port,
-              path: u.path.startsWith('/') ? u.path : '/${u.path}',
-              query: u.query.isEmpty ? null : u.query,
-              fragment: u.fragment.isEmpty ? null : u.fragment,
-            );
-            normalized = rebuilt.toString();
-          } else {
-            normalized = img;
-          }
-        } catch (_) {
-          normalized = img;
-        }
-      } else {
-        normalized = '$base${img.startsWith('/') ? '' : '/'}$img';
-      }
+      final processedImageUrl =
+          await ImageUrlService.instance.processImageUrl(raw.imageUrl);
+
       return BannerItem(
         id: raw.id,
-        imageUrl: normalized,
+        imageUrl: processedImageUrl,
         title: raw.title,
         subtitle: raw.subtitle,
         linkUrl: raw.linkUrl,
         priority: raw.priority,
       );
-    }).toList();
+    });
+
+    // Wait for all signed URL requests to complete
+    return await Future.wait(bannerFutures);
   }
 
   Map<String, dynamic> _toMap(dynamic v) {

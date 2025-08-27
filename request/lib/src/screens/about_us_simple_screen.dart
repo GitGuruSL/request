@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
+import 'dart:async';
 import 'dart:convert' as convert;
 import 'package:http/http.dart' as http;
 import '../services/content_service.dart';
@@ -32,30 +33,44 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
 
   Future<void> _loadPages() async {
     try {
-      // Prefer published pages; if none, fall back to approved so global
-      // admin content is visible prior to publishing.
-      var pages = await _contentService.getPages(status: 'published');
-      if (pages.isEmpty) {
-        final approved = await _contentService.getPages(status: 'approved');
-        if (approved.isNotEmpty) pages = approved;
-      }
-      // Resolve a displayable logo URL from the freshly fetched pages
-      final rawLogo = _getMetaFromPages<String>(pages, 'logoUrl');
-      String? logoToUse;
-      if (rawLogo != null && rawLogo.isNotEmpty) {
-        logoToUse = await _resolveDisplayUrl(rawLogo);
-      }
-      if (mounted)
-        setState(() {
-          _pages = pages;
-          _loading = false;
-          _resolvedLogoUrl = logoToUse ?? rawLogo;
-        });
-    } catch (_) {
+      // Add timeout to prevent hanging
+      await Future.any([
+        _loadPagesInternal(),
+        Future.delayed(const Duration(seconds: 10), () {
+          throw TimeoutException('Content loading timed out after 10 seconds');
+        }),
+      ]);
+    } catch (e) {
+      print('Error loading About Us content: $e');
       if (mounted) {
-        _loading = false;
-        setState(() {});
+        setState(() {
+          _loading = false;
+          _pages = []; // Set empty pages so UI shows fallback content
+        });
       }
+    }
+  }
+
+  Future<void> _loadPagesInternal() async {
+    // Prefer published pages; if none, fall back to approved so global
+    // admin content is visible prior to publishing.
+    var pages = await _contentService.getPages(status: 'published');
+    if (pages.isEmpty) {
+      final approved = await _contentService.getPages(status: 'approved');
+      if (approved.isNotEmpty) pages = approved;
+    }
+    // Resolve a displayable logo URL from the freshly fetched pages
+    final rawLogo = _getMetaFromPages<String>(pages, 'logoUrl');
+    String? logoToUse;
+    if (rawLogo != null && rawLogo.isNotEmpty) {
+      logoToUse = await _resolveDisplayUrl(rawLogo);
+    }
+    if (mounted) {
+      setState(() {
+        _pages = pages;
+        _loading = false;
+        _resolvedLogoUrl = logoToUse ?? rawLogo;
+      });
     }
   }
 
@@ -196,190 +211,195 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
       body: GlassTheme.backgroundContainer(
         child: _loading
             ? const Center(child: CircularProgressIndicator())
-            : ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  // Header logo + title (optional via metadata.logoUrl)
-                  if ((_resolvedLogoUrl ?? _getMeta<String>('logoUrl'))
-                          ?.isNotEmpty ==
-                      true)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Center(
-                            child: Image.network(
-                              _resolvedLogoUrl ?? _getMeta<String>('logoUrl')!,
-                              height: 72,
-                              fit: BoxFit.contain,
-                              errorBuilder: (context, error, stack) =>
-                                  const SizedBox.shrink(),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text('Request', style: GlassTheme.titleSmall),
-                        ],
-                      ),
-                    ),
-
-                  // About text (metadata or page content fallback)
-                  if (aboutTextFallback()?.isNotEmpty == true)
-                    _sectionCard(
-                      child: Text(
-                        aboutTextFallback()!,
-                        style: GlassTheme.bodyLarge,
-                      ),
-                    ),
-
-                  // Address
-                  if (_getMeta<String>('hqTitle') != null ||
-                      _getMeta<String>('hqAddress') != null)
-                    _sectionCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (_getMeta<String>('hqTitle')?.isNotEmpty == true)
-                            Text(_getMeta<String>('hqTitle')!,
-                                style: GlassTheme.titleSmall),
-                          if (_getMeta<String>('hqAddress')?.isNotEmpty == true)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 6),
-                              child: Text(_getMeta<String>('hqAddress')!,
-                                  style: GlassTheme.bodyLarge),
-                            ),
-                        ],
-                      ),
-                    ),
-
-                  // Support numbers row
-                  if (_getMeta<String>('supportPassenger')?.isNotEmpty ==
-                          true ||
-                      _getMeta<String>('hotline')?.isNotEmpty == true)
-                    _sectionCard(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _contactColumn('Support - Passenger',
-                              _getMeta<String>('supportPassenger')),
-                          _contactColumn(
-                              'Hotline', _getMeta<String>('hotline')),
-                        ],
-                      ),
-                    ),
-
-                  // Website link
-                  if (_getMeta<String>('websiteUrl')?.isNotEmpty == true)
-                    _sectionCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Website', style: GlassTheme.titleSmall),
-                          const SizedBox(height: 6),
-                          InkWell(
-                            onTap: () =>
-                                _launchUrl(_getMeta<String>('websiteUrl')!),
-                            child: Text(
-                              _getMeta<String>('websiteUrl')!,
-                              style: GlassTheme.accent,
-                            ),
-                          )
-                        ],
-                      ),
-                    ),
-
-                  // Feedback blurb
-                  if (_getMeta<String>('feedbackText')?.isNotEmpty == true)
-                    _sectionCard(
-                      child: Text(_getMeta<String>('feedbackText')!,
-                          style: GlassTheme.bodyLarge),
-                    ),
-
-                  // Legal and Privacy links
-                  _sectionCard(
-                    child: Column(
-                      children: [
-                        _tile(
-                          icon: Icons.gavel_outlined,
-                          title: 'Legal',
-                          onTap: () {
-                            _openPreferredPage(
-                              preferredSlugs: const [
-                                'legal',
-                                'terms-conditions'
-                              ],
-                              keywordsFallback: const [
-                                'terms',
-                                'legal',
-                                'conditions'
-                              ],
-                              defaultSlug: 'terms-conditions',
-                              defaultTitle: 'Terms & Conditions',
-                            );
-                          },
-                        ),
-                        _divider(),
-                        _tile(
-                          icon: Icons.privacy_tip_outlined,
-                          title: 'Privacy Policy',
-                          onTap: () {
-                            _openPreferredPage(
-                              preferredSlugs: const [
-                                'privacy-policy-central',
-                                'privacy-policy'
-                              ],
-                              keywordsFallback: const ['privacy', 'policy'],
-                              defaultSlug: 'privacy-policy',
-                              defaultTitle: 'Privacy Policy',
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Socials row (optional)
-                  if (_getMeta<String>('facebookUrl')?.isNotEmpty == true ||
-                      _getMeta<String>('xUrl')?.isNotEmpty == true)
-                    _sectionCard(
-                      child: Row(
-                        children: [
-                          Text('Follow Us', style: GlassTheme.titleSmall),
-                          const SizedBox(width: 12),
-                          if (_getMeta<String>('facebookUrl')?.isNotEmpty ==
-                              true)
-                            IconButton(
-                              icon: Icon(Icons.facebook,
-                                  color: GlassTheme.colors.infoColor),
-                              onPressed: () =>
-                                  _launchUrl(_getMeta<String>('facebookUrl')!),
-                            ),
-                          if (_getMeta<String>('xUrl')?.isNotEmpty == true)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 8.0),
-                              child: IconButton(
-                                icon: Icon(Icons.public,
-                                    color: GlassTheme.colors.textPrimary),
-                                onPressed: () =>
-                                    _launchUrl(_getMeta<String>('xUrl')!),
+            : _pages.isEmpty
+                ? _buildFallbackContent()
+                : ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      // Header logo + title (optional via metadata.logoUrl)
+                      if ((_resolvedLogoUrl ?? _getMeta<String>('logoUrl'))
+                              ?.isNotEmpty ==
+                          true)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Center(
+                                child: Image.network(
+                                  _resolvedLogoUrl ??
+                                      _getMeta<String>('logoUrl')!,
+                                  height: 72,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (context, error, stack) =>
+                                      const SizedBox.shrink(),
+                                ),
                               ),
-                            ),
-                        ],
-                      ),
-                    ),
+                              const SizedBox(height: 8),
+                              Text('Request', style: GlassTheme.titleSmall),
+                            ],
+                          ),
+                        ),
 
-                  // App version footer
-                  if (_appVersion != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: Center(
-                        child: Text('App version $_appVersion',
-                            style: GlassTheme.bodySmall),
+                      // About text (metadata or page content fallback)
+                      if (aboutTextFallback()?.isNotEmpty == true)
+                        _sectionCard(
+                          child: Text(
+                            aboutTextFallback()!,
+                            style: GlassTheme.bodyLarge,
+                          ),
+                        ),
+
+                      // Address
+                      if (_getMeta<String>('hqTitle') != null ||
+                          _getMeta<String>('hqAddress') != null)
+                        _sectionCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (_getMeta<String>('hqTitle')?.isNotEmpty ==
+                                  true)
+                                Text(_getMeta<String>('hqTitle')!,
+                                    style: GlassTheme.titleSmall),
+                              if (_getMeta<String>('hqAddress')?.isNotEmpty ==
+                                  true)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 6),
+                                  child: Text(_getMeta<String>('hqAddress')!,
+                                      style: GlassTheme.bodyLarge),
+                                ),
+                            ],
+                          ),
+                        ),
+
+                      // Support numbers row
+                      if (_getMeta<String>('supportPassenger')?.isNotEmpty ==
+                              true ||
+                          _getMeta<String>('hotline')?.isNotEmpty == true)
+                        _sectionCard(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _contactColumn('Support - Passenger',
+                                  _getMeta<String>('supportPassenger')),
+                              _contactColumn(
+                                  'Hotline', _getMeta<String>('hotline')),
+                            ],
+                          ),
+                        ),
+
+                      // Website link
+                      if (_getMeta<String>('websiteUrl')?.isNotEmpty == true)
+                        _sectionCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Website', style: GlassTheme.titleSmall),
+                              const SizedBox(height: 6),
+                              InkWell(
+                                onTap: () =>
+                                    _launchUrl(_getMeta<String>('websiteUrl')!),
+                                child: Text(
+                                  _getMeta<String>('websiteUrl')!,
+                                  style: GlassTheme.accent,
+                                ),
+                              )
+                            ],
+                          ),
+                        ),
+
+                      // Feedback blurb
+                      if (_getMeta<String>('feedbackText')?.isNotEmpty == true)
+                        _sectionCard(
+                          child: Text(_getMeta<String>('feedbackText')!,
+                              style: GlassTheme.bodyLarge),
+                        ),
+
+                      // Legal and Privacy links
+                      _sectionCard(
+                        child: Column(
+                          children: [
+                            _tile(
+                              icon: Icons.gavel_outlined,
+                              title: 'Legal',
+                              onTap: () {
+                                _openPreferredPage(
+                                  preferredSlugs: const [
+                                    'legal',
+                                    'terms-conditions'
+                                  ],
+                                  keywordsFallback: const [
+                                    'terms',
+                                    'legal',
+                                    'conditions'
+                                  ],
+                                  defaultSlug: 'terms-conditions',
+                                  defaultTitle: 'Terms & Conditions',
+                                );
+                              },
+                            ),
+                            _divider(),
+                            _tile(
+                              icon: Icons.privacy_tip_outlined,
+                              title: 'Privacy Policy',
+                              onTap: () {
+                                _openPreferredPage(
+                                  preferredSlugs: const [
+                                    'privacy-policy-central',
+                                    'privacy-policy'
+                                  ],
+                                  keywordsFallback: const ['privacy', 'policy'],
+                                  defaultSlug: 'privacy-policy',
+                                  defaultTitle: 'Privacy Policy',
+                                );
+                              },
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                ],
-              ),
+
+                      // Socials row (optional)
+                      if (_getMeta<String>('facebookUrl')?.isNotEmpty == true ||
+                          _getMeta<String>('xUrl')?.isNotEmpty == true)
+                        _sectionCard(
+                          child: Row(
+                            children: [
+                              Text('Follow Us', style: GlassTheme.titleSmall),
+                              const SizedBox(width: 12),
+                              if (_getMeta<String>('facebookUrl')?.isNotEmpty ==
+                                  true)
+                                IconButton(
+                                  icon: Icon(Icons.facebook,
+                                      color: GlassTheme.colors.infoColor),
+                                  onPressed: () => _launchUrl(
+                                      _getMeta<String>('facebookUrl')!),
+                                ),
+                              if (_getMeta<String>('xUrl')?.isNotEmpty == true)
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 8.0),
+                                  child: IconButton(
+                                    icon: Icon(Icons.public,
+                                        color: GlassTheme.colors.textPrimary),
+                                    onPressed: () =>
+                                        _launchUrl(_getMeta<String>('xUrl')!),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+
+                      // App version footer
+                      if (_appVersion != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Center(
+                            child: Text('App version $_appVersion',
+                                style: GlassTheme.bodySmall),
+                          ),
+                        ),
+                    ],
+                  ),
       ),
     );
   }
@@ -489,5 +509,71 @@ class _AboutUsSimpleScreenState extends State<AboutUsSimpleScreen> {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       }
     } catch (_) {}
+  }
+
+  Widget _buildFallbackContent() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          const SizedBox(height: 40),
+          // App logo/icon
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: GlassTheme.colors.primaryBlue.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(
+              Icons.info_outline,
+              size: 64,
+              color: GlassTheme.colors.primaryBlue,
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // App title
+          Text(
+            'Request App',
+            style: GlassTheme.titleLarge.copyWith(
+              fontWeight: FontWeight.bold,
+              color: GlassTheme.colors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Default about text
+          _sectionCard(
+            child: Text(
+              'Request App is your comprehensive platform for connecting people with the products and services they need. Whether you\'re looking to buy, sell, rent, or request services, our app makes it easy to find what you\'re looking for in your local area.\n\n'
+              'Our mission is to create a seamless marketplace that brings communities together, enabling efficient transactions and fostering local commerce.\n\n'
+              'Features include:\n'
+              '• Item and service requests\n'
+              '• Price comparison\n'
+              '• Delivery services\n'
+              '• Rental marketplace\n'
+              '• Local business directory',
+              style: GlassTheme.bodyLarge,
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Contact info fallback
+          _sectionCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Contact Us', style: GlassTheme.titleMedium),
+                const SizedBox(height: 12),
+                Text(
+                  'For support or inquiries, please contact us through the app or visit our website.',
+                  style: GlassTheme.bodyMedium,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

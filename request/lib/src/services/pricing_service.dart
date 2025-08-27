@@ -2,6 +2,7 @@ import 'dart:async';
 import '../models/price_listing.dart';
 import '../models/master_product.dart';
 import 'api_client.dart';
+import 'image_url_service.dart';
 
 class PricingService {
   final ApiClient _apiClient = ApiClient.instance;
@@ -33,15 +34,45 @@ class PricingService {
         print('DEBUG: Data array length: ${dataArray?.length}');
 
         if (dataArray != null) {
-          final products = dataArray.map((data) {
+          final productFutures = dataArray.map((data) async {
             print('DEBUG: Raw product data: $data');
             final product =
                 MasterProduct.fromJson(data as Map<String, dynamic>);
+
+            // Process all product images with AWS S3 signed URLs if needed
+            final processedImages =
+                await ImageUrlService.instance.processImageUrls(product.images);
+
+            final processedProduct = MasterProduct(
+              id: product.id,
+              name: product.name,
+              brand: product.brand,
+              category: product.category,
+              subcategory: product.subcategory,
+              description: product.description,
+              images: processedImages, // Use processed images with signed URLs
+              availableVariables: product.availableVariables,
+              isActive: product.isActive,
+              createdAt: product.createdAt,
+              updatedAt: product.updatedAt,
+              businessListingsCount: product.businessListingsCount,
+              slug: product.slug,
+              baseUnit: product.baseUnit,
+              brandName: product.brandName,
+              listingCount: product.listingCount,
+              minPrice: product.minPrice,
+              maxPrice: product.maxPrice,
+              avgPrice: product.avgPrice,
+            );
+
             print(
-                'DEBUG: Parsed product "${product.name}" - Images: ${product.images}');
-            return product;
-          }).toList();
-          print('DEBUG: Parsed ${products.length} products successfully');
+                'DEBUG: Processed product "${processedProduct.name}" - Images: ${processedProduct.images}');
+            return processedProduct;
+          });
+
+          final products = await Future.wait(productFutures);
+          print(
+              'DEBUG: Parsed ${products.length} products successfully with AWS image processing');
           return products;
         }
       }

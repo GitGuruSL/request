@@ -37,9 +37,9 @@ class ContentService {
   static final ContentService instance = ContentService._();
 
   static String get _baseUrl {
-    if (kIsWeb) return 'http://localhost:3001';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://localhost:3001';
+    if (kIsWeb) return 'https://api.alphabet.lk';
+    if (Platform.isAndroid) return 'https://api.alphabet.lk';
+    return 'https://api.alphabet.lk';
   }
 
   Map<String, String> _authHeaders(String? token) => {

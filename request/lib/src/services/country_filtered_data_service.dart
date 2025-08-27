@@ -443,13 +443,13 @@ class CountryFilteredDataService {
       // Get base URL from platform configuration
       String baseUrl;
       if (kIsWeb) {
-        baseUrl = 'http://localhost:3001';
+        baseUrl = 'https://api.alphabet.lk';
       } else if (Platform.isAndroid) {
-        baseUrl = 'http://10.0.2.2:3001';
+        baseUrl = 'https://api.alphabet.lk';
       } else if (Platform.isIOS) {
-        baseUrl = 'http://localhost:3001';
+        baseUrl = 'https://api.alphabet.lk';
       } else {
-        baseUrl = 'http://localhost:3001';
+        baseUrl = 'https://api.alphabet.lk';
       }
 
       final url = Uri.parse(

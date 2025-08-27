@@ -1,17 +1,16 @@
 // API Configuration for REST API Backend
 class ApiConfig {
   // Base URL for the API
-  static const String baseUrl = 'http://localhost:3001/api';
+  static const String baseUrl = 'https://api.alphabet.lk/api';
 
   // Alternative URLs for different environments
   static const String developmentUrl = 'http://localhost:3001/api';
-  static const String productionUrl = 'https://your-production-api.com/api';
+  static const String productionUrl = 'https://api.alphabet.lk/api';
 
   // Get the appropriate base URL based on environment
   static String get apiBaseUrl {
-    // TODO: Implement environment detection
-    // For now, return development URL
-    return developmentUrl;
+    // Use production URL for all builds
+    return productionUrl;
   }
 
   // API Endpoints
@@ -27,13 +26,13 @@ class ApiConfig {
 
   // Default headers
   static Map<String, String> get defaultHeaders => {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  };
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
 
   // Authenticated headers
   static Map<String, String> getAuthHeaders(String token) => {
-    ...defaultHeaders,
-    'Authorization': 'Bearer $token',
-  };
+        ...defaultHeaders,
+        'Authorization': 'Bearer $token',
+      };
 }

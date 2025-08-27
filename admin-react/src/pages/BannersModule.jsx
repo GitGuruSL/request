@@ -11,6 +11,7 @@ export default function BannersModule() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState({ id: null, title: '', subtitle: '', imageUrl: '', linkUrl: '', active: true, priority: 0 });
   const [uploading, setUploading] = useState(false);
+  const [signedImageUrl, setSignedImageUrl] = useState(''); // For signed URL preview
   const fileInputRef = useRef(null);
 
   const country = isSuperAdmin ? null : (adminData?.country || userCountry || 'LK');
@@ -38,9 +39,41 @@ export default function BannersModule() {
   const openEdit = (b) => { setForm({ id: b.id, title: b.title || '', subtitle: b.subtitle || '', imageUrl: b.imageUrl || b.image || '', linkUrl: b.linkUrl || b.link || '', active: b.active !== false, priority: b.priority || 0 }); setDialogOpen(true); };
   const closeDialog = () => setDialogOpen(false);
 
+  // Generate signed URL for S3 images
+  const getSignedImageUrl = async (url) => {
+    if (!url) return '';
+    try {
+      // Check if it's an S3 URL
+      if (/^https?:\/\/.*\.s3\..*amazonaws\.com/i.test(url)) {
+        const response = await api.post('/s3/signed-url', { url, expiresIn: 3600 });
+        if (response.data?.success && response.data?.signedUrl) {
+          return response.data.signedUrl;
+        }
+      }
+      return url; // Return original URL if not S3 or if signing fails
+    } catch (error) {
+      console.error('Failed to generate signed URL:', error);
+      return url; // Fallback to original URL
+    }
+  };
+
+  // Update signed URL when form imageUrl changes
+  useEffect(() => {
+    if (form.imageUrl) {
+      getSignedImageUrl(form.imageUrl).then(setSignedImageUrl);
+    } else {
+      setSignedImageUrl('');
+    }
+  }, [form.imageUrl]);
+
   const resolveImage = (url) => {
     if (!url) return url;
     try {
+      // If it's already a full S3 URL, we'll use signed URL for display
+      if (/^https?:\/\/.*\.s3\..*amazonaws\.com/i.test(url)) {
+        return signedImageUrl || url; // Use signed URL if available
+      }
+      // If it's a full HTTP URL, check if it needs localhost replacement
       if (/^https?:\/\//i.test(url)) {
         // Replace localhost with API base
         return url.replace(/^https?:\/\/localhost(?::\d+)?/i, API_BASE_URL);
@@ -97,8 +130,25 @@ export default function BannersModule() {
       setUploading(true);
       setError('');
       const fd = new FormData();
-      fd.append('image', file);
-      // Backend single-image endpoint mounted at /api/upload
+      fd.append('file', file); // S3 upload expects 'file' field
+      fd.append('uploadType', 'banners'); // Specify upload type for S3 organization
+      
+      // Try S3 upload first (preferred method)
+      try {
+        const res = await api.post('/s3/upload', fd, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        if (res.data?.success && res.data?.url) {
+          setForm((f) => ({ ...f, imageUrl: res.data.url }));
+          return;
+        }
+      } catch (s3Error) {
+        console.warn('S3 upload failed, trying local upload as fallback:', s3Error);
+      }
+      
+      // Fallback to local upload if S3 fails
+      fd.delete('uploadType'); // Remove S3-specific field
+      fd.append('image', file); // Local upload expects 'image' field
       const res = await api.post('/upload', fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });

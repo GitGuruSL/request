@@ -17,6 +17,7 @@ import '../../theme/glass_theme.dart';
 import '../../theme/app_theme.dart';
 import '../../services/banner_service.dart';
 import '../../models/banner_item.dart' as model;
+import '../../widgets/smart_network_image.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -622,8 +623,8 @@ class _NetworkBannerCard extends StatelessWidget {
               children: [
                 // Full-bleed uploaded image as background
                 Positioned.fill(
-                  child: Image.network(
-                    item.imageUrl,
+                  child: SmartNetworkImage(
+                    imageUrl: item.imageUrl,
                     fit: BoxFit.cover,
                     errorBuilder: (c, e, st) => const SizedBox.shrink(),
                   ),
@@ -863,8 +864,8 @@ class _ProductCard extends StatelessWidget {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(16),
                     child: product.images.isNotEmpty
-                        ? Image.network(
-                            product.images.first,
+                        ? SmartNetworkImage(
+                            imageUrl: product.images.first,
                             fit: BoxFit.cover,
                             width: double.infinity,
                             height: double.infinity,

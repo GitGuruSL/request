@@ -84,3 +84,5 @@ request/pubspec.lock
 
 # Admin server logs
 admin-web-app/server.log
+request-backend-key.pem
+ssh-key.pem
