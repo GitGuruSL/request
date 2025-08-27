@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../services/enhanced_user_service.dart';
 import '../../services/rest_auth_service.dart' hide UserModel;
 import '../../services/contact_verification_service.dart';
+import '../../services/image_upload_service.dart';
 import '../../models/enhanced_user_model.dart';
 
 class UserProfileScreen extends StatefulWidget {
@@ -212,58 +214,69 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Widget _buildProfilePictureItem() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 0),
-      child: Row(
-        children: [
-          Icon(
-            Icons.person_outline,
-            color: Colors.grey[600],
-            size: 24,
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Add profile picture',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.black87,
-                  ),
-                ),
-                if (!_hasProfilePicture()) const SizedBox(height: 4),
-                if (!_hasProfilePicture())
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.blue,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Text(
-                      '1',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: Colors.grey[200],
-            child: Icon(
-              Icons.person,
+    return InkWell(
+      onTap: _showProfilePictureOptions,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 0),
+        child: Row(
+          children: [
+            Icon(
+              Icons.person_outline,
               color: Colors.grey[600],
               size: 24,
             ),
-          ),
-        ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _hasProfilePicture()
+                        ? 'Change profile picture'
+                        : 'Add profile picture',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  if (!_hasProfilePicture()) const SizedBox(height: 4),
+                  if (!_hasProfilePicture())
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.blue,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        '1',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: Colors.grey[200],
+              backgroundImage: _hasProfilePicture()
+                  ? NetworkImage(_currentUser!.profilePictureUrl!)
+                  : null,
+              child: !_hasProfilePicture()
+                  ? Icon(
+                      Icons.person,
+                      color: Colors.grey[600],
+                      size: 24,
+                    )
+                  : null,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -533,7 +546,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   bool _hasProfilePicture() {
-    return false; // TODO: Add profile image support
+    return _currentUser?.profilePictureUrl != null &&
+        _currentUser!.profilePictureUrl!.isNotEmpty;
   }
 
   int _getEmergencyContactsCount() {
@@ -553,6 +567,224 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Additional settings feature coming soon')),
     );
+  }
+
+  void _showProfilePictureOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Profile Picture',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Take Photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from Gallery'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+            if (_hasProfilePicture())
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text('Remove Photo',
+                    style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _removeProfilePicture();
+                },
+              ),
+            const SizedBox(height: 10),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: source,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 80,
+      );
+
+      if (image != null) {
+        await _uploadProfilePicture(image);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error picking image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _uploadProfilePicture(XFile imageFile) async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      // Upload image using the ImageUploadService
+      final ImageUploadService uploadService = ImageUploadService();
+      final uploadedUrl = await uploadService.uploadImage(
+        imageFile,
+        'profile-pictures',
+      );
+
+      if (uploadedUrl != null) {
+        // Update user profile with new image URL
+        final success = await _userService.updateProfile(
+          profilePictureUrl: uploadedUrl,
+        );
+
+        if (mounted) {
+          Navigator.pop(context); // Close loading dialog
+
+          if (success) {
+            // Refresh user data to show new image
+            await _loadUserData();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                  content: Text('Profile picture updated successfully!')),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Failed to update profile picture'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      } else {
+        if (mounted) {
+          Navigator.pop(context); // Close loading dialog
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to upload image'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error uploading image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _removeProfilePicture() async {
+    try {
+      // Show confirmation dialog
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Remove Profile Picture'),
+          content: const Text(
+              'Are you sure you want to remove your profile picture?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Remove', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed == true) {
+        // Show loading indicator
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+
+        // Update user profile with null image URL
+        final success = await _userService.updateProfile(
+          profilePictureUrl: null,
+        );
+
+        if (mounted) {
+          Navigator.pop(context); // Close loading dialog
+
+          if (success) {
+            // Refresh user data to show removed image
+            await _loadUserData();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                  content: Text('Profile picture removed successfully!')),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Failed to remove profile picture'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog if open
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error removing profile picture: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _handleLogout() async {

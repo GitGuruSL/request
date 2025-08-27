@@ -20,6 +20,7 @@ class UserModel {
   final String? lastName;
   final String email;
   final String? phoneNumber;
+  final String? profilePictureUrl;
   final List<UserRole> roles;
   final UserRole activeRole;
   final Map<UserRole, RoleData> roleData;
@@ -40,6 +41,7 @@ class UserModel {
     this.lastName,
     required this.email,
     this.phoneNumber,
+    this.profilePictureUrl,
     required this.roles,
     required this.activeRole,
     required this.roleData,
@@ -82,6 +84,7 @@ class UserModel {
       lastName: map['last_name'] ?? map['lastName'],
       email: map['email'] ?? '',
       phoneNumber: map['phoneNumber'] ?? map['phone'],
+      profilePictureUrl: map['profilePictureUrl'] ?? map['profile_picture_url'],
       roles: _parseRoles(map['roles']) ?? [UserRole.general],
       activeRole: UserRole.values.byName(map['activeRole'] ?? 'general'),
       roleData: _parseRoleData(map['roleData']) ?? {},
@@ -105,6 +108,7 @@ class UserModel {
       'lastName': lastName,
       'email': email,
       'phoneNumber': phoneNumber,
+      'profilePictureUrl': profilePictureUrl,
       'roles': roles.map((e) => e.name).toList(),
       'activeRole': activeRole.name,
       'roleData':

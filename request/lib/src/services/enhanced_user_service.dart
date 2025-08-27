@@ -48,6 +48,7 @@ class EnhancedUserService {
             lastName: userData['last_name'],
             email: userData['email'] ?? authUser.email,
             phoneNumber: userData['phone'],
+            profilePictureUrl: userData['profile_picture_url'],
             dateOfBirth: userData['date_of_birth'] != null
                 ? DateTime.tryParse(userData['date_of_birth'].toString())
                 : null,
@@ -89,6 +90,7 @@ class EnhancedUserService {
         name: authUser.fullName,
         email: authUser.email,
         phoneNumber: authUser.phoneNumber,
+        profilePictureUrl: null, // No profile picture in fallback data
         roles: const [UserRole.general],
         activeRole: UserRole.general,
         roleData: const {},
@@ -146,6 +148,7 @@ class EnhancedUserService {
           lastName: userData['last_name'],
           email: userData['email'],
           phoneNumber: userData['phone'],
+          profilePictureUrl: userData['profile_picture_url'],
           dateOfBirth: userData['date_of_birth'] != null
               ? DateTime.tryParse(userData['date_of_birth'].toString())
               : null,
@@ -184,6 +187,7 @@ class EnhancedUserService {
     String? phoneNumber,
     String? email,
     String? displayName,
+    String? profilePictureUrl,
     DateTime? dateOfBirth,
     String? gender,
   }) async {
@@ -201,6 +205,8 @@ class EnhancedUserService {
       if (phoneNumber != null) updateData['phone'] = phoneNumber;
       if (email != null) updateData['email'] = email;
       if (displayName != null) updateData['display_name'] = displayName;
+      if (profilePictureUrl != null)
+        updateData['profile_picture_url'] = profilePictureUrl;
       if (dateOfBirth != null)
         updateData['date_of_birth'] =
             dateOfBirth.toIso8601String().split('T')[0]; // Send as YYYY-MM-DD
@@ -241,6 +247,7 @@ class EnhancedUserService {
     String? phoneNumber,
     String? email,
     String? displayName,
+    String? profilePictureUrl,
     DateTime? dateOfBirth,
     String? gender,
   }) =>
@@ -250,6 +257,7 @@ class EnhancedUserService {
         phoneNumber: phoneNumber,
         email: email,
         displayName: displayName,
+        profilePictureUrl: profilePictureUrl,
         dateOfBirth: dateOfBirth,
         gender: gender,
       );
