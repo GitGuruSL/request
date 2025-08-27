@@ -267,8 +267,32 @@ class AuthService {
     /**
      * Send OTP for phone verification
      */
-    async sendPhoneOTP(phone, countryCode = null) {
-        console.log(`📱 Auth: Sending OTP to ${phone}, country: ${countryCode}`);
+    async sendPhoneOTP(phone, countryCode = null, userId = null) {
+        console.log(`📱 Auth: Sending OTP to ${phone}, country: ${countryCode}, userId: ${userId}`);
+        
+        // If userId is provided, check unified verification first
+        if (userId) {
+            const { checkUnifiedPhoneVerification } = require('../utils/unifiedVerification');
+            
+            console.log(`🔍 Auth: Checking unified phone verification for user ${userId}...`);
+            const verificationCheck = await checkUnifiedPhoneVerification(userId, phone);
+            
+            if (verificationCheck.phoneVerified) {
+                console.log(`✅ Auth: Phone ${phone} already verified via ${verificationCheck.verificationSource} - skipping OTP`);
+                return { 
+                    message: 'Phone number already verified', 
+                    otpSent: false,
+                    alreadyVerified: true,
+                    channel: 'unified_verification',
+                    verificationSource: verificationCheck.verificationSource,
+                    verifiedPhone: verificationCheck.verifiedPhone,
+                    checkedTables: verificationCheck.checkedTables
+                };
+            } else {
+                console.log(`❌ Auth: Phone ${phone} not verified in any table - sending OTP`);
+                console.log(`📊 Auth: Checked tables:`, verificationCheck.checkedTables);
+            }
+        }
         
         // Use the SMS service instance
         const smsService = SMSService;

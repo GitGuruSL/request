@@ -406,6 +406,25 @@ router.post('/verify-phone/send-otp', auth.authMiddleware(), async (req, res) =>
     const normalizedPhone = normalizePhoneNumber(phoneNumber);
     console.log(`📱 Sending OTP for driver verification - Phone: ${phoneNumber} → ${normalizedPhone}, User: ${userId}`);
 
+    // Use unified verification system to check all three tables
+    console.log(`🔍 Driver verification: Checking unified phone verification for user ${userId}...`);
+    const verificationCheck = await checkUnifiedPhoneVerification(userId, normalizedPhone);
+    
+    if (verificationCheck.phoneVerified) {
+      console.log(`✅ Driver verification: Phone ${normalizedPhone} already verified via ${verificationCheck.verificationSource} - skipping OTP`);
+      return res.json({
+        success: true,
+        message: 'Phone number is already verified',
+        already_verified: true,
+        verification_source: verificationCheck.verificationSource,
+        verified_phone: verificationCheck.verifiedPhone,
+        checked_tables: verificationCheck.checkedTables
+      });
+    } else {
+      console.log(`❌ Driver verification: Phone ${normalizedPhone} not verified in any table - sending OTP`);
+      console.log(`📊 Driver verification: Checked tables:`, verificationCheck.checkedTables);
+    }
+
     // Use country-specific SMS service
     const smsService = require('../services/smsService');
     

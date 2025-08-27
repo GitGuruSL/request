@@ -77,7 +77,22 @@ router.post('/send-phone-otp', async (req, res) => {
             });
         }
 
-        const result = await authService.sendPhoneOTP(phone, countryCode);
+        // Try to get userId from token if provided (optional authentication)
+        let userId = null;
+        try {
+            const authHeader = req.headers.authorization;
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                const token = authHeader.substring(7);
+                const decoded = authService.verifyToken(token);
+                userId = decoded.id;
+                console.log(`📱 Auth: Request from authenticated user ${userId}`);
+            }
+        } catch (authError) {
+            // Ignore auth errors - this endpoint works for both authenticated and unauthenticated users
+            console.log(`📱 Auth: Unauthenticated request or invalid token - proceeding without unified check`);
+        }
+
+        const result = await authService.sendPhoneOTP(phone, countryCode, userId);
         res.json({
             success: true,
             message: result.message,
