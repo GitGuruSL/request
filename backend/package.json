@@ -8,6 +8,8 @@
     "dev": "nodemon server.js",
   "deploy:scp:ps": "powershell -ExecutionPolicy Bypass -File ./scripts/deploy-scp.ps1",
   "deploy:scp:sh": "bash ./scripts/deploy-scp.sh",
+  "migrate:sql": "node ./scripts/run-sql-migration.js ./migration/20250827_subscriptions.sql",
+    "migrate:ssh": "powershell -ExecutionPolicy Bypass -File ./scripts/run-migration-ssh.ps1",
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "eslint .",

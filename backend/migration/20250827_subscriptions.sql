@@ -1,5 +1,7 @@
--- Subscriptions + usage limits + PPC clicks
 -- Safe to run multiple times (use IF NOT EXISTS)
+
+-- Enable required extensions
+CREATE EXTENSION IF NOT EXISTS pgcrypto; -- for gen_random_uuid()
 
 CREATE TABLE IF NOT EXISTS subscription_plans (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -11,11 +11,10 @@ if (-not $RemoteHost -or -not $User) {
   exit 1
 }
 
-$repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
-$backendDir = Join-Path $repoRoot 'backend'
+$backendDir = Resolve-Path (Join-Path $PSScriptRoot '..')
 if (-not (Test-Path $backendDir)) { Write-Error "Backend folder not found: $backendDir"; exit 1 }
 
-$tgz = Join-Path $repoRoot 'backend.tgz'
+$tgz = Join-Path $env:TEMP 'backend.tgz'
 if (Test-Path $tgz) { Remove-Item $tgz -Force }
 
 Write-Host "[SCP] Creating archive $tgz from $backendDir"
@@ -43,6 +42,8 @@ sudo mkdir -p "$Path"
 echo "[Remote] Extracting archive"
 sudo tar -xzf /tmp/request-backend.tgz -C "$Path" --strip-components=1
 cd "$Path"
+echo "[Remote] Fixing permissions"
+sudo chown -R `$USER:`$USER "$Path"
 echo "[Remote] Installing Node if missing"
 if ! command -v node >/dev/null 2>&1; then
   if command -v apt-get >/dev/null 2>&1; then
@@ -65,7 +66,12 @@ echo "[Remote] Done. Health (if bound): curl -fsS http://127.0.0.1:3001/health |
 "@
 
 Write-Host "[SCP] Running remote update via SSH"
-& ssh @sshKeyArg "$remote" "$remoteScript"
+# Normalize to LF and send as base64 to avoid CRLF parsing issues on remote
+$remoteScriptLF = $remoteScript -replace "`r?`n","`n"
+$bytes = [System.Text.Encoding]::UTF8.GetBytes($remoteScriptLF)
+$b64 = [Convert]::ToBase64String($bytes)
+$exec = "echo $b64 | base64 -d > /tmp/request-deploy.sh && chmod +x /tmp/request-deploy.sh && bash /tmp/request-deploy.sh"
+& ssh @sshKeyArg "$remote" "$exec"
 if ($LASTEXITCODE -ne 0) { Write-Error "ssh failed ($LASTEXITCODE)"; exit $LASTEXITCODE }
 
 Remove-Item $tgz -Force
