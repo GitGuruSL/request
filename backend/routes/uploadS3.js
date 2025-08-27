@@ -87,7 +87,24 @@ router.get('/test', async (req, res) => {
 
 module.exports = router;
 
-// New: Generate a signed URL for arbitrary S3 object URLs
+// Generate a signed URL for an S3 key (GET method for Flutter compatibility)
+router.get('/signed-url', async (req, res) => {
+  try {
+    const { key, expiresIn } = req.query || {};
+    if (!key) return res.status(400).json({ success: false, error: 'key parameter is required' });
+    
+    // Convert S3 key to full URL
+    const fullUrl = `https://requestappbucket.s3.amazonaws.com/${key}`;
+    const signedUrl = await getSignedUrl(fullUrl, Number(expiresIn) || 3600);
+    
+    return res.json({ success: true, signedUrl });
+  } catch (error) {
+    console.error('❌ Error generating signed URL for key:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// New: Generate a signed URL for arbitrary S3 object URLs (POST method)
 router.post('/signed-url', async (req, res) => {
   try {
     const { url, expiresIn } = req.body || {};

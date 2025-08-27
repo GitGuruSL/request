@@ -20,9 +20,12 @@ class S3ImageUploadService {
   /// Get signed URL for S3 object
   static Future<String?> getSignedUrlForKey(String s3Key) async {
     try {
-      final response = await ApiClient.instance.get<dynamic>(
+      // Convert S3 key to full URL format expected by backend
+      final fullUrl = 'https://requestappbucket.s3.amazonaws.com/$s3Key';
+
+      final response = await ApiClient.instance.post<dynamic>(
         '/api/s3/signed-url',
-        queryParameters: {'key': s3Key},
+        data: {'url': fullUrl},
       );
 
       if (response.isSuccess && response.data != null) {

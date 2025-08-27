@@ -261,20 +261,37 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 ],
               ),
             ),
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: Colors.grey[200],
-              backgroundImage: _hasProfilePicture()
-                  ? NetworkImage(_currentUser!.profilePictureUrl!)
-                  : null,
-              child: !_hasProfilePicture()
-                  ? Icon(
+            _hasProfilePicture()
+                ? FutureBuilder<String?>(
+                    future:
+                        _getProfilePictureUrl(_currentUser!.profilePictureUrl!),
+                    builder: (context, snapshot) {
+                      return CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Colors.grey[200],
+                        backgroundImage:
+                            snapshot.hasData && snapshot.data != null
+                                ? NetworkImage(snapshot.data!)
+                                : null,
+                        child: !snapshot.hasData || snapshot.data == null
+                            ? Icon(
+                                Icons.person,
+                                color: Colors.grey[600],
+                                size: 24,
+                              )
+                            : null,
+                      );
+                    },
+                  )
+                : CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Colors.grey[200],
+                    child: Icon(
                       Icons.person,
                       color: Colors.grey[600],
                       size: 24,
-                    )
-                  : null,
-            ),
+                    ),
+                  ),
           ],
         ),
       ),
@@ -548,6 +565,24 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   bool _hasProfilePicture() {
     return _currentUser?.profilePictureUrl != null &&
         _currentUser!.profilePictureUrl!.isNotEmpty;
+  }
+
+  Future<String?> _getProfilePictureUrl(String profilePictureUrl) async {
+    // If it's already a full HTTP URL, check if it's an S3 URL that needs signing
+    if (profilePictureUrl
+        .startsWith('https://requestappbucket.s3.amazonaws.com/')) {
+      try {
+        // Extract the S3 key from the URL
+        final uri = Uri.parse(profilePictureUrl);
+        final s3Key = uri.path.substring(1); // Remove leading slash
+        return await S3ImageUploadService.getSignedUrlForKey(s3Key);
+      } catch (e) {
+        print('Error getting signed URL for profile picture: $e');
+        return profilePictureUrl; // Fallback to original URL
+      }
+    }
+    // If it's not an S3 URL, return as-is
+    return profilePictureUrl;
   }
 
   int _getEmergencyContactsCount() {
