@@ -8,10 +8,12 @@ const dotenv = require('dotenv');
 async function main() {
   const cwd = process.cwd();
   const candidates = [
-    path.join(cwd, 'production.env'),
+  // Prefer the same file the app uses
+  path.join(cwd, '.env.rds'),
+  // Fallbacks
+  path.join(cwd, 'production.env'),
   path.join(cwd, 'deploy', 'production.env'),
-    path.join(cwd, '.env.rds'),
-    path.join(cwd, '.env'),
+  path.join(cwd, '.env'),
   ];
   let loaded = null;
   for (const p of candidates) {
@@ -64,8 +66,20 @@ async function main() {
     process.exit(1);
   }
 
+  // Safe log of connection details (no password)
+  const safeDetails = clientConfig.connectionString
+    ? { connectionString: '***redacted***' }
+    : { host: clientConfig.host, port: clientConfig.port, database: clientConfig.database, user: clientConfig.user, ssl: !!clientConfig.ssl };
+  console.log('[migrate] Connection details:', safeDetails);
+
   const client = new Client(clientConfig);
-  await client.connect();
+  try {
+    await client.connect();
+  } catch (e) {
+    console.error('[migrate] Could not connect to database:', e.message);
+    if (loaded) console.error('[migrate] Env file used:', loaded);
+    process.exit(1);
+  }
   try {
     console.log(`[migrate] Running migration: ${sqlPath}`);
     await client.query('BEGIN');

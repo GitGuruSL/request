@@ -1,7 +1,8 @@
 param(
   [string]$RemoteHost = $env:DEPLOY_HOST,
   [string]$User = $env:DEPLOY_USER,
-  [string]$Key  = $env:DEPLOY_KEY_PATH
+  [string]$Key  = $env:DEPLOY_KEY_PATH,
+  [string]$AppPath = $env:DEPLOY_PATH
 )
 
 if (-not $RemoteHost -or -not $User) {
@@ -14,9 +15,19 @@ if ($Key) { $sshArgs += @('-i', $Key) }
 $remote = "$User@$RemoteHost"
 
 Write-Host "[SSH] Running migration on $remote"
-$script = @"
+$script = @'
 set -e
-cd /opt/request-backend
+# Pick app path: explicit > /opt/request-backend > /var/www/request-backend
+APP_PATH="${AppPath:-}"
+if [ -z "$APP_PATH" ]; then
+  if [ -d "/opt/request-backend" ]; then APP_PATH="/opt/request-backend"; fi
+  if [ -d "/var/www/request-backend" ]; then APP_PATH="${APP_PATH:-/var/www/request-backend}"; fi
+fi
+if [ -z "$APP_PATH" ] || [ ! -d "$APP_PATH" ]; then
+  echo "[migrate] ERROR: App path not found (tried: $APP_PATH, /opt/request-backend, /var/www/request-backend)" >&2
+  exit 1
+fi
+cd "$APP_PATH"
 # Ensure dos2unix is available and normalize env files (handles CRLF)
 if ! command -v dos2unix >/dev/null 2>&1; then
   if command -v apt-get >/dev/null 2>&1; then
@@ -26,12 +37,20 @@ if ! command -v dos2unix >/dev/null 2>&1; then
     sudo yum install -y dos2unix >/dev/null 2>&1 || true
   fi
 fi
-for f in production.env deploy/production.env .env.rds; do
+for f in production.env deploy/production.env .env.rds ../.env.rds /var/www/request-backend/.env.rds; do
   if [ -f "$f" ]; then
     dos2unix "$f" >/dev/null 2>&1 || true
     sed -i 's/\r$//' "$f" || true
   fi
 done
+# Source envs - prefer .env.rds if present
+if [ -f .env.rds ]; then
+  set -a; . ./.env.rds; set +a
+elif [ -f ../.env.rds ]; then
+  set -a; . ../.env.rds; set +a
+elif [ -f /var/www/request-backend/.env.rds ]; then
+  set -a; . /var/www/request-backend/.env.rds; set +a
+fi
 if [ -f production.env ]; then
   set -a
   . ./production.env
@@ -43,13 +62,10 @@ if [ -f deploy/production.env ]; then
   . /tmp/prod.env
   set +a
 fi
-if [ -f .env.rds ]; then
-  set -a
-  . ./.env.rds
-  set +a
-fi
+# Sanity echo (non-sensitive): which host/user/db
+echo "[migrate] Using DB host: ${DB_HOST:-${PGHOST:-(echo unset)}} user: ${DB_USERNAME:-${PGUSER:-(echo unset)}} database: ${DB_DATABASE:-${PGDATABASE:-(echo unset)}}"
 node ./scripts/run-sql-migration.js ./migration/20250827_subscriptions.sql
-"@
+'@
 # Normalize to LF and send via base64
 $scriptLF = $script -replace "`r?`n","`n"
 $bytes = [System.Text.Encoding]::UTF8.GetBytes($scriptLF)

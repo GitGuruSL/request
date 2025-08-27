@@ -31,7 +31,8 @@ WHERE spn.is_active = true;
 CREATE TABLE IF NOT EXISTS subscriptions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL,
-  plan_id UUID REFERENCES subscription_plans(id),
+  -- FK must reference a real table, not a view
+  plan_id UUID REFERENCES subscription_plans_new(id),
   status TEXT NOT NULL CHECK (status IN ('active','canceled','expired','trialing')),
   start_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   current_period_end TIMESTAMPTZ,
@@ -56,7 +57,8 @@ CREATE TABLE IF NOT EXISTS usage_monthly (
 CREATE TABLE IF NOT EXISTS price_comparison_business (
   business_id UUID PRIMARY KEY,
   mode TEXT NOT NULL CHECK (mode IN ('ppc','monthly')),
-  monthly_plan_id UUID REFERENCES subscription_plans(id),
+  -- FK must reference a real table, not a view
+  monthly_plan_id UUID REFERENCES subscription_plans_new(id),
   ppc_price_cents INTEGER,
   currency TEXT,
   is_active BOOLEAN NOT NULL DEFAULT true,

@@ -3,7 +3,8 @@ param(
   [string]$User = $env:DEPLOY_USER,
   [string]$Path = $(if ($env:DEPLOY_PATH) { $env:DEPLOY_PATH } else { '/opt/request-backend' }),
   [string]$Pm2  = $(if ($env:PM2_NAME) { $env:PM2_NAME } else { 'request-backend' }),
-  [string]$Key  = $env:DEPLOY_KEY_PATH
+  [string]$Key  = $env:DEPLOY_KEY_PATH,
+  [switch]$Mirror
 )
 
 if (-not $RemoteHost -or -not $User) {
@@ -40,6 +41,18 @@ set -e
 echo "[Remote] Ensure app path: $Path"
 sudo mkdir -p "$Path"
 echo "[Remote] Extracting archive"
+if [ "$Mirror" = "True" ] || [ "$Mirror" = "true" ]; then
+  echo "[Remote] Mirror mode: cleaning stale files (preserving env, uploads, node_modules, deploy)"
+  for f in "$Path"/*; do
+    bn="$(basename "$f")"
+    case " $bn " in
+      ' .env '|' .env.rds '|' production.env '|' uploads '|' node_modules '|' deploy ')
+        echo "[Remote] Preserving $bn" ;;
+      *)
+        echo "[Remote] Removing $f"; sudo rm -rf "$f" ;;
+    esac
+  done
+fi
 sudo tar -xzf /tmp/request-backend.tgz -C "$Path" --strip-components=1
 cd "$Path"
 echo "[Remote] Fixing permissions"

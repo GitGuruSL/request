@@ -4,6 +4,10 @@ Overview
 - Build and publish Docker images automatically on push to main.
 - Server pulls from GHCR and restarts container via SSH action.
 
+Environments
+- Production: branch main → image tag ghcr.io/<owner>/request-backend:<git-sha> → deploy to port 3001 via backend-deploy.yml
+- Staging: branch develop → image tag ghcr.io/<owner>/request-backend:<git-sha>-stg → deploy to port 3101 via backend-deploy-staging.yml
+
 CI/CD
 - GitHub Actions workflow at `.github/workflows/backend-deploy.yml` builds Docker image from `backend/` and pushes to GHCR.
 - Image tags:
@@ -13,6 +17,22 @@ CI/CD
   - `GHCR_USER` (lowercase GitHub username or org) and `GHCR_TOKEN` (PAT with `read:packages`, `write:packages`) — used for image push; if not set, workflow falls back to `GITHUB_TOKEN` for GHCR push.
   - `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY` — used by SSH deploy.
 - GHCR visibility: if your GHCR package is private, the server must also authenticate (workflow will docker login with `GHCR_USER/TOKEN` on the server if provided). If public, server can pull anonymously.
+
+CI (tests and lint)
+- `.github/workflows/backend-ci.yml` runs on push/PR to `main` and `develop` for `backend/**` changes:
+  - Node 20, `npm ci`
+  - `npm run lint` (if present)
+  - `npm test` (if present)
+- Protect branches to require this workflow to pass before merge.
+
+Staging deployment
+- Workflow: `.github/workflows/backend-deploy-staging.yml` (push to `develop` or manual dispatch)
+- Tags pushed: `staging` and `<git-sha>-stg`
+- Required repo secrets:
+  - `STAGING_DEPLOY_HOST`, `STAGING_DEPLOY_USER`, `STAGING_DEPLOY_SSH_KEY`
+  - Optional `GHCR_USER`, `GHCR_TOKEN` if GHCR is private
+- Server binds container to `127.0.0.1:3101` (keep behind Nginx if exposing)
+- Expects env file at `/opt/request-backend/production.env` (you can switch to a dedicated staging env path later)
 
 Server setup (one-time)
 1) Install Docker
@@ -29,6 +49,10 @@ How deployments work
 - On push to main: workflow builds image and pushes `latest` and `<git-sha>` to GHCR (owner normalized to lowercase).
 - Deploy pulls the `<git-sha>` tag on the server, runs the container bound to `127.0.0.1:3001`, then probes `/health` up to 30 times. On success, the sha is recorded to `/opt/request-backend/last_successful.sha` for rollback.
 
+How staging deployments work
+- On push to develop: workflow builds and pushes `staging` and `<git-sha>-stg` to GHCR.
+- Deploy pulls `<git-sha>-stg`, starts `request-backend-stg` container bound to `127.0.0.1:3101`, then health checks `/health` on port 3101.
+
 Local development
 - docker compose -f backend/docker-compose.yml up --build
 
@@ -38,6 +62,12 @@ Rollbacks
   docker rm -f request-backend
   docker run -d --name request-backend --restart unless-stopped --env-file /opt/request-backend/production.env -p 127.0.0.1:3001:3001 ghcr.io/<owner>/request-backend:<old-sha>
 
+Staging rollback (similar)
+- SSH to staging server and run:
+  docker pull ghcr.io/<owner>/request-backend:<old-sha>-stg
+  docker rm -f request-backend-stg
+  docker run -d --name request-backend-stg --restart unless-stopped --env-file /opt/request-backend/production.env -p 127.0.0.1:3101:3001 ghcr.io/<owner>/request-backend:<old-sha>-stg
+
 Notes
 - Ensure production.env matches the variables consumed by backend/server.js.
 - For Nginx TLS, keep Nginx on host and proxy to http://localhost:3001.
@@ -46,6 +76,9 @@ Notes
 
 <!-- ci: trigger backend build - 2025-08-27 -->
  - GHCR repository owner must be lowercase; the workflow normalizes owner for tags, but set GHCR_USER secret in lowercase to avoid auth issues.
+
+.dockerignore
+- Added to reduce Docker build context size (excludes node_modules, uploads, .env*, .git, markdown, etc.).
 
 Simple SCP deployment (no CI)
 
