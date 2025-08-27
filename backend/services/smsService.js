@@ -440,6 +440,7 @@ class LocalProvider {
       throw new Error('Local provider configuration not found');
     }
 
+    this.logOnly = localConfig.logOnly || false;
     this.endpoint = localConfig.endpoint;
     this.apiKey = localConfig.apiKey;
     this.method = localConfig.method || 'POST';
@@ -447,6 +448,28 @@ class LocalProvider {
 
   async sendSMS(to, message) {
     try {
+      if (this.logOnly) {
+        // Log-only mode for testing
+        console.log('📱 LOCAL SMS PROVIDER (LOG ONLY)');
+        console.log(`📞 To: ${to}`);
+        console.log(`💬 Message: ${message}`);
+        console.log(`⏰ Time: ${new Date().toISOString()}`);
+        console.log('✅ SMS would be sent successfully in production');
+        
+        return {
+          success: true,
+          messageId: `local_log_${Date.now()}`,
+          cost: 0.003,
+          provider: 'local',
+          mode: 'log_only'
+        };
+      }
+
+      // Real HTTP endpoint mode
+      if (!this.endpoint) {
+        throw new Error('Local provider endpoint not configured');
+      }
+
       const response = await axios({
         method: this.method,
         url: this.endpoint,
@@ -464,7 +487,7 @@ class LocalProvider {
       return {
         success: true,
         messageId: response.data.messageId || Date.now().toString(),
-        cost: 0.003, // Estimated cost
+        cost: 0.003,
         provider: 'local'
       };
     } catch (error) {
