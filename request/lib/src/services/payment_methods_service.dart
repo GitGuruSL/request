@@ -8,7 +8,6 @@ class PaymentMethod {
   final String category;
   final String imageUrl;
   final String fees;
-  String? _signedImageUrl;
 
   PaymentMethod({
     required this.id,
@@ -19,26 +18,26 @@ class PaymentMethod {
     required this.fees,
   });
 
-  /// Get signed URL for the payment method image
-  Future<String?> getSignedImageUrl() async {
-    if (_signedImageUrl != null) return _signedImageUrl;
-
+  /// Get image URL for the payment method (handles both S3 URLs and signed URLs)
+  Future<String?> getImageUrl() async {
     if (imageUrl.isEmpty) return null;
-
-    // If it's already a full URL, return as is
+    
+    // For S3 URLs, return them directly (they should be publicly accessible for payment methods)
+    if (imageUrl.startsWith('https://requestappbucket.s3.amazonaws.com/')) {
+      return imageUrl;
+    }
+    
+    // If it's already a full HTTP URL, return as is
     if (imageUrl.startsWith('http')) return imageUrl;
-
-    // If it's an S3 key, get signed URL
+    
+    // If it's an S3 key, try to get signed URL
     try {
-      _signedImageUrl = await S3ImageUploadService.getSignedUrlForKey(imageUrl);
-      return _signedImageUrl;
+      return await S3ImageUploadService.getSignedUrlForKey(imageUrl);
     } catch (e) {
       print('Error getting signed URL for payment method $name: $e');
       return null;
     }
-  }
-
-  factory PaymentMethod.fromJson(Map<String, dynamic> json) {
+  }  factory PaymentMethod.fromJson(Map<String, dynamic> json) {
     return PaymentMethod(
       id: json['id']?.toString() ?? '',
       name: json['name'] ?? '',

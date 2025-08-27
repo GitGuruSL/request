@@ -50,7 +50,7 @@ class _PaymentMethodsSettingsScreenState
   /// Widget to display payment method image with S3 signed URL support
   Widget _buildPaymentMethodImage(PaymentMethod method, {double size = 40}) {
     return FutureBuilder<String?>(
-      future: method.getSignedImageUrl(),
+      future: method.getImageUrl(),
       builder: (context, snapshot) {
         final imageUrl = snapshot.data;
         final hasImage = imageUrl != null && imageUrl.isNotEmpty;
