@@ -1089,23 +1089,22 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       print('Error checking phone verification status: $e');
     }
 
-    // Phone not verified, start verification process using unified system
+    // Phone not verified, start verification process using auth system for personal profile
     try {
-      final result = await _contactService.startBusinessPhoneVerification(
-        phoneNumber: phoneNumber,
-        onCodeSent: (verificationId) {
-          _showPhoneOtpDialog(phoneNumber, verificationId);
-        },
-        onError: (error) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $error')),
-          );
-        },
+      // Use RestAuthService for personal profile phone verification
+      final result = await RestAuthService.instance.sendOTP(
+        emailOrPhone: phoneNumber,
+        isEmail: false,
+        countryCode: '+94', // Default country code for Sri Lanka
       );
 
-      if (!result['success']) {
+      if (result.success) {
+        _showPhoneOtpDialog(phoneNumber, result.otpToken ?? '');
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send verification code')),
+          SnackBar(
+              content:
+                  Text('Failed to send verification code: ${result.error}')),
         );
       }
     } catch (e) {
@@ -1115,7 +1114,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
-  void _showPhoneOtpDialog(String phoneNumber, String verificationId) {
+  void _showPhoneOtpDialog(String phoneNumber, String otpToken) {
     final TextEditingController otpController = TextEditingController();
 
     showDialog(
@@ -1145,8 +1144,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () => _verifyPhoneOtp(
-                verificationId, otpController.text, phoneNumber),
+            onPressed: () =>
+                _verifyPhoneOtp(otpToken, otpController.text, phoneNumber),
             child: const Text('Verify'),
           ),
         ],
@@ -1154,8 +1153,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
-  void _verifyPhoneOtp(
-      String verificationId, String otp, String phoneNumber) async {
+  void _verifyPhoneOtp(String otpToken, String otp, String phoneNumber) async {
     if (otp.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter the verification code')),
@@ -1164,14 +1162,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
 
     try {
-      final result = await _contactService.verifyBusinessPhoneOTP(
-        verificationId: verificationId,
+      // Use RestAuthService for personal profile phone verification
+      final result = await RestAuthService.instance.verifyOTP(
+        emailOrPhone: phoneNumber,
         otp: otp.trim(),
+        otpToken: otpToken,
       );
 
       Navigator.pop(context); // Close OTP dialog
 
-      if (result['success'] == true) {
+      if (result.success) {
         // Update unified verification status
         setState(() {
           _unifiedPhoneVerified = true;
@@ -1184,7 +1184,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text(
-                  'Verification failed: ${result['error'] ?? 'Unknown error'}')),
+                  'Verification failed: ${result.error ?? 'Unknown error'}')),
         );
       }
     } catch (e) {
