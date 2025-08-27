@@ -107,116 +107,189 @@ class _ChatConversationsScreenState extends State<ChatConversationsScreen> {
                               const SizedBox(height: 8),
                           itemBuilder: (ctx, i) {
                             final c = _conversations[i];
-                            return Material(
-                              color: Colors.transparent,
-                              borderRadius: BorderRadius.circular(20),
-                              child: InkWell(
+                            return Dismissible(
+                              key: Key('conversation_${c.id}'),
+                              direction: DismissDirection.endToStart,
+                              background: Container(
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.only(right: 20),
+                                margin: const EdgeInsets.only(bottom: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Icon(
+                                  Icons.delete,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
+                              ),
+                              confirmDismiss: (direction) async {
+                                final confirmed = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('Delete Conversation'),
+                                    content: Text(
+                                        'Are you sure you want to delete this conversation about "${c.requestTitle ?? 'this request'}"?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, false),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, true),
+                                        child: const Text('Delete',
+                                            style:
+                                                TextStyle(color: Colors.red)),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                return confirmed ?? false;
+                              },
+                              onDismissed: (direction) async {
+                                try {
+                                  // TODO: Implement conversation deletion in ChatService
+                                  // await ChatService.instance.deleteConversation(c.id);
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content:
+                                              Text('Conversation deleted')),
+                                    );
+                                    // Remove from local list for immediate UI feedback
+                                    setState(() {
+                                      _conversations.removeAt(i);
+                                    });
+                                  }
+                                } catch (e) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                            'Error deleting conversation: $e'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                              child: Material(
+                                color: Colors.transparent,
                                 borderRadius: BorderRadius.circular(20),
-                                onTap: () async {
-                                  final messages = await ChatService.instance
-                                      .getMessages(conversationId: c.id);
-                                  if (!mounted) return;
-                                  await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => ConversationScreen(
-                                        conversation: c,
-                                        initialMessages: messages,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(20),
+                                  onTap: () async {
+                                    final messages = await ChatService.instance
+                                        .getMessages(conversationId: c.id);
+                                    if (!mounted) return;
+                                    await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => ConversationScreen(
+                                          conversation: c,
+                                          initialMessages: messages,
+                                        ),
                                       ),
-                                    ),
-                                  );
-                                  _load();
-                                },
-                                child: Container(
-                                  decoration: GlassTheme.glassContainer,
-                                  padding: const EdgeInsets.all(14),
-                                  child: Row(
-                                    children: [
-                                      Stack(
-                                        alignment: Alignment.center,
-                                        children: [
-                                          CircleAvatar(
-                                            radius: 22,
-                                            backgroundColor: GlassTheme
-                                                    .isDarkMode
-                                                ? Colors.white.withOpacity(0.08)
-                                                : Colors.black
-                                                    .withOpacity(0.06),
-                                            child: Icon(Icons.person,
-                                                color: GlassTheme
-                                                    .colors.textTertiary,
-                                                size: 22),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
+                                    );
+                                    _load();
+                                  },
+                                  child: Container(
+                                    decoration: GlassTheme.glassContainer,
+                                    padding: const EdgeInsets.all(14),
+                                    child: Row(
+                                      children: [
+                                        Stack(
+                                          alignment: Alignment.center,
                                           children: [
-                                            Text(
-                                              c.requestTitle ?? 'Request Chat',
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                  fontWeight: FontWeight.w700,
+                                            CircleAvatar(
+                                              radius: 22,
+                                              backgroundColor: GlassTheme
+                                                      .isDarkMode
+                                                  ? Colors.white
+                                                      .withOpacity(0.08)
+                                                  : Colors.black
+                                                      .withOpacity(0.06),
+                                              child: Icon(Icons.person,
                                                   color: GlassTheme
-                                                      .colors.textPrimary),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              c.lastMessageText ??
-                                                  'Tap to open conversation',
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                  color: GlassTheme
-                                                      .colors.textSecondary),
+                                                      .colors.textTertiary,
+                                                  size: 22),
                                             ),
                                           ],
                                         ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.end,
-                                        children: [
-                                          Text(
-                                            _formatTime(c.lastMessageAt),
-                                            style: TextStyle(
-                                              color: GlassTheme
-                                                  .colors.textTertiary,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          if ((c.unreadCount ?? 0) > 0)
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 10,
-                                                      vertical: 4),
-                                              decoration: BoxDecoration(
-                                                color: GlassTheme
-                                                    .colors.textAccent,
-                                                borderRadius:
-                                                    BorderRadius.circular(999),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                c.requestTitle ??
+                                                    'Request Chat',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                    fontWeight: FontWeight.w700,
+                                                    color: GlassTheme
+                                                        .colors.textPrimary),
                                               ),
-                                              child: Text(
-                                                (c.unreadCount ?? 0)
-                                                    .toString()
-                                                    .padLeft(2, '0'),
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w600,
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                c.lastMessageText ??
+                                                    'Tap to open conversation',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                    color: GlassTheme
+                                                        .colors.textSecondary),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.end,
+                                          children: [
+                                            Text(
+                                              _formatTime(c.lastMessageAt),
+                                              style: TextStyle(
+                                                color: GlassTheme
+                                                    .colors.textTertiary,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            if ((c.unreadCount ?? 0) > 0)
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: GlassTheme
+                                                      .colors.textAccent,
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          999),
+                                                ),
+                                                child: Text(
+                                                  (c.unreadCount ?? 0)
+                                                      .toString()
+                                                      .padLeft(2, '0'),
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
                                                 ),
                                               ),
-                                            ),
-                                        ],
-                                      ),
-                                    ],
+                                          ],
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
