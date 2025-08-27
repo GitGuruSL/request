@@ -25,8 +25,8 @@ class PaymentMethod {
     // For S3 URLs, get signed URL from backend
     if (imageUrl.startsWith('https://requestappbucket.s3.amazonaws.com/')) {
       try {
-        final response =
-            await PaymentMethodsService._api.get<dynamic>('/api/payment-methods/image-url/$id');
+        final response = await PaymentMethodsService._api
+            .get<dynamic>('/api/payment-methods/image-url/$id');
         if (response.isSuccess && response.data != null) {
           final data = response.data;
           if (data is Map<String, dynamic> && data['signedUrl'] != null) {
