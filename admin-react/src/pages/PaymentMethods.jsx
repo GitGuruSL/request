@@ -84,18 +84,57 @@ const PaymentMethods = () => {
       const params = {};
       if (!isSuperAdmin && userCountry) params.country = userCountry;
       const { data } = await api.get('/payment-methods', { params });
-      setPaymentMethods(Array.isArray(data) ? data : data?.items || []);
+      console.log('Payment methods API response:', data); // Debug log
+      
+      let methodsArray = [];
+      
+      // Handle both direct array response and structured response
+      if (Array.isArray(data)) {
+        methodsArray = data;
+      } else if (data && data.success && Array.isArray(data.data)) {
+        methodsArray = data.data;
+      } else if (data && Array.isArray(data.items)) {
+        methodsArray = data.items;
+      } else if (data && Array.isArray(data.methods)) {
+        methodsArray = data.methods;
+      } else {
+        console.warn('Unexpected payment methods API response format:', data);
+        methodsArray = [];
+      }
+      
+      setPaymentMethods(methodsArray);
     } catch (error) {
       console.error('Error fetching payment methods:', error);
+      setPaymentMethods([]); // Set empty array on error
     }
   };
 
   const fetchCountries = async () => {
     try {
       const { data } = await api.get('/countries');
-      setCountries((data?.countries || data || []).filter(c => c.isEnabled !== false));
+      console.log('Countries API response:', data); // Debug log
+      
+      let countriesArray = [];
+      
+      // Handle the actual backend response format: { success: true, data: [...] }
+      if (data && data.success && Array.isArray(data.data)) {
+        countriesArray = data.data;
+      } else if (Array.isArray(data)) {
+        countriesArray = data;
+      } else if (data && Array.isArray(data.countries)) {
+        countriesArray = data.countries;
+      } else if (data && Array.isArray(data.items)) {
+        countriesArray = data.items;
+      } else {
+        console.warn('Unexpected countries API response format:', data);
+        countriesArray = [];
+      }
+      
+      const filteredCountries = countriesArray.filter(c => c && c.isEnabled !== false);
+      setCountries(filteredCountries);
     } catch (error) {
       console.error('Error fetching countries:', error);
+      setCountries([]); // Set empty array on error
     }
   };
 
