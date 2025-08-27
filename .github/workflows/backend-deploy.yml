@@ -13,8 +13,6 @@ permissions:
   packages: write
 
 jobs:
-  # Avoid overlapping image builds across pushes
-  # (builds can still run concurrently but in separate groups if changed)
   build-and-push:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
@@ -25,12 +23,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Prepare lowercase owner
+        id: vars
+        run: echo "owner_lower=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
       - name: Log in to GHCR
+        if: ${{ secrets.GHCR_USER != '' && secrets.GHCR_TOKEN != '' }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ secrets.GHCR_USER }}
           password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Log in to GHCR (fallback to GITHUB_TOKEN)
+        if: ${{ secrets.GHCR_USER == '' || secrets.GHCR_TOKEN == '' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -42,8 +53,8 @@ jobs:
           file: ./backend/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/request-backend:latest
-            ghcr.io/${{ github.repository_owner }}/request-backend:${{ github.sha }}
+            ghcr.io/${{ steps.vars.outputs.owner_lower }}/request-backend:latest
+            ghcr.io/${{ steps.vars.outputs.owner_lower }}/request-backend:${{ github.sha }}
 
   deploy:
     name: Deploy to Server (SSH)
@@ -55,36 +66,33 @@ jobs:
       group: backend-deploy-production
       cancel-in-progress: true
     steps:
-      - name: Connect and deploy
+      - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script_stop: true
-          - name: Prepare lowercase owner
-            id: vars
-            run: |
-              echo "owner_lower=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
-
           script: |
             set -e
-            IMAGE_BASE="ghcr.io/${{ github.repository_owner }}/request-backend"
+            REPO_OWNER="${{ github.repository_owner }}"
+            IMAGE_OWNER="$(echo "$REPO_OWNER" | tr '[:upper:]' '[:lower:]')"
+            IMAGE_BASE="ghcr.io/${IMAGE_OWNER}/request-backend"
             IMAGE_TAG="${{ github.sha }}"
             IMAGE="$IMAGE_BASE:$IMAGE_TAG"
-            echo "[Deploy] Logging into GHCR"
-            echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u ${{ secrets.GHCR_USER }} --password-stdin
+
+            echo "[Deploy] Logging into GHCR if creds provided"
+            if [ -n "${{ secrets.GHCR_TOKEN }}" ] && [ -n "${{ secrets.GHCR_USER }}" ]; then
+              echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
+            fi
 
             echo "[Deploy] Pull image $IMAGE"
             docker pull "$IMAGE"
-                ghcr.io/${{ steps.vars.outputs.owner_lower }}/request-backend:latest
-                ghcr.io/${{ steps.vars.outputs.owner_lower }}/request-backend:${{ github.sha }}
+
             sudo mkdir -p /opt/request-backend
             sudo chown $USER:$USER /opt/request-backend
 
-            # Ensure curl exists for health check
             if ! command -v curl >/dev/null 2>&1; then
-              echo "[Deploy] Installing curl"
               if command -v apt-get >/dev/null 2>&1; then
                 sudo apt-get update -y && sudo apt-get install -y curl
               elif command -v yum >/dev/null 2>&1; then
@@ -102,9 +110,7 @@ jobs:
               --name request-backend \
               --restart unless-stopped \
               --env-file /opt/request-backend/production.env \
-                        REPO_OWNER="${{ github.repository_owner }}"
-                        IMAGE_OWNER=$(echo "$REPO_OWNER" | tr '[:upper:]' '[:lower:]')
-                        IMAGE_BASE="ghcr.io/${IMAGE_OWNER}/request-backend"
+              -p 127.0.0.1:3001:3001 \
               "$IMAGE"
 
             echo "[Deploy] Health check"
@@ -116,13 +122,9 @@ jobs:
               echo "[Deploy] Waiting for service... ($i/30)"
               sleep 2
             done
-            # Final verification (fail workflow if unhealthy)
             curl -fsS http://127.0.0.1:3001/health >/dev/null
 
-            echo "[Deploy] Record last successful SHA"
             echo "$IMAGE_TAG" | sudo tee /opt/request-backend/last_successful.sha > /dev/null
-
-            echo "[Deploy] Prune old images"
             docker image prune -f
 
       - name: Rollback on failure
@@ -135,14 +137,15 @@ jobs:
           script_stop: true
           script: |
             set -e
-            IMAGE_BASE="ghcr.io/${{ github.repository_owner }}/request-backend"
+            REPO_OWNER="${{ github.repository_owner }}"
+            IMAGE_OWNER="$(echo "$REPO_OWNER" | tr '[:upper:]' '[:lower:]')"
+            IMAGE_BASE="ghcr.io/${IMAGE_OWNER}/request-backend"
+
             echo "[Rollback] Attempting rollback"
             if [ -f /opt/request-backend/last_successful.sha ]; then
-              LAST_SHA=$(cat /opt/request-backend/last_successful.sha)
+              LAST_SHA="$(cat /opt/request-backend/last_successful.sha)"
               IMAGE="$IMAGE_BASE:$LAST_SHA"
-              echo "[Rollback] Pulling $IMAGE"
               docker pull "$IMAGE"
-              echo "[Rollback] Restarting container"
               if [ "$(docker ps -aq -f name=request-backend)" ]; then
                 docker rm -f request-backend || true
               fi
@@ -152,7 +155,6 @@ jobs:
                 --env-file /opt/request-backend/production.env \
                 -p 127.0.0.1:3001:3001 \
                 "$IMAGE"
-              echo "[Rollback] Verifying health"
               for i in $(seq 1 30); do
                 if curl -fsS http://127.0.0.1:3001/health >/dev/null 2>&1; then
                   echo "[Rollback] Service healthy after rollback"
