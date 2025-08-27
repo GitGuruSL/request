@@ -184,6 +184,35 @@ class _HomeScreenState extends State<HomeScreen> {
           icon: Icons.flight,
           color: const Color(0xFF9C27B0),
         ),
+        // New Coming Soon modules
+        _RequestType(
+          type: 'construction',
+          title: 'Construction & Renovation',
+          subtitle: 'Builders, repairs and remodels',
+          icon: Icons.construction,
+          color: const Color(0xFF8D6E63),
+        ),
+        _RequestType(
+          type: 'events',
+          title: 'Events & Catering',
+          subtitle: 'Weddings, parties, corporate',
+          icon: Icons.celebration,
+          color: const Color(0xFFFFC107),
+        ),
+        _RequestType(
+          type: 'moving',
+          title: 'Moving & Logistics',
+          subtitle: 'House/office shifting, trucks',
+          icon: Icons.moving,
+          color: const Color(0xFF0EA5E9),
+        ),
+        _RequestType(
+          type: 'education',
+          title: 'Education & Tutoring',
+          subtitle: 'School, languages, test prep',
+          icon: Icons.school,
+          color: const Color(0xFF10B981),
+        ),
       ];
 
   String _greetingName() {
@@ -272,8 +301,12 @@ class _HomeScreenState extends State<HomeScreen> {
   // Quick create bottom sheet removed from Home.
 
   bool _moduleEnabled(String type) {
-    // Tours & Travel is always coming soon
-    if (type == 'tours') return false;
+    // Coming Soon modules (temporarily gated off)
+    if (type == 'tours' ||
+        type == 'construction' ||
+        type == 'events' ||
+        type == 'moving' ||
+        type == 'education') return false;
 
     final key = switch (type) {
       'rental' => 'rent',
@@ -737,14 +770,18 @@ class _QuickActionsGrid extends StatelessWidget {
       itemCount: items.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 2.2,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
+        // Slightly higher aspect ratio -> shorter cards (more content fits)
+        childAspectRatio: 2.6,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
       ),
       itemBuilder: (ctx, i) {
         final it = items[i];
         final disabled = !moduleEnabled(it.type);
-        final title = it.title.split(' ').first; // concise title like "Item"
+        // Show a single concise word (split by space or &)
+        final title = it.title
+            .split(RegExp(r'\s|&'))
+            .first; // e.g., "Tours & Travel" -> "Tours"
         final textColor =
             disabled ? const Color(0xFF9CA3AF) : AppTheme.textPrimary;
         final subColor =
@@ -755,7 +792,7 @@ class _QuickActionsGrid extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           child: Container(
             decoration: GlassTheme.glassContainerDisabled(disabled: disabled),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
               children: [
                 // Texts (title + subtitle)
@@ -771,29 +808,29 @@ class _QuickActionsGrid extends StatelessWidget {
                         style: TextStyle(
                           fontWeight: FontWeight.w800,
                           color: textColor,
-                          fontSize: 14,
+                          fontSize: 13,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
                         it.subtitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: subColor,
-                          fontSize: 12,
+                          fontSize: 11,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 // Right illustration/icon (no white box)
                 Icon(
                   it.icon,
                   color: disabled ? const Color(0xFFCBD5E1) : it.color,
-                  size: 32,
+                  size: 28,
                 ),
               ],
             ),
