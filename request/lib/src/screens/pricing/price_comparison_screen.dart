@@ -973,27 +973,35 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
   }
 
   Widget _buildPaymentMethodChip(String name, String paymentMethodId) {
-    return SizedBox(
-      width: 28,
-      height: 28,
-      child: ClipOval(
+    return Container(
+      width: 60,
+      height: 40,
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
         child: FutureBuilder<String?>(
           future: _getPaymentMethodImageUrl(paymentMethodId),
           builder: (context, snapshot) {
             if (snapshot.hasData && snapshot.data != null) {
-              return Image.network(
-                snapshot.data!,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  color: Colors.grey[200],
-                  child:
-                      const Icon(Icons.payment, size: 16, color: Colors.grey),
+              return Padding(
+                padding: const EdgeInsets.all(6.0),
+                child: Image.network(
+                  snapshot.data!,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: Colors.grey[50],
+                    child:
+                        const Icon(Icons.payment, size: 24, color: Colors.grey),
+                  ),
                 ),
               );
             } else {
               return Container(
-                color: Colors.grey[200],
-                child: const Icon(Icons.payment, size: 16, color: Colors.grey),
+                color: Colors.grey[50],
+                child: const Icon(Icons.payment, size: 24, color: Colors.grey),
               );
             }
           },
