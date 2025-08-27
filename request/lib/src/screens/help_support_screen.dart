@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/content_service.dart';
 import 'content_page_screen.dart';
 import '../theme/glass_theme.dart';
@@ -18,6 +19,11 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
   List<ContentPage> _helpPages = [];
   bool _isLoading = true;
 
+  // Contact form controllers
+  final TextEditingController _subjectController = TextEditingController();
+  final TextEditingController _messageController = TextEditingController();
+  final GlobalKey<FormState> _contactFormKey = GlobalKey<FormState>();
+
   @override
   void initState() {
     super.initState();
@@ -28,6 +34,8 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _subjectController.dispose();
+    _messageController.dispose();
     super.dispose();
   }
 
@@ -214,7 +222,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
               color: Colors.grey[800],
             ),
           ),
-          const SizedBox(height: 15),
+          const SizedBox(height: 20),
 
           _buildContactOption(
             Icons.chat,
@@ -250,72 +258,99 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.grey[50],
+              color: GlassTheme.isDarkMode
+                  ? const Color(0xFF2C2C2C).withOpacity(0.8)
+                  : Colors.white,
               borderRadius: BorderRadius.circular(15),
-              border: Border.all(color: Colors.grey[200]!),
+              // Removed border to make it borderless
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Send us a message',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[800],
-                  ),
-                ),
-                const SizedBox(height: 15),
-                TextField(
-                  decoration: InputDecoration(
-                    labelText: 'Subject',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: Colors.blue[600]!),
+            child: Form(
+              key: _contactFormKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Send us a message',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: GlassTheme.colors.textPrimary,
                     ),
                   ),
-                ),
-                const SizedBox(height: 15),
-                TextField(
-                  maxLines: 5,
-                  decoration: InputDecoration(
-                    labelText: 'Message',
-                    alignLabelWithHint: true,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: Colors.blue[600]!),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _sendMessage,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue[600],
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
+                  const SizedBox(height: 15),
+                  TextFormField(
+                    controller: _subjectController,
+                    decoration: InputDecoration(
+                      labelText: 'Subject',
+                      border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide:
+                            BorderSide(color: GlassTheme.colors.textAccent),
+                      ),
                     ),
-                    child: const Text(
-                      'Send Message',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter a subject';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 15),
+                  TextFormField(
+                    controller: _messageController,
+                    maxLines: 5,
+                    decoration: InputDecoration(
+                      labelText: 'Message',
+                      alignLabelWithHint: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide:
+                            BorderSide(color: GlassTheme.colors.textAccent),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter your message';
+                      }
+                      if (value.trim().length < 10) {
+                        return 'Message should be at least 10 characters long';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _sendMessage,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: GlassTheme.colors.textAccent,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        elevation: 0, // Remove shadow
+                        shadowColor: Colors.transparent, // Remove shadow
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text(
+                        'Send Message',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
@@ -324,13 +359,15 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
   }
 
   Widget _buildFAQItem(String question, String answer) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 10),
+      decoration: GlassTheme.glassContainer,
       child: ExpansionTile(
         title: Text(
           question,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w600,
+            color: GlassTheme.colors.textPrimary,
           ),
         ),
         children: [
@@ -339,7 +376,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
             child: Text(
               answer,
               style: TextStyle(
-                color: Colors.grey[700],
+                color: GlassTheme.colors.textSecondary,
                 height: 1.5,
               ),
             ),
@@ -350,56 +387,215 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
   }
 
   Widget _buildGuideItem(IconData icon, String title, String description) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        leading: Icon(icon, color: Colors.blue[600], size: 28),
-        title: Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
+      decoration: GlassTheme.glassContainer,
+      child: InkWell(
+        onTap: () => _showGuideDialog(title),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF06B6D4)
+                      .withOpacity(0.2), // Cyan color like modern menu
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  icon,
+                  color: const Color(0xFF06B6D4),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: GlassTheme.colors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: GlassTheme.colors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
-        subtitle: Text(description),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: () => _showGuideDialog(title),
       ),
     );
   }
 
   Widget _buildContactOption(
       IconData icon, String title, String description, VoidCallback onTap) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.blue[50],
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, color: Colors.blue[600]),
-        ),
-        title: Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        subtitle: Text(description),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+      decoration: GlassTheme.glassContainer,
+      child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981)
+                      .withOpacity(0.2), // Emerald color like modern menu
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  icon,
+                  color: const Color(0xFF10B981),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: GlassTheme.colors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: GlassTheme.colors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
   void _showGuideDialog(String guide) {
+    String content = '';
+
+    switch (guide) {
+      case 'Getting Started':
+        content = '''
+1. Download and install the Request app
+2. Create your account with email or phone number
+3. Verify your account through OTP
+4. Complete your profile information
+5. Browse categories and start creating requests!
+
+Tip: Add a profile picture to build trust with other users.
+        ''';
+        break;
+      case 'Creating Requests':
+        content = '''
+1. Go to the Browse screen
+2. Select the category that matches your need
+3. Tap "Create Request" button
+4. Fill in all the required details:
+   - Title and description
+   - Budget range
+   - Location
+   - Photos (if applicable)
+5. Review and submit your request
+
+Your request will be visible to businesses in your area!
+        ''';
+        break;
+      case 'Business Features':
+        content = '''
+1. Go to Account > Role Management
+2. Switch to Business account
+3. Upload verification documents
+4. Wait for admin approval
+5. Once verified, you can:
+   - Respond to customer requests
+   - Create business listings
+   - Manage your business profile
+   - View analytics and insights
+
+Business accounts get priority visibility!
+        ''';
+        break;
+      case 'Price Comparison':
+        content = '''
+1. Browse through different business responses
+2. Compare prices, ratings, and reviews
+3. Check business verification status
+4. Contact businesses directly through the app
+5. Make informed decisions based on:
+   - Price ranges
+   - Business ratings
+   - Location proximity
+   - Available services
+
+Always verify business credentials before making payments!
+        ''';
+        break;
+      case 'Ride Requests':
+        content = '''
+1. Select "Transportation" category
+2. Choose "Ride Request" subcategory
+3. Enter pickup and drop-off locations
+4. Set your budget and preferred time
+5. Add any special requirements
+6. Submit the request
+
+Drivers will respond with their offers and availability.
+        ''';
+        break;
+      case 'Delivery Services':
+        content = '''
+1. Select "Delivery" category
+2. Choose the type of delivery needed
+3. Enter pickup and delivery addresses
+4. Specify item details and special instructions
+5. Set your budget and timeline
+6. Submit the request
+
+Delivery providers will contact you with quotes and availability.
+        ''';
+        break;
+      default:
+        content =
+            'This guide will be implemented with detailed step-by-step instructions.';
+    }
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(guide),
-        content: const Text(
-            'This guide will be implemented with detailed step-by-step instructions.'),
+        content: SingleChildScrollView(
+          child: Text(
+            content,
+            style: const TextStyle(height: 1.4),
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -411,32 +607,159 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
   }
 
   void _startLiveChat() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Starting live chat...')),
-    );
+    // For now, redirect to email since live chat is not implemented
+    _sendEmail();
   }
 
-  void _sendEmail() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Opening email client...')),
+  void _sendEmail() async {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: 'info@request.lk',
+      query: 'subject=Support Request&body=Please describe your issue here...',
     );
+
+    try {
+      if (await canLaunchUrl(emailUri)) {
+        await launchUrl(emailUri);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'Could not open email client. Please email us at info@request.lk'),
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Could not open email client. Please email us at info@request.lk'),
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+    }
   }
 
-  void _callSupport() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Calling support...')),
-    );
+  void _callSupport() async {
+    final Uri phoneUri = Uri(scheme: 'tel', path: '0725742238');
+
+    try {
+      if (await canLaunchUrl(phoneUri)) {
+        await launchUrl(phoneUri);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content:
+                  Text('Could not open phone dialer. Please call 0725742238'),
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content:
+                Text('Could not open phone dialer. Please call 0725742238'),
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+    }
   }
 
-  void _reportBug() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Opening bug report form...')),
+  void _reportBug() async {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: 'info@request.lk',
+      query:
+          'subject=Bug Report&body=Please describe the bug you encountered:\n\nSteps to reproduce:\n1. \n2. \n3. \n\nExpected behavior:\n\n\nActual behavior:\n\n\nDevice info:\n\n',
     );
+
+    try {
+      if (await canLaunchUrl(emailUri)) {
+        await launchUrl(emailUri);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'Could not open email client. Please email your bug report to info@request.lk'),
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Could not open email client. Please email your bug report to info@request.lk'),
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+    }
   }
 
-  void _sendMessage() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Message sent successfully!')),
-    );
+  void _sendMessage() async {
+    if (_contactFormKey.currentState?.validate() ?? false) {
+      final String subject = _subjectController.text.trim();
+      final String message = _messageController.text.trim();
+
+      final Uri emailUri = Uri(
+        scheme: 'mailto',
+        path: 'info@request.lk',
+        query: 'subject=$subject&body=$message',
+      );
+
+      try {
+        if (await canLaunchUrl(emailUri)) {
+          await launchUrl(emailUri);
+
+          // Clear the form after successful send
+          _subjectController.clear();
+          _messageController.clear();
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Email client opened. Please send your message.'),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                    'Could not open email client. Please email us directly at info@request.lk'),
+                duration: Duration(seconds: 4),
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'Could not open email client. Please email us directly at info@request.lk'),
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+      }
+    }
   }
 }

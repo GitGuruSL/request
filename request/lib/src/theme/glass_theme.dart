@@ -128,17 +128,8 @@ class GlassTheme {
         //   colors: colors.glassBackground,
         // ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: const Color(0xFFE5E7EB), // Light gray border
-          width: 1.0,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1), // Subtle shadow
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        // Removed border to make it borderless
+        // Removed boxShadow to make it flat
       );
 
   static BoxDecoration get glassContainerSubtle => BoxDecoration(
@@ -149,17 +140,8 @@ class GlassTheme {
         //   colors: colors.glassBackgroundSubtle,
         // ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFFE5E7EB), // Light gray border
-          width: 1.0,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08), // Subtle shadow
-            blurRadius: 6,
-            offset: const Offset(0, 1),
-          ),
-        ],
+        // Removed border to make it borderless
+        // Removed boxShadow to make it flat
       );
 
   static BoxDecoration glassContainerDisabled({bool disabled = false}) =>
@@ -172,17 +154,8 @@ class GlassTheme {
               : colors.glassBackground,
         ),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: disabled ? colors.glassBorderSubtle : colors.glassBorder,
-          width: 1.0,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: colors.shadowPrimary,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        // Removed border to make it borderless
+        // Removed boxShadow to make it flat
       );
 
   // Background gradient
