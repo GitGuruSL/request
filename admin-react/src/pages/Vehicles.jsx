@@ -64,16 +64,6 @@ const Vehicles = () => {
   // Check permissions
   const hasVehiclePermission = isSuperAdmin || adminData?.permissions?.vehicleManagement;
 
-  if (!hasVehiclePermission) {
-    return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error">
-          You don't have permission to access Vehicle Management. Please contact your administrator.
-        </Alert>
-      </Box>
-    );
-  }
-
   const vehicleIcons = {
     'TwoWheeler': <TwoWheeler />,
     'DirectionsCar': <DirectionsCar />,
@@ -83,16 +73,28 @@ const Vehicles = () => {
   };
 
   useEffect(() => {
-    fetchVehicles();
-    if (!isSuperAdmin && adminData?.country) {
-      fetchCountryVehicles();
+    if (hasVehiclePermission) {
+      fetchVehicles();
+      if (!isSuperAdmin && adminData?.country) {
+        fetchCountryVehicles();
+      }
     }
-  }, [isSuperAdmin, adminData?.country]);
+  }, [isSuperAdmin, adminData?.country, hasVehiclePermission]);
 
   // Debug: Track countryVehicles changes
   useEffect(() => {
     console.log('🔄 countryVehicles state updated:', countryVehicles);
   }, [countryVehicles]);
+
+  if (!hasVehiclePermission) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">
+          You don't have permission to access Vehicle Management. Please contact your administrator.
+        </Alert>
+      </Box>
+    );
+  }
 
   const fetchVehicles = async () => {
     try {

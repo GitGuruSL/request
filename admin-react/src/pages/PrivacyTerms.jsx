@@ -54,6 +54,12 @@ const PrivacyTerms = () => {
   // Check permissions
   const hasLegalPermission = isSuperAdmin || adminData?.permissions?.legalDocumentManagement;
 
+  useEffect(() => {
+    if (hasLegalPermission) {
+      loadDocuments();
+    }
+  }, [userCountry, hasLegalPermission]);
+
   if (!hasLegalPermission) {
     return (
       <Box sx={{ p: 3 }}>
@@ -63,10 +69,6 @@ const PrivacyTerms = () => {
       </Box>
     );
   }
-
-  useEffect(() => {
-    loadDocuments();
-  }, [userCountry, hasLegalPermission]);
 
   const loadDocuments = async () => {
     try {
