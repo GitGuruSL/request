@@ -1,4 +1,5 @@
 import '../services/api_client.dart';
+import '../services/s3_image_upload_service.dart';
 
 class PaymentMethod {
   final String id; // country_payment_methods.id
@@ -7,6 +8,7 @@ class PaymentMethod {
   final String category;
   final String imageUrl;
   final String fees;
+  String? _signedImageUrl;
 
   PaymentMethod({
     required this.id,
@@ -16,6 +18,25 @@ class PaymentMethod {
     required this.imageUrl,
     required this.fees,
   });
+
+  /// Get signed URL for the payment method image
+  Future<String?> getSignedImageUrl() async {
+    if (_signedImageUrl != null) return _signedImageUrl;
+
+    if (imageUrl.isEmpty) return null;
+
+    // If it's already a full URL, return as is
+    if (imageUrl.startsWith('http')) return imageUrl;
+
+    // If it's an S3 key, get signed URL
+    try {
+      _signedImageUrl = await S3ImageUploadService.getSignedUrlForKey(imageUrl);
+      return _signedImageUrl;
+    } catch (e) {
+      print('Error getting signed URL for payment method $name: $e');
+      return null;
+    }
+  }
 
   factory PaymentMethod.fromJson(Map<String, dynamic> json) {
     return PaymentMethod(

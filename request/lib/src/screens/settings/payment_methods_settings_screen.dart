@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import '../../services/auth_service.dart';
 import '../../services/payment_methods_service.dart';
 import '../../services/rest_support_services.dart';
-import '../../services/api_client.dart';
 import '../../theme/glass_theme.dart';
 
 class PaymentMethodsSettingsScreen extends StatefulWidget {
@@ -48,10 +47,60 @@ class _PaymentMethodsSettingsScreenState
     }
   }
 
-  String _absoluteUrl(String url) {
-    if (url.isEmpty || url.startsWith('http')) return url;
-    final base = ApiClient.baseUrlPublic;
-    return url.startsWith('/') ? '$base$url' : '$base/$url';
+  /// Widget to display payment method image with S3 signed URL support
+  Widget _buildPaymentMethodImage(PaymentMethod method, {double size = 40}) {
+    return FutureBuilder<String?>(
+      future: method.getSignedImageUrl(),
+      builder: (context, snapshot) {
+        final imageUrl = snapshot.data;
+        final hasImage = imageUrl != null && imageUrl.isNotEmpty;
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              shape: BoxShape.circle,
+            ),
+            child: const CircularProgressIndicator(strokeWidth: 2),
+          );
+        }
+
+        return ClipOval(
+          child: SizedBox(
+            width: size,
+            height: size,
+            child: hasImage
+                ? Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Container(
+                        color: Colors.grey[200],
+                        child: const CircularProgressIndicator(strokeWidth: 2),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      print(
+                          'Failed to load payment image: $imageUrl, Error: $error');
+                      return Container(
+                        color: Colors.grey[200],
+                        child: Icon(Icons.payment,
+                            size: size * 0.5, color: Colors.grey),
+                      );
+                    },
+                  )
+                : Container(
+                    color: Colors.grey[200],
+                    child: Icon(Icons.payment,
+                        size: size * 0.5, color: Colors.grey),
+                  ),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _save() async {
@@ -143,19 +192,8 @@ class _PaymentMethodsSettingsScreenState
                       itemBuilder: (context, index) {
                         final m = notSelected[index];
                         final isPicked = localSelected.contains(m.id);
-                        final avatarUrl = m.imageUrl.isNotEmpty
-                            ? _absoluteUrl(m.imageUrl)
-                            : '';
                         return ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: Colors.grey[200],
-                            backgroundImage: (avatarUrl.isNotEmpty)
-                                ? NetworkImage(avatarUrl)
-                                : null,
-                            child: (avatarUrl.isEmpty)
-                                ? const Icon(Icons.payment, color: Colors.grey)
-                                : null,
-                          ),
+                          leading: _buildPaymentMethodImage(m, size: 40),
                           title: Text(m.name),
                           subtitle: m.category.isNotEmpty
                               ? Text(m.category.toUpperCase(),
@@ -303,34 +341,10 @@ class _PaymentMethodsSettingsScreenState
                           spacing: 10,
                           runSpacing: 10,
                           children: selectedMethods.map((m) {
-                            final hasImage = m.imageUrl.isNotEmpty;
-                            final imgUrl =
-                                hasImage ? _absoluteUrl(m.imageUrl) : '';
                             return Stack(
                               clipBehavior: Clip.none,
                               children: [
-                                SizedBox(
-                                  width: 40,
-                                  height: 40,
-                                  child: ClipOval(
-                                    child: hasImage
-                                        ? Image.network(
-                                            imgUrl,
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (_, __, ___) =>
-                                                Container(
-                                              color: Colors.grey[200],
-                                              child: const Icon(Icons.payment,
-                                                  size: 18, color: Colors.grey),
-                                            ),
-                                          )
-                                        : Container(
-                                            color: Colors.grey[200],
-                                            child: const Icon(Icons.payment,
-                                                size: 18, color: Colors.grey),
-                                          ),
-                                  ),
-                                ),
+                                _buildPaymentMethodImage(m, size: 40),
                                 Positioned(
                                   right: -6,
                                   top: -6,

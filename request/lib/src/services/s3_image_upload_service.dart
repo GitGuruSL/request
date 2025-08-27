@@ -17,6 +17,29 @@ class S3ImageUploadService {
     return 'https://api.alphabet.lk';
   }
 
+  /// Get signed URL for S3 object
+  static Future<String?> getSignedUrlForKey(String s3Key) async {
+    try {
+      final response = await ApiClient.instance.get<dynamic>(
+        '/api/s3/signed-url',
+        queryParameters: {'key': s3Key},
+      );
+
+      if (response.isSuccess && response.data != null) {
+        final data = response.data;
+        if (data is Map<String, dynamic> && data['signedUrl'] != null) {
+          return data['signedUrl'] as String;
+        }
+      }
+      return null;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ [S3Service] Error getting signed URL for $s3Key: $e');
+      }
+      return null;
+    }
+  }
+
   /// Upload image to S3 using the backend S3 service
   Future<String?> uploadImageToS3(XFile file, String uploadType,
       {String? userId}) async {
