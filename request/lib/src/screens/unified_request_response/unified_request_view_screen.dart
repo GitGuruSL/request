@@ -13,6 +13,7 @@ import 'unified_response_edit_screen.dart';
 import '../chat/conversation_screen.dart';
 import '../../services/chat_service.dart';
 import '../../services/rest_request_service.dart' show ReviewsService;
+import '../account/public_profile_screen.dart';
 
 /// UnifiedRequestViewScreen (Minimal REST Migration)
 /// Legacy Firebase-based logic removed. Displays core request info only.
@@ -445,7 +446,7 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
     final acceptedId = _request!.acceptedResponseId;
     if (acceptedId == null) return;
     // Find the accepted response to show context
-  // Ensure responses loaded; dialog does not display responder info for now
+    // Ensure responses loaded; dialog does not display responder info for now
     int rating = 5;
     final commentCtrl = TextEditingController();
     await showDialog(
@@ -480,7 +481,8 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           FilledButton(
             onPressed: _submittingReview
                 ? null
@@ -495,10 +497,15 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                     if (!mounted) return;
                     Navigator.pop(ctx);
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text(ok ? 'Review submitted' : 'Failed to submit review')));
+                        content: Text(ok
+                            ? 'Review submitted'
+                            : 'Failed to submit review')));
                   },
             child: _submittingReview
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2))
                 : const Text('Submit'),
           ),
         ],
@@ -1053,9 +1060,22 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                           Icon(Icons.person, size: 18, color: Colors.grey[600]),
                           const SizedBox(width: 8),
                           Expanded(
-                            child: Text(r.userName ?? 'Unknown User',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w600)),
+                            child: GestureDetector(
+                              onTap: () {
+                                if ((r.userId).isNotEmpty) {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          PublicProfileScreen(userId: r.userId),
+                                    ),
+                                  );
+                                }
+                              },
+                              child: Text(r.userName ?? 'Unknown User',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      decoration: TextDecoration.underline)),
+                            ),
                           ),
                           if (!_isOwner) ...[
                             IconButton(
@@ -1226,7 +1246,9 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                           onPressed: _confirmDeleteRequest,
                           icon: const Icon(Icons.delete_outline, size: 16),
                           label: const Text('Delete')),
-                    ])
+                    ]),
+                    const SizedBox(height: 8),
+                    _ownerActions(),
                   ],
                 ])),
             const SizedBox(height: 20),

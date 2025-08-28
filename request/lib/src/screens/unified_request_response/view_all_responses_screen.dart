@@ -7,6 +7,7 @@ import '../../services/enhanced_request_service.dart';
 import '../../services/messaging_service.dart';
 import '../messaging/conversation_screen.dart';
 import 'unified_response_view_screen.dart';
+import '../account/public_profile_screen.dart';
 
 class ViewAllResponsesScreen extends StatefulWidget {
   final RequestModel request;
@@ -158,18 +159,33 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
                   // Header with responder info and status
                   Row(
                     children: [
-                      CircleAvatar(
-                        radius: 20,
-                        backgroundColor: Colors.grey[200],
-                        child: Text(
-                          (responder != null && responder.name.isNotEmpty)
-                              ? responder.name[0]
-                              : (fallbackName != null && fallbackName.isNotEmpty
-                                  ? fallbackName[0]
-                                  : 'U'),
-                          style: const TextStyle(
-                            color: Colors.black54,
-                            fontWeight: FontWeight.bold,
+                      GestureDetector(
+                        onTap: () {
+                          final uid = response.responderId;
+                          if (uid.isNotEmpty) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    PublicProfileScreen(userId: uid),
+                              ),
+                            );
+                          }
+                        },
+                        child: CircleAvatar(
+                          radius: 20,
+                          backgroundColor: Colors.grey[200],
+                          child: Text(
+                            (responder != null && responder.name.isNotEmpty)
+                                ? responder.name[0]
+                                : (fallbackName != null &&
+                                        fallbackName.isNotEmpty
+                                    ? fallbackName[0]
+                                    : 'U'),
+                            style: const TextStyle(
+                              color: Colors.black54,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
@@ -178,9 +194,26 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              responder?.name ?? fallbackName ?? 'Unknown User',
-                              style: GlassTheme.titleSmall,
+                            GestureDetector(
+                              onTap: () {
+                                final uid = response.responderId;
+                                if (uid.isNotEmpty) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          PublicProfileScreen(userId: uid),
+                                    ),
+                                  );
+                                }
+                              },
+                              child: Text(
+                                responder?.name ??
+                                    fallbackName ??
+                                    'Unknown User',
+                                style: GlassTheme.titleSmall.copyWith(
+                                    decoration: TextDecoration.underline),
+                              ),
                             ),
                             Text(
                               'Response to ${_getTypeDisplayName(widget.request.type.toString().split('.').last)}',
