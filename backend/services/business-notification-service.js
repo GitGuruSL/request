@@ -45,10 +45,16 @@ class BusinessNotificationService {
     const query = `
       SELECT DISTINCT bv.user_id, bv.business_name, bv.business_email
       FROM business_verifications bv
+      LEFT JOIN business_types bt ON bt.id = bv.business_type_id
       WHERE bv.is_verified = true
         AND bv.status = 'approved'
-        AND (bv.business_type = 'delivery_service' OR bv.business_type = 'both')
         AND bv.country = $1
+        AND (
+          LOWER(COALESCE(bt.name, '')) = 'delivery service' OR
+          LOWER(COALESCE(bv.business_category, '')) = 'delivery service' OR
+          bv.business_type = 'delivery_service' OR
+          bv.business_type = 'both'
+        )
       ORDER BY bv.business_name
     `;
 
@@ -113,9 +119,11 @@ class BusinessNotificationService {
    */
   static async canBusinessRespondToRequest(userId, requestType, categoryId) {
     const query = `
-      SELECT business_type, categories, is_verified, status
-      FROM business_verifications 
-      WHERE user_id = $1 AND is_verified = true AND status = 'approved'
+      SELECT bv.business_type, bv.categories, bv.is_verified, bv.status,
+             COALESCE(bt.name, '') as bt_name, COALESCE(bv.business_category, '') as bt_category
+      FROM business_verifications bv
+      LEFT JOIN business_types bt ON bt.id = bv.business_type_id
+      WHERE bv.user_id = $1 AND bv.is_verified = true AND bv.status = 'approved'
     `;
 
     const result = await database.query(query, [userId]);
@@ -128,9 +136,11 @@ class BusinessNotificationService {
     // Check request type restrictions
     if (requestType === 'delivery') {
       // Only delivery service businesses can respond to delivery requests
-      if (business.business_type === 'delivery_service' || business.business_type === 'both') {
-        return { canRespond: true, reason: 'delivery_service_authorized' };
-      }
+      const name = (business.bt_name || '').toLowerCase();
+      const cat = (business.bt_category || '').toLowerCase();
+      const legacy = business.business_type;
+      const isDelivery = name === 'delivery service' || cat === 'delivery service' || legacy === 'delivery_service' || legacy === 'both';
+      if (isDelivery) return { canRespond: true, reason: 'delivery_service_authorized' };
       return { canRespond: false, reason: 'delivery_requires_delivery_service' };
     }
 
@@ -153,9 +163,11 @@ class BusinessNotificationService {
    */
   static async getBusinessAccessRights(userId) {
     const query = `
-      SELECT business_type, categories, is_verified, status
-      FROM business_verifications 
-      WHERE user_id = $1
+      SELECT bv.business_type, bv.categories, bv.is_verified, bv.status,
+             COALESCE(bt.name, '') as bt_name, COALESCE(bv.business_category, '') as bt_category
+      FROM business_verifications bv
+      LEFT JOIN business_types bt ON bt.id = bv.business_type_id
+      WHERE bv.user_id = $1
     `;
 
     const result = await database.query(query, [userId]);
@@ -176,11 +188,14 @@ class BusinessNotificationService {
     }
 
     const business = result.rows[0];
-    const isVerified = business.is_verified && business.status === 'approved';
+  const isVerified = business.is_verified && business.status === 'approved';
 
-    // Determine access rights based on business type
-    const isProductSeller = business.business_type === 'product_selling' || business.business_type === 'both';
-    const isDeliveryService = business.business_type === 'delivery_service' || business.business_type === 'both';
+  // Determine access rights based on type (support both legacy string and new bt_name/category)
+  const btName = (business.bt_name || '').toLowerCase();
+  const btCat = (business.bt_category || '').toLowerCase();
+  const legacy = (business.business_type || '').toLowerCase();
+  const isProductSeller = btName === 'product seller' || btCat === 'product seller' || legacy === 'product_selling' || legacy === 'both';
+  const isDeliveryService = btName === 'delivery service' || btCat === 'delivery service' || legacy === 'delivery_service' || legacy === 'both';
 
     return {
       // Price management (only product sellers)

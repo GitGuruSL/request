@@ -139,7 +139,8 @@ router.get('/form-data', async (req, res) => {
     }
     function modulesForBusinessType(name) {
       const n = normalizeName(name);
-      if (n.includes('product')) return ['item'];
+      // For now, do not map Product Seller to item groups (no subcategories)
+      if (n.includes('product')) return [];
       if (n.includes('delivery')) return [];
       if (n.includes('tour')) return ['tours'];
       if (n.includes('event')) return ['events'];
@@ -160,12 +161,9 @@ router.get('/form-data', async (req, res) => {
         const arr = subcategoriesByModule[m] || [];
         for (const g of arr) groups.push(g);
       }
-      // Ensure Product Seller uses item groups
-      const modulesResolved = mlist.length ? mlist : (normalizeName(bt.name).includes('product') ? ['item'] : []);
-      if (modulesResolved.includes('item') && groups.length === 0) {
-        for (const g of itemSubcategoriesByCategory) groups.push(g);
-      }
-      subcategoriesByBusinessType[key] = { modules: modulesResolved, groups };
+  // No fallback for Product Seller; keep empty groups to hide picker
+  const modulesResolved = mlist;
+  subcategoriesByBusinessType[key] = { modules: modulesResolved, groups };
     }
 
   res.json({
