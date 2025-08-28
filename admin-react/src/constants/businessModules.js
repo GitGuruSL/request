@@ -238,7 +238,8 @@ export const getModulesUsingDependency = (moduleId) => {
 export const BUSINESS_TYPE_TO_MODULES = {
   // Current active LK types
   'Product Seller': ['item', 'service', 'rent', 'price'], // price is public but sellers manage prices
-  'Delivery Service': ['delivery'],
+  // Delivery Service: access to all request modules except price & ride
+  'Delivery Service': ['item', 'service', 'rent', 'delivery'],
 
   // Future verticals (disabled by default at country level)
   'Tours': ['tours'],

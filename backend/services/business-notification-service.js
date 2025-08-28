@@ -200,19 +200,20 @@ class BusinessNotificationService {
     return {
       // Price management (only product sellers)
       canAddPrices: isVerified && isProductSeller,
-      
+
       // Request creation rights
-      canSendItemRequests: isVerified && isProductSeller,    // Product sellers can request items
-      canSendServiceRequests: isVerified && isProductSeller, // Product sellers can request services  
-      canSendRentRequests: isVerified && isProductSeller,    // Product sellers can request rentals
-      canSendDeliveryRequests: isVerified,                   // Anyone can request delivery
-      canSendRideRequests: false,                            // Only individual users (drivers) handle rides
-      
+      // Delivery Service has access to all request types except price & ride
+      canSendItemRequests: isVerified && (isProductSeller || isDeliveryService),
+      canSendServiceRequests: isVerified && (isProductSeller || isDeliveryService),
+      canSendRentRequests: isVerified && (isProductSeller || isDeliveryService),
+      canSendDeliveryRequests: isVerified, // anyone can request delivery
+      canSendRideRequests: false,          // rides are for drivers only
+
       // Response rights
       canRespondToDelivery: isVerified && isDeliveryService, // Only delivery services
       canRespondToRide: false,                               // Only registered drivers, not businesses
       canRespondToOther: isVerified,                         // Anyone can respond to item/service/rent
-      
+
       // Metadata
       categories: business.categories || [],
       businessType: business.business_type,
