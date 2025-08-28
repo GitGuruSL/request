@@ -74,17 +74,17 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
           return 'Ride';
         case 'price':
         case 'pricing':
-        case 'Education':
-          return _TypeStyle(Icons.school, const Color(0xFF673AB7), Colors.white); // deep purple
-        case 'Hiring':
-          return _TypeStyle(Icons.work_outline, const Color(0xFFFFA000), Colors.white); // amber 700
-        case 'Construction':
-          return _TypeStyle(Icons.construction, const Color(0xFF795548), Colors.white); // brown
-        case 'Events':
-          return _TypeStyle(Icons.event, const Color(0xFFE91E63), Colors.white); // pink
-        case 'Tours':
-          return _TypeStyle(Icons.travel_explore, const Color(0xFF3F51B5), Colors.white); // indigo
           return 'Price';
+        case 'Education':
+          return 'Education';
+        case 'Hiring':
+          return 'Hiring';
+        case 'Construction':
+          return 'Construction';
+        case 'Events':
+          return 'Events';
+        case 'Tours':
+          return 'Tours';
         case 'tours':
           return 'Tours';
         case 'events':
@@ -1472,8 +1472,8 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
         return _TypeStyle(Icons.work_outline, const Color(0xFFFFA000),
             Colors.white); // amber 700
       case 'Construction':
-        return _TypeStyle(Icons.construction, const Color(0xFF795548),
-            Colors.white); // brown
+        return _TypeStyle(
+            Icons.construction, const Color(0xFF795548), Colors.white); // brown
       case 'Events':
         return _TypeStyle(
             Icons.event, const Color(0xFFE91E63), Colors.white); // pink
