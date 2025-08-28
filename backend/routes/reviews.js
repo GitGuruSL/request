@@ -63,7 +63,7 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
 
     // Prevent duplicate reviews for same pair on this request
     const existing = await db.queryOne(
-      'SELECT id FROM reviews WHERE request_id=$1 AND reviewer_id=$2 AND reviewee_id=$3',
+      'SELECT id FROM reviews WHERE request_id=$1 AND reviewer_id=$2::text AND reviewee_id=$3::text',
       [request_id, reviewerId, reqRow.responder_id]
     );
     if (existing) {
@@ -72,7 +72,7 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
 
     const inserted = await db.queryOne(`
       INSERT INTO reviews (request_id, response_id, reviewer_id, reviewee_id, rating, comment, country_code)
-      VALUES ($1,$2,$3,$4,$5,$6,$7)
+      VALUES ($1,$2,$3::text,$4::text,$5,$6,$7)
       RETURNING *
     `, [request_id, reqRow.accepted_response_id, reviewerId, reqRow.responder_id, rate, comment || null, reqRow.country_code || null]);
 
@@ -115,13 +115,13 @@ router.get('/user/:userId', async (req, res) => {
     const rows = await db.query(`
       SELECT rv.*, u.display_name AS reviewer_name, u.photo_url AS reviewer_photo
       FROM reviews rv
-      LEFT JOIN users u ON rv.reviewer_id = u.id
-      WHERE rv.reviewee_id = $1
+      LEFT JOIN users u ON u.id::text = rv.reviewer_id
+      WHERE rv.reviewee_id = $1::text
       ORDER BY rv.created_at DESC
       LIMIT $2 OFFSET $3
     `, [userId, lim, offset]);
 
-    const countRow = await db.queryOne('SELECT COUNT(*)::int AS total FROM reviews WHERE reviewee_id = $1', [userId]);
+    const countRow = await db.queryOne('SELECT COUNT(*)::int AS total FROM reviews WHERE reviewee_id = $1::text', [userId]);
 
     res.json({
       success: true,
@@ -144,7 +144,7 @@ router.get('/stats/:userId', async (req, res) => {
       SELECT 
         COALESCE(AVG(rating), 0)::numeric(10,2) AS average_rating,
         COUNT(*)::int AS review_count
-      FROM reviews WHERE reviewee_id = $1
+      FROM reviews WHERE reviewee_id = $1::text
     `, [userId]);
     res.json({ success: true, data: stats });
   } catch (error) {
@@ -159,7 +159,7 @@ router.get('/request/:requestId/mine', auth.authMiddleware(), async (req, res) =
     const { requestId } = req.params;
     const reviewerId = req.user.id || req.user.userId;
     const row = await db.queryOne(
-      `SELECT * FROM reviews WHERE request_id = $1 AND reviewer_id = $2 LIMIT 1`,
+      `SELECT * FROM reviews WHERE request_id = $1 AND reviewer_id = $2::text LIMIT 1`,
       [requestId, reviewerId]
     );
     return res.json({ success: true, data: row || null });
