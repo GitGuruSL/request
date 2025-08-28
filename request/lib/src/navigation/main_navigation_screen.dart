@@ -37,8 +37,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     ),
     _NavigationItem(
       screen: const ChatConversationsScreen(),
-      icon: Icons.message_outlined,
-      activeIcon: Icons.message,
+      icon: Icons.chat_bubble_outline_rounded,
+      activeIcon: Icons.chat_bubble_rounded,
       label: 'Messages',
     ),
     _NavigationItem(

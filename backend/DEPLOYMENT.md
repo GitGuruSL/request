@@ -17,14 +17,9 @@ CI/CD
   - `GHCR_USER` (lowercase GitHub username or org) and `GHCR_TOKEN` (PAT with `read:packages`, `write:packages`) — used for image push; if not set, workflow falls back to `GITHUB_TOKEN` for GHCR push.
   - `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY` — used by SSH deploy.
 - GHCR visibility: if your GHCR package is private, the server must also authenticate (workflow will docker login with `GHCR_USER/TOKEN` on the server if provided). If public, server can pull anonymously.
-
-CI (tests and lint)
-- `.github/workflows/backend-ci.yml` runs on push/PR to `main` and `develop` for `backend/**` changes:
   - Node 20, `npm ci`
   - `npm run lint` (if present)
   - `npm test` (if present)
-- Protect branches to require this workflow to pass before merge.
-
 Staging deployment
 - Workflow: `.github/workflows/backend-deploy-staging.yml` (push to `develop` or manual dispatch)
 - Tags pushed: `staging` and `<git-sha>-stg`
@@ -59,8 +54,6 @@ Local development
 Rollbacks
 - SSH to server and run:
   docker pull ghcr.io/<owner>/request-backend:<old-sha>
-  docker rm -f request-backend
-  docker run -d --name request-backend --restart unless-stopped --env-file /opt/request-backend/production.env -p 127.0.0.1:3001:3001 ghcr.io/<owner>/request-backend:<old-sha>
 
 Staging rollback (similar)
 - SSH to staging server and run:
