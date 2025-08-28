@@ -24,7 +24,6 @@ class _CategoryPickerState extends State<CategoryPicker> {
   final Map<String, Map<String, String>> _subcategoryNameToId =
       {}; // cat name -> (sub name -> id)
   bool _isClosing = false;
-  bool _showAll = false; // developer helper to view all backend categories
 
   // Cache last debug stats
   int _totalBackend = 0;
@@ -106,7 +105,7 @@ class _CategoryPickerState extends State<CategoryPicker> {
         });
       }
       debugPrint(
-          'CategoryPicker debug: totalBackend=$_totalBackend explicitMatches=$_explicitMatches type=${widget.requestType} module=${widget.module} showing=${_categories.length} (showAll=$_showAll)');
+          'CategoryPicker: backend=$_totalBackend matches=$_explicitMatches type=${widget.requestType} module=${widget.module} showing=${_categories.length}');
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
       debugPrint('CategoryPicker error: $e');
@@ -220,24 +219,7 @@ class _CategoryPickerState extends State<CategoryPicker> {
         children: [
           const Icon(Icons.inbox_outlined, size: 48, color: Colors.grey),
           const SizedBox(height: 12),
-          Text('No categories for ${widget.requestType}',
-              style: const TextStyle(color: Colors.grey)),
-          const SizedBox(height: 8),
-          Text(
-            'Backend total: $_totalBackend  Explicit matches: $_explicitMatches',
-            style: const TextStyle(fontSize: 12, color: Colors.grey),
-          ),
-          if (!_showAll && _totalBackend > 0 && _explicitMatches == 0)
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: ElevatedButton(
-                onPressed: () {
-                  setState(() => _showAll = true);
-                  _load();
-                },
-                child: const Text('Show All Backend Categories'),
-              ),
-            ),
+          const Text('No categories', style: TextStyle(color: Colors.grey)),
         ],
       ),
     );
