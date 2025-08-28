@@ -10,6 +10,9 @@
         android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission
         android:name="android.permission.INTERNET"/>
+    <!-- Android 13+ notifications permission -->
+    <uses-permission
+        android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="Request"
         android:name="${applicationName}"

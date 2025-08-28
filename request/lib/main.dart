@@ -30,6 +30,7 @@ import 'src/theme/app_theme.dart';
 import 'src/screens/chat/chat_conversations_screen.dart';
 import 'src/screens/notification_screen.dart';
 import 'src/screens/ride/rider_browse_drivers_screen.dart';
+import 'src/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,6 +39,21 @@ void main() async {
     // Initialize REST API services instead of Firebase
     await ServiceManager.instance.initialize();
 
+    // Initialize local notifications
+    await NotificationService.instance.initialize(
+      onSelect: (payload) {
+        // Handle navigation from notification taps
+        // Expect payloads like route|{"key":"value"}
+        // Keep it minimal for now: route name only
+        if (payload != null && payload.isNotEmpty) {
+          // Delay navigation until after runApp
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            navigatorKey.currentState?.pushNamed(payload);
+          });
+        }
+      },
+    );
+
     debugPrint('✅ REST API services initialized successfully');
   } catch (e) {
     debugPrint('❌ Service initialization failed: $e');
@@ -45,6 +61,8 @@ void main() async {
 
   runApp(const MyApp());
 }
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -55,12 +73,31 @@ class MyApp extends StatelessWidget {
       title: 'Request Marketplace',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      navigatorKey: navigatorKey,
       initialRoute: '/',
       onGenerateRoute: (settings) {
         switch (settings.name) {
           case '/':
             return MaterialPageRoute(
               builder: (context) => const SplashScreen(),
+            );
+          case '/dev-notification-test':
+            return MaterialPageRoute(
+              builder: (context) => Scaffold(
+                appBar: AppBar(title: const Text('Notification Test')),
+                body: Center(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      await NotificationService.instance.showLocalNotification(
+                        title: 'Hello from Request',
+                        body: 'This is a test notification',
+                        payload: '/notifications',
+                      );
+                    },
+                    child: const Text('Show test notification'),
+                  ),
+                ),
+              ),
             );
           case '/welcome':
             return MaterialPageRoute(
