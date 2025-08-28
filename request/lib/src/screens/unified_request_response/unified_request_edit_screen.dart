@@ -486,9 +486,24 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
             case 'education':
               // General
               final sl = mf['studentLevel'] ?? mf['level'];
-              if (sl is String && sl.isNotEmpty) _educationLevel = sl;
+              if (sl is String && sl.isNotEmpty) {
+                const allowedLevels = {
+                  'Primary (Grade 1-5)',
+                  'Secondary (Grade 6-11 / O/L)',
+                  'A/L (Advanced Level)',
+                  'Undergraduate',
+                  'Postgraduate',
+                  'Professional',
+                  'Other',
+                };
+                _educationLevel = allowedLevels.contains(sl) ? sl : 'Other';
+              }
               final pm = mf['preferredMode'];
-              if (pm is String && pm.isNotEmpty) _preferredEducationMode = pm;
+              if (pm is String && pm.isNotEmpty) {
+                const allowedModes = {'Online', 'In-Person', 'Both'};
+                _preferredEducationMode =
+                    allowedModes.contains(pm) ? pm : 'Online';
+              }
               final ns = mf['numberOfStudents'];
               if (ns != null) _studentsCountController.text = ns.toString();
               final spw = mf['sessionsPerWeek'];
