@@ -79,7 +79,8 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
   final _experienceYearsController = TextEditingController(); // hiring
   bool _needsGuide = false; // tours
   bool _pickupRequiredForTour = false; // tours
-  String _educationLevel = 'Beginner'; // education
+  // Use a value that always exists in dropdown items to avoid value mismatch
+  String _educationLevel = 'Other'; // education
   String _positionType = 'Full-time'; // hiring
   // Hiring module (edit)
   final TextEditingController _jobTitleController = TextEditingController();
@@ -1150,6 +1151,34 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
         // Tours module: General fields (edit)
         if (_selectedType == RequestType.service &&
             (_selectedModule?.toLowerCase() == 'tours')) ...[
+          // Location / Destination (Tours)
+          _buildFlatField(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Location / Destination',
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                AccurateLocationPickerWidget(
+                  controller: _locationController,
+                  countryCode: CountryService.instance.countryCode,
+                  labelText: '',
+                  hintText: 'Enter destination (e.g., Kandy, Ella, Yala)',
+                  isRequired: true,
+                  prefixIcon: Icons.location_on,
+                  onLocationSelected: (address, lat, lng) {
+                    setState(() {
+                      _locationController.text = address;
+                      _selectedLatitude = lat;
+                      _selectedLongitude = lng;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
           _buildFlatField(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1619,7 +1648,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
     _experienceYearsController.clear();
     _needsGuide = false;
     _pickupRequiredForTour = false;
-    _educationLevel = 'Beginner';
+    _educationLevel = 'Other';
     _preferredEducationMode = 'Online';
     _studentsCountController.clear();
     _sessionsPerWeekController.clear();

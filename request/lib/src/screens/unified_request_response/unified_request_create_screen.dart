@@ -91,7 +91,8 @@ class _UnifiedRequestCreateScreenState
   final _experienceYearsController = TextEditingController(); // hiring
   bool _needsGuide = false; // tours
   bool _pickupRequiredForTour = false; // tours
-  String _educationLevel = 'Beginner'; // education
+  // Use a value that always exists in dropdown items to avoid value mismatch
+  String _educationLevel = 'Other'; // education
   String _positionType = 'Full-time'; // hiring
   // Hiring module
   final TextEditingController _jobTitleController = TextEditingController();
@@ -1403,7 +1404,7 @@ class _UnifiedRequestCreateScreenState
     _experienceYearsController.clear();
     _needsGuide = false;
     _pickupRequiredForTour = false;
-    _educationLevel = 'Beginner';
+    _educationLevel = 'Other';
     _preferredEducationMode = 'Online';
     _positionType = 'Full-time';
     // hiring
