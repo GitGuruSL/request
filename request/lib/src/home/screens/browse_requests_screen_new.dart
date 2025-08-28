@@ -359,10 +359,24 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     );
   }
 
-  // Derive enum RequestType from REST model fields
+  // Derive enum RequestType from REST model fields, preferring metadata.module,
+  // and fall back to smart heuristics from title/description.
   RequestType _typeOf(RequestModel r) {
-    final raw = (r.requestType ?? r.categoryType ?? '').trim().toLowerCase();
-    switch (raw) {
+    // 1) Prefer explicit database or metadata hints
+    final module = r.metadata != null
+        ? r.metadata!['module']?.toString().trim().toLowerCase()
+        : null;
+    final typed = (r.requestType ??
+            r.categoryType ??
+            (r.metadata != null
+                    ? (r.metadata!['request_type'] ?? r.metadata!['type'])
+                    : '')
+                .toString())
+        .trim()
+        .toLowerCase();
+
+    String hint = module?.isNotEmpty == true ? module! : typed;
+    switch (hint) {
       case 'item':
       case 'items':
       case 'product':
@@ -389,9 +403,32 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
       case 'price_comparison':
       case 'pricing':
         return RequestType.price;
-      default:
-        return RequestType.item;
     }
+
+    // 2) Heuristic inference from text when hints are missing/ambiguous
+    final text = '${r.title} ${r.description}'.toLowerCase();
+    bool matchesAny(List<String> words) => words
+        .any((w) => RegExp('\\b' + RegExp.escape(w) + '\\b').hasMatch(text));
+
+    if (matchesAny(['hire', 'rent', 'rental', 'lease', 'book', 'booking'])) {
+      return RequestType.rental;
+    }
+    if (matchesAny(['deliver', 'delivery', 'courier', 'parcel', 'ship'])) {
+      return RequestType.delivery;
+    }
+    if (matchesAny(['ride', 'pickup', 'drop', 'driver', 'taxi', 'transport'])) {
+      return RequestType.ride;
+    }
+    if (matchesAny(['quote', 'quotes', 'price', 'pricing', 'estimate'])) {
+      return RequestType.price;
+    }
+    if (matchesAny(
+        ['repair', 'fix', 'install', 'installation', 'cleaning', 'service'])) {
+      return RequestType.service;
+    }
+
+    // 3) Default to item when nothing else matches
+    return RequestType.item;
   }
 
   String? _cityOf(RequestModel r) => r.cityName;
@@ -531,48 +568,67 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     );
   }
 
-  // Prefer module from metadata for badge, fallback to main type name
+  // Prefer module from metadata for badge, but if it conflicts with inferred
+  // type from text/fields, show the inferred type label. Ensures 'van hire'
+  // appears as Rent, not Item.
   String _displayModuleOrType(RequestModel r) {
-    final module =
-        r.metadata != null ? r.metadata!['module']?.toString() : null;
-    if (module != null && module.trim().isNotEmpty) {
-      final m = module.trim().toLowerCase();
+    String labelFromType(RequestType t) {
+      switch (t) {
+        case RequestType.item:
+          return 'Item';
+        case RequestType.service:
+          return 'Service';
+        case RequestType.rental:
+          return 'Rent';
+        case RequestType.delivery:
+          return 'Delivery';
+        case RequestType.ride:
+          return 'Ride';
+        case RequestType.price:
+          return 'Price';
+      }
+    }
+
+    // Inferred type using robust logic
+    final inferred = _typeOf(r);
+
+    // Map module string to a RequestType to detect conflicts
+    RequestType? typeFromModule(String m) {
       switch (m) {
         case 'item':
         case 'items':
-          return 'Item';
+          return RequestType.item;
         case 'rent':
         case 'rental':
         case 'rentals':
-          return 'Rent';
+          return RequestType.rental;
         case 'delivery':
-          return 'Delivery';
+          return RequestType.delivery;
         case 'ride':
-          return 'Ride';
-        case 'tours':
-          return 'Tours';
-        case 'events':
-          return 'Events';
-        case 'construction':
-          return 'Construction';
-        case 'education':
-          return 'Education';
-        case 'hiring':
-        case 'jobs':
-          return 'Hiring';
+          return RequestType.ride;
         case 'service':
         case 'other':
-          return 'Service';
+          return RequestType.service;
         case 'price':
         case 'pricing':
-          return 'Price';
+          return RequestType.price;
         default:
-          return m.isNotEmpty
-              ? m[0].toUpperCase() + m.substring(1)
-              : _getTypeDisplayName(_typeOf(r));
+          return null;
       }
     }
-    return _getTypeDisplayName(_typeOf(r));
+
+    final module =
+        r.metadata != null ? r.metadata!['module']?.toString() : null;
+    final m = module?.trim().toLowerCase();
+    final moduleType = (m != null && m.isNotEmpty) ? typeFromModule(m) : null;
+
+    // If module absent or conflicts with inferred type, use inferred
+    if (moduleType == null || moduleType != inferred) {
+      return labelFromType(inferred);
+    }
+
+    // Use module label when consistent
+    return labelFromType(moduleType);
   }
 
   String _getTypeDisplayName(RequestType type) {
