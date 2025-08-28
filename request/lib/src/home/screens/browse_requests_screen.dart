@@ -50,21 +50,49 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     _scrollController.addListener(_onScroll);
   }
 
-  // Normalize model type to one of our display tabs
+  // Determine display label prioritizing module over main type
   String _displayTypeFor(models.RequestModel r) {
-    // Prefer explicit DB origin if present in typeSpecificData/request_type
-    String t = r.type.name.toLowerCase();
     final meta = r.typeSpecificData;
-    final dbType = meta['request_type']?.toString() ?? meta['type']?.toString();
-    if (dbType != null && dbType.isNotEmpty) {
-      t = dbType.toLowerCase();
-      if (t.startsWith('requesttype.')) {
-        t = t.substring('requesttype.'.length);
+    // 1) Prefer explicit module saved in metadata by create/edit flows
+    final rawModule = meta['module']?.toString().trim();
+    if (rawModule != null && rawModule.isNotEmpty) {
+      final m = rawModule.toLowerCase();
+      switch (m) {
+        case 'item':
+        case 'items':
+          return 'Item';
+        case 'rent':
+        case 'rental':
+        case 'rentals':
+          return 'Rent';
+        case 'delivery':
+          return 'Delivery';
+        case 'ride':
+          return 'Ride';
+        case 'tours':
+          return 'Tours';
+        case 'events':
+          return 'Events';
+        case 'construction':
+          return 'Construction';
+        case 'education':
+          return 'Education';
+        case 'hiring':
+        case 'jobs':
+          return 'Hiring';
+        case 'other':
+          return 'Service'; // generic services bucket
+        default:
+          // Unknown module string -> Title Case it
+          return m.isNotEmpty ? m[0].toUpperCase() + m.substring(1) : 'Service';
       }
     }
+
+    // 2) Fall back to request type -> best-effort module label
+    final t = r.type.name.toLowerCase();
     switch (t) {
       case 'item':
-        return 'Items';
+        return 'Item';
       case 'service':
         return 'Service';
       case 'rental':
@@ -74,8 +102,9 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
         return 'Delivery';
       case 'ride':
         return 'Ride';
+      case 'price':
+        return 'Price';
       default:
-        // Fallback to keyword check only if type is unknown
         return _getRequestTypeFromCategory(r.type.name, r.title, r.description);
     }
   }
@@ -253,14 +282,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     }
   }
 
-  String _relativeTime(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1) return 'just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
-    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
-  }
+  // Removed unused _relativeTime helper (no longer displayed in cards)
 
   @override
   Widget build(BuildContext context) {
@@ -1100,7 +1122,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  '$requestType Request',
+                  requestType,
                   style: TextStyle(
                     color: style.bg,
                     fontSize: 11,
@@ -1410,7 +1432,7 @@ class _Header extends StatelessWidget {
               Row(
                 children: [
                   Text(
-                    'Discover',
+                    'Discover Requests',
                     style: GlassTheme.titleLarge,
                   ),
                   const Spacer(),

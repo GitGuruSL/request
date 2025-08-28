@@ -426,7 +426,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      _getTypeDisplayName(_typeOf(request)),
+                      _displayModuleOrType(request),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 12,
@@ -529,6 +529,50 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
         ),
       ),
     );
+  }
+
+  // Prefer module from metadata for badge, fallback to main type name
+  String _displayModuleOrType(RequestModel r) {
+    final module =
+        r.metadata != null ? r.metadata!['module']?.toString() : null;
+    if (module != null && module.trim().isNotEmpty) {
+      final m = module.trim().toLowerCase();
+      switch (m) {
+        case 'item':
+        case 'items':
+          return 'Item';
+        case 'rent':
+        case 'rental':
+        case 'rentals':
+          return 'Rent';
+        case 'delivery':
+          return 'Delivery';
+        case 'ride':
+          return 'Ride';
+        case 'tours':
+          return 'Tours';
+        case 'events':
+          return 'Events';
+        case 'construction':
+          return 'Construction';
+        case 'education':
+          return 'Education';
+        case 'hiring':
+        case 'jobs':
+          return 'Hiring';
+        case 'service':
+        case 'other':
+          return 'Service';
+        case 'price':
+        case 'pricing':
+          return 'Price';
+        default:
+          return m.isNotEmpty
+              ? m[0].toUpperCase() + m.substring(1)
+              : _getTypeDisplayName(_typeOf(r));
+      }
+    }
+    return _getTypeDisplayName(_typeOf(r));
   }
 
   String _getTypeDisplayName(RequestType type) {
