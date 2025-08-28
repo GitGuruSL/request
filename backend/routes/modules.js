@@ -25,12 +25,15 @@ const COUNTRY_MODULE_CONFIG = {
       'rental_request',
       'delivery_request',
       'ride_sharing',
-      'food_delivery',
-      'grocery',
-      'beauty',
-      'professional'
+      // Extended service modules
+      'tours',
+      'events',
+      'construction',
+      'education',
+      'hiring',
+      'other'
     ],
-    disabled_modules: ['price_request'] // Example: Price requests not available in US
+    disabled_modules: ['price_request'] // Example
   },
   'IN': { // India
     enabled_modules: [
@@ -38,10 +41,13 @@ const COUNTRY_MODULE_CONFIG = {
       'service_request',
       'delivery_request',
       'ride_sharing',
-      'food_delivery',
-      'grocery',
-      'beauty',
-      'professional'
+      // Extended service modules
+      'tours',
+      'events',
+      'construction',
+      'education',
+      'hiring',
+      'other'
     ],
     disabled_modules: ['rental_request', 'price_request']
   }

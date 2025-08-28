@@ -384,14 +384,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _moduleEnabled(String type) {
     // Group headers are always enabled (they open a chooser)
     if (type == 'products' || type == 'services') return true;
-    // Force-enable additional service types in the UI
-    if (type == 'tours' ||
-        type == 'construction' ||
-        type == 'events' ||
-        type == 'hiring' ||
-        type == 'education' ||
-        type == 'other') return true;
-
+    // All leaf modules (including tours/events/etc) must respect country toggles
     final key = switch (type) {
       'rental' => 'rent',
       _ => type,
@@ -1289,7 +1282,22 @@ class _OptionTile extends StatelessWidget {
     final subColor =
         disabled ? const Color(0xFFB8BFC7) : AppTheme.textSecondary;
     return InkWell(
-      onTap: disabled ? null : onTap,
+      onTap: () {
+        if (disabled) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => ComingSoonWidget(
+                title: option.title,
+                description:
+                    'This feature is not available in your country yet. We\'re working to bring ${option.title.toLowerCase()} to your region soon!',
+                icon: option.icon,
+              ),
+            ),
+          );
+        } else {
+          onTap();
+        }
+      },
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(

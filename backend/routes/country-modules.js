@@ -5,7 +5,9 @@ const auth = require('../services/auth');
 
 // Default known module keys to ensure new modules appear in admin UI even if not set yet
 const DEFAULT_MODULE_KEYS = [
+  // Core
   'item','service','rent','delivery','ride','price',
+  // New service families
   'tours','events','construction','education','hiring','other'
 ];
 
