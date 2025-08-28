@@ -55,6 +55,15 @@ if docker ps -aq -f "label=${LABEL_KEY}=${LABEL_VAL}" | grep -q .; then
   docker rm -f $(docker ps -aq -f "label=${LABEL_KEY}=${LABEL_VAL}") >/dev/null 2>&1 || true
 fi
 
+# Remove any containers created from the same image (any tag) but with a different name
+if docker ps -a --format '{{.ID}} {{.Image}} {{.Names}}' | grep -E "${REPO}[:@]" >/dev/null 2>&1; then
+  while read -r ID IMG NM; do
+    if [[ "$NM" != "$NAME" ]]; then
+      docker rm -f "$ID" >/dev/null 2>&1 || true
+    fi
+  done < <(docker ps -a --format '{{.ID}} {{.Image}} {{.Names}}' | grep -E "${REPO}[:@]")
+fi
+
 echo "🚀 Starting container..."
 docker run -d --name "$NAME" \
   --restart unless-stopped \
