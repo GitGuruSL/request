@@ -623,7 +623,10 @@ router.post('/admin', auth.authMiddleware(), async (req, res) => {
     if (!(await hasCountryBusinessTypesTable())) {
       return res.status(400).json({ success: false, message: 'Business types migration required. Please run /api/business-types/run-migration as super admin.' });
     }
-    const { name, description, icon, country_code, display_order = 0, global_business_type_id } = req.body;
+    const { name, description, icon, country_code, display_order = 0, global_business_type_id,
+      can_manage_prices, can_respond_item, can_respond_service, can_respond_rent,
+      can_respond_tours, can_respond_events, can_respond_construction, can_respond_education,
+      can_respond_hiring, can_respond_delivery } = req.body;
     const userId = req.user.id;
     
     // Validate required fields
@@ -643,13 +646,27 @@ router.post('/admin', auth.authMiddleware(), async (req, res) => {
     }
 
     const insertQuery = `
-      INSERT INTO country_business_types (name, description, icon, country_code, display_order, global_business_type_id, created_by, updated_by)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $7)
+      INSERT INTO country_business_types (
+        name, description, icon, country_code, display_order, global_business_type_id,
+        can_manage_prices, can_respond_item, can_respond_service, can_respond_rent,
+        can_respond_tours, can_respond_events, can_respond_construction, can_respond_education,
+        can_respond_hiring, can_respond_delivery,
+        created_by, updated_by
+      )
+      VALUES ($1, $2, $3, $4, $5, $6,
+              COALESCE($7,false), COALESCE($8,true), COALESCE($9,true), COALESCE($10,true),
+              COALESCE($11,true), COALESCE($12,true), COALESCE($13,true), COALESCE($14,true),
+              COALESCE($15,true), COALESCE($16,false),
+              $17, $17)
       RETURNING *
     `;
 
     const result = await database.queryOne(insertQuery, [
-      name, description, icon, country_code, display_order, global_business_type_id || null, userId
+      name, description, icon, country_code, display_order, global_business_type_id || null,
+      can_manage_prices, can_respond_item, can_respond_service, can_respond_rent,
+      can_respond_tours, can_respond_events, can_respond_construction, can_respond_education,
+      can_respond_hiring, can_respond_delivery,
+      userId
     ]);
 
     res.status(201).json({
@@ -679,7 +696,10 @@ router.post('/admin', auth.authMiddleware(), async (req, res) => {
 router.put('/admin/:id', auth.authMiddleware(), async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, icon, is_active, display_order, global_business_type_id } = req.body;
+    const { name, description, icon, is_active, display_order, global_business_type_id,
+      can_manage_prices, can_respond_item, can_respond_service, can_respond_rent,
+      can_respond_tours, can_respond_events, can_respond_construction, can_respond_education,
+      can_respond_hiring, can_respond_delivery } = req.body;
     const userId = req.user.id;
 
     // Check if business type exists and user can manage it
@@ -712,6 +732,16 @@ router.put('/admin/:id', auth.authMiddleware(), async (req, res) => {
           is_active = COALESCE($5, is_active),
           display_order = COALESCE($6, display_order),
           global_business_type_id = COALESCE($7, global_business_type_id),
+          can_manage_prices = COALESCE($9, can_manage_prices),
+          can_respond_item = COALESCE($10, can_respond_item),
+          can_respond_service = COALESCE($11, can_respond_service),
+          can_respond_rent = COALESCE($12, can_respond_rent),
+          can_respond_tours = COALESCE($13, can_respond_tours),
+          can_respond_events = COALESCE($14, can_respond_events),
+          can_respond_construction = COALESCE($15, can_respond_construction),
+          can_respond_education = COALESCE($16, can_respond_education),
+          can_respond_hiring = COALESCE($17, can_respond_hiring),
+          can_respond_delivery = COALESCE($18, can_respond_delivery),
           updated_by = $8,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = $1
@@ -719,7 +749,10 @@ router.put('/admin/:id', auth.authMiddleware(), async (req, res) => {
     `;
 
     const result = await database.queryOne(updateQuery, [
-      id, name, description, icon, is_active, display_order, global_business_type_id, userId
+      id, name, description, icon, is_active, display_order, global_business_type_id, userId,
+      can_manage_prices, can_respond_item, can_respond_service, can_respond_rent,
+      can_respond_tours, can_respond_events, can_respond_construction, can_respond_education,
+      can_respond_hiring, can_respond_delivery
     ]);
 
     res.json({

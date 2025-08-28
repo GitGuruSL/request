@@ -36,9 +36,9 @@ class BusinessNotificationService {
         return await this.getProductSellerBusinesses(countryCode);
       }
 
-      // Common requests: anyone can respond (notify all verified businesses, prioritize category matches)
+      // Common requests: anyone can respond by default, but respect country capability toggles if present
       if (COMMON.includes(type)) {
-        return await this.getAllBusinessesWithCategoryPreference(categoryId, subcategoryId, countryCode);
+        return await this.getAllBusinessesWithCategoryPreference(categoryId, subcategoryId, countryCode, type);
       }
 
       // For item/service/rent requests, notify all verified businesses in country
@@ -144,18 +144,24 @@ class BusinessNotificationService {
    * Get all businesses with category preference (for item/service/rent requests)
    * Anyone can respond, but prioritize category matches
    */
-  static async getAllBusinessesWithCategoryPreference(categoryId, subcategoryId, countryCode) {
+  static async getAllBusinessesWithCategoryPreference(categoryId, subcategoryId, countryCode, requestType = null) {
     const query = `
       SELECT DISTINCT bv.user_id, bv.business_name, bv.business_email, bv.categories, bv.business_type,
+             cbt.country_code, cbt.name as cbt_name,
+             cbt.can_respond_item, cbt.can_respond_service, cbt.can_respond_rent,
+             cbt.can_respond_tours, cbt.can_respond_events, cbt.can_respond_construction,
+             cbt.can_respond_education, cbt.can_respond_hiring,
              CASE 
                WHEN bv.categories @> $2::jsonb THEN 'category_match'
                WHEN bv.categories @> $3::jsonb THEN 'subcategory_match' 
                ELSE 'general_business'
              END as match_priority
       FROM business_verifications bv
+      LEFT JOIN country_business_types cbt ON cbt.id = bv.country_business_type_id
       WHERE bv.is_verified = true
         AND bv.status = 'approved'
         AND bv.country = $1
+        AND (cbt.country_code IS NULL OR cbt.country_code = $1)
       ORDER BY 
         CASE 
           WHEN bv.categories @> $2::jsonb THEN 1
@@ -173,8 +179,23 @@ class BusinessNotificationService {
 
     const result = await database.query(query, params);
     console.log(`🏪 Found ${result.rows.length} businesses (all can respond, ${result.rows.filter(r => r.match_priority.includes('match')).length} have category preference)`);
-    
-    return result.rows.map(row => ({
+    // Apply capability filter if requestType provided and country flags exist
+    const filtered = result.rows.filter(row => {
+      if (!requestType || !row.cbt_name) return true; // legacy/no country type, allow
+      switch (requestType) {
+        case 'item': return row.can_respond_item !== false; // default true
+        case 'service': return row.can_respond_service !== false;
+        case 'rent': return row.can_respond_rent !== false;
+        case 'tours': return row.can_respond_tours !== false;
+        case 'events': return row.can_respond_events !== false;
+        case 'construction': return row.can_respond_construction !== false;
+        case 'education': return row.can_respond_education !== false;
+        case 'hiring': return row.can_respond_hiring !== false;
+        default: return true;
+      }
+    });
+
+    return filtered.map(row => ({
       userId: row.user_id,
       businessName: row.business_name,
       businessEmail: row.business_email,
@@ -220,9 +241,30 @@ class BusinessNotificationService {
       return { canRespond: false, reason: 'ride_requests_for_drivers_only' };
     }
 
-    // For item/service/rent requests, all verified businesses can respond
-    if (['item', 'service', 'rent'].includes(requestType)) {
-      return { canRespond: true, reason: 'open_to_all_businesses' };
+    // For common requests, respect per-country capabilities if available
+    if (['item','service','rent','tours','events','construction','education','hiring'].includes(requestType)) {
+      const capQuery = `
+        SELECT cbt.*
+        FROM business_verifications bv
+        LEFT JOIN country_business_types cbt ON cbt.id = bv.country_business_type_id
+        WHERE bv.user_id = $1
+      `;
+      const capRes = await database.query(capQuery, [userId]);
+      if (capRes.rows.length === 0 || !capRes.rows[0]) {
+        return { canRespond: true, reason: 'open_to_all_businesses' };
+      }
+      const c = capRes.rows[0];
+      const allowed = {
+        item: c.can_respond_item !== false,
+        service: c.can_respond_service !== false,
+        rent: c.can_respond_rent !== false,
+        tours: c.can_respond_tours !== false,
+        events: c.can_respond_events !== false,
+        construction: c.can_respond_construction !== false,
+        education: c.can_respond_education !== false,
+        hiring: c.can_respond_hiring !== false
+      }[requestType];
+      return { canRespond: !!allowed, reason: allowed ? 'country_capability_enabled' : 'country_capability_disabled' };
     }
 
     return { canRespond: true, reason: 'general_business_request' };
@@ -268,9 +310,20 @@ class BusinessNotificationService {
   const isProductSeller = btName === 'product seller' || btCat === 'product seller' || legacy === 'product_selling' || legacy === 'both';
   const isDeliveryService = ['delivery service','delivery'].includes(btName) || ['delivery service','delivery'].includes(btCat) || legacy === 'delivery_service' || legacy === 'both';
 
+    // Fetch country capability flags
+    const capRes = await database.query(`
+      SELECT cbt.can_manage_prices, cbt.can_respond_item, cbt.can_respond_service, cbt.can_respond_rent,
+             cbt.can_respond_tours, cbt.can_respond_events, cbt.can_respond_construction,
+             cbt.can_respond_education, cbt.can_respond_hiring, cbt.can_respond_delivery
+      FROM country_business_types cbt
+      WHERE cbt.id = $1
+    `, [business.country_business_type_id || null]);
+
+    const caps = capRes.rows[0] || {};
+
     return {
       // Price management (only product sellers)
-      canAddPrices: isVerified && isProductSeller,
+      canAddPrices: isVerified && (caps.can_manage_prices ?? isProductSeller),
 
   // Request creation rights (any verified business can send any request except ride)
   canSendItemRequests: isVerified,
@@ -279,10 +332,10 @@ class BusinessNotificationService {
   canSendDeliveryRequests: isVerified,
       canSendRideRequests: false,          // rides are for drivers only
 
-      // Response rights
-      canRespondToDelivery: isVerified && isDeliveryService, // Only delivery services
+  // Response rights (respect per-country caps)
+  canRespondToDelivery: isVerified && (caps.can_respond_delivery ?? isDeliveryService),
       canRespondToRide: false,                               // Only registered drivers, not businesses
-      canRespondToOther: isVerified,                         // Anyone can respond to item/service/rent
+  canRespondToOther: isVerified && ((caps.can_respond_item ?? true) || (caps.can_respond_service ?? true) || (caps.can_respond_rent ?? true) || (caps.can_respond_tours ?? true) || (caps.can_respond_events ?? true) || (caps.can_respond_construction ?? true) || (caps.can_respond_education ?? true) || (caps.can_respond_hiring ?? true)),
 
       // Metadata
       categories: business.categories || [],
