@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 
 class CustomLogo extends StatelessWidget {
   final double size;
+  final String assetPath;
 
   const CustomLogo({
     Key? key,
     this.size = 120,
+    this.assetPath = 'assets/images/app_logo.png',
   }) : super(key: key);
 
   @override
@@ -14,14 +16,14 @@ class CustomLogo extends StatelessWidget {
       width: size,
       height: size,
       child: Image.asset(
-        'assets/images/app_logo.png',
+        assetPath,
         width: size,
         height: size,
         fit: BoxFit.contain,
         errorBuilder: (context, error, stackTrace) {
           // Debug: Print the error to console
           print('Logo loading error: $error');
-          
+
           // Fallback to a simple container with text for debugging
           return Container(
             width: size,
@@ -69,9 +71,19 @@ class CustomLogo extends StatelessWidget {
     );
   }
 
-  // Named constructors for different sizes
-  static CustomLogo large() => const CustomLogo(size: 120);
+  // Named constructors for different sizes/uses
+  // Welcome screen logo (replace the asset with your welcome logo file)
+  static CustomLogo large() => const CustomLogo(
+        size: 120,
+        assetPath: 'assets/images/logo_welcome.png',
+      );
+
   static CustomLogo medium() => const CustomLogo(size: 80);
   static CustomLogo small() => const CustomLogo(size: 40);
-  static CustomLogo splash() => const CustomLogo(size: 150);
+
+  // Splash screen logo (replace the asset with your splash logo file)
+  static CustomLogo splash() => const CustomLogo(
+        size: 150,
+        assetPath: 'assets/images/logo_splash.png',
+      );
 }
