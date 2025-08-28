@@ -60,9 +60,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
       switch (m) {
         case 'item':
         case 'items':
-          // Special-case: If module is set to item, still infer from text to
-          // catch rentals like "van hire". Only show Item when inference
-          // stays Items.
+          // If module is item(s), infer from text to catch rentals like "van hire".
           final inferred =
               _getRequestTypeFromCategory(r.type.name, r.title, r.description);
           return inferred != 'Items' ? inferred : 'Item';
@@ -74,6 +72,19 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
           return 'Delivery';
         case 'ride':
           return 'Ride';
+        case 'price':
+        case 'pricing':
+        case 'Education':
+          return _TypeStyle(Icons.school, const Color(0xFF673AB7), Colors.white); // deep purple
+        case 'Hiring':
+          return _TypeStyle(Icons.work_outline, const Color(0xFFFFA000), Colors.white); // amber 700
+        case 'Construction':
+          return _TypeStyle(Icons.construction, const Color(0xFF795548), Colors.white); // brown
+        case 'Events':
+          return _TypeStyle(Icons.event, const Color(0xFFE91E63), Colors.white); // pink
+        case 'Tours':
+          return _TypeStyle(Icons.travel_explore, const Color(0xFF3F51B5), Colors.white); // indigo
+          return 'Price';
         case 'tours':
           return 'Tours';
         case 'events':
@@ -86,10 +97,25 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
         case 'jobs':
           return 'Hiring';
         case 'other':
-          return 'Service'; // generic services bucket
+        case 'others':
+        case 'misc':
+        case 'general':
+        case 'unknown':
+        case 'n/a':
+        case 'na':
+        case 'product':
+        case 'products':
+        case 'goods':
+          // Treat generic/unknown modules as ambiguous; prefer inference.
+          final inferred =
+              _getRequestTypeFromCategory(r.type.name, r.title, r.description);
+          return inferred != 'Items' ? inferred : 'Item';
         default:
-          // Unknown module string -> Title Case it
-          return m.isNotEmpty ? m[0].toUpperCase() + m.substring(1) : 'Service';
+          // Unknown specific module -> try inference first; fallback to title-cased module.
+          final inferred =
+              _getRequestTypeFromCategory(r.type.name, r.title, r.description);
+          if (inferred != 'Items') return inferred;
+          return m.isNotEmpty ? m[0].toUpperCase() + m.substring(1) : 'Item';
       }
     }
 
@@ -103,7 +129,10 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
             _getRequestTypeFromCategory(r.type.name, r.title, r.description);
         return inferred != 'Items' ? inferred : 'Item';
       case 'service':
-        return 'Service';
+        // If content suggests otherwise (e.g., rental keywords), override.
+        final inferredService =
+            _getRequestTypeFromCategory(r.type.name, r.title, r.description);
+        return inferredService != 'Service' ? inferredService : 'Service';
       case 'rental':
       case 'rent':
         return 'Rent';
@@ -1249,11 +1278,26 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     String searchText =
         (title ?? '').toLowerCase() + ' ' + (description ?? '').toLowerCase();
 
+    // Normalize punctuation
+    searchText = searchText.replaceAll(RegExp(r'[^a-z0-9\s]'), ' ');
+
+    // Check for price/quote keywords
+    if (searchText.contains('quote') ||
+        searchText.contains('price') ||
+        searchText.contains('pricing') ||
+        searchText.contains('estimate')) {
+      return 'Price';
+    }
+
     // Check for delivery keywords
     if (searchText.contains('delivery') ||
         searchText.contains('deliver') ||
         searchText.contains('courier') ||
-        searchText.contains('shipping')) {
+        searchText.contains('ship') ||
+        searchText.contains('shipping') ||
+        searchText.contains('parcel') ||
+        searchText.contains('package') ||
+        searchText.contains('logistics')) {
       return 'Delivery';
     }
 
@@ -1261,7 +1305,10 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     if (searchText.contains('rent') ||
         searchText.contains('rental') ||
         searchText.contains('lease') ||
-        searchText.contains('hire')) {
+        searchText.contains('leased') ||
+        searchText.contains('hire') ||
+        searchText.contains('booking') ||
+        searchText.contains('book ')) {
       return 'Rent';
     }
 
@@ -1271,7 +1318,17 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
         searchText.contains('maintenance') ||
         searchText.contains('fix') ||
         searchText.contains('consultation') ||
-        searchText.contains('cleaning') || // Added cleaning
+        searchText.contains('cleaning') ||
+        searchText.contains('cleaner') ||
+        searchText.contains('clean ') ||
+        searchText.contains('install') ||
+        searchText.contains('installation') ||
+        searchText.contains('setup') ||
+        searchText.contains('electrician') ||
+        searchText.contains('plumber') ||
+        searchText.contains('plumbing') ||
+        searchText.contains('painting') ||
+        searchText.contains('paint ') ||
         searchText.contains('support')) {
       return 'Service';
     }
@@ -1281,6 +1338,8 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
         searchText.contains('transport') ||
         searchText.contains('taxi') ||
         searchText.contains('driver') ||
+        searchText.contains('pickup') ||
+        searchText.contains('drop') ||
         searchText.contains('travel') ||
         searchText.contains('trip')) {
       return 'Ride';
@@ -1403,6 +1462,24 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
         return _TypeStyle(Icons.build, const Color(0xFF00BCD4), Colors.white);
       case 'Rent':
         return _TypeStyle(Icons.vpn_key, const Color(0xFF2196F3), Colors.white);
+      case 'Price':
+        return _TypeStyle(
+            Icons.attach_money, const Color(0xFF9C27B0), Colors.white);
+      case 'Education':
+        return _TypeStyle(
+            Icons.school, const Color(0xFF673AB7), Colors.white); // deep purple
+      case 'Hiring':
+        return _TypeStyle(Icons.work_outline, const Color(0xFFFFA000),
+            Colors.white); // amber 700
+      case 'Construction':
+        return _TypeStyle(Icons.construction, const Color(0xFF795548),
+            Colors.white); // brown
+      case 'Events':
+        return _TypeStyle(
+            Icons.event, const Color(0xFFE91E63), Colors.white); // pink
+      case 'Tours':
+        return _TypeStyle(Icons.travel_explore, const Color(0xFF3F51B5),
+            Colors.white); // indigo
       case 'Items':
       default:
         return _TypeStyle(
