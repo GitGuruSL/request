@@ -37,6 +37,7 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
   bool _updatingRequest = false;
   bool _deletingRequest = false;
   bool _submittingReview = false;
+  bool _alreadyReviewed = false;
 
   @override
   void initState() {
@@ -57,6 +58,14 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
           final page = await _service.getResponses(r.id, page: 1, limit: 50);
           responses = page.responses;
         } catch (_) {}
+        // Check if current user already reviewed (if owner)
+        if (owner) {
+          try {
+            final mine =
+                await ReviewsService.instance.getMyReviewForRequest(r.id);
+            _alreadyReviewed = mine != null;
+          } catch (_) {}
+        }
       }
       if (mounted) {
         setState(() {
@@ -635,9 +644,10 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
         const SizedBox(width: 12),
         if (status == 'completed' && hasAccepted)
           OutlinedButton.icon(
-            onPressed: _promptReviewAcceptedResponder,
+            onPressed: _alreadyReviewed ? null : _promptReviewAcceptedResponder,
             icon: const Icon(Icons.rate_review_outlined),
-            label: const Text('Review responder'),
+            label: Text(
+                _alreadyReviewed ? 'Already reviewed' : 'Review responder'),
           ),
       ],
     );

@@ -153,4 +153,20 @@ router.get('/stats/:userId', async (req, res) => {
   }
 });
 
+// Auth: fetch current user's review (if any) for a specific request
+router.get('/request/:requestId/mine', auth.authMiddleware(), async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const reviewerId = req.user.id || req.user.userId;
+    const row = await db.queryOne(
+      `SELECT * FROM reviews WHERE request_id = $1 AND reviewer_id = $2 LIMIT 1`,
+      [requestId, reviewerId]
+    );
+    return res.json({ success: true, data: row || null });
+  } catch (error) {
+    console.error('Error fetching my review for request:', error);
+    res.status(500).json({ success: false, message: 'Error fetching review', error: error.message });
+  }
+});
+
 module.exports = router;

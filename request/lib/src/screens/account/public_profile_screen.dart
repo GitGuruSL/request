@@ -149,6 +149,16 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(p.displayName, style: GlassTheme.titleMedium),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    _stars(p.averageRating.round()),
+                    const SizedBox(width: 6),
+                    Text('(${p.reviewCount})',
+                        style: GlassTheme.bodySmall
+                            .copyWith(color: GlassTheme.colors.textTertiary)),
+                  ],
+                ),
                 if ((p.email ?? '').isNotEmpty)
                   Text(p.email!,
                       style: GlassTheme.bodySmall

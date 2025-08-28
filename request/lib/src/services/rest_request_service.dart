@@ -746,4 +746,18 @@ class ReviewsService {
       return null;
     }
   }
+
+  Future<Map<String, dynamic>?> getMyReviewForRequest(String requestId) async {
+    try {
+      final res = await _apiClient
+          .get<Map<String, dynamic>>('/api/reviews/request/$requestId/mine');
+      if (res.isSuccess && res.data != null) {
+        return res.data!['data'] as Map<String, dynamic>?; // can be null
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching my review for request: $e');
+      return null;
+    }
+  }
 }
