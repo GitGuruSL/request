@@ -88,14 +88,15 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
   String _payPeriod = 'Monthly'; // Monthly, Weekly, Daily, Hourly
   bool _isSalaryNegotiable = false;
   final Set<String> _benefits =
-    <String>{}; // EPF/ETF, Meals, Accommodation, Transport, OT
+      <String>{}; // EPF/ETF, Meals, Accommodation, Transport, OT
   String _workArrangement = 'On-site'; // On-site, Hybrid, Remote
-  String _educationRequirement = 'O/L'; // O/L, A/L, Diploma, Degree, Postgraduate
+  String _educationRequirement =
+      'O/L'; // O/L, A/L, Diploma, Degree, Postgraduate
   final TextEditingController _skillsController =
-    TextEditingController(); // comma separated
+      TextEditingController(); // comma separated
   String _applyMethod = 'In-App'; // In-App, Call, Email
   final TextEditingController _contactPersonController =
-    TextEditingController();
+      TextEditingController();
   final TextEditingController _contactPhoneController = TextEditingController();
   final TextEditingController _contactEmailController = TextEditingController();
   DateTime? _applicationDeadline; // date-only
@@ -569,8 +570,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
               if (ce is String) _contactEmailController.text = ce;
               final ad = mf['applicationDeadline'];
               if (ad is int) {
-                _applicationDeadline =
-                    DateTime.fromMillisecondsSinceEpoch(ad);
+                _applicationDeadline = DateTime.fromMillisecondsSinceEpoch(ad);
               }
               break;
           }
@@ -708,14 +708,14 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
     _durationRequiredController.dispose();
     _hoursRequiredController.dispose();
     _rentalItemsListController.dispose();
-  // hiring
-  _jobTitleController.dispose();
-  _companyNameController.dispose();
-  _salaryController.dispose();
-  _skillsController.dispose();
-  _contactPersonController.dispose();
-  _contactPhoneController.dispose();
-  _contactEmailController.dispose();
+    // hiring
+    _jobTitleController.dispose();
+    _companyNameController.dispose();
+    _salaryController.dispose();
+    _skillsController.dispose();
+    _contactPersonController.dispose();
+    _contactPhoneController.dispose();
+    _contactEmailController.dispose();
     super.dispose();
   }
 
@@ -1635,21 +1635,21 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
     _targetCountryController.clear();
     _fieldOfStudyController.clear();
     _positionType = 'Full-time';
-  // hiring
-  _jobTitleController.clear();
-  _companyNameController.clear();
-  _salaryController.clear();
-  _payPeriod = 'Monthly';
-  _isSalaryNegotiable = false;
-  _benefits.clear();
-  _workArrangement = 'On-site';
-  _educationRequirement = 'O/L';
-  _skillsController.clear();
-  _applyMethod = 'In-App';
-  _contactPersonController.clear();
-  _contactPhoneController.clear();
-  _contactEmailController.clear();
-  _applicationDeadline = null;
+    // hiring
+    _jobTitleController.clear();
+    _companyNameController.clear();
+    _salaryController.clear();
+    _payPeriod = 'Monthly';
+    _isSalaryNegotiable = false;
+    _benefits.clear();
+    _workArrangement = 'On-site';
+    _educationRequirement = 'O/L';
+    _skillsController.clear();
+    _applyMethod = 'In-App';
+    _contactPersonController.clear();
+    _contactPhoneController.clear();
+    _contactEmailController.clear();
+    _applicationDeadline = null;
     // events
     _eventDate = null;
     _eventStartTime = null;
@@ -2225,7 +2225,8 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
                       DropdownMenuItem(value: 'Daily', child: Text('Daily')),
                       DropdownMenuItem(value: 'Hourly', child: Text('Hourly')),
                     ],
-                    onChanged: (v) => setState(() => _payPeriod = v ?? 'Monthly'),
+                    onChanged: (v) =>
+                        setState(() => _payPeriod = v ?? 'Monthly'),
                   ),
                   const SizedBox(height: 8),
                   CheckboxListTile(
@@ -2324,7 +2325,8 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
                       DropdownMenuItem(value: 'Call', child: Text('Call')),
                       DropdownMenuItem(value: 'Email', child: Text('Email')),
                     ],
-                    onChanged: (v) => setState(() => _applyMethod = v ?? 'In-App'),
+                    onChanged: (v) =>
+                        setState(() => _applyMethod = v ?? 'In-App'),
                   ),
                   const SizedBox(height: 12),
                   if (_applyMethod != 'In-App') ...[
@@ -2359,7 +2361,8 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('Application Deadline',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
                   const SizedBox(height: 8),
                   InkWell(
                     onTap: () async {
@@ -2369,7 +2372,8 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
                         firstDate: DateTime.now(),
                         lastDate: DateTime.now().add(const Duration(days: 365)),
                       );
-                      if (date != null) setState(() => _applicationDeadline = date);
+                      if (date != null)
+                        setState(() => _applicationDeadline = date);
                     },
                     child: Container(
                       padding: const EdgeInsets.all(12),
@@ -2583,46 +2587,46 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           },
         }..removeWhere((k, v) => v == null);
       case 'hiring':
-    final skills = _skillsController.text
-      .split(',')
-      .map((e) => e.trim())
-      .where((e) => e.isNotEmpty)
-      .toList();
-    return {
-      'jobTitle': _jobTitleController.text.trim().isNotEmpty
-        ? _jobTitleController.text.trim()
-        : null,
-      'companyName': _companyNameController.text.trim().isNotEmpty
-        ? _companyNameController.text.trim()
-        : null,
-      'positionType': _positionType,
-      'workArrangement': _workArrangement,
-      'salary': _salaryController.text.trim().isNotEmpty
-        ? int.tryParse(_salaryController.text.trim())
-        : null,
-      'payPeriod': _payPeriod,
-      'salaryNegotiable': _isSalaryNegotiable,
-      'benefits': _benefits.isNotEmpty ? _benefits.toList() : null,
-      'experienceYears': _experienceYearsController.text.trim().isNotEmpty
-        ? int.tryParse(_experienceYearsController.text.trim())
-        : null,
-      'educationRequirement': _educationRequirement,
-      'skills': skills.isNotEmpty ? skills : null,
-      'applyMethod': _applyMethod,
-      'contactPerson': _applyMethod != 'In-App' &&
-          _contactPersonController.text.trim().isNotEmpty
-        ? _contactPersonController.text.trim()
-        : null,
-      'contactPhone': _applyMethod == 'Call' &&
-          _contactPhoneController.text.trim().isNotEmpty
-        ? _contactPhoneController.text.trim()
-        : null,
-      'contactEmail': _applyMethod == 'Email' &&
-          _contactEmailController.text.trim().isNotEmpty
-        ? _contactEmailController.text.trim()
-        : null,
-      'applicationDeadline': _applicationDeadline?.millisecondsSinceEpoch,
-    }..removeWhere((k, v) => v == null);
+        final skills = _skillsController.text
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+        return {
+          'jobTitle': _jobTitleController.text.trim().isNotEmpty
+              ? _jobTitleController.text.trim()
+              : null,
+          'companyName': _companyNameController.text.trim().isNotEmpty
+              ? _companyNameController.text.trim()
+              : null,
+          'positionType': _positionType,
+          'workArrangement': _workArrangement,
+          'salary': _salaryController.text.trim().isNotEmpty
+              ? int.tryParse(_salaryController.text.trim())
+              : null,
+          'payPeriod': _payPeriod,
+          'salaryNegotiable': _isSalaryNegotiable,
+          'benefits': _benefits.isNotEmpty ? _benefits.toList() : null,
+          'experienceYears': _experienceYearsController.text.trim().isNotEmpty
+              ? int.tryParse(_experienceYearsController.text.trim())
+              : null,
+          'educationRequirement': _educationRequirement,
+          'skills': skills.isNotEmpty ? skills : null,
+          'applyMethod': _applyMethod,
+          'contactPerson': _applyMethod != 'In-App' &&
+                  _contactPersonController.text.trim().isNotEmpty
+              ? _contactPersonController.text.trim()
+              : null,
+          'contactPhone': _applyMethod == 'Call' &&
+                  _contactPhoneController.text.trim().isNotEmpty
+              ? _contactPhoneController.text.trim()
+              : null,
+          'contactEmail': _applyMethod == 'Email' &&
+                  _contactEmailController.text.trim().isNotEmpty
+              ? _contactEmailController.text.trim()
+              : null,
+          'applicationDeadline': _applicationDeadline?.millisecondsSinceEpoch,
+        }..removeWhere((k, v) => v == null);
       default:
         return {};
     }
