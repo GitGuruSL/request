@@ -3,6 +3,8 @@ import 'dart:ui';
 import '../../services/country_filtered_data_service.dart';
 import '../../services/user_registration_service.dart';
 import '../../services/country_service.dart';
+import '../../services/module_management_service.dart';
+import '../../services/enhanced_user_service.dart';
 import '../../models/request_model.dart' as models;
 import '../../screens/unified_request_response/unified_request_view_screen.dart';
 import '../../screens/requests/ride/view_ride_request_screen.dart';
@@ -26,6 +28,17 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
 
   // Allowed from user registrations (driver/delivery, etc.)
   List<String> _allowedRequestTypes = ['item', 'service', 'rent'];
+
+  // Country-enabled modules mapped to request type keys (item, service, rent, delivery, ride, price)
+  final Set<String> _countryEnabledTypes = {
+    'item',
+    'service',
+    'rent',
+    'delivery',
+    'ride',
+    'price'
+  };
+  bool _isLoggedIn = true;
 
   // Filters selected by the user from the bottom sheet
   final Set<String> _selectedTypes =
@@ -172,12 +185,35 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
       });
       return;
     }
+    // Determine auth state
+    try {
+      final user = await EnhancedUserService().getCurrentUserModel();
+      _isLoggedIn = user != null;
+    } catch (_) {
+      _isLoggedIn = false;
+    }
     // Load allowed request types based on user registrations (driver/delivery)
     try {
       final allowed =
           await UserRegistrationService.instance.getAllowedRequestTypes();
       _allowedRequestTypes = allowed;
     } catch (_) {}
+
+    // Load country-enabled modules and map to request types
+    try {
+      final enabledModules =
+          await ModuleManagementService.instance.getEnabledModules();
+      _countryEnabledTypes..clear();
+      for (final m in enabledModules) {
+        final cfg = ModuleManagementService.moduleConfigurations[m];
+        if (cfg != null) {
+          _countryEnabledTypes
+              .addAll(cfg.requestTypes.map((e) => e.toLowerCase()));
+        }
+      }
+    } catch (_) {
+      // ignore errors; fall back to defaults
+    }
 
     await _fetchPage(reset: true);
   }
@@ -229,13 +265,22 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
   }
 
   List<models.RequestModel> get _filteredRequests {
-    // First, enforce role-based gating
-    final gated = _requests.where((r) {
+    // First, enforce role-based gating (driver/delivery)
+    final roleGated = _requests.where((r) {
       final mapped = _mapRequestModelToTypeKey(r);
       return _allowedRequestTypes.contains(mapped);
     }).toList();
 
-    Iterable<models.RequestModel> current = gated;
+    // Next, enforce country-enabled module gating
+    Iterable<models.RequestModel> current = roleGated.where((r) {
+      final key = _mapRequestModelToTypeKey(r);
+      return _countryEnabledTypes.contains(key);
+    });
+
+    // Public visibility: if not logged in, show only Price requests
+    if (!_isLoggedIn) {
+      current = current.where((r) => _mapRequestModelToTypeKey(r) == 'price');
+    }
 
     // Type filters
     if (_selectedTypes.isNotEmpty) {
@@ -464,8 +509,12 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
       'service',
       'rent',
       'delivery',
-      'ride'
-    ].where((t) => _allowedRequestTypes.contains(t)).toList();
+      'ride',
+      'price'
+    ]
+        .where((t) => _allowedRequestTypes.contains(t))
+        .where((t) => _countryEnabledTypes.contains(t))
+        .toList();
     final availableCategories = _availableCategories().toList()..sort();
     final availableSubcategories = _availableSubcategories().toList()..sort();
 

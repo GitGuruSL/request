@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../models/enhanced_user_model.dart' as enhanced;
 import '../models/request_model.dart';
 import '../services/enhanced_user_service.dart';
+import 'module_management_service.dart';
 
 /// Request Filtering Service
 /// Implements sophisticated filtering based on:
@@ -24,9 +25,33 @@ class RequestFilteringService {
     try {
       // Get current user data
       final user = await _userService.getCurrentUserModel();
+      final moduleService = ModuleManagementService.instance;
+      final enabledModules = await moduleService.getEnabledModules();
+
+      // Helper: gate by country-enabled modules
+      List<RequestModel> _applyModuleGating(List<RequestModel> input) {
+        // Build allowed request types from enabled modules
+        final allowedTypes = <String>{};
+        for (final m in enabledModules) {
+          final cfg = ModuleManagementService.moduleConfigurations[m];
+          if (cfg != null) {
+            allowedTypes.addAll(cfg.requestTypes.map((e) => e.toLowerCase()));
+          }
+        }
+        return input
+            .where((r) => allowedTypes.contains(r.type.name.toLowerCase()))
+            .toList();
+      }
+
       if (user == null) {
-        if (kDebugMode) print('🚫 No authenticated user found');
-        return [];
+        if (kDebugMode)
+          print(
+              '🚫 No authenticated user found; applying public visibility rules');
+        // Public visibility: only show Price requests, still respect country module gating
+        final moduleFiltered = _applyModuleGating(allRequests);
+        return moduleFiltered
+            .where((r) => r.type == enhanced.RequestType.price)
+            .toList();
       }
 
       if (kDebugMode) {
@@ -38,7 +63,7 @@ class RequestFilteringService {
 
       List<RequestModel> filteredRequests = [];
 
-      // Step 1: Filter by country (all users)
+      // Step 1: Filter by country (all authenticated users)
       filteredRequests = _filterByCountry(allRequests, user.countryCode);
       if (kDebugMode)
         print('🌍 After country filter: ${filteredRequests.length} requests');
@@ -63,6 +88,12 @@ class RequestFilteringService {
         if (kDebugMode)
           print(
               '🏢 After business filter: ${filteredRequests.length} requests');
+      }
+
+      // Step 5: Apply country-enabled module gating
+      filteredRequests = _applyModuleGating(filteredRequests);
+      if (kDebugMode) {
+        print('🧩 After module gating: ${filteredRequests.length} requests');
       }
 
       return filteredRequests;
@@ -284,6 +315,19 @@ class RequestFilteringService {
     final user = await _userService.getCurrentUserModel();
     if (user == null) return false;
 
+    // Module gating: ensure this request's type is enabled for the country
+    final enabledModules =
+        await ModuleManagementService.instance.getEnabledModules();
+    final allowedTypes = <String>{};
+    for (final m in enabledModules) {
+      final cfg = ModuleManagementService.moduleConfigurations[m];
+      if (cfg != null)
+        allowedTypes.addAll(cfg.requestTypes.map((e) => e.toLowerCase()));
+    }
+    if (!allowedTypes.contains(request.type.name.toLowerCase())) {
+      return false;
+    }
+
     // Country check
     if (request.country != null && request.country != user.countryCode) {
       return false;
@@ -330,18 +374,33 @@ class RequestFilteringService {
 
     List<enhanced.RequestType> availableTypes = [];
 
+    // Country-enabled module gating
+    final enabledModules =
+        await ModuleManagementService.instance.getEnabledModules();
+    final enabledTypesSet = <String>{};
+    for (final m in enabledModules) {
+      final cfg = ModuleManagementService.moduleConfigurations[m];
+      if (cfg != null)
+        enabledTypesSet.addAll(cfg.requestTypes.map((e) => e.toLowerCase()));
+    }
+
     // All users can create these types
-    availableTypes.addAll([
-      enhanced.RequestType.item,
-      enhanced.RequestType.service,
-      enhanced.RequestType.rental,
-      enhanced.RequestType.price,
-    ]);
+    void addIfEnabled(enhanced.RequestType t) {
+      if (enabledTypesSet.contains(t.name.toLowerCase())) {
+        availableTypes.add(t);
+      }
+    }
+
+    // Base types (if enabled for country)
+    addIfEnabled(enhanced.RequestType.item);
+    addIfEnabled(enhanced.RequestType.service);
+    addIfEnabled(enhanced.RequestType.rental);
+    addIfEnabled(enhanced.RequestType.price);
 
     // Only verified drivers can create ride requests
     if (user.hasRole(enhanced.UserRole.driver) &&
         user.isRoleVerified(enhanced.UserRole.driver)) {
-      availableTypes.add(enhanced.RequestType.ride);
+      addIfEnabled(enhanced.RequestType.ride);
     }
 
     // Only verified businesses can create delivery requests
@@ -349,7 +408,7 @@ class RequestFilteringService {
             user.isRoleVerified(enhanced.UserRole.business)) ||
         (user.hasRole(enhanced.UserRole.delivery) &&
             user.isRoleVerified(enhanced.UserRole.delivery))) {
-      availableTypes.add(enhanced.RequestType.delivery);
+      addIfEnabled(enhanced.RequestType.delivery);
     }
 
     return availableTypes;
