@@ -28,7 +28,7 @@
       },
       "tours": {
         "categories": [
-          { "name": "Experiences", "subcategories": ["City Tour", "Nature & Wildlife", "Cultural"] }
+          { "name": "Tours", "subcategories": ["City Tour", "Nature & Wildlife", "Cultural"] }
         ]
       },
       "events": {
@@ -46,9 +46,9 @@
           { "name": "Learning", "subcategories": ["Tutoring", "Language", "Music"] }
         ]
       },
-      "jobs": {
+    "hiring": {
         "categories": [
-          { "name": "Hiring", "subcategories": ["Full-time", "Part-time", "Freelance"] }
+      { "name": "Hiring", "subcategories": ["Full-time", "Part-time", "Freelance"] }
         ]
       },
       "other": {

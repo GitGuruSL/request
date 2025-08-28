@@ -64,9 +64,10 @@ async function upsertCountrySubcategory(subId, countryCode) {
   }
 }
 
-async function createCategory({ name, description, type, module }) {
+async function createCategory({ name, description, type, module, requestType }) {
   const slug = slugify(module ? `${module}-${name}` : name);
   const metadata = Object.assign({}, description ? { description } : {}, module ? { module } : {});
+  const reqType = requestType || module || (type === 'rent' ? 'rent' : type);
   // Try reuse existing by slug
   const existing = await db.queryOne('SELECT * FROM categories WHERE slug = $1 LIMIT 1', [slug]);
   if (existing) {
@@ -77,6 +78,7 @@ async function createCategory({ name, description, type, module }) {
     const updated = await db.update('categories', existing.id, {
       name,
       type,
+      request_type: reqType,
       is_active: true,
       metadata: Object.keys(meta).length ? meta : null
     });
@@ -86,6 +88,7 @@ async function createCategory({ name, description, type, module }) {
     name,
     slug,
     type,
+    request_type: reqType,
     is_active: true,
     metadata: Object.keys(metadata).length ? metadata : null,
     created_at: new Date().toISOString(),
@@ -122,67 +125,77 @@ async function createSubcategory(categoryId, { name, description }) {
   return row;
 }
 
-async function reseed({ seed, countryCode = 'LK', dryRun = false }) {
+async function reseed({ seed, countryCode = 'LK', dryRun = false, purge = false }) {
   if (dryRun) log('Running in DRY RUN mode. No writes will be committed.');
 
   // Validate minimal structure
   if (!seed || typeof seed !== 'object') throw new Error('Invalid seed: expected object');
 
-  // Backup
+  // Backup current data first
   const backupPath = await backupExisting();
   log('Backup created at:', backupPath);
 
   if (dryRun) return { backupPath };
 
-  // Soft-archive old data
-  await softArchiveExisting();
+  if (purge) {
+    log('Purging existing categories and mappings...');
+    // Delete in dependency order
+    await db.query('DELETE FROM country_subcategories');
+    await db.query('DELETE FROM sub_categories');
+    await db.query('DELETE FROM country_categories');
+    await db.query('DELETE FROM categories');
+    log('Purge complete.');
+  } else {
+    // Soft-archive old data if not purging
+    await softArchiveExisting();
+  }
 
   // Insert new data
-  let displayOrder = 1;
+  let displayOrder = 1; // kept for potential future use; not persisted currently
   const created = [];
 
-  // Items (Products)
+  // Items (Products) => type=product, module=item, request_type=item
   if (seed.item && Array.isArray(seed.item.categories)) {
     for (const cat of seed.item.categories) {
-      const catRow = await createCategory({ name: cat.name, description: cat.description, type: 'item' });
+      const catRow = await createCategory({ name: cat.name, description: cat.description, type: 'product', module: 'item', requestType: 'item' });
       await upsertCountryCategory(catRow.id, countryCode, displayOrder++);
       const subcats = Array.isArray(cat.subcategories) ? cat.subcategories : [];
       for (const sc of subcats) {
         const scRow = await createSubcategory(catRow.id, typeof sc === 'string' ? { name: sc } : sc);
         await upsertCountrySubcategory(scRow.id, countryCode);
       }
-      created.push({ type: 'item', id: catRow.id, name: catRow.name });
+      created.push({ type: 'product', module: 'item', request_type: 'item', id: catRow.id, name: catRow.name });
     }
   }
 
-  // Rentals (Products)
+  // Rentals (Products) => type=product, module=rent, request_type=rent
   if (seed.rental && Array.isArray(seed.rental.categories)) {
     for (const cat of seed.rental.categories) {
-      const catRow = await createCategory({ name: cat.name, description: cat.description, type: 'rental' });
+      const catRow = await createCategory({ name: cat.name, description: cat.description, type: 'product', module: 'rent', requestType: 'rent' });
       await upsertCountryCategory(catRow.id, countryCode, displayOrder++);
       const subcats = Array.isArray(cat.subcategories) ? cat.subcategories : [];
       for (const sc of subcats) {
         const scRow = await createSubcategory(catRow.id, typeof sc === 'string' ? { name: sc } : sc);
         await upsertCountrySubcategory(scRow.id, countryCode);
       }
-      created.push({ type: 'rental', id: catRow.id, name: catRow.name });
+      created.push({ type: 'product', module: 'rent', request_type: 'rent', id: catRow.id, name: catRow.name });
     }
   }
 
-  // Services by module
+  // Services by module => type=service, module=<moduleKey>, request_type=<moduleKey>
   if (seed.service && seed.service.modules && typeof seed.service.modules === 'object') {
     const modules = seed.service.modules;
     for (const [moduleKey, moduleData] of Object.entries(modules)) {
       const categories = moduleData && Array.isArray(moduleData.categories) ? moduleData.categories : [];
       for (const cat of categories) {
-        const catRow = await createCategory({ name: cat.name, description: cat.description, type: 'service', module: moduleKey });
+        const catRow = await createCategory({ name: cat.name, description: cat.description, type: 'service', module: moduleKey, requestType: moduleKey });
         await upsertCountryCategory(catRow.id, countryCode, displayOrder++);
         const subcats = Array.isArray(cat.subcategories) ? cat.subcategories : [];
         for (const sc of subcats) {
           const scRow = await createSubcategory(catRow.id, typeof sc === 'string' ? { name: sc } : sc);
           await upsertCountrySubcategory(scRow.id, countryCode);
         }
-        created.push({ type: 'service', module: moduleKey, id: catRow.id, name: catRow.name });
+        created.push({ type: 'service', module: moduleKey, request_type: moduleKey, id: catRow.id, name: catRow.name });
       }
     }
   }
@@ -195,7 +208,8 @@ async function main() {
     const args = process.argv.slice(2);
     const seedArgIdx = args.indexOf('--seed');
     const countryIdx = args.indexOf('--country');
-    const dryRun = args.includes('--dryRun');
+  const dryRun = args.includes('--dryRun');
+  const purge = args.includes('--purge');
     const seedPathCli = seedArgIdx !== -1 ? args[seedArgIdx + 1] : undefined;
     const countryCode = countryIdx !== -1 ? args[countryIdx + 1] : (process.env.SEED_COUNTRY || undefined);
 
@@ -204,9 +218,10 @@ async function main() {
 
     log('Using seed file:', usePath);
     log('Target country:', country);
-    log('Dry run:', dryRun);
+  log('Dry run:', dryRun);
+  log('Purge:', purge);
 
-    const result = await reseed({ seed, countryCode: country, dryRun });
+  const result = await reseed({ seed, countryCode: country, dryRun, purge });
     log('Done:', result);
     process.exit(0);
   } catch (e) {

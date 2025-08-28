@@ -53,8 +53,8 @@ router.get('/', async (req, res) => {
     const enriched = categories.map(c => ({
       ...c,
       description: c.description || (c.metadata && c.metadata.description) || null,
-      module: c.metadata && c.metadata.module ? c.metadata.module : null,
-      request_type: c.type || null,
+    module: c.metadata && c.metadata.module ? c.metadata.module : null,
+    request_type: c.request_type || null,
     }));
 
     res.json({ success: true, data: enriched, count: enriched.length, isGlobalView: user.role === 'super_admin', filteredByType: type || null });
@@ -73,7 +73,7 @@ router.get('/:id', async (req, res) => {
     const { id } = req.params;
   const category = await dbService.findById('categories', id);
     if (!category) return res.status(404).json({ success: false, error: 'Category not found' });
-  res.json({ success: true, data: { ...category, description: category.metadata?.description || null, module: category.metadata?.module || null, request_type: category.type || null } });
+  res.json({ success: true, data: { ...category, description: category.metadata?.description || null, module: category.metadata?.module || null, request_type: category.request_type || null } });
   } catch (error) {
     console.error('Get category error:', error);
     res.status(500).json({ success: false, error: error.message });

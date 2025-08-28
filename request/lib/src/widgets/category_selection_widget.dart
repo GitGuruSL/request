@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import '../services/rest_category_service.dart';
 
 class CategorySelectionWidget extends StatefulWidget {
-  final String categoryType;
+  /// Request type per new scheme: 'product' or 'service'.
+  /// You may also pass a module as the type for convenience (e.g., 'tours').
+  final String type;
+
+  /// Optional module filter: one of item, rent, delivery, ride, tours, events, construction, education, hiring, other
+  final String? module;
   final String? selectedCategoryId;
   final String? selectedSubCategoryId;
   final Function(String? categoryId, String? subCategoryId) onSelectionChanged;
@@ -10,7 +15,8 @@ class CategorySelectionWidget extends StatefulWidget {
 
   const CategorySelectionWidget({
     super.key,
-    required this.categoryType,
+    required this.type,
+    this.module,
     this.selectedCategoryId,
     this.selectedSubCategoryId,
     required this.onSelectionChanged,
@@ -56,14 +62,37 @@ class _CategorySelectionWidgetState extends State<CategorySelectionWidget> {
         _isLoading = true;
       });
 
-      // REST categories (filter by type in name/description)
-      final all = await _categoryService.getCategoriesWithCache();
-      final filter = widget.categoryType.toLowerCase();
-      final categories = all
-          .where((c) =>
-              c.name.toLowerCase().contains(filter) ||
-              (c.description?.toLowerCase().contains(filter) ?? false))
-          .toList();
+      // Normalize filters per new backend scheme
+      String t = widget.type.toLowerCase();
+      String? m = widget.module?.toLowerCase();
+
+      bool isModule(String? s) {
+        const mods = {
+          'item',
+          'rent',
+          'delivery',
+          'ride',
+          'tours',
+          'events',
+          'construction',
+          'education',
+          'hiring',
+          'other'
+        };
+        return s != null && mods.contains(s);
+      }
+
+      // If 'type' was actually a module convenience, infer proper type.
+      if (isModule(t) && (m == null || m.isEmpty)) {
+        m = t;
+        t = (m == 'item' || m == 'rent') ? 'product' : 'service';
+      }
+
+      // Fetch filtered categories directly from backend
+      final categories = await _categoryService.getCategoriesWithCache(
+        type: t,
+        module: m,
+      );
 
       List<CategoryOption> options = [];
 
@@ -217,28 +246,34 @@ class _CategorySelectionWidgetState extends State<CategorySelectionWidget> {
   }
 
   IconData _getCategoryIcon() {
-    switch (widget.categoryType) {
-      case 'item':
-        return Icons.shopping_bag;
-      case 'service':
-        return Icons.build;
-      case 'delivery':
-        return Icons.local_shipping;
-      default:
-        return Icons.category;
-    }
+    final t = widget.type.toLowerCase();
+    final m = widget.module?.toLowerCase();
+    if (m == 'delivery' || t == 'delivery') return Icons.local_shipping;
+    if (m == 'ride' || t == 'ride') return Icons.directions_car;
+    if (m == 'tours') return Icons.card_travel;
+    if (m == 'events') return Icons.event;
+    if (m == 'construction') return Icons.engineering;
+    if (m == 'education') return Icons.school;
+    if (m == 'hiring') return Icons.work_outline;
+    if (m == 'other') return Icons.dashboard_customize;
+    if (t == 'product' || m == 'item' || m == 'rent') return Icons.shopping_bag;
+    if (t == 'service') return Icons.build;
+    return Icons.category;
   }
 
   String _getCategoryTitle() {
-    switch (widget.categoryType) {
-      case 'item':
-        return 'Item Category';
-      case 'service':
-        return 'Service Category';
-      case 'delivery':
-        return 'Delivery Category';
-      default:
-        return 'Category';
-    }
+    final t = widget.type.toLowerCase();
+    final m = widget.module?.toLowerCase();
+    if (m == 'delivery' || t == 'delivery') return 'Delivery Category';
+    if (m == 'ride' || t == 'ride') return 'Ride Category';
+    if (m == 'tours') return 'Tours Category';
+    if (m == 'events') return 'Events Category';
+    if (m == 'construction') return 'Construction Category';
+    if (m == 'education') return 'Education Category';
+    if (m == 'hiring') return 'Hiring Category';
+    if (m == 'other') return 'Other Category';
+    if (t == 'product' || m == 'item' || m == 'rent') return 'Item Category';
+    if (t == 'service') return 'Service Category';
+    return 'Category';
   }
 }

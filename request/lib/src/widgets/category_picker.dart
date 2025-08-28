@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import '../services/rest_category_service.dart';
 
 class CategoryPicker extends StatefulWidget {
-  final String requestType; // 'item','service','delivery','rent'
-  final String? module; // optional module filter when requestType == 'service'
+  final String requestType; // 'product'|'service' or convenience module key
+  final String?
+      module; // optional module filter; if null and requestType is a module, it's inferred
   final ScrollController scrollController;
   const CategoryPicker(
       {super.key,
@@ -40,8 +41,20 @@ class _CategoryPickerState extends State<CategoryPicker> {
       final rest = RestCategoryService.instance;
 
       // Filter by type and optional module
-      final all = await rest.getCategoriesWithCache(
-          type: widget.requestType.toLowerCase(), module: widget.module);
+      String t = widget.requestType.toLowerCase();
+      String? m = widget.module?.toLowerCase();
+      if (t == 'rental') {
+        t = 'product';
+        m = 'rent';
+      }
+      if (t == 'jobs') {
+        t = 'service';
+        m = 'hiring';
+      }
+      if (m == 'rental') m = 'rent';
+      if (m == 'jobs') m = 'hiring';
+
+      final all = await rest.getCategoriesWithCache(type: t, module: m);
       _totalBackend = all.length;
       _categoryNameToId.clear();
       _subcategoryNameToId.clear();

@@ -36,12 +36,15 @@ class Category {
         json['metadata'] is Map<String, dynamic>
             ? json['metadata'] as Map<String, dynamic>
             : null;
+    final String? topLevelModule =
+        (json['module'] is String) ? (json['module'] as String) : null;
     return Category(
       id: json['id'].toString(),
       name: json['name'] ?? '',
       description: json['description'],
       iconUrl: json['icon_url'],
-      module: metadata != null ? (metadata['module'] as String?) : null,
+      module: topLevelModule ??
+          (metadata != null ? (metadata['module'] as String?) : null),
       countryCode: json['country_code'] ?? 'LK',
       isActive: json['is_active'] ?? true,
       displayOrder: json['display_order'] ?? 0,
@@ -130,21 +133,52 @@ class RestCategoryService {
   Future<List<Category>> getCategories({
     String countryCode = 'LK',
     bool includeInactive = false,
-    String? type, // Add type parameter
-    String? module, // Optional module filter for service categories
+    String? type, // product or service, or a module name for convenience
+    String? module, // Optional module filter
   }) async {
     try {
-      // Normalize legacy types to align with backend seed
+      // Normalize filters per new scheme:
+      // - type is either 'product' or 'service'
+      // - module is one of: item, rent, delivery, ride, tours, events, construction, education, hiring, other
+      // If user passes a module as 'type', infer correctly.
       String? t = type?.toLowerCase();
       String? m = module?.toLowerCase();
-      if (t == 'rent') t = 'rental';
-      if (t == 'delivery' && (m == null || m.isEmpty)) {
+
+      // Alias mapping for backwards compatibility
+      // Accept 'rental' as module 'rent', and 'jobs' as 'hiring'
+      if (t == 'rental') {
+        m = 'rent';
+        t = 'product';
+      } else if (t == 'jobs') {
+        m = 'hiring';
         t = 'service';
-        m = 'delivery';
       }
-      if (t == 'ride' && (m == null || m.isEmpty)) {
-        t = 'service';
-        m = 'ride';
+      if (m == 'rental') m = 'rent';
+      if (m == 'jobs') m = 'hiring';
+
+      bool isModule(String? s) {
+        const mods = {
+          'item',
+          'rent',
+          'delivery',
+          'ride',
+          'tours',
+          'events',
+          'construction',
+          'education',
+          'hiring',
+          'other'
+        };
+        return s != null && mods.contains(s);
+      }
+
+      if ((t == null || t.isEmpty) && isModule(m)) {
+        // infer type from module when only module provided
+        t = (m == 'item' || m == 'rent') ? 'product' : 'service';
+      } else if (isModule(t) && (m == null || m.isEmpty)) {
+        // type was actually a module convenience
+        m = t;
+        t = (m == 'item' || m == 'rent') ? 'product' : 'service';
       }
 
       final queryParams = {
