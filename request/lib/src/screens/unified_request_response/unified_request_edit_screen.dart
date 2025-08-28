@@ -71,6 +71,31 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
   int _adults = 2;
   int _children = 0;
 
+  // Events module – general and category-specific state (edit)
+  DateTime? _eventDate; // date-only
+  TimeOfDay? _eventStartTime;
+  TimeOfDay? _eventEndTime;
+  String _eventType = 'Wedding';
+  final TextEditingController _eventOtherTypeController = TextEditingController();
+  // Venues
+  String _venueType = 'Indoor';
+  final Set<String> _requiredFacilities = <String>{};
+  // Food & Beverage
+  final Set<String> _cuisineTypes = <String>{};
+  String _serviceStyle = 'Buffet';
+  final TextEditingController _dietaryNeedsController = TextEditingController();
+  // Entertainment & Talent
+  String _talentType = '';
+  final TextEditingController _durationRequiredController = TextEditingController();
+  String _talentVenueType = 'Indoor';
+  // Services & Staff
+  String _staffType = '';
+  int _staffCount = 1;
+  final TextEditingController _hoursRequiredController = TextEditingController();
+  // Rentals & Supplies
+  final TextEditingController _rentalItemsListController = TextEditingController();
+  final Set<String> _rentalRequiredServices = <String>{};
+
   // Tours & Experiences
   String _tourType = 'Cultural & Heritage';
   String _preferredLanguage = 'English';
