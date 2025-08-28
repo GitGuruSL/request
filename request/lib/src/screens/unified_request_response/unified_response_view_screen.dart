@@ -530,6 +530,11 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
             'Drop-off Date',
             _formatEpochDate(info['estimatedDropoffTime']),
           ),
+          const SizedBox(height: 8),
+        ],
+        if (info['specialInstructions'] != null &&
+            (info['specialInstructions'] as String).trim().isNotEmpty) ...[
+          _buildDetailRow('Special Instructions', info['specialInstructions']),
         ],
       ],
     );
@@ -545,6 +550,11 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
         ],
         if (info['routeDescription'] != null) ...[
           _buildDetailRow('Route', info['routeDescription']),
+          const SizedBox(height: 8),
+        ],
+        if (info['driverNotes'] != null &&
+            (info['driverNotes'] as String).trim().isNotEmpty) ...[
+          _buildDetailRow('Driver Notes', info['driverNotes']),
         ],
       ],
     );

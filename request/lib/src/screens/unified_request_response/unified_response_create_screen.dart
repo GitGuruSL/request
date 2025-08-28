@@ -492,6 +492,7 @@ class _UnifiedResponseCreateScreenState
                 hintText: 'Tap to pick responder location',
                 isRequired: true,
                 prefixIcon: Icons.location_on,
+                enableCurrentLocationTap: true,
                 onLocationSelected: (address, lat, lng) {
                   setState(() {
                     _locationAddressController.text = address;
@@ -517,6 +518,8 @@ class _UnifiedResponseCreateScreenState
         return _buildRentalResponseFields();
       case RequestType.delivery:
         return _buildDeliveryResponseFields();
+      case RequestType.ride:
+        return _buildRideResponseFields();
       default:
         return const SizedBox();
     }
@@ -1614,6 +1617,140 @@ class _UnifiedResponseCreateScreenState
     );
   }
 
+  Widget _buildRideResponseFields() {
+    return Column(
+      children: [
+        // Fare
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: const BoxDecoration(color: Colors.white),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Proposed Fare*',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _fareController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  hintText: 'Your fare for this ride',
+                  prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.all(16),
+                  filled: true,
+                  fillColor: const Color(0xFFF8F9FA),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter a fare';
+                  }
+                  if (double.tryParse(value) == null) {
+                    return 'Please enter a valid amount';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Vehicle Type
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: const BoxDecoration(color: Colors.white),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Vehicle Type*',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _selectedVehicleType,
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.all(16),
+                  filled: true,
+                  fillColor: Color(0xFFF8F9FA),
+                ),
+                items: ['Car', 'Van', 'Truck', 'Motorcycle', 'Bicycle']
+                    .map((vehicle) =>
+                        DropdownMenuItem(value: vehicle, child: Text(vehicle)))
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedVehicleType = value!;
+                  });
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Route Description
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: const BoxDecoration(color: Colors.white),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Route Description (Optional)',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _routeDescriptionController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  hintText: 'Any particular route preferences',
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.all(16),
+                  filled: true,
+                  fillColor: Color(0xFFF8F9FA),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Driver Notes
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: const BoxDecoration(color: Colors.white),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Driver Notes (Optional)',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _driverNotesController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  hintText: 'Anything the requester should know',
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.all(16),
+                  filled: true,
+                  fillColor: Color(0xFFF8F9FA),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Future<void> _submitResponse() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -1762,6 +1899,14 @@ class _UnifiedResponseCreateScreenState
             'estimatedDropoffTime':
                 _parseDateToMillis(_estimatedDropoffTimeController.text.trim()),
             'specialInstructions': _specialInstructionsController.text.trim(),
+          };
+          break;
+        case RequestType.ride:
+          price = double.tryParse(_fareController.text.trim());
+          additionalInfo = {
+            'vehicleType': _selectedVehicleType,
+            'routeDescription': _routeDescriptionController.text.trim(),
+            'driverNotes': _driverNotesController.text.trim(),
           };
           break;
         default:
