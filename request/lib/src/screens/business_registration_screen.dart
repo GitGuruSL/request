@@ -567,12 +567,12 @@ class _BusinessRegistrationScreenState
           ),
           const SizedBox(height: 16),
           _buildDocumentUpload(
-            title: 'Business License',
-            description: 'Upload your valid business license.',
+            title: 'Business License (optional)',
+            description: 'Upload your business license if available.',
             file: _businessLicenseFile,
             url: _businessLicenseUrl,
             onTap: () => _pickDocument('business_license'),
-            isRequired: true,
+            isRequired: false,
           ),
           _buildDocumentUpload(
             title: 'Tax Certificate (optional)',
@@ -1136,17 +1136,18 @@ class _BusinessRegistrationScreenState
         'insuranceDocumentUrl': insuranceDocumentUrl,
         'businessLogoUrl': businessLogoUrl,
         // Document status tracking
-        'businessLicenseStatus': 'pending',
+        'businessLicenseStatus': businessLicenseUrl != null ? 'pending' : null,
         'taxCertificateStatus': taxCertificateUrl != null ? 'pending' : null,
         'insuranceDocumentStatus':
             insuranceDocumentUrl != null ? 'pending' : null,
         'businessLogoStatus': businessLogoUrl != null ? 'pending' : null,
         // Document verification nested structure
         'documentVerification': {
-          'businessLicense': {
-            'status': 'pending',
-            'submittedAt': DateTime.now(),
-          },
+          if (businessLicenseUrl != null)
+            'businessLicense': {
+              'status': 'pending',
+              'submittedAt': DateTime.now(),
+            },
           if (taxCertificateUrl != null)
             'taxCertificate': {
               'status': 'pending',
