@@ -10,6 +10,7 @@
   "deploy:scp:sh": "bash ./scripts/deploy-scp.sh",
   "migrate:sql": "node ./scripts/run-sql-migration.js ./migration/20250827_subscriptions.sql",
   "seed:categories": "node ./scripts/reseed_categories_v2.js",
+  "backfill:category:request_type": "node ./scripts/backfill_category_request_type.js",
     "migrate:ssh": "powershell -ExecutionPolicy Bypass -File ./scripts/run-migration-ssh.ps1",
     "test": "jest",
     "test:watch": "jest --watch",
