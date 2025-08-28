@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/glass_theme.dart';
 import '../models/enhanced_user_model.dart';
 import '../services/enhanced_user_service.dart';
 import '../services/rest_notification_service.dart';
@@ -67,6 +68,7 @@ class _EnhancedMainDashboardState extends State<EnhancedMainDashboard> {
     }
 
     return Scaffold(
+      extendBody: true,
       appBar: _buildAppBar(),
       drawer: _buildDrawer(),
       body: _buildBody(),
@@ -589,8 +591,8 @@ class _EnhancedMainDashboardState extends State<EnhancedMainDashboard> {
       top: false,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          // Match HomeScreen background color (#F5F5F5)
-          color: const Color(0xFFF5F5F5),
+          // Match HomeScreen background color
+          color: GlassTheme.backgroundColor,
           border: Border(
             top: BorderSide(
               color: Theme.of(context).dividerColor.withOpacity(0.25),

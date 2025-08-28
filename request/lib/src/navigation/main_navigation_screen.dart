@@ -68,22 +68,24 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true,
       body: _navigationItems[_currentIndex].screen,
       bottomNavigationBar: SafeArea(
         top: false,
         child: DecoratedBox(
           decoration: const BoxDecoration(
-            // Match HomeScreen backgroundContainer solid color
-            color: Color(0xFFF5F5F5),
+            // Transparent so the page background is visible under the bar
+            color: Colors.transparent,
             border: Border(
               top: BorderSide(
-                color: Color(0x40000000), // dividerColor at ~25% opacity
-                width: 0.6,
+                color:
+                    Color.fromARGB(64, 187, 186, 186), // ~25% black as divider
+                width: 0.2,
               ),
             ),
           ),
           child: NavigationBar(
-            backgroundColor: Theme.of(context).colorScheme.background,
+            backgroundColor: Colors.transparent,
             surfaceTintColor: Colors.transparent,
             height: 64,
             selectedIndex: _currentIndex,

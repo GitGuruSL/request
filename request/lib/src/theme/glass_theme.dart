@@ -4,6 +4,10 @@ class GlassTheme {
   // Theme mode setting
   static bool _isDarkMode = false;
 
+  // Single source of truth for the app background color (used by HomeScreen)
+  // Keep this in sync with `backgroundGradient`.
+  static const Color backgroundColor = Color(0xFFF5F5F5);
+
   static bool get isDarkMode => _isDarkMode;
 
   static void toggleTheme() {
@@ -160,7 +164,7 @@ class GlassTheme {
 
   // Background gradient
   static BoxDecoration get backgroundGradient => BoxDecoration(
-        color: const Color(0xFFF5F5F5), // Solid light gray background
+        color: backgroundColor, // Solid light gray background
         // gradient: LinearGradient(
         //   begin: Alignment.topCenter,
         //   end: Alignment.bottomCenter,
