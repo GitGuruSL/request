@@ -376,12 +376,12 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _moduleEnabled(String type) {
     // Group headers are always enabled (they open a chooser)
     if (type == 'products' || type == 'services') return true;
-    // Coming Soon modules (temporarily gated off)
+    // Force-enable additional service types in the UI
     if (type == 'tours' ||
         type == 'construction' ||
         type == 'events' ||
         type == 'jobs' ||
-        type == 'education') return false;
+        type == 'education') return true;
 
     final key = switch (type) {
       'rental' => 'rent',
@@ -433,11 +433,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Subtle drag handle for modern look
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
                   Row(
                     children: [
-                      Icon(isProducts ? Icons.shopping_bag : Icons.build,
-                          color: AppTheme.textPrimary),
-                      const SizedBox(width: 8),
                       Text(
                         isProducts ? 'Products' : 'Services',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -585,7 +594,12 @@ class _HomeScreenState extends State<HomeScreen> {
         );
         break;
       case 'tours':
-        // Tours & Travel - Coming Soon (this case won't be reached due to _moduleEnabled returning false)
+      case 'events':
+      case 'construction':
+      case 'education':
+      case 'jobs':
+        // Route other service types to generic Service flow for now
+        _openUnified(RequestType.service);
         break;
     }
   }
@@ -1180,9 +1194,10 @@ class _SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Text(
         title,
-        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: AppTheme.textPrimary,
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textSecondary,
+              letterSpacing: 0.2,
             ),
       ),
     );
@@ -1244,21 +1259,13 @@ class _OptionTile extends StatelessWidget {
     return InkWell(
       onTap: disabled ? null : onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: disabled
-                    ? Colors.grey.shade200
-                    : option.color.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(option.icon,
-                  color: disabled ? Colors.grey.shade400 : option.color),
-            ),
-            const SizedBox(width: 12),
+            Icon(option.icon,
+                color: disabled ? Colors.grey.shade400 : option.color,
+                size: 22),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1282,7 +1289,7 @@ class _OptionTile extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 4),
             if (onToggleFavorite != null)
               IconButton(
                 tooltip: 'Favorite',
@@ -1296,7 +1303,7 @@ class _OptionTile extends StatelessWidget {
                 ),
                 onPressed: () => onToggleFavorite?.call(option.type),
               ),
-            Icon(Icons.chevron_right, color: subColor),
+            // Removed trailing chevron for a cleaner list
           ],
         ),
       ),
