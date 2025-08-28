@@ -20,6 +20,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
+    coreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -103,6 +104,7 @@ flutter {
 dependencies {
     // Multi-dex support
     implementation 'androidx.multidex:multidex:2.0.1'
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
     
     // Core Android libraries
     implementation 'androidx.core:core-ktx:1.13.1'

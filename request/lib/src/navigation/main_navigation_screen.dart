@@ -79,7 +79,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             border: const Border(
               top: BorderSide(
                 color: Color.fromARGB(64, 148, 147, 147), // subtle divider
-                width: 0.6,
+                width: 0.2,
               ),
             ),
           ),
