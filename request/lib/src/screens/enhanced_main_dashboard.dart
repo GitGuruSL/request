@@ -78,8 +78,10 @@ class _EnhancedMainDashboardState extends State<EnhancedMainDashboard> {
   AppBar _buildAppBar() {
     return AppBar(
       elevation: 0,
-      backgroundColor: Theme.of(context).colorScheme.primary,
-      foregroundColor: Colors.white,
+      scrolledUnderElevation: 0,
+      backgroundColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+      foregroundColor: Theme.of(context).colorScheme.onSurface,
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -92,10 +94,10 @@ class _EnhancedMainDashboardState extends State<EnhancedMainDashboard> {
           ),
           Text(
             _getRoleDisplayName(currentUser!.activeRole),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w400,
-              color: Colors.white70,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
         ],
@@ -580,21 +582,58 @@ class _EnhancedMainDashboardState extends State<EnhancedMainDashboard> {
     );
   }
 
-  BottomNavigationBar _buildBottomNavigation() {
+  Widget _buildBottomNavigation() {
     final navItems = _getNavItemsForRole(currentUser!.activeRole);
 
-    return BottomNavigationBar(
-      currentIndex: _currentIndex,
-      onTap: (index) => setState(() => _currentIndex = index),
-      type: BottomNavigationBarType.fixed,
-      selectedItemColor: Theme.of(context).colorScheme.primary,
-      unselectedItemColor: Colors.grey,
-      items: navItems
-          .map((item) => BottomNavigationBarItem(
-                icon: Icon(item['icon']),
-                label: item['label'],
-              ))
-          .toList(),
+    return NavigationBar(
+      height: 64,
+      selectedIndex: _currentIndex,
+      onDestinationSelected: (index) => setState(() => _currentIndex = index),
+      indicatorColor: Theme.of(context).colorScheme.primary.withOpacity(0.15),
+      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+      destinations: navItems.map((item) {
+        final isMessages =
+            (item['label'] as String).toLowerCase() == 'messages';
+        final hasBadge = isMessages && _unreadNotifications > 0;
+        return NavigationDestination(
+          icon: _buildNavIcon(
+              item['icon'] as IconData, hasBadge ? _unreadNotifications : null),
+          selectedIcon: _buildNavIcon(
+              item['icon'] as IconData, hasBadge ? _unreadNotifications : null),
+          label: item['label'] as String,
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildNavIcon(IconData icon, [int? badge]) {
+    final iconWidget = Icon(icon, size: 26);
+    if (badge == null || badge <= 0) return iconWidget;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        iconWidget,
+        Positioned(
+          right: -6,
+          top: -6,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            constraints: const BoxConstraints(minWidth: 16),
+            child: Text(
+              badge > 99 ? '99+' : '$badge',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

@@ -26,6 +26,27 @@ class AppTheme {
     colorScheme: ColorScheme.fromSeed(
         seedColor: primaryColor, brightness: Brightness.light),
     scaffoldBackgroundColor: Colors.transparent,
+    appBarTheme: const AppBarTheme(
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      backgroundColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+      foregroundColor: Colors.black,
+      centerTitle: false,
+    ),
+    navigationBarTheme: NavigationBarThemeData(
+      elevation: 8,
+      backgroundColor: Colors.white,
+      indicatorColor: const Color(0xFF4B9D62).withValues(alpha: 0.18),
+      indicatorShape: const StadiumBorder(),
+      labelTextStyle: WidgetStateProperty.resolveWith<TextStyle?>((states) {
+        final selected = states.contains(WidgetState.selected);
+        return TextStyle(
+          fontSize: 12,
+          fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+        );
+      }),
+    ),
   );
 
   static final ThemeData darkTheme = ThemeData(
@@ -34,6 +55,27 @@ class AppTheme {
     colorScheme: ColorScheme.fromSeed(
         seedColor: primaryLight, brightness: Brightness.dark),
     scaffoldBackgroundColor: Colors.transparent,
+    appBarTheme: const AppBarTheme(
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      backgroundColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+      foregroundColor: Colors.white,
+      centerTitle: false,
+    ),
+    navigationBarTheme: NavigationBarThemeData(
+      elevation: 8,
+      backgroundColor: const Color(0xFF111315),
+      indicatorColor: primaryLight.withValues(alpha: 0.22),
+      indicatorShape: const StadiumBorder(),
+      labelTextStyle: WidgetStateProperty.resolveWith<TextStyle?>((states) {
+        final selected = states.contains(WidgetState.selected);
+        return TextStyle(
+          fontSize: 12,
+          fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+        );
+      }),
+    ),
   );
 
   // Common decorations/styles

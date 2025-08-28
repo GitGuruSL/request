@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/rest_notification_service.dart';
 import '../home/screens/home_screen.dart';
 import '../home/screens/browse_requests_screen.dart';
 import '../screens/modern_menu_screen.dart';
@@ -16,6 +17,7 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
+  int _unreadMessages = 0;
   late final List<_NavigationItem> _navigationItems = [
     _NavigationItem(
       screen: const HomeScreen(),
@@ -53,6 +55,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    _loadUnreadCounts();
   }
 
   Future<void> _persistIndex(int index) async {
@@ -66,26 +69,67 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _navigationItems[_currentIndex].screen,
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _currentIndex,
-        onTap: (index) {
+      bottomNavigationBar: NavigationBar(
+        height: 64,
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (index) {
           setState(() => _currentIndex = index);
           _persistIndex(index);
         },
-        selectedItemColor: Theme.of(context).colorScheme.primary,
-        unselectedItemColor: Colors.grey,
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        elevation: 8,
-        items: _navigationItems
-            .map((item) => BottomNavigationBarItem(
-                  icon: Icon(item.icon, size: 28),
-                  activeIcon: Icon(item.activeIcon, size: 28),
-                  label: item.label,
-                ))
-            .toList(),
+        indicatorColor: Theme.of(context).colorScheme.primary.withOpacity(0.15),
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        destinations: _navigationItems.map((item) {
+          final isMessages = item.label.toLowerCase() == 'messages';
+          final hasBadge = isMessages && _unreadMessages > 0;
+          return NavigationDestination(
+            icon: _buildIcon(item.icon, hasBadge ? _unreadMessages : null),
+            selectedIcon:
+                _buildIcon(item.activeIcon, hasBadge ? _unreadMessages : null),
+            label: item.label,
+          );
+        }).toList(),
       ),
+    );
+  }
+
+  Future<void> _loadUnreadCounts() async {
+    try {
+      final counts = await RestNotificationService.instance.unreadCounts();
+      if (!mounted) return;
+      setState(() => _unreadMessages = counts.messages);
+    } catch (_) {
+      // Ignore errors and keep badge hidden
+    }
+  }
+
+  Widget _buildIcon(IconData icon, [int? badge]) {
+    final iconWidget = Icon(icon, size: 26);
+    if (badge == null || badge <= 0) return iconWidget;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        iconWidget,
+        Positioned(
+          right: -6,
+          top: -6,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            constraints: const BoxConstraints(minWidth: 16),
+            child: Text(
+              badge > 99 ? '99+' : '$badge',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
