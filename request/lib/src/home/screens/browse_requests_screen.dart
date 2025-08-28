@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import 'dart:async';
 import '../../services/country_filtered_data_service.dart';
 import '../../services/user_registration_service.dart';
 import '../../services/country_service.dart';
@@ -39,6 +40,10 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     'price'
   };
   bool _isLoggedIn = true;
+  // Search state
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  Timer? _searchDebounce;
 
   // Filters selected by the user from the bottom sheet
   final Set<String> _selectedTypes =
@@ -163,6 +168,8 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _searchDebounce?.cancel();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -310,6 +317,12 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
           current.where((r) => _mapRequestModelToTypeKey(r) == 'delivery');
     }
 
+    // Search query across multiple fields
+    final q = _searchQuery.trim().toLowerCase();
+    if (q.isNotEmpty) {
+      current = current.where((r) => _matchesSearch(r, q));
+    }
+
     // Price range
     if (_minPrice != null || _maxPrice != null) {
       final min = _minPrice ?? double.negativeInfinity;
@@ -342,6 +355,44 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     }
 
     return list;
+  }
+
+  bool _matchesSearch(models.RequestModel r, String q) {
+    // Collect searchable tokens from various fields
+    final parts = <String?>[
+      r.title,
+      r.description,
+      _displayTypeFor(
+          r), // inferred module/type label e.g., Item, Service, Rent
+      _categoryOf(r),
+      _subcategoryOf(r),
+      r.location?.city,
+    ];
+
+    // Include typeSpecificData values (flattened)
+    if (r.typeSpecificData.isNotEmpty) {
+      for (final entry in r.typeSpecificData.entries) {
+        // key and value as strings
+        parts.add(entry.key);
+        final v = entry.value;
+        if (v is String) {
+          parts.add(v);
+        } else if (v is num || v is bool) {
+          parts.add(v.toString());
+        } else if (v is List) {
+          parts.add(v.join(' '));
+        } else if (v is Map) {
+          parts.add(v.values.join(' '));
+        }
+      }
+    }
+
+    // Basic contains matching
+    for (final p in parts) {
+      final s = p?.toString().toLowerCase();
+      if (s != null && s.contains(q)) return true;
+    }
+    return false;
   }
 
   // Map RequestModel to a backend type key used by allowed types list
@@ -414,7 +465,11 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                           _deliveryOnly ||
                           _minPrice != null ||
                           _maxPrice != null ||
-                          _sortBy != 'relevance'),
+                          _sortBy != 'relevance' ||
+                          _searchQuery.trim().isNotEmpty,
+                      searchController: _searchController,
+                      onSearchChanged: _onSearchChanged,
+                      onClearSearch: _clearSearch),
                   _buildResultCount(),
                   Expanded(
                     child: _initialLoading
@@ -1043,6 +1098,20 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     return v[0].toUpperCase() + v.substring(1);
   }
 
+  void _onSearchChanged(String value) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      setState(() {
+        _searchQuery = value;
+      });
+    });
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    _onSearchChanged('');
+  }
+
   Widget _buildAccordion({
     required String title,
     String? subtitle,
@@ -1543,10 +1612,16 @@ class _Header extends StatelessWidget {
   final VoidCallback onRefresh;
   final VoidCallback onOpenFilter;
   final bool hasActiveFilters;
+  final TextEditingController searchController;
+  final ValueChanged<String> onSearchChanged;
+  final VoidCallback onClearSearch;
   const _Header({
     required this.onRefresh,
     required this.onOpenFilter,
     this.hasActiveFilters = false,
+    required this.searchController,
+    required this.onSearchChanged,
+    required this.onClearSearch,
   });
 
   @override
@@ -1606,7 +1681,11 @@ class _Header extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              const _SearchBar(),
+              _SearchBar(
+                searchController: searchController,
+                onChanged: onSearchChanged,
+                onClear: onClearSearch,
+              ),
             ],
           ),
         ),
@@ -1616,7 +1695,14 @@ class _Header extends StatelessWidget {
 }
 
 class _SearchBar extends StatelessWidget {
-  const _SearchBar();
+  final TextEditingController searchController;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+  const _SearchBar({
+    required this.searchController,
+    required this.onChanged,
+    required this.onClear,
+  });
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -1643,11 +1729,20 @@ class _SearchBar extends StatelessWidget {
         ],
       ),
       child: TextField(
+        controller: searchController,
+        onChanged: onChanged,
         decoration: InputDecoration(
           hintText: 'Find requests by skill, item, or service',
           hintStyle: TextStyle(color: _Palette.secondaryText, fontSize: 15),
           prefixIcon:
               Icon(Icons.search_outlined, color: _Palette.secondaryText),
+          suffixIcon: searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: Icon(Icons.close, color: _Palette.secondaryText),
+                  onPressed: onClear,
+                  tooltip: 'Clear',
+                )
+              : null,
           border: InputBorder.none,
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
