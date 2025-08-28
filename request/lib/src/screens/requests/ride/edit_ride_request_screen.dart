@@ -229,6 +229,19 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
               myLocationButtonEnabled: false,
               zoomControlsEnabled: false,
               mapToolbarEnabled: false,
+              // Remove lite mode to fix rendering issues
+              liteModeEnabled: false,
+              buildingsEnabled: true,
+              indoorViewEnabled: false,
+              compassEnabled: true,
+              trafficEnabled: false,
+              mapType: MapType.normal,
+              // Add these for better performance
+              minMaxZoomPreference: const MinMaxZoomPreference(10.0, 20.0),
+              rotateGesturesEnabled: true,
+              scrollGesturesEnabled: true,
+              tiltGesturesEnabled: false,
+              zoomGesturesEnabled: true,
             ),
           ),
 

@@ -417,7 +417,9 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
               initialCameraPosition: _initialPosition,
               onMapCreated: (GoogleMapController controller) {
                 _mapController = controller;
-                if (mounted) setState(() => _mapReady = true);
+                if (mounted) {
+                  setState(() => _mapReady = true);
+                }
               },
               markers: _markers,
               polylines: _polylines,
@@ -426,12 +428,19 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
               myLocationButtonEnabled: false,
               zoomControlsEnabled: false,
               mapToolbarEnabled: false,
-              liteModeEnabled: true,
-              buildingsEnabled: false,
+              // Remove lite mode to fix rendering issues
+              liteModeEnabled: false,
+              buildingsEnabled: true,
               indoorViewEnabled: false,
-              compassEnabled: false,
+              compassEnabled: true,
               trafficEnabled: false,
               mapType: MapType.normal,
+              // Add these for better performance
+              minMaxZoomPreference: const MinMaxZoomPreference(10.0, 20.0),
+              rotateGesturesEnabled: true,
+              scrollGesturesEnabled: true,
+              tiltGesturesEnabled: false,
+              zoomGesturesEnabled: true,
             ),
           ),
 
