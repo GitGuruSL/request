@@ -4,6 +4,7 @@ import '../home/screens/home_screen.dart';
 import '../home/screens/browse_requests_screen.dart';
 import '../screens/modern_menu_screen.dart';
 import '../screens/pricing/price_comparison_screen.dart';
+import '../screens/chat/chat_conversations_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final int initialIndex;
@@ -33,6 +34,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       icon: Icons.trending_up_outlined,
       activeIcon: Icons.trending_up,
       label: 'Prices',
+    ),
+    _NavigationItem(
+      screen: const ChatConversationsScreen(),
+      icon: Icons.message_outlined,
+      activeIcon: Icons.message,
+      label: 'Messages',
     ),
     _NavigationItem(
       screen: const ModernMenuScreen(),

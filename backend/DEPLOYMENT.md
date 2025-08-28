@@ -74,6 +74,24 @@ Notes
  - If `/health` depends on DB and the database is unreachable, deployment will fail and rollback. Verify DB access and credentials in `production.env` before retrying.
  - If GHCR pulls fail on server, either set `GHCR_USER/GHCR_TOKEN` repo secrets (server docker login is attempted) or make the GHCR package public.
 
+Standardize container name (avoid duplicates)
+- Always use a single canonical name: `request-backend-container`.
+- Replace containers via a stop/remove/run sequence, or use the helper script below.
+
+Helper script (server)
+```bash
+bash /opt/request-backend/redeploy.sh <tag-or-sha> [--public]
+# Example:
+bash /opt/request-backend/redeploy.sh fa3e6cb7d845608f8db12ef246201759eef6f243
+```
+
+Installing the helper once
+```bash
+sudo mkdir -p /opt/request-backend
+sudo cp backend/deploy/redeploy.sh /opt/request-backend/
+sudo chmod +x /opt/request-backend/redeploy.sh
+```
+
 <!-- ci: trigger backend build - 2025-08-27T10:30Z -->
  - GHCR repository owner must be lowercase; the workflow normalizes owner for tags, but set GHCR_USER secret in lowercase to avoid auth issues.
 
