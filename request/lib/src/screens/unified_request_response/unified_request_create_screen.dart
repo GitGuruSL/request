@@ -231,15 +231,15 @@ class _UnifiedRequestCreateScreenState
     _guestsCountController.dispose();
     _areaSizeController.dispose();
     _sessionsPerWeekController.dispose();
-  _studentsCountController.dispose();
-  _detailedNeedsController.dispose();
-  _subjectsController.dispose();
-  _syllabusOtherController.dispose();
-  _courseOrSkillController.dispose();
-  _desiredOutcomeControllerEdu.dispose();
-  _artOrSportController.dispose();
-  _targetCountryController.dispose();
-  _fieldOfStudyController.dispose();
+    _studentsCountController.dispose();
+    _detailedNeedsController.dispose();
+    _subjectsController.dispose();
+    _syllabusOtherController.dispose();
+    _courseOrSkillController.dispose();
+    _desiredOutcomeControllerEdu.dispose();
+    _artOrSportController.dispose();
+    _targetCountryController.dispose();
+    _fieldOfStudyController.dispose();
     _experienceYearsController.dispose();
     _otherLanguageController.dispose();
     _tourPickupController.dispose();
@@ -1192,12 +1192,12 @@ class _UnifiedRequestCreateScreenState
         const SizedBox(height: 16),
 
         // Location for services other than Tours/Events (handled above for those)
-    if (!(_selectedType == RequestType.service &&
-      (((_selectedModule?.toLowerCase() == 'tours') ||
-          (_selectedModule?.toLowerCase() == 'events')) ||
-        // Hide location when Education is strictly online
-        ((_selectedModule?.toLowerCase() == 'education') &&
-          _preferredEducationMode == 'Online'))))
+        if (!(_selectedType == RequestType.service &&
+            (((_selectedModule?.toLowerCase() == 'tours') ||
+                    (_selectedModule?.toLowerCase() == 'events')) ||
+                // Hide location when Education is strictly online
+                ((_selectedModule?.toLowerCase() == 'education') &&
+                    _preferredEducationMode == 'Online'))))
           _buildFlatField(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1363,22 +1363,22 @@ class _UnifiedRequestCreateScreenState
     _guestsCountController.clear();
     _areaSizeController.clear();
     _sessionsPerWeekController.clear();
-  _studentsCountController.clear();
-  _detailedNeedsController.clear();
-  _subjectsController.clear();
-  _syllabus = 'Local (National)';
-  _syllabusOtherController.clear();
-  _courseOrSkillController.clear();
-  _desiredOutcomeControllerEdu.clear();
-  _artOrSportController.clear();
-  _classType = 'Individual';
-  _targetCountryController.clear();
-  _fieldOfStudyController.clear();
+    _studentsCountController.clear();
+    _detailedNeedsController.clear();
+    _subjectsController.clear();
+    _syllabus = 'Local (National)';
+    _syllabusOtherController.clear();
+    _courseOrSkillController.clear();
+    _desiredOutcomeControllerEdu.clear();
+    _artOrSportController.clear();
+    _classType = 'Individual';
+    _targetCountryController.clear();
+    _fieldOfStudyController.clear();
     _experienceYearsController.clear();
     _needsGuide = false;
     _pickupRequiredForTour = false;
     _educationLevel = 'Beginner';
-  _preferredEducationMode = 'Online';
+    _preferredEducationMode = 'Online';
     _positionType = 'Full-time';
     // events
     _eventDate = null;
@@ -1717,8 +1717,8 @@ class _UnifiedRequestCreateScreenState
                           value: 'In-Person', child: Text('In-Person')),
                       DropdownMenuItem(value: 'Both', child: Text('Both')),
                     ],
-                    onChanged: (v) => setState(
-                        () => _preferredEducationMode = v ?? 'Online'),
+                    onChanged: (v) =>
+                        setState(() => _preferredEducationMode = v ?? 'Online'),
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
@@ -1769,8 +1769,7 @@ class _UnifiedRequestCreateScreenState
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       value: _syllabus,
-                      decoration:
-                          const InputDecoration(labelText: 'Syllabus'),
+                      decoration: const InputDecoration(labelText: 'Syllabus'),
                       items: const [
                         DropdownMenuItem(
                             value: 'Local (National)',
@@ -1782,7 +1781,8 @@ class _UnifiedRequestCreateScreenState
                         DropdownMenuItem(value: 'IB', child: Text('IB')),
                         DropdownMenuItem(value: 'Other', child: Text('Other')),
                       ],
-                      onChanged: (v) => setState(() => _syllabus = v ?? _syllabus),
+                      onChanged: (v) =>
+                          setState(() => _syllabus = v ?? _syllabus),
                     ),
                     if (_syllabus == 'Other')
                       Padding(
@@ -1843,7 +1843,8 @@ class _UnifiedRequestCreateScreenState
                         DropdownMenuItem(
                             value: 'Workshop', child: Text('Workshop')),
                       ],
-                      onChanged: (v) => setState(() => _classType = v ?? 'Individual'),
+                      onChanged: (v) =>
+                          setState(() => _classType = v ?? 'Individual'),
                     ),
                   ],
                 ),
@@ -2054,54 +2055,54 @@ class _UnifiedRequestCreateScreenState
       case 'construction':
         return _buildConstructionPayload();
       case 'education':
-    return {
-      // General education
-      'studentLevel': _educationLevel,
-      'preferredMode': _preferredEducationMode,
-      'numberOfStudents': _studentsCountController.text.trim().isNotEmpty
-        ? int.tryParse(_studentsCountController.text.trim())
-        : null,
-      'sessionsPerWeek': _sessionsPerWeekController.text.trim().isNotEmpty
-        ? int.tryParse(_sessionsPerWeekController.text.trim())
-        : null,
-      'detailedNeeds': _detailedNeedsController.text.trim().isNotEmpty
-        ? _detailedNeedsController.text.trim()
-        : null,
-      // Category-specific
-      if (_selectedCategory.toLowerCase() == 'academic tutoring') ...{
-      'subjects': _subjectsController.text.trim().isNotEmpty
-        ? _subjectsController.text.trim()
-        : null,
-      'syllabus': _syllabus,
-      'syllabusOther': _syllabus == 'Other'
-        ? _syllabusOtherController.text.trim()
-        : null,
-      },
-      if (_selectedCategory.toLowerCase() ==
-        'professional & skill development') ...{
-      'courseOrSkill': _courseOrSkillController.text.trim().isNotEmpty
-        ? _courseOrSkillController.text.trim()
-        : null,
-      'desiredOutcome':
-        _desiredOutcomeControllerEdu.text.trim().isNotEmpty
-          ? _desiredOutcomeControllerEdu.text.trim()
-          : null,
-      },
-      if (_selectedCategory.toLowerCase() == 'arts & hobbies') ...{
-      'artOrSport': _artOrSportController.text.trim().isNotEmpty
-        ? _artOrSportController.text.trim()
-        : null,
-      'classType': _classType,
-      },
-      if (_selectedCategory.toLowerCase() == 'admissions & consulting') ...{
-      'targetCountry': _targetCountryController.text.trim().isNotEmpty
-        ? _targetCountryController.text.trim()
-        : null,
-      'fieldOfStudy': _fieldOfStudyController.text.trim().isNotEmpty
-        ? _fieldOfStudyController.text.trim()
-        : null,
-      },
-    }..removeWhere((k, v) => v == null);
+        return {
+          // General education
+          'studentLevel': _educationLevel,
+          'preferredMode': _preferredEducationMode,
+          'numberOfStudents': _studentsCountController.text.trim().isNotEmpty
+              ? int.tryParse(_studentsCountController.text.trim())
+              : null,
+          'sessionsPerWeek': _sessionsPerWeekController.text.trim().isNotEmpty
+              ? int.tryParse(_sessionsPerWeekController.text.trim())
+              : null,
+          'detailedNeeds': _detailedNeedsController.text.trim().isNotEmpty
+              ? _detailedNeedsController.text.trim()
+              : null,
+          // Category-specific
+          if (_selectedCategory.toLowerCase() == 'academic tutoring') ...{
+            'subjects': _subjectsController.text.trim().isNotEmpty
+                ? _subjectsController.text.trim()
+                : null,
+            'syllabus': _syllabus,
+            'syllabusOther': _syllabus == 'Other'
+                ? _syllabusOtherController.text.trim()
+                : null,
+          },
+          if (_selectedCategory.toLowerCase() ==
+              'professional & skill development') ...{
+            'courseOrSkill': _courseOrSkillController.text.trim().isNotEmpty
+                ? _courseOrSkillController.text.trim()
+                : null,
+            'desiredOutcome':
+                _desiredOutcomeControllerEdu.text.trim().isNotEmpty
+                    ? _desiredOutcomeControllerEdu.text.trim()
+                    : null,
+          },
+          if (_selectedCategory.toLowerCase() == 'arts & hobbies') ...{
+            'artOrSport': _artOrSportController.text.trim().isNotEmpty
+                ? _artOrSportController.text.trim()
+                : null,
+            'classType': _classType,
+          },
+          if (_selectedCategory.toLowerCase() == 'admissions & consulting') ...{
+            'targetCountry': _targetCountryController.text.trim().isNotEmpty
+                ? _targetCountryController.text.trim()
+                : null,
+            'fieldOfStudy': _fieldOfStudyController.text.trim().isNotEmpty
+                ? _fieldOfStudyController.text.trim()
+                : null,
+          },
+        }..removeWhere((k, v) => v == null);
       case 'hiring':
         return {
           'positionType': _positionType,
