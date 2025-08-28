@@ -28,7 +28,36 @@
       },
       "tours": {
         "categories": [
-          { "name": "Tours", "subcategories": ["City Tour", "Nature & Wildlife", "Cultural"] }
+          {
+            "name": "Tours & Experiences",
+            "subcategories": [
+              "Cultural & Heritage",
+              "Nature & Wildlife",
+              "Adventure & Water Sports",
+              "Pilgrimage & Religious",
+              "Wellness & Retreats",
+              "Food & Culinary",
+              "Photography & Sightseeing",
+              "Other Experiences"
+            ]
+          },
+          {
+            "name": "Transportation",
+            "subcategories": [
+              "Hire Driver for Tour",
+              "Airport Transfer",
+              "Vehicle Rental (Self-Drive)"
+            ]
+          },
+          {
+            "name": "Accommodation",
+            "subcategories": [
+              "Hotel",
+              "Villa/Bungalow",
+              "Guesthouse/Homestay",
+              "Hostel"
+            ]
+          }
         ]
       },
       "events": {
