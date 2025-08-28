@@ -40,6 +40,17 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
 
   // Service-specific controllers
   final _specialInstructionsController = TextEditingController();
+  // Service module dynamic controllers/fields (mirror create screen)
+  final _peopleCountController = TextEditingController(); // tours/events
+  final _durationDaysController = TextEditingController(); // tours
+  final _guestsCountController = TextEditingController(); // events
+  final _areaSizeController = TextEditingController(); // construction (sqft)
+  final _sessionsPerWeekController = TextEditingController(); // education
+  final _experienceYearsController = TextEditingController(); // hiring
+  bool _needsGuide = false; // tours
+  bool _pickupRequiredForTour = false; // tours
+  String _educationLevel = 'Beginner'; // education
+  String _positionType = 'Full-time'; // hiring
 
   // Rental-specific controllers
   final _itemToRentController = TextEditingController();
@@ -54,6 +65,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
   final _dimensionsController = TextEditingController();
 
   RequestType _selectedType = RequestType.item;
+  String? _selectedModule; // inferred module for service type
   String _selectedCondition = 'New';
   String _selectedUrgency = 'Flexible';
   String _selectedCategory = 'Electronics';
@@ -139,9 +151,50 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
         _selectedSubCategoryId = typeData['subcategoryId']?.toString() ??
             typeData['subcategory']?.toString();
         _selectedUrgency = typeData['urgency']?.toString() ?? 'Flexible';
+        _selectedModule = typeData['module']?.toString();
         if (typeData['preferredDateTime'] != null) {
           _preferredDateTime = DateTime.fromMillisecondsSinceEpoch(
               typeData['preferredDateTime']);
+        }
+
+        // Hydrate moduleFields if present
+        final mf = (typeData['moduleFields'] as Map?)?.cast<String, dynamic>();
+        if (mf != null) {
+          final module = _selectedModule?.toLowerCase();
+          switch (module) {
+            case 'tours':
+              final pc = mf['peopleCount'];
+              if (pc != null) _peopleCountController.text = pc.toString();
+              final dd = mf['durationDays'];
+              if (dd != null) _durationDaysController.text = dd.toString();
+              _needsGuide = (mf['needsGuide'] == true);
+              _pickupRequiredForTour = (mf['pickupRequired'] == true);
+              break;
+            case 'events':
+              final gc = mf['guestsCount'];
+              if (gc != null) _guestsCountController.text = gc.toString();
+              break;
+            case 'construction':
+              final area = mf['areaSizeSqft'];
+              if (area != null) _areaSizeController.text = area.toString();
+              break;
+            case 'education':
+              final lvl = mf['level'];
+              if (lvl is String && lvl.isNotEmpty) _educationLevel = lvl;
+              final spw = mf['sessionsPerWeek'];
+              if (spw != null) {
+                _sessionsPerWeekController.text = spw.toString();
+              }
+              break;
+            case 'hiring':
+              final pt = mf['positionType'];
+              if (pt is String && pt.isNotEmpty) _positionType = pt;
+              final exp = mf['experienceYears'];
+              if (exp != null) {
+                _experienceYearsController.text = exp.toString();
+              }
+              break;
+          }
         }
 
         // Ensure categoryId is set if we have a category
@@ -242,6 +295,13 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
     _itemDescriptionController.dispose();
     _weightController.dispose();
     _dimensionsController.dispose();
+    // dispose dynamic controllers
+    _peopleCountController.dispose();
+    _durationDaysController.dispose();
+    _guestsCountController.dispose();
+    _areaSizeController.dispose();
+    _sessionsPerWeekController.dispose();
+    _experienceYearsController.dispose();
     super.dispose();
   }
 
@@ -262,6 +322,36 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
       case RequestType.price:
         return 'Price Request';
     }
+  }
+
+  String _getTypeDisplayNameWithModule() {
+    if (_selectedType == RequestType.service && _selectedModule != null) {
+      final m = _selectedModule!.toLowerCase();
+      switch (m) {
+        case 'item':
+          return 'Item Request';
+        case 'rent':
+        case 'rental':
+          return 'Rental Request';
+        case 'delivery':
+          return 'Delivery Request';
+        case 'ride':
+          return 'Ride Request';
+        case 'tours':
+          return 'Tour Request';
+        case 'events':
+          return 'Event Request';
+        case 'construction':
+          return 'Construction Request';
+        case 'education':
+          return 'Education Request';
+        case 'hiring':
+          return 'Hiring Request';
+        case 'other':
+          return 'Other Service Request';
+      }
+    }
+    return _getTypeDisplayName(_selectedType);
   }
 
   Future<void> _showCategoryPicker() async {
@@ -300,7 +390,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
     }
 
     return GlassPage(
-      title: 'Edit ${_getTypeDisplayName(_selectedType)}',
+      title: 'Edit ${_getTypeDisplayNameWithModule()}',
       appBarBackgroundColor: GlassTheme.isDarkMode
           ? const Color(0x1AFFFFFF)
           : const Color(0xCCFFFFFF),
@@ -330,7 +420,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text('Update ${_getTypeDisplayName(_selectedType)}'),
+                  : Text('Update ${_getTypeDisplayNameWithModule()}'),
             ),
           ),
         ),
@@ -586,6 +676,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
                 maxChildSize: 0.95,
                 builder: (context, scrollController) => CategoryPicker(
                   requestType: 'service',
+                  module: _selectedModule,
                   scrollController: scrollController,
                 ),
               ),
@@ -598,6 +689,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
                     result['subcategory'] ?? _selectedSubcategory;
                 _selectedCategoryId = result['category'];
                 _selectedSubCategoryId = result['subcategory'];
+                _resetServiceDynamicFields();
               });
             }
           },
@@ -826,8 +918,224 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
             ],
           ),
         ),
+        const SizedBox(height: 16),
+
+        // Module/Subcategory-specific dynamic fields (edit)
+        _buildServiceDynamicFields(),
       ],
     );
+  }
+
+  void _resetServiceDynamicFields() {
+    _peopleCountController.clear();
+    _durationDaysController.clear();
+    _guestsCountController.clear();
+    _areaSizeController.clear();
+    _sessionsPerWeekController.clear();
+    _experienceYearsController.clear();
+    _needsGuide = false;
+    _pickupRequiredForTour = false;
+    _educationLevel = 'Beginner';
+    _positionType = 'Full-time';
+  }
+
+  Widget _buildServiceDynamicFields() {
+    if (_selectedType != RequestType.service || _selectedModule == null) {
+      return const SizedBox.shrink();
+    }
+    final module = _selectedModule!.toLowerCase();
+    switch (module) {
+      case 'tours':
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildFlatField(
+              child: TextFormField(
+                controller: _peopleCountController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Number of People',
+                  hintText: 'Enter headcount for the tour',
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildFlatField(
+              child: TextFormField(
+                controller: _durationDaysController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Duration (days)',
+                  hintText: 'e.g., 3',
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildFlatField(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Need a tour guide?'),
+                    value: _needsGuide,
+                    onChanged: (v) => setState(() => _needsGuide = v ?? false),
+                  ),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Pickup required'),
+                    value: _pickupRequiredForTour,
+                    onChanged: (v) =>
+                        setState(() => _pickupRequiredForTour = v ?? false),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      case 'events':
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildFlatField(
+              child: TextFormField(
+                controller: _guestsCountController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Guests Count',
+                  hintText: 'How many people will attend?',
+                ),
+              ),
+            ),
+          ],
+        );
+      case 'construction':
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildFlatField(
+              child: TextFormField(
+                controller: _areaSizeController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Area Size (sqft)',
+                  hintText: 'Approximate area size',
+                ),
+              ),
+            ),
+          ],
+        );
+      case 'education':
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildFlatField(
+              child: DropdownButtonFormField<String>(
+                value: _educationLevel,
+                decoration: const InputDecoration(labelText: 'Level'),
+                items: const [
+                  DropdownMenuItem(value: 'Beginner', child: Text('Beginner')),
+                  DropdownMenuItem(
+                      value: 'Intermediate', child: Text('Intermediate')),
+                  DropdownMenuItem(value: 'Advanced', child: Text('Advanced')),
+                ],
+                onChanged: (v) =>
+                    setState(() => _educationLevel = v ?? 'Beginner'),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildFlatField(
+              child: TextFormField(
+                controller: _sessionsPerWeekController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Sessions per week',
+                  hintText: 'e.g., 2',
+                ),
+              ),
+            ),
+          ],
+        );
+      case 'hiring':
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildFlatField(
+              child: DropdownButtonFormField<String>(
+                value: _positionType,
+                decoration: const InputDecoration(labelText: 'Position Type'),
+                items: const [
+                  DropdownMenuItem(
+                      value: 'Full-time', child: Text('Full-time')),
+                  DropdownMenuItem(
+                      value: 'Part-time', child: Text('Part-time')),
+                  DropdownMenuItem(value: 'Contract', child: Text('Contract')),
+                ],
+                onChanged: (v) =>
+                    setState(() => _positionType = v ?? 'Full-time'),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildFlatField(
+              child: TextFormField(
+                controller: _experienceYearsController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Experience (years)',
+                  hintText: 'e.g., 3',
+                ),
+              ),
+            ),
+          ],
+        );
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  Map<String, dynamic> _buildModuleFieldsPayload() {
+    final module = _selectedModule?.toLowerCase();
+    switch (module) {
+      case 'tours':
+        return {
+          'peopleCount': _peopleCountController.text.trim().isNotEmpty
+              ? int.tryParse(_peopleCountController.text.trim())
+              : null,
+          'durationDays': _durationDaysController.text.trim().isNotEmpty
+              ? int.tryParse(_durationDaysController.text.trim())
+              : null,
+          'needsGuide': _needsGuide,
+          'pickupRequired': _pickupRequiredForTour,
+        }..removeWhere((k, v) => v == null);
+      case 'events':
+        return {
+          'guestsCount': _guestsCountController.text.trim().isNotEmpty
+              ? int.tryParse(_guestsCountController.text.trim())
+              : null,
+        }..removeWhere((k, v) => v == null);
+      case 'construction':
+        return {
+          'areaSizeSqft': _areaSizeController.text.trim().isNotEmpty
+              ? double.tryParse(_areaSizeController.text.trim())
+              : null,
+        }..removeWhere((k, v) => v == null);
+      case 'education':
+        return {
+          'level': _educationLevel,
+          'sessionsPerWeek': _sessionsPerWeekController.text.trim().isNotEmpty
+              ? int.tryParse(_sessionsPerWeekController.text.trim())
+              : null,
+        }..removeWhere((k, v) => v == null);
+      case 'hiring':
+        return {
+          'positionType': _positionType,
+          'experienceYears': _experienceYearsController.text.trim().isNotEmpty
+              ? int.tryParse(_experienceYearsController.text.trim())
+              : null,
+        }..removeWhere((k, v) => v == null);
+      default:
+        return {};
+    }
   }
 
   Widget _buildRentalFields() {
@@ -1602,12 +1910,14 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           'serviceType': (_selectedSubcategory?.isNotEmpty == true)
               ? _selectedSubcategory
               : _selectedCategory,
+          'module': _selectedModule,
           'categoryId': _selectedCategoryId ?? '',
           'subCategoryId': _selectedSubCategoryId ?? '',
           'category': _selectedCategory,
           'subcategory': _selectedSubcategory,
           'preferredDateTime': _preferredDateTime?.millisecondsSinceEpoch,
           'urgency': _selectedUrgency,
+          'moduleFields': _buildModuleFieldsPayload(),
         };
       case RequestType.delivery:
         return {
