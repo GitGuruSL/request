@@ -273,6 +273,14 @@ class _HomeScreenState extends State<HomeScreen> {
           icon: Icons.work,
           color: const Color(0xFF0EA5E9),
         ),
+        // Other
+        _RequestType(
+          type: 'other',
+          title: 'Other',
+          subtitle: 'Not listed above',
+          icon: Icons.more_horiz,
+          color: const Color(0xFF64748B),
+        ),
       ];
 
   List<_RequestType> get _allLeafOptions => [
@@ -381,7 +389,8 @@ class _HomeScreenState extends State<HomeScreen> {
         type == 'construction' ||
         type == 'events' ||
         type == 'jobs' ||
-        type == 'education') return true;
+        type == 'education' ||
+        type == 'other') return true;
 
     final key = switch (type) {
       'rental' => 'rent',
@@ -549,6 +558,23 @@ class _HomeScreenState extends State<HomeScreen> {
                         _handleTap(opt);
                       },
                     ),
+                    const SizedBox(height: 6),
+                    _SectionHeader(title: 'Other'),
+                    _OptionList(
+                      options: _serviceOptions
+                          .where((o) => o.type == 'other')
+                          .toList(),
+                      moduleEnabled: _moduleEnabled,
+                      isFavorite: _isFavorite,
+                      onToggleFavorite: (t) {
+                        _toggleFavorite(t);
+                        setModalState(() {});
+                      },
+                      onTap: (opt) {
+                        Navigator.of(ctx).pop();
+                        _handleTap(opt);
+                      },
+                    ),
                   ] else ...[
                     _SectionHeader(title: 'Choose type'),
                     _OptionList(
@@ -600,6 +626,9 @@ class _HomeScreenState extends State<HomeScreen> {
       case 'jobs':
         // Route other service types to generic Service flow with module context
         _openUnified(RequestType.service, module: type);
+        break;
+      case 'other':
+        _openUnified(RequestType.service, module: 'other');
         break;
     }
   }
