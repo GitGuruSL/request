@@ -29,6 +29,7 @@ class _CategoryPickerState extends State<CategoryPicker> {
   String? _selectedMain;
   String?
       _moduleOverride; // chosen module when type=service and module not provided
+  String? _resolvedModule; // module used for last fetch
   final Map<String, List<String>> _categories = {}; // name -> sub names
   final Map<String, String> _categoryNameToId = {}; // name -> id
   final Map<String, Map<String, String>> _subcategoryNameToId =
@@ -72,7 +73,10 @@ class _CategoryPickerState extends State<CategoryPicker> {
 
       // If service and no module chosen, stop loading and let UI show module chooser
       if (t == 'service' && (m == null || m.isEmpty)) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _resolvedModule = null;
+        });
         return;
       }
 
@@ -99,7 +103,17 @@ class _CategoryPickerState extends State<CategoryPicker> {
           }
         }
       }
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _resolvedModule = m;
+          _isLoading = false;
+          // If a module is selected and there is only one category, auto-open its sub list
+          if ((_resolvedModule != null && _resolvedModule!.isNotEmpty) &&
+              _categories.keys.length == 1) {
+            _selectedMain = _categories.keys.first;
+          }
+        });
+      }
       debugPrint(
           'CategoryPicker debug: totalBackend=$_totalBackend explicitMatches=$_explicitMatches type=${widget.requestType} module=${widget.module} showing=${_categories.length} (showAll=$_showAll)');
     } catch (e) {
@@ -249,7 +263,7 @@ class _CategoryPickerState extends State<CategoryPicker> {
             ),
           Expanded(
             child: Text(
-              _selectedMain ?? 'Select a Category',
+              _selectedMain ?? _composeTitle(),
               style: Theme.of(context).textTheme.titleLarge,
             ),
           ),
@@ -264,6 +278,40 @@ class _CategoryPickerState extends State<CategoryPicker> {
         ],
       ),
     );
+  }
+
+  String _composeTitle() {
+    final m = _resolvedModule ?? widget.module?.toLowerCase();
+    if (m == null || m.isEmpty) return 'Select a Category';
+    final label = _moduleLabel(m);
+    return 'Select a Category · $label';
+  }
+
+  String _moduleLabel(String m) {
+    switch (m) {
+      case 'item':
+        return 'Item';
+      case 'rent':
+        return 'Rental';
+      case 'delivery':
+        return 'Delivery';
+      case 'ride':
+        return 'Ride';
+      case 'tours':
+        return 'Tours';
+      case 'events':
+        return 'Events';
+      case 'construction':
+        return 'Construction';
+      case 'education':
+        return 'Education';
+      case 'hiring':
+        return 'Hiring';
+      case 'other':
+        return 'Other';
+      default:
+        return m;
+    }
   }
 
   Widget _buildEmpty() {
