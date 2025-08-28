@@ -497,6 +497,18 @@ class _EnhancedBrowseScreenState extends State<EnhancedBrowseScreen> {
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 12),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(Icons.chat_bubble_outline_rounded, size: 14),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${int.tryParse((request.typeSpecificData['response_count'] ?? '0').toString()) ?? 0}',
+                    style: const TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
               Row(
                 children: [
                   if (request.location != null) ...[

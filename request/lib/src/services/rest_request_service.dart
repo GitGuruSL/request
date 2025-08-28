@@ -39,6 +39,7 @@ class RequestModel {
   final List<String>? imageUrls;
   final Map<String, dynamic>? metadata;
   final String? requestType; // Add request_type field from database
+  final int responseCount; // Number of responses (from backend aggregate)
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -69,6 +70,7 @@ class RequestModel {
     this.imageUrls,
     this.metadata,
     this.requestType, // Add requestType to constructor
+    this.responseCount = 0,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -108,6 +110,9 @@ class RequestModel {
       metadata: json['metadata'],
       requestType:
           json['request_type']?.toString(), // Add request_type from database
+      responseCount: json['response_count'] is int
+          ? (json['response_count'] as int)
+          : int.tryParse((json['response_count'] ?? '0').toString()) ?? 0,
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
     );
@@ -136,6 +141,7 @@ class RequestModel {
       'deadline': deadline?.toIso8601String(),
       'image_urls': imageUrls,
       'metadata': metadata,
+      'response_count': responseCount,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };

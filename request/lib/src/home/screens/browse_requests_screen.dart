@@ -1342,19 +1342,34 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                   const SizedBox(width: 16),
                   // Response count
                   Icon(
-                    Icons.chat_bubble_outline,
+                    Icons.chat_bubble_outline_rounded,
                     size: 16,
                     color: GlassTheme.colors.textSecondary,
                   ),
                   const SizedBox(width: 4),
-                  Text(
-                    '${request.responses.length}',
-                    style: TextStyle(
-                      color: GlassTheme.colors.textSecondary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  Builder(builder: (context) {
+                    int count = 0;
+                    final meta = request.typeSpecificData;
+                    if (meta.containsKey('response_count')) {
+                      final v = meta['response_count'];
+                      if (v is int) {
+                        count = v;
+                      } else {
+                        count = int.tryParse(v.toString()) ??
+                            request.responses.length;
+                      }
+                    } else {
+                      count = request.responses.length;
+                    }
+                    return Text(
+                      '$count',
+                      style: TextStyle(
+                        color: GlassTheme.colors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    );
+                  }),
                 ],
               ), // Location with proper spacing
               if (request.location?.city != null) const SizedBox(height: 8),

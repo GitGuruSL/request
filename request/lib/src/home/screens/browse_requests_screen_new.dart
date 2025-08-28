@@ -521,7 +521,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
 
               const SizedBox(height: 12),
 
-              // Footer with budget and location
+              // Footer with budget, responses and location
               Row(
                 children: [
                   if (request.budget != null) ...[
@@ -539,6 +539,28 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                       ),
                     ),
                   ],
+                  const SizedBox(width: 12),
+                  // Responses count chip
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.black12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.chat_bubble_outline_rounded,
+                            size: 14, color: Colors.black54),
+                        const SizedBox(width: 4),
+                        Text('${request.responseCount}',
+                            style: const TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
                   const Spacer(),
                   if (_cityOf(request) != null &&
                       _cityOf(request)!.isNotEmpty) ...[

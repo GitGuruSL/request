@@ -310,6 +310,12 @@ class CountryFilteredDataService {
 
   /// Convert REST RequestModel to UI RequestModel
   models.RequestModel _convertToRequestModel(RequestModel r) {
+    // Merge backend metadata with computed response_count for UI consumption
+    final Map<String, dynamic> meta = {
+      ...(r.metadata ?? const {}),
+      'response_count': r.responseCount,
+    };
+
     return models.RequestModel(
       id: r.id,
       requesterId: r.userId,
@@ -322,7 +328,7 @@ class CountryFilteredDataService {
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,
       images: r.imageUrls ?? const [],
-      typeSpecificData: r.metadata ?? const {},
+      typeSpecificData: meta,
       budget: r.budget,
       currency: r.currency ?? CountryService.instance.currency,
       country: r.countryCode,
