@@ -81,6 +81,7 @@ const notificationsRoutes = require('./routes/notifications');
 const contactRoutes = require('./routes/contact');
 
 const bannersRoutes = require('./routes/banners'); // NEW - Banners CRUD
+const reviewsRoutes = require('./routes/reviews'); // NEW - User reviews API
 
 
 
@@ -361,6 +362,7 @@ app.use('/api/cities', cityRoutes);
 app.use('/api/requests', requestRoutes);
 
 app.use('/api/users', usersRoutes);
+app.use('/api/reviews', reviewsRoutes); // Mount reviews for public profiles
 
 app.use('/api/vehicle-types', vehicleTypeRoutes);
 

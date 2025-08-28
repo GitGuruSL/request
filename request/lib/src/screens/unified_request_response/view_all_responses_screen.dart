@@ -233,8 +233,7 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
                                 responder?.name ??
                                     fallbackName ??
                                     'Unknown User',
-                                style: GlassTheme.titleSmall.copyWith(
-                                    decoration: TextDecoration.underline),
+                                style: GlassTheme.titleSmall,
                               ),
                             ),
                             if (stats != null) ...[

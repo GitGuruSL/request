@@ -1083,8 +1083,8 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                               },
                               child: Text(r.userName ?? 'Unknown User',
                                   style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      decoration: TextDecoration.underline)),
+                                    fontWeight: FontWeight.w600,
+                                  )),
                             ),
                           ),
                           if (!_isOwner) ...[
