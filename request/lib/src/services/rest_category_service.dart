@@ -29,9 +29,9 @@ class Category {
   });
 
   factory Category.fromJson(Map<String, dynamic> json) {
-    // Attempt to read various possible field names for type
+    // Prefer normalized request_type over raw type
     final dynamicType =
-        json['type'] ?? json['request_type'] ?? json['category_type'];
+        json['request_type'] ?? json['type'] ?? json['category_type'];
     final Map<String, dynamic>? metadata =
         json['metadata'] is Map<String, dynamic>
             ? json['metadata'] as Map<String, dynamic>
