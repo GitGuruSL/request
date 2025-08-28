@@ -38,7 +38,7 @@ import {
   VisibilityOff as VisibilityOffIcon
 } from '@mui/icons-material';
 import api from '../services/apiClient';
-import { getModulesForBusinessType } from '../constants/businessModules';
+import { getModulesForBusinessType, getCapabilitiesForBusinessType } from '../constants/businessModules';
 import { useAuth } from '../contexts/AuthContext';
 
 const CountryBusinessTypesManagement = () => {
@@ -286,6 +286,7 @@ const CountryBusinessTypesManagement = () => {
                     <TableCell>Order</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Modules</TableCell>
+                    <TableCell>Capabilities</TableCell>
                     <TableCell>Actions</TableCell>
                   </TableRow>
                 </TableHead>
@@ -298,6 +299,24 @@ const CountryBusinessTypesManagement = () => {
                         <Typography variant="body2" noWrap>
                           {type.description || '-'}
                         </Typography>
+                      </TableCell>
+                      <TableCell>
+                        {(() => {
+                          const cap = getCapabilitiesForBusinessType(type.name);
+                          const chips = [];
+                          if (cap.managePrices) chips.push(<Chip key="cap-prices" label="Manage Prices" size="small" color="secondary" />);
+                          if (cap.sendItem) chips.push(<Chip key="cap-item" label="Send Item" size="small" />);
+                          if (cap.sendService) chips.push(<Chip key="cap-service" label="Send Service" size="small" />);
+                          if (cap.sendRent) chips.push(<Chip key="cap-rent" label="Send Rent" size="small" />);
+                          if (cap.sendDelivery) chips.push(<Chip key="cap-delivery" label="Send Delivery" size="small" />);
+                          if (cap.respondDelivery) chips.push(<Chip key="cap-respond-delivery" label="Respond Delivery" size="small" color="success" />);
+                          if (cap.respondOther) chips.push(<Chip key="cap-respond-other" label="Respond Other" size="small" color="success" />);
+                          return (
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                              {chips.length ? chips : <Typography variant="caption" color="text.secondary">No capabilities</Typography>}
+                            </Box>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell>{type.display_order || 0}</TableCell>
                       <TableCell>
@@ -354,7 +373,7 @@ const CountryBusinessTypesManagement = () => {
                   ))}
                   {businessTypes.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
+                      <TableCell colSpan={8} sx={{ textAlign: 'center', py: 4 }}>
                         <Typography color="text.secondary">
                           No business types found for this country
                         </Typography>
@@ -487,6 +506,27 @@ const CountryBusinessTypesManagement = () => {
                     <Typography variant="caption" color="text.secondary">No mapped modules</Typography>
                   )}
                 </Box>
+              </Grid>
+
+              {/* Capabilities preview */}
+              <Grid item xs={12}>
+                <Typography variant="subtitle2" gutterBottom>Capabilities</Typography>
+                {(() => {
+                  const cap = getCapabilitiesForBusinessType(formData.name);
+                  const chips = [];
+                  if (cap.managePrices) chips.push(<Chip key="cap-prices" label="Manage Prices" size="small" color="secondary" />);
+                  if (cap.sendItem) chips.push(<Chip key="cap-item" label="Send Item" size="small" />);
+                  if (cap.sendService) chips.push(<Chip key="cap-service" label="Send Service" size="small" />);
+                  if (cap.sendRent) chips.push(<Chip key="cap-rent" label="Send Rent" size="small" />);
+                  if (cap.sendDelivery) chips.push(<Chip key="cap-delivery" label="Send Delivery" size="small" />);
+                  if (cap.respondDelivery) chips.push(<Chip key="cap-respond-delivery" label="Respond Delivery" size="small" color="success" />);
+                  if (cap.respondOther) chips.push(<Chip key="cap-respond-other" label="Respond Other" size="small" color="success" />);
+                  return (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {chips.length ? chips : <Typography variant="caption" color="text.secondary">No capabilities</Typography>}
+                    </Box>
+                  );
+                })()}
               </Grid>
             </Grid>
           </DialogContent>

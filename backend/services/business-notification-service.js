@@ -201,12 +201,11 @@ class BusinessNotificationService {
       // Price management (only product sellers)
       canAddPrices: isVerified && isProductSeller,
 
-      // Request creation rights
-      // Delivery Service has access to all request types except price & ride
-      canSendItemRequests: isVerified && (isProductSeller || isDeliveryService),
-      canSendServiceRequests: isVerified && (isProductSeller || isDeliveryService),
-      canSendRentRequests: isVerified && (isProductSeller || isDeliveryService),
-      canSendDeliveryRequests: isVerified, // anyone can request delivery
+  // Request creation rights (any verified business can send any request except ride)
+  canSendItemRequests: isVerified,
+  canSendServiceRequests: isVerified,
+  canSendRentRequests: isVerified,
+  canSendDeliveryRequests: isVerified,
       canSendRideRequests: false,          // rides are for drivers only
 
       // Response rights

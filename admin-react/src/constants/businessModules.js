@@ -272,3 +272,23 @@ export const getModulesForBusinessTypes = (typeNames = []) => {
     .map(id => BUSINESS_MODULES[id.toUpperCase()])
     .filter(Boolean);
 };
+
+// Capabilities inferred by business type (aligned with backend access rights)
+export const getCapabilitiesForBusinessType = (typeName) => {
+  const name = (typeName || '').toLowerCase();
+  const isProductSeller = name === 'product seller';
+  const isDeliveryService = name === 'delivery service';
+
+  return {
+    managePrices: isProductSeller, // price mgmt only for product sellers
+    // Any verified business can send any request (except ride)
+    sendItem: true,
+    sendService: true,
+    sendRent: true,
+    sendDelivery: true,
+    sendRide: false,
+    // Responses
+    respondDelivery: isDeliveryService,
+    respondOther: true
+  };
+};
