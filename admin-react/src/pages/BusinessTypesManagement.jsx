@@ -38,6 +38,7 @@ import {
   VisibilityOff as VisibilityOffIcon
 } from '@mui/icons-material';
 import api from '../services/apiClient';
+// TODO: Wire capability toggles to backend fields (can_respond_* and can_manage_prices)
 import { getModulesForBusinessType, getCapabilitiesForBusinessType } from '../constants/businessModules';
 import { useAuth } from '../contexts/AuthContext';
 

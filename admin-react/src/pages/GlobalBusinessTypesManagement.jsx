@@ -33,6 +33,7 @@ import {
   ContentCopy as CopyIcon
 } from '@mui/icons-material';
 import api from '../services/apiClient';
+// TODO: Expose and edit per-country capability toggles via a dedicated UI; global templates may later include default caps.
 import { getModulesForBusinessType, getCapabilitiesForBusinessType } from '../constants/businessModules';
 
 const GlobalBusinessTypesManagement = () => {

@@ -200,3 +200,11 @@ Schema highlights:
 
 Admin UI route: `/subscriptions-new` (Component `SubscriptionPlansNew.jsx`).
 Provides CRUD with JSON editors for features & limitations.
+
+## Backend capability toggles (optional)
+If you want to toggle per-country respond/manage capabilities in Admin, run the backend migration once:
+
+- From repo root:
+  - Node: backend/run_add_country_business_capabilities.js
+
+This adds columns to `country_business_types` and backfills sensible defaults for Product Seller and Delivery.
