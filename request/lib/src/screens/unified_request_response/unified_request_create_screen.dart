@@ -64,6 +64,44 @@ class _UnifiedRequestCreateScreenState
   String _educationLevel = 'Beginner'; // education
   String _positionType = 'Full-time'; // hiring
 
+  // Tours module – general and category-specific state
+  DateTime? _tourStartDate; // date-only
+  DateTime? _tourEndDate; // date-only
+  int _adults = 2;
+  int _children = 0;
+
+  // Tours & Experiences
+  String _tourType = 'Cultural & Heritage';
+  String _preferredLanguage = 'English';
+  final _otherLanguageController = TextEditingController();
+  final Set<String> _timeOfDayPrefs =
+      <String>{}; // Morning, Afternoon, Evening, Full Day
+  bool _jeepIncluded = false;
+  String _skillLevel = 'Beginner';
+
+  // Transportation (within tours)
+  String _transportType = 'Hire Driver for Tour';
+  final _tourPickupController = TextEditingController();
+  final _tourDropoffController = TextEditingController();
+  final Set<String> _vehicleTypes =
+      <String>{}; // Car (Sedan), Van (AC), Tuk-Tuk, Motorbike/Scooter, Luxury Vehicle
+  String _luggageOption = 'Small Bags Only';
+  final _itineraryController = TextEditingController();
+  final _flightNumberController = TextEditingController();
+  final _flightTimeController = TextEditingController();
+  bool _licenseConfirmed = false;
+
+  // Accommodation (within tours)
+  String _accommodationType = 'Hotel';
+  int _unitsCount = 1; // rooms or beds
+  String _unitsType = 'rooms'; // 'rooms' or 'beds'
+  final Set<String> _amenities =
+      <String>{}; // AC, Hot Water, Wi-Fi, Kitchen, Pool, Parking
+  String _boardBasis = 'Room Only';
+  bool _cookStaffRequired = false;
+  bool _mealsWithHostFamily = false;
+  String _hostelRoomType = 'Dormitory';
+
   RequestType _selectedType = RequestType.item;
   String? _selectedModule; // service subtype/module context
   String _selectedCondition = 'New';
@@ -133,6 +171,12 @@ class _UnifiedRequestCreateScreenState
     _areaSizeController.dispose();
     _sessionsPerWeekController.dispose();
     _experienceYearsController.dispose();
+    _otherLanguageController.dispose();
+    _tourPickupController.dispose();
+    _tourDropoffController.dispose();
+    _itineraryController.dispose();
+    _flightNumberController.dispose();
+    _flightTimeController.dispose();
     super.dispose();
   }
 
@@ -729,6 +773,131 @@ class _UnifiedRequestCreateScreenState
         ),
         const SizedBox(height: 16),
 
+        // Tours module: General fields at the top
+        if (_selectedType == RequestType.service &&
+            (_selectedModule?.toLowerCase() == 'tours')) ...[
+          // Location / Destination
+          _buildFlatField(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Location / Destination',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 8),
+                AccurateLocationPickerWidget(
+                  controller: _locationController,
+                  countryCode: CountryService.instance.countryCode,
+                  labelText: '',
+                  hintText: 'Enter destination (e.g., Kandy, Ella, Yala)',
+                  isRequired: true,
+                  prefixIcon: Icons.location_on,
+                  onLocationSelected: (address, lat, lng) {
+                    setState(() {
+                      _locationController.text = address;
+                      _selectedLatitude = lat;
+                      _selectedLongitude = lng;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Start/End Dates (date-only)
+          _buildFlatField(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Dates',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: _tourStartDate ?? DateTime.now(),
+                            firstDate: DateTime.now(),
+                            lastDate:
+                                DateTime.now().add(const Duration(days: 365)),
+                          );
+                          if (date != null)
+                            setState(() => _tourStartDate = date);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          color: const Color(0xFFF8F9FA),
+                          child: Text(
+                            _tourStartDate == null
+                                ? 'Start Date'
+                                : _formatDate(_tourStartDate!),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () async {
+                          final initial =
+                              _tourEndDate ?? _tourStartDate ?? DateTime.now();
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: initial,
+                            firstDate: _tourStartDate ?? DateTime.now(),
+                            lastDate:
+                                DateTime.now().add(const Duration(days: 365)),
+                          );
+                          if (date != null) setState(() => _tourEndDate = date);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          color: const Color(0xFFF8F9FA),
+                          child: Text(
+                            _tourEndDate == null
+                                ? 'End Date'
+                                : _formatDate(_tourEndDate!),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Number of People (Adults / Children)
+          _buildFlatField(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Number of People',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 8),
+                _buildCounterRow(
+                    'Adults (12+)', _adults, (v) => setState(() => _adults = v),
+                    min: 1),
+                const SizedBox(height: 8),
+                _buildCounterRow('Children (2-11)', _children,
+                    (v) => setState(() => _children = v),
+                    min: 0),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+
         // Request Title
         _buildFlatField(
           child: TextFormField(
@@ -747,15 +916,18 @@ class _UnifiedRequestCreateScreenState
         ),
         const SizedBox(height: 16),
 
-        // Description
+        // Description (Tours: Special Requirements / Description)
         _buildFlatField(
           child: TextFormField(
             controller: _descriptionController,
             maxLines: 4,
-            decoration: const InputDecoration(
-              labelText: 'Description',
-              hintText:
-                  'Provide detailed information about the service needed...',
+            decoration: InputDecoration(
+              labelText: (_selectedModule?.toLowerCase() == 'tours')
+                  ? 'Special Requirements / Description'
+                  : 'Description',
+              hintText: (_selectedModule?.toLowerCase() == 'tours')
+                  ? 'Any extra details (e.g., wheelchair access, child-friendly)'
+                  : 'Provide detailed information about the service needed...',
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -767,87 +939,94 @@ class _UnifiedRequestCreateScreenState
         ),
         const SizedBox(height: 16),
 
-        // Location (Use Location Picker Widget)
-        _buildFlatField(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Location',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 8),
-              AccurateLocationPickerWidget(
-                controller: _locationController,
-                countryCode: CountryService.instance.countryCode,
-                labelText: '',
-                hintText: 'Enter service location',
-                isRequired: true,
-                prefixIcon: Icons.location_on,
-                onLocationSelected: (address, lat, lng) {
-                  setState(() {
-                    _locationController.text = address;
-                    _selectedLatitude = lat;
-                    _selectedLongitude = lng;
-                  });
-                },
-              ),
-            ],
+        // Location for non-Tours services (Tours handled above)
+        if (!(_selectedType == RequestType.service &&
+            (_selectedModule?.toLowerCase() == 'tours')))
+          _buildFlatField(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Location',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 8),
+                AccurateLocationPickerWidget(
+                  controller: _locationController,
+                  countryCode: CountryService.instance.countryCode,
+                  labelText: '',
+                  hintText: 'Enter service location',
+                  isRequired: true,
+                  prefixIcon: Icons.location_on,
+                  onLocationSelected: (address, lat, lng) {
+                    setState(() {
+                      _locationController.text = address;
+                      _selectedLatitude = lat;
+                      _selectedLongitude = lng;
+                    });
+                  },
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 16),
+        if (!(_selectedType == RequestType.service &&
+            (_selectedModule?.toLowerCase() == 'tours')))
+          const SizedBox(height: 16),
 
-        // Preferred Date & Time (Remove Border)
-        _buildFlatField(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Preferred Date & Time',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 8),
-              InkWell(
-                onTap: () async {
-                  final date = await showDatePicker(
-                    context: context,
-                    initialDate: DateTime.now(),
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime.now().add(const Duration(days: 365)),
-                  );
-                  if (date != null) {
-                    final time = await showTimePicker(
+        // Preferred Date & Time for non-Tours (Tours uses Start/End)
+        if (!(_selectedType == RequestType.service &&
+            (_selectedModule?.toLowerCase() == 'tours'))) ...[
+          _buildFlatField(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Preferred Date & Time',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: () async {
+                    final date = await showDatePicker(
                       context: context,
-                      initialTime: TimeOfDay.now(),
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
                     );
-                    if (time != null) {
-                      setState(() {
-                        _preferredDateTime = DateTime(
-                          date.year,
-                          date.month,
-                          date.day,
-                          time.hour,
-                          time.minute,
-                        );
-                      });
+                    if (date != null) {
+                      final time = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay.now(),
+                      );
+                      if (time != null) {
+                        setState(() {
+                          _preferredDateTime = DateTime(
+                            date.year,
+                            date.month,
+                            date.day,
+                            time.hour,
+                            time.minute,
+                          );
+                        });
+                      }
                     }
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  width: double.infinity,
-                  color: const Color(0xFFF8F9FA),
-                  child: Text(
-                    _preferredDateTime == null
-                        ? 'Select date and time'
-                        : '${_preferredDateTime!.day}/${_preferredDateTime!.month}/${_preferredDateTime!.year} at ${TimeOfDay.fromDateTime(_preferredDateTime!).format(context)}',
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    width: double.infinity,
+                    color: const Color(0xFFF8F9FA),
+                    child: Text(
+                      _preferredDateTime == null
+                          ? 'Select date and time'
+                          : '${_preferredDateTime!.day}/${_preferredDateTime!.month}/${_preferredDateTime!.year} at ${TimeOfDay.fromDateTime(_preferredDateTime!).format(context)}',
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 16),
+          const SizedBox(height: 16),
+        ],
 
         // Urgency
         _buildFlatField(
@@ -940,53 +1119,7 @@ class _UnifiedRequestCreateScreenState
     final module = _selectedModule!.toLowerCase();
     switch (module) {
       case 'tours':
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildFlatField(
-              child: TextFormField(
-                controller: _peopleCountController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Number of People',
-                  hintText: 'Enter headcount for the tour',
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            _buildFlatField(
-              child: TextFormField(
-                controller: _durationDaysController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Duration (days)',
-                  hintText: 'e.g., 3',
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            _buildFlatField(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Need a tour guide?'),
-                    value: _needsGuide,
-                    onChanged: (v) => setState(() => _needsGuide = v ?? false),
-                  ),
-                  CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Pickup required'),
-                    value: _pickupRequiredForTour,
-                    onChanged: (v) =>
-                        setState(() => _pickupRequiredForTour = v ?? false),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        );
+        return _buildToursModuleFields();
       case 'events':
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1092,12 +1225,69 @@ class _UnifiedRequestCreateScreenState
     switch (module) {
       case 'tours':
         return {
-          'peopleCount': _peopleCountController.text.trim().isNotEmpty
-              ? int.tryParse(_peopleCountController.text.trim())
-              : null,
-          'durationDays': _durationDaysController.text.trim().isNotEmpty
-              ? int.tryParse(_durationDaysController.text.trim())
-              : null,
+          // General (for all tours module requests)
+          'startDate': _tourStartDate?.millisecondsSinceEpoch,
+          'endDate': _tourEndDate?.millisecondsSinceEpoch,
+          'adults': _adults,
+          'children': _children,
+          // Tours & Experiences specific
+          if (_selectedCategory.toLowerCase() == 'tours & experiences') ...{
+            'tourType': _tourType,
+            'preferredLanguage': _preferredLanguage,
+            'otherLanguage': _preferredLanguage == 'Other'
+                ? _otherLanguageController.text.trim()
+                : null,
+            'timeOfDayPrefs':
+                _timeOfDayPrefs.isNotEmpty ? _timeOfDayPrefs.toList() : null,
+            'jeepIncluded':
+                _tourType == 'Wildlife & Safari' ? _jeepIncluded : null,
+            'skillLevel':
+                _tourType == 'Adventure & Water Sports' ? _skillLevel : null,
+          },
+          // Transportation specific
+          if (_selectedCategory.toLowerCase() == 'transportation') ...{
+            'transportType': _transportType,
+            'transportPickup': _tourPickupController.text.trim().isNotEmpty
+                ? _tourPickupController.text.trim()
+                : null,
+            'transportDropoff': _tourDropoffController.text.trim().isNotEmpty
+                ? _tourDropoffController.text.trim()
+                : null,
+            'vehicleTypes':
+                _vehicleTypes.isNotEmpty ? _vehicleTypes.toList() : null,
+            'luggage': _transportType == 'Vehicle Rental (Self-Drive)'
+                ? null
+                : _luggageOption,
+            'itinerary': _transportType == 'Hire Driver for Tour'
+                ? _itineraryController.text.trim()
+                : null,
+            'flightNumber': _transportType == 'Airport Transfer'
+                ? _flightNumberController.text.trim()
+                : null,
+            'flightTime': _transportType == 'Airport Transfer'
+                ? _flightTimeController.text.trim()
+                : null,
+            'licenseConfirmed': _transportType == 'Vehicle Rental (Self-Drive)'
+                ? _licenseConfirmed
+                : null,
+          },
+          // Accommodation specific
+          if (_selectedCategory.toLowerCase() == 'accommodation') ...{
+            'accommodationType': _accommodationType,
+            'unitsCount': _unitsCount,
+            'unitsType': _unitsType,
+            'amenities': _amenities.isNotEmpty ? _amenities.toList() : null,
+            'boardBasis': _boardBasis,
+            'cookStaffRequired': _accommodationType == 'Villa/Bungalow'
+                ? _cookStaffRequired
+                : null,
+            'mealsWithHostFamily': _accommodationType == 'Guesthouse/Homestay'
+                ? _mealsWithHostFamily
+                : null,
+            'hostelRoomType':
+                _accommodationType == 'Hostel' ? _hostelRoomType : null,
+          },
+          // Legacy simple fields kept (optional)
           'needsGuide': _needsGuide,
           'pickupRequired': _pickupRequiredForTour,
         }..removeWhere((k, v) => v == null);
@@ -1130,6 +1320,439 @@ class _UnifiedRequestCreateScreenState
       default:
         return {};
     }
+  }
+
+  // Tours module UI builder
+  Widget _buildToursModuleFields() {
+    final cat = _selectedCategory.toLowerCase();
+    if (cat == 'tours & experiences') {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Type of Tour
+          _buildFlatField(
+            child: DropdownButtonFormField<String>(
+              value: _tourType,
+              decoration: const InputDecoration(labelText: 'Type of Tour'),
+              items: const [
+                DropdownMenuItem(
+                    value: 'Cultural & Heritage',
+                    child: Text('Cultural & Heritage')),
+                DropdownMenuItem(
+                    value: 'Wildlife & Safari',
+                    child: Text('Wildlife & Safari')),
+                DropdownMenuItem(
+                    value: 'Nature & Hiking', child: Text('Nature & Hiking')),
+                DropdownMenuItem(
+                    value: 'Local Experience', child: Text('Local Experience')),
+                DropdownMenuItem(
+                    value: 'Adventure & Water Sports',
+                    child: Text('Adventure & Water Sports')),
+              ],
+              onChanged: (v) => setState(() => _tourType = v ?? _tourType),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Preferred Language
+          _buildFlatField(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DropdownButtonFormField<String>(
+                  value: _preferredLanguage,
+                  decoration:
+                      const InputDecoration(labelText: 'Preferred Language'),
+                  items: const [
+                    DropdownMenuItem(value: 'English', child: Text('English')),
+                    DropdownMenuItem(value: 'Sinhala', child: Text('Sinhala')),
+                    DropdownMenuItem(value: 'Tamil', child: Text('Tamil')),
+                    DropdownMenuItem(value: 'Other', child: Text('Other')),
+                  ],
+                  onChanged: (v) =>
+                      setState(() => _preferredLanguage = v ?? 'English'),
+                ),
+                if (_preferredLanguage == 'Other')
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: TextFormField(
+                      controller: _otherLanguageController,
+                      decoration:
+                          const InputDecoration(labelText: 'Specify Language'),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Preferred Time of Day (multi-select)
+          _buildFlatField(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Preferred Time of Day',
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                ...['Morning', 'Afternoon', 'Evening', 'Full Day'].map((t) {
+                  final selected = _timeOfDayPrefs.contains(t);
+                  return CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(t),
+                    value: selected,
+                    onChanged: (v) => setState(() {
+                      if (v == true) {
+                        _timeOfDayPrefs.add(t);
+                      } else {
+                        _timeOfDayPrefs.remove(t);
+                      }
+                    }),
+                  );
+                }),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Sub-type specific
+          if (_tourType == 'Wildlife & Safari')
+            _buildFlatField(
+              child: CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Jeep Included?'),
+                value: _jeepIncluded,
+                onChanged: (v) => setState(() => _jeepIncluded = v ?? false),
+              ),
+            ),
+          if (_tourType == 'Adventure & Water Sports')
+            _buildFlatField(
+              child: DropdownButtonFormField<String>(
+                value: _skillLevel,
+                decoration: const InputDecoration(labelText: 'Skill Level'),
+                items: const [
+                  DropdownMenuItem(value: 'Beginner', child: Text('Beginner')),
+                  DropdownMenuItem(
+                      value: 'Intermediate', child: Text('Intermediate')),
+                  DropdownMenuItem(value: 'Advanced', child: Text('Advanced')),
+                ],
+                onChanged: (v) => setState(() => _skillLevel = v ?? 'Beginner'),
+              ),
+            ),
+        ],
+      );
+    } else if (cat == 'transportation') {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Type of Transport
+          _buildFlatField(
+            child: DropdownButtonFormField<String>(
+              value: _transportType,
+              decoration: const InputDecoration(labelText: 'Type of Transport'),
+              items: const [
+                DropdownMenuItem(
+                    value: 'Hire Driver for Tour',
+                    child: Text('Hire Driver for Tour')),
+                DropdownMenuItem(
+                    value: 'Airport Transfer', child: Text('Airport Transfer')),
+                DropdownMenuItem(
+                    value: 'Vehicle Rental (Self-Drive)',
+                    child: Text('Vehicle Rental (Self-Drive)')),
+                DropdownMenuItem(
+                    value: 'Inter-city Taxi', child: Text('Inter-city Taxi')),
+              ],
+              onChanged: (v) =>
+                  setState(() => _transportType = v ?? _transportType),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Pickup/Dropoff Locations
+          _buildFlatField(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Pickup Location'),
+                const SizedBox(height: 6),
+                AccurateLocationPickerWidget(
+                  controller: _tourPickupController,
+                  countryCode: CountryService.instance.countryCode,
+                  labelText: '',
+                  hintText: 'Enter pickup location',
+                  isRequired: true,
+                  prefixIcon: Icons.my_location,
+                  onLocationSelected: (address, lat, lng) {
+                    _tourPickupController.text = address;
+                  },
+                ),
+                const SizedBox(height: 12),
+                const Text('Drop-off Location'),
+                const SizedBox(height: 6),
+                AccurateLocationPickerWidget(
+                  controller: _tourDropoffController,
+                  countryCode: CountryService.instance.countryCode,
+                  labelText: '',
+                  hintText: 'Enter drop-off location',
+                  isRequired: true,
+                  prefixIcon: Icons.location_on,
+                  onLocationSelected: (address, lat, lng) {
+                    _tourDropoffController.text = address;
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Vehicle Type Preference (multi-select)
+          _buildFlatField(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Vehicle Type Preference'),
+                ...[
+                  'Car (Sedan)',
+                  'Van (AC)',
+                  'Tuk-Tuk',
+                  'Motorbike/Scooter',
+                  'Luxury Vehicle'
+                ].map((vtype) {
+                  final selected = _vehicleTypes.contains(vtype);
+                  return CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(vtype),
+                    value: selected,
+                    onChanged: (v) => setState(() {
+                      if (v == true) {
+                        _vehicleTypes.add(vtype);
+                      } else {
+                        _vehicleTypes.remove(vtype);
+                      }
+                    }),
+                  );
+                }),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Luggage (hidden for self-drive)
+          if (_transportType != 'Vehicle Rental (Self-Drive)')
+            _buildFlatField(
+              child: DropdownButtonFormField<String>(
+                value: _luggageOption,
+                decoration: const InputDecoration(labelText: 'Luggage'),
+                items: const [
+                  DropdownMenuItem(
+                      value: 'Small Bags Only', child: Text('Small Bags Only')),
+                  DropdownMenuItem(
+                      value: 'Medium Suitcases',
+                      child: Text('Medium Suitcases')),
+                  DropdownMenuItem(
+                      value: 'Large Suitcases', child: Text('Large Suitcases')),
+                ],
+                onChanged: (v) =>
+                    setState(() => _luggageOption = v ?? _luggageOption),
+              ),
+            ),
+          // Sub-type specifics
+          if (_transportType == 'Hire Driver for Tour') ...[
+            const SizedBox(height: 16),
+            _buildFlatField(
+              child: TextFormField(
+                controller: _itineraryController,
+                maxLines: 3,
+                decoration:
+                    const InputDecoration(labelText: 'Itinerary / Key Stops'),
+              ),
+            ),
+          ],
+          if (_transportType == 'Airport Transfer') ...[
+            const SizedBox(height: 16),
+            _buildFlatField(
+              child: TextFormField(
+                controller: _flightNumberController,
+                decoration: const InputDecoration(labelText: 'Flight Number'),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildFlatField(
+              child: TextFormField(
+                controller: _flightTimeController,
+                decoration:
+                    const InputDecoration(labelText: 'Arrival/Departure Time'),
+              ),
+            ),
+          ],
+          if (_transportType == 'Vehicle Rental (Self-Drive)') ...[
+            const SizedBox(height: 16),
+            _buildFlatField(
+              child: CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Valid International/Local License?'),
+                value: _licenseConfirmed,
+                onChanged: (v) =>
+                    setState(() => _licenseConfirmed = v ?? false),
+              ),
+            ),
+          ],
+        ],
+      );
+    } else if (cat == 'accommodation') {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Type of Accommodation
+          _buildFlatField(
+            child: DropdownButtonFormField<String>(
+              value: _accommodationType,
+              decoration:
+                  const InputDecoration(labelText: 'Type of Accommodation'),
+              items: const [
+                DropdownMenuItem(value: 'Hotel', child: Text('Hotel')),
+                DropdownMenuItem(
+                    value: 'Villa/Bungalow', child: Text('Villa/Bungalow')),
+                DropdownMenuItem(
+                    value: 'Guesthouse/Homestay',
+                    child: Text('Guesthouse/Homestay')),
+                DropdownMenuItem(value: 'Eco-Lodge', child: Text('Eco-Lodge')),
+                DropdownMenuItem(value: 'Hostel', child: Text('Hostel')),
+              ],
+              onChanged: (v) => setState(() {
+                _accommodationType = v ?? _accommodationType;
+                if (_accommodationType == 'Hostel') {
+                  _unitsType = 'beds';
+                } else {
+                  _unitsType = 'rooms';
+                }
+              }),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Rooms/Beds counter
+          _buildFlatField(
+            child: _buildCounterRow(
+              _unitsType == 'beds' ? 'Number of Beds' : 'Number of Rooms',
+              _unitsCount,
+              (v) => setState(() => _unitsCount = v),
+              min: 1,
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Amenities (multi-select)
+          _buildFlatField(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Required Amenities'),
+                ...[
+                  'Air Conditioning (AC)',
+                  'Hot Water',
+                  'Wi-Fi',
+                  'Kitchen Facilities',
+                  'Swimming Pool',
+                  'Parking',
+                ].map((a) {
+                  final selected = _amenities.contains(a);
+                  return CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(a),
+                    value: selected,
+                    onChanged: (v) => setState(() {
+                      if (v == true) {
+                        _amenities.add(a);
+                      } else {
+                        _amenities.remove(a);
+                      }
+                    }),
+                  );
+                }),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Board Basis
+          _buildFlatField(
+            child: DropdownButtonFormField<String>(
+              value: _boardBasis,
+              decoration: const InputDecoration(labelText: 'Board Basis'),
+              items: const [
+                DropdownMenuItem(value: 'Room Only', child: Text('Room Only')),
+                DropdownMenuItem(
+                    value: 'Bed & Breakfast', child: Text('Bed & Breakfast')),
+                DropdownMenuItem(
+                    value: 'Half Board', child: Text('Half Board')),
+                DropdownMenuItem(
+                    value: 'Full Board', child: Text('Full Board')),
+              ],
+              onChanged: (v) => setState(() => _boardBasis = v ?? _boardBasis),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Sub-type specifics
+          if (_accommodationType == 'Villa/Bungalow')
+            _buildFlatField(
+              child: CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Cook / Staff Required?'),
+                value: _cookStaffRequired,
+                onChanged: (v) =>
+                    setState(() => _cookStaffRequired = v ?? false),
+              ),
+            ),
+          if (_accommodationType == 'Hostel') ...[
+            _buildFlatField(
+              child: DropdownButtonFormField<String>(
+                value: _hostelRoomType,
+                decoration: const InputDecoration(labelText: 'Room Type'),
+                items: const [
+                  DropdownMenuItem(
+                      value: 'Dormitory', child: Text('Dormitory')),
+                  DropdownMenuItem(
+                      value: 'Private Room', child: Text('Private Room')),
+                ],
+                onChanged: (v) =>
+                    setState(() => _hostelRoomType = v ?? _hostelRoomType),
+              ),
+            ),
+          ],
+          if (_accommodationType == 'Guesthouse/Homestay')
+            _buildFlatField(
+              child: CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Meals with Host Family?'),
+                value: _mealsWithHostFamily,
+                onChanged: (v) =>
+                    setState(() => _mealsWithHostFamily = v ?? false),
+              ),
+            ),
+        ],
+      );
+    }
+    return const SizedBox.shrink();
+  }
+
+  // Helpers
+  String _formatDate(DateTime dt) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${dt.year}-${two(dt.month)}-${two(dt.day)}';
+  }
+
+  Widget _buildCounterRow(String label, int value, void Function(int) onChanged,
+      {int min = 0, int max = 99}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label),
+        Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.remove_circle_outline),
+              onPressed: value > min ? () => onChanged(value - 1) : null,
+            ),
+            Text('$value', style: const TextStyle(fontWeight: FontWeight.w600)),
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline),
+              onPressed: value < max ? () => onChanged(value + 1) : null,
+            ),
+          ],
+        ),
+      ],
+    );
   }
 
   Widget _buildRentalFields() {

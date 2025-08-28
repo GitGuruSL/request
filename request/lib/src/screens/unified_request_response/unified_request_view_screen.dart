@@ -1201,6 +1201,15 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
   String _formatValue(dynamic value) {
     if (value == null) return 'N/A';
 
+    // Handle list values
+    if (value is List) {
+      try {
+        return value.map((e) => _formatValue(e)).join(', ');
+      } catch (_) {
+        return value.join(', ');
+      }
+    }
+
     // Handle timestamp values (large numbers that look like epoch timestamps)
     if (value is int && value > 1000000000000) {
       try {
@@ -1268,6 +1277,64 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
 
     String prettyLabel(String key) {
       switch (key) {
+        // Tours module common
+        case 'startDate':
+          return 'Start Date';
+        case 'endDate':
+          return 'End Date';
+        case 'adults':
+          return 'Adults';
+        case 'children':
+          return 'Children';
+        // Tours & Experiences
+        case 'tourType':
+          return 'Tour Type';
+        case 'preferredLanguage':
+          return 'Preferred Language';
+        case 'otherLanguage':
+          return 'Other Language';
+        case 'timeOfDayPrefs':
+          return 'Preferred Time';
+        case 'jeepIncluded':
+          return 'Jeep Included?';
+        case 'skillLevel':
+          return 'Skill Level';
+        // Transportation
+        case 'transportType':
+          return 'Type of Transport';
+        case 'transportPickup':
+          return 'Pickup Location';
+        case 'transportDropoff':
+          return 'Drop-off Location';
+        case 'vehicleTypes':
+          return 'Vehicle Types';
+        case 'luggage':
+          return 'Luggage';
+        case 'itinerary':
+          return 'Itinerary';
+        case 'flightNumber':
+          return 'Flight Number';
+        case 'flightTime':
+          return 'Flight Time';
+        case 'licenseConfirmed':
+          return 'License Confirmed';
+        // Accommodation
+        case 'accommodationType':
+          return 'Accommodation Type';
+        case 'unitsCount':
+          return 'Units Count';
+        case 'unitsType':
+          return 'Units Type';
+        case 'amenities':
+          return 'Amenities';
+        case 'boardBasis':
+          return 'Board Basis';
+        case 'cookStaffRequired':
+          return 'Cook/Staff Required';
+        case 'mealsWithHostFamily':
+          return 'Meals with Host Family';
+        case 'hostelRoomType':
+          return 'Hostel Room Type';
         case 'peopleCount':
           return 'People Count';
         case 'durationDays':
@@ -1335,8 +1402,8 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                           fontWeight: FontWeight.w500, fontSize: 12)),
                 ),
                 Expanded(
-                  child:
-                      Text(v.toString(), style: const TextStyle(fontSize: 12)),
+                  child: Text(_formatValue(v),
+                      style: const TextStyle(fontSize: 12)),
                 ),
               ],
             ),
