@@ -190,8 +190,8 @@ router.delete('/:id',
     try {
       const { id } = req.params;
 
-      // Check if category has subcategories
-      const subcategoriesCount = await dbService.count('subcategories', { category_id: id });
+  // Check if category has subcategories
+  const subcategoriesCount = await dbService.count('sub_categories', { category_id: id });
       if (subcategoriesCount > 0) {
         return res.status(400).json({
           success: false,

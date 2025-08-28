@@ -184,7 +184,7 @@ class _UnifiedRequestCreateScreenState
   @override
   Widget build(BuildContext context) {
     return GlassPage(
-      title: 'Create ${_getTypeDisplayName(_selectedType)}',
+      title: 'Create ${_getTypeDisplayNameWithModule()}',
       appBarBackgroundColor: GlassTheme.isDarkMode
           ? const Color(0x1AFFFFFF)
           : const Color(0xCCFFFFFF),
@@ -195,6 +195,9 @@ class _UnifiedRequestCreateScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (_selectedType == RequestType.service &&
+                  _selectedModule != null)
+                _buildModuleBanner(_selectedModule!),
               GlassTheme.glassCard(child: _buildTypeSpecificFields()),
             ],
           ),
@@ -220,6 +223,118 @@ class _UnifiedRequestCreateScreenState
         ),
       ),
     );
+  }
+
+  String _getTypeDisplayNameWithModule() {
+    if (_selectedType == RequestType.service && _selectedModule != null) {
+      final m = _selectedModule!.toLowerCase();
+      switch (m) {
+        case 'tours':
+          return 'Tour Request';
+        case 'events':
+          return 'Event Request';
+        case 'construction':
+          return 'Construction Request';
+        case 'education':
+          return 'Education Request';
+        case 'jobs':
+          return 'Hiring Request';
+        case 'other':
+          return 'Other Service Request';
+      }
+    }
+    return _getTypeDisplayName(_selectedType);
+  }
+
+  Widget _buildModuleBanner(String module) {
+    final info = _moduleTheme(module);
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          colors: info.gradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(info.icon, color: Colors.white, size: 28),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(info.title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    )),
+                if (info.subtitle != null)
+                  Text(info.subtitle!,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      )),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  _ModuleTheme _moduleTheme(String module) {
+    switch (module.toLowerCase()) {
+      case 'tours':
+        return _ModuleTheme(
+          title: 'Tours & Travel',
+          subtitle: 'Trips, packages, and activities',
+          icon: Icons.flight_takeoff,
+          gradient: const [Color(0xFF9333EA), Color(0xFF6366F1)],
+        );
+      case 'events':
+        return _ModuleTheme(
+          title: 'Events',
+          subtitle: 'Weddings, parties, and more',
+          icon: Icons.celebration,
+          gradient: const [Color(0xFFF59E0B), Color(0xFFEF4444)],
+        );
+      case 'construction':
+        return _ModuleTheme(
+          title: 'Construction',
+          subtitle: 'Builders, repairs, and renovations',
+          icon: Icons.construction,
+          gradient: const [Color(0xFF0EA5E9), Color(0xFF10B981)],
+        );
+      case 'education':
+        return _ModuleTheme(
+          title: 'Education',
+          subtitle: 'Tutoring and training',
+          icon: Icons.school,
+          gradient: const [Color(0xFF22C55E), Color(0xFF06B6D4)],
+        );
+      case 'jobs':
+        return _ModuleTheme(
+          title: 'Hiring',
+          subtitle: 'Find talent or gigs',
+          icon: Icons.work,
+          gradient: const [Color(0xFF3B82F6), Color(0xFF10B981)],
+        );
+      case 'other':
+      default:
+        return _ModuleTheme(
+          title: 'Other Service',
+          subtitle: 'Tell us what you need',
+          icon: Icons.more_horiz,
+          gradient: const [Color(0xFF64748B), Color(0xFF94A3B8)],
+        );
+    }
   }
 
   Widget _buildFlatField({required Widget child}) {
@@ -1473,4 +1588,17 @@ class _UnifiedRequestCreateScreenState
         return {};
     }
   }
+}
+
+class _ModuleTheme {
+  final String title;
+  final String? subtitle;
+  final IconData icon;
+  final List<Color> gradient;
+  const _ModuleTheme({
+    required this.title,
+    this.subtitle,
+    required this.icon,
+    required this.gradient,
+  });
 }

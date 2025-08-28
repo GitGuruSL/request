@@ -1,0 +1,61 @@
+{
+  "country": "LK",
+  "item": {
+    "categories": [
+      { "name": "Electronics", "subcategories": ["Phones", "Laptops", "Accessories"] },
+      { "name": "Home & Kitchen", "subcategories": ["Furniture", "Appliances", "Cookware"] },
+      { "name": "Fashion", "subcategories": ["Men", "Women", "Kids"] }
+    ]
+  },
+  "rental": {
+    "categories": [
+      { "name": "Vehicles", "subcategories": ["Cars", "Vans", "Motorbikes"] },
+      { "name": "Equipment", "subcategories": ["Power Tools", "Cameras", "Party & Events"] }
+    ]
+  },
+  "service": {
+    "modules": {
+      "delivery": {
+        "categories": [
+          { "name": "Parcel Delivery", "subcategories": ["Documents", "Small Parcel", "Large Parcel"] },
+          { "name": "Food & Groceries", "subcategories": ["Groceries", "Meals"] }
+        ]
+      },
+      "ride": {
+        "categories": [
+          { "name": "Transport", "subcategories": ["Airport", "City Ride", "Outstation"] }
+        ]
+      },
+      "tours": {
+        "categories": [
+          { "name": "Experiences", "subcategories": ["City Tour", "Nature & Wildlife", "Cultural"] }
+        ]
+      },
+      "events": {
+        "categories": [
+          { "name": "Event Services", "subcategories": ["Catering", "Decor", "Photography"] }
+        ]
+      },
+      "construction": {
+        "categories": [
+          { "name": "Skilled Trades", "subcategories": ["Masonry", "Carpentry", "Plumbing", "Electrical"] }
+        ]
+      },
+      "education": {
+        "categories": [
+          { "name": "Learning", "subcategories": ["Tutoring", "Language", "Music"] }
+        ]
+      },
+      "jobs": {
+        "categories": [
+          { "name": "Hiring", "subcategories": ["Full-time", "Part-time", "Freelance"] }
+        ]
+      },
+      "other": {
+        "categories": [
+          { "name": "Other Services", "subcategories": ["Miscellaneous"] }
+        ]
+      }
+    }
+  }
+}
