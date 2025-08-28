@@ -191,12 +191,8 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
 
   Widget _statTile(IconData icon, String value, String label) {
     return Expanded(
-      child: Container(
+      child: GlassTheme.glassCard(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -308,13 +304,9 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   }
 
   Widget _reviewTile(UserReviewItem it) {
-    return Container(
+    return GlassTheme.glassCard(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

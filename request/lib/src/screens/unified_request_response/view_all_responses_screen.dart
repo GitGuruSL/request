@@ -32,6 +32,14 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
       {}; // userId -> { average_rating, review_count }
   final Set<String> _statsLoading = {};
 
+  // Safely convert dynamic API values (num or string like "0.00") to double
+  double _asDouble(dynamic v, {double fallback = 0.0}) {
+    if (v == null) return fallback;
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v) ?? fallback;
+    return fallback;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -240,8 +248,7 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
                               const SizedBox(height: 4),
                               Row(
                                 children: [
-                                  _stars((stats['average_rating'] ?? 0)
-                                      .toDouble()),
+                                  _stars(_asDouble(stats['average_rating'])),
                                   const SizedBox(width: 6),
                                   Text(
                                     '(${(stats['review_count'] ?? 0).toString()})',
