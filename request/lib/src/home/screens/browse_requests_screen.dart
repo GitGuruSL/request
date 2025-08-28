@@ -92,7 +92,11 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     final t = r.type.name.toLowerCase();
     switch (t) {
       case 'item':
-        return 'Item';
+        // Items are the default bucket, but re-infer from title/description to
+        // catch cases like "van hire" which should be Rentals.
+        final inferred =
+            _getRequestTypeFromCategory(r.type.name, r.title, r.description);
+        return inferred != 'Items' ? inferred : 'Item';
       case 'service':
         return 'Service';
       case 'rental':
