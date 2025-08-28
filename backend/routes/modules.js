@@ -13,10 +13,8 @@ const COUNTRY_MODULE_CONFIG = {
       'delivery_request',
       'ride_sharing',
       'price_request',
-      'food_delivery',
-      'grocery',
-      'beauty',
-      'professional'
+  // Service sub-modules (admin can enable via country-modules)
+  // Keeping disabled here by default to allow country-modules to drive state
     ],
     disabled_modules: [] // All modules available
   },
@@ -60,6 +58,8 @@ const DEFAULT_CONFIG = {
     'ride_sharing',
     'price_request'
   ],
+  // Note: extended service modules (tours, events, construction, education, hiring, other)
+  // are exposed via /api/modules/all but toggled per-country using /api/country-modules
   disabled_modules: []
 };
 
@@ -153,6 +153,49 @@ router.get('/all', async (req, res) => {
         description: 'Compare prices across different sellers/services',
         features: ['Price tracking', 'Price alerts', 'Comparison charts', 'Historical data'],
         dependencies: ['Payment System', 'In-app Messaging']
+      },
+      // Extended service modules (per-country toggle in country-modules)
+      {
+        id: 'tours',
+        name: 'Tours & Experiences',
+        description: 'Guided tours, travel experiences, accommodation, and transport for tourism',
+        features: ['Tour packages', 'Experience booking', 'Accommodation', 'Transport'],
+        dependencies: ['In-app Messaging', 'Location Services']
+      },
+      {
+        id: 'events',
+        name: 'Event Services',
+        description: 'Venues, catering, entertainment, rentals, and event staffing',
+        features: ['Venue listings', 'Catering', 'Entertainment', 'Rentals & supplies'],
+        dependencies: ['In-app Messaging']
+      },
+      {
+        id: 'construction',
+        name: 'Construction Services',
+        description: 'New builds, renovations, trades, consultation, and materials',
+        features: ['Trades & contractors', 'Renovation', 'Design & BOQ', 'Materials & equipment'],
+        dependencies: ['In-app Messaging', 'Location Services']
+      },
+      {
+        id: 'education',
+        name: 'Education & Training',
+        description: 'Tutoring, professional courses, arts & hobbies, admissions consulting',
+        features: ['Course listings', 'Levels & skills', 'Scheduling'],
+        dependencies: ['In-app Messaging']
+      },
+      {
+        id: 'hiring',
+        name: 'Recruitment & Staffing',
+        description: 'Job categories across hospitality, retail, IT, construction, admin, logistics, domestic, creative',
+        features: ['Job categories', 'Applicant messaging'],
+        dependencies: ['In-app Messaging']
+      },
+      {
+        id: 'other',
+        name: 'Other Services',
+        description: 'Miscellaneous services not covered by other modules',
+        features: ['General service listings'],
+        dependencies: ['In-app Messaging']
       }
     ];
     
