@@ -193,6 +193,9 @@ class RestCategoryService {
       // Add module filter if specified
       if (m != null && m.isNotEmpty) {
         queryParams['module'] = m;
+        // Also pass request_type for servers that filter using request_type instead of module
+        queryParams['request_type'] = m;
+        queryParams['requestType'] = m; // dual key for compatibility
       }
 
       final response = await _apiClient.get<Map<String, dynamic>>(

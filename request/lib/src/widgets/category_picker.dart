@@ -97,9 +97,11 @@ class _CategoryPickerState extends State<CategoryPicker> {
       _categoryNameToId.clear();
       _subcategoryNameToId.clear();
 
-      // Categories are already filtered by type from the backend, so use them directly
-      final listToUse = all;
-      _explicitMatches = all.length;
+      // Ensure module-level filtering on client too, in case backend ignores module filter
+      final listToUse = (m == null || m.isEmpty)
+          ? all
+          : all.where((c) => (c.module ?? '').toLowerCase() == m).toList();
+      _explicitMatches = listToUse.length;
       _categories.clear();
 
       for (final cat in listToUse) {
