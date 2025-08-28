@@ -29,7 +29,7 @@ function normalize(s) { return String(s || '').trim().toLowerCase(); }
 async function main() {
   const country = argValue('--country', 'LK');
   const apply = hasFlag('--apply');
-  const allowed = ['product seller', 'delivery service'];
+  const allowed = ['product seller', 'delivery', 'delivery service'];
   console.log(`\n🧹 Pruning business types for country=${country} (apply=${apply})`);
 
   const hasCountryTable = await tableExists('country_business_types');

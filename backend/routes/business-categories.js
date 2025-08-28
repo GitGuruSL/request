@@ -9,7 +9,7 @@ router.get('/business-types', async (req, res) => {
   try {
     const businessTypes = [
       { value: 'product_selling', label: 'Product Selling', description: 'Sell physical products to customers' },
-      { value: 'delivery_service', label: 'Delivery Service', description: 'Provide delivery and logistics services' },
+  { value: 'delivery_service', label: 'Delivery', description: 'Provide delivery and logistics services' },
       { value: 'both', label: 'Both', description: 'Both product selling and delivery services' }
     ];
 

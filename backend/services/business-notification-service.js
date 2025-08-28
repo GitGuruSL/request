@@ -17,15 +17,28 @@ class BusinessNotificationService {
       console.log(`   Category: ${categoryId}, Subcategory: ${subcategoryId}`);
       console.log(`   Request Type: ${requestType}, Country: ${countryCode}`);
 
+      const type = (requestType || '').toLowerCase();
+      const COMMON = ['item','service','tours','events','construction','education','hiring'];
+
       // For delivery requests, only notify delivery service businesses
-      if (requestType === 'delivery') {
+      if (type === 'delivery') {
         return await this.getDeliveryBusinesses(countryCode);
       }
 
       // For ride requests, don't notify businesses (only drivers should respond)
-      if (requestType === 'ride') {
+      if (type === 'ride') {
         console.log('🚗 Ride requests only notify drivers, not businesses');
         return [];
+      }
+
+      // Price requests: product sellers should respond
+      if (type === 'price') {
+        return await this.getProductSellerBusinesses(countryCode);
+      }
+
+      // Common requests: product sellers and delivery businesses should respond
+      if (COMMON.includes(type)) {
+        return await this.getBusinessesByTypeNames(countryCode, ['product seller', 'delivery', 'delivery service']);
       }
 
       // For item/service/rent requests, notify all verified businesses in country
@@ -50,8 +63,8 @@ class BusinessNotificationService {
         AND bv.status = 'approved'
         AND bv.country = $1
         AND (
-          LOWER(COALESCE(bt.name, '')) = 'delivery service' OR
-          LOWER(COALESCE(bv.business_category, '')) = 'delivery service' OR
+          LOWER(COALESCE(bt.name, '')) IN ('delivery service','delivery') OR
+          LOWER(COALESCE(bv.business_category, '')) IN ('delivery service','delivery') OR
           bv.business_type = 'delivery_service' OR
           bv.business_type = 'both'
         )
@@ -66,6 +79,64 @@ class BusinessNotificationService {
       businessName: row.business_name,
       businessEmail: row.business_email,
       notificationReason: 'delivery_service'
+    }));
+  }
+
+  /**
+   * Get product seller businesses only
+   */
+  static async getProductSellerBusinesses(countryCode) {
+    const query = `
+      SELECT DISTINCT bv.user_id, bv.business_name, bv.business_email
+      FROM business_verifications bv
+      LEFT JOIN business_types bt ON bt.id = bv.business_type_id
+      WHERE bv.is_verified = true
+        AND bv.status = 'approved'
+        AND bv.country = $1
+        AND (
+          LOWER(COALESCE(bt.name, '')) = 'product seller' OR
+          LOWER(COALESCE(bv.business_category, '')) = 'product seller' OR
+          bv.business_type = 'product_selling' OR
+          bv.business_type = 'both'
+        )
+      ORDER BY bv.business_name
+    `;
+
+    const result = await database.query(query, [countryCode]);
+    console.log(`🏷️ Found ${result.rows.length} product seller businesses in ${countryCode}`);
+    return result.rows.map(row => ({
+      userId: row.user_id,
+      businessName: row.business_name,
+      businessEmail: row.business_email,
+      notificationReason: 'product_seller'
+    }));
+  }
+
+  /**
+   * Get businesses filtered by business type names (supports legacy and joined name)
+   */
+  static async getBusinessesByTypeNames(countryCode, names = []) {
+    const lowered = names.map(n => String(n).toLowerCase());
+    const query = `
+      SELECT DISTINCT bv.user_id, bv.business_name, bv.business_email
+      FROM business_verifications bv
+      LEFT JOIN business_types bt ON bt.id = bv.business_type_id
+      WHERE bv.is_verified = true
+        AND bv.status = 'approved'
+        AND bv.country = $1
+        AND (
+          LOWER(COALESCE(bt.name, '')) = ANY($2)
+          OR LOWER(COALESCE(bv.business_category, '')) = ANY($2)
+        )
+      ORDER BY bv.business_name
+    `;
+    const result = await database.query(query, [countryCode, lowered]);
+    console.log(`🏢 Found ${result.rows.length} businesses by types [${lowered.join(', ')}] in ${countryCode}`);
+    return result.rows.map(row => ({
+      userId: row.user_id,
+      businessName: row.business_name,
+      businessEmail: row.business_email,
+      notificationReason: 'type_filtered'
     }));
   }
 
@@ -139,7 +210,7 @@ class BusinessNotificationService {
       const name = (business.bt_name || '').toLowerCase();
       const cat = (business.bt_category || '').toLowerCase();
       const legacy = business.business_type;
-      const isDelivery = name === 'delivery service' || cat === 'delivery service' || legacy === 'delivery_service' || legacy === 'both';
+      const isDelivery = ['delivery service','delivery'].includes(name) || ['delivery service','delivery'].includes(cat) || legacy === 'delivery_service' || legacy === 'both';
       if (isDelivery) return { canRespond: true, reason: 'delivery_service_authorized' };
       return { canRespond: false, reason: 'delivery_requires_delivery_service' };
     }
@@ -195,7 +266,7 @@ class BusinessNotificationService {
   const btCat = (business.bt_category || '').toLowerCase();
   const legacy = (business.business_type || '').toLowerCase();
   const isProductSeller = btName === 'product seller' || btCat === 'product seller' || legacy === 'product_selling' || legacy === 'both';
-  const isDeliveryService = btName === 'delivery service' || btCat === 'delivery service' || legacy === 'delivery_service' || legacy === 'both';
+  const isDeliveryService = ['delivery service','delivery'].includes(btName) || ['delivery service','delivery'].includes(btCat) || legacy === 'delivery_service' || legacy === 'both';
 
     return {
       // Price management (only product sellers)

@@ -238,7 +238,7 @@ async function autoActivateCountryData(countryCode, countryName, adminUserId, ad
           // Pruned set per new direction
           typesToSeed = [
             { id: null, name: 'Product Seller', description: 'Businesses that sell physical products (electronics, clothing, etc.)', icon: '🛍️', display_order: 1, is_active: true },
-            { id: null, name: 'Delivery Service', description: 'Courier, logistics, and delivery companies', icon: '🚚', display_order: 2, is_active: true },
+            { id: null, name: 'Delivery', description: 'Courier, logistics, and delivery companies', icon: '🚚', display_order: 2, is_active: true },
             { id: null, name: 'Tours', description: 'Tours and experiences operators and guides', icon: '🧭', display_order: 10, is_active: true },
             { id: null, name: 'Events', description: 'Event planners, venues, rentals, catering', icon: '🎉', display_order: 11, is_active: true },
             { id: null, name: 'Construction', description: 'Contractors, trades, design and materials', icon: '🏗️', display_order: 12, is_active: true },

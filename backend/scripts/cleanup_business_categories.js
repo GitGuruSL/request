@@ -7,7 +7,7 @@
  *   --country <CODE>        Country code (default: LK)
  *   --apply                 Execute updates (default: dry run)
  *   --onlyApproved          Limit to approved & verified businesses
- *   --allowed "name1,name2"  Allowed type names (default: "Product Seller,Delivery Service")
+ *   --allowed "name1,name2"  Allowed type names (default: "Product Seller,Delivery")
  *
  * Usage (Windows PowerShell):
  *   node ./backend/scripts/cleanup_business_categories.js --country LK
@@ -31,7 +31,7 @@ async function run() {
   const country = argValue('--country', 'LK');
   const apply = hasFlag('--apply');
   const onlyApproved = hasFlag('--onlyApproved');
-  const allowedRaw = argValue('--allowed', 'Product Seller,Delivery Service');
+  const allowedRaw = argValue('--allowed', 'Product Seller,Delivery');
   const allowed = allowedRaw.split(',').map(norm);
 
   console.log(`\n🧹 Cleaning categories for types [${allowed.join(', ')}] in country=${country} (apply=${apply}, onlyApproved=${onlyApproved})`);

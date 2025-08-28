@@ -238,8 +238,8 @@ export const getModulesUsingDependency = (moduleId) => {
 export const BUSINESS_TYPE_TO_MODULES = {
   // Current active LK types
   'Product Seller': ['item', 'service', 'rent', 'price'], // price is public but sellers manage prices
-  // Delivery Service: access to all request modules except price & ride
-  'Delivery Service': ['item', 'service', 'rent', 'delivery'],
+  // Delivery: keep name aligned with module while maintaining backend compatibility
+  'Delivery': ['item', 'service', 'rent', 'delivery'],
 
   // Future verticals (disabled by default at country level)
   'Tours': ['tours'],
@@ -277,7 +277,7 @@ export const getModulesForBusinessTypes = (typeNames = []) => {
 export const getCapabilitiesForBusinessType = (typeName) => {
   const name = (typeName || '').toLowerCase();
   const isProductSeller = name === 'product seller';
-  const isDeliveryService = name === 'delivery service';
+  const isDeliveryService = name === 'delivery' || name === 'delivery service';
 
   return {
     managePrices: isProductSeller, // price mgmt only for product sellers
