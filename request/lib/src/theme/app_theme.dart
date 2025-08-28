@@ -25,7 +25,9 @@ class AppTheme {
     brightness: Brightness.light,
     colorScheme: ColorScheme.fromSeed(
         seedColor: primaryColor, brightness: Brightness.light),
-    scaffoldBackgroundColor: Colors.transparent,
+    // Ensure a consistent light background everywhere (no black bleed-through)
+    scaffoldBackgroundColor: Colors.white,
+    canvasColor: Colors.white,
     appBarTheme: const AppBarTheme(
       elevation: 0,
       scrolledUnderElevation: 0,
@@ -35,7 +37,8 @@ class AppTheme {
       centerTitle: false,
     ),
     navigationBarTheme: NavigationBarThemeData(
-      elevation: 8,
+      // No elevation/shadow to blend with app background and divider only.
+      elevation: 0,
       backgroundColor: Colors.transparent,
       indicatorColor: const Color(0xFF4B9D62).withValues(alpha: 0.18),
       indicatorShape: const StadiumBorder(),
@@ -54,7 +57,7 @@ class AppTheme {
     brightness: Brightness.dark,
     colorScheme: ColorScheme.fromSeed(
         seedColor: primaryLight, brightness: Brightness.dark),
-    scaffoldBackgroundColor: Colors.transparent,
+    scaffoldBackgroundColor: const Color(0xFF121212),
     appBarTheme: const AppBarTheme(
       elevation: 0,
       scrolledUnderElevation: 0,
@@ -64,7 +67,7 @@ class AppTheme {
       centerTitle: false,
     ),
     navigationBarTheme: NavigationBarThemeData(
-      elevation: 8,
+      elevation: 0,
       backgroundColor: Colors.transparent,
       indicatorColor: primaryLight.withValues(alpha: 0.22),
       indicatorShape: const StadiumBorder(),
