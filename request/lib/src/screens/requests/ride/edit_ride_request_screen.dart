@@ -76,8 +76,8 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
     _initializeFromRequest();
 
     // Delayed map initialization to reduce initial rendering load
-    Timer(const Duration(seconds: 3), () {
-      // Increased from 1s to 3s
+    Timer(const Duration(seconds: 2), () {
+      // Balanced delay for better UX
       if (mounted) {
         setState(() {
           _shouldShowMap = true;
@@ -256,13 +256,12 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
                     markers: _markers,
                     polylines: _polylines,
                     onTap: _onMapTapped,
-                    myLocationEnabled: false, // Disable for lite mode
+                    myLocationEnabled: true, // Re-enable for functionality
                     myLocationButtonEnabled: false,
                     zoomControlsEnabled: false,
                     mapToolbarEnabled: false,
-                    // Critical fixes for frame rendering issues - ENABLE LITE MODE
-                    liteModeEnabled:
-                        true, // Use static map image to avoid frame issues
+                    // Critical fixes for frame rendering issues - DISABLE LITE MODE
+                    liteModeEnabled: false, // Use interactive map but optimized
                     buildingsEnabled: false, // Disable to reduce rendering load
                     indoorViewEnabled: false,
                     compassEnabled: false, // Disable to reduce UI elements

@@ -75,8 +75,8 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
     _checkExistingResponse();
 
     // Delayed map initialization to reduce initial rendering load
-    Timer(const Duration(seconds: 3), () {
-      // Increased delay from 1s to 3s
+    Timer(const Duration(seconds: 2), () {
+      // Balanced delay: not too long, not too short
       if (mounted) {
         setState(() {
           _shouldShowMap = true;
@@ -469,10 +469,10 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
                                 try {
                                   _mapController = controller;
 
-                                  // Add a longer delay to ensure the map is properly initialized
+                                  // Add moderate delay to ensure the map is properly initialized
                                   await Future.delayed(const Duration(
                                       milliseconds:
-                                          2000)); // Increased from 500ms to 2s
+                                          1000)); // Reduced from 2s to 1s
 
                                   if (_markers.isNotEmpty) {
                                     await _updateMapMarkersAndCamera();
@@ -494,11 +494,13 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
                                   }
                                 }
                               },
-                              myLocationEnabled: false, // Disable for lite mode
-                              myLocationButtonEnabled: false,
-                              // Critical fixes for frame rendering issues - ENABLE LITE MODE
+                              myLocationEnabled:
+                                  true, // Re-enable for functionality
+                              myLocationButtonEnabled:
+                                  false, // Keep disabled for performance
+                              // Critical fixes for frame rendering issues - DISABLE LITE MODE
                               liteModeEnabled:
-                                  true, // Use static map image to avoid frame issues
+                                  false, // Use interactive map but optimized
                               buildingsEnabled:
                                   false, // Disable to reduce rendering load
                               indoorViewEnabled: false,
