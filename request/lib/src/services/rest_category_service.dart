@@ -134,18 +134,31 @@ class RestCategoryService {
     String? module, // Optional module filter for service categories
   }) async {
     try {
+      // Normalize legacy types to align with backend seed
+      String? t = type?.toLowerCase();
+      String? m = module?.toLowerCase();
+      if (t == 'rent') t = 'rental';
+      if (t == 'delivery' && (m == null || m.isEmpty)) {
+        t = 'service';
+        m = 'delivery';
+      }
+      if (t == 'ride' && (m == null || m.isEmpty)) {
+        t = 'service';
+        m = 'ride';
+      }
+
       final queryParams = {
         'country': countryCode,
         'includeInactive': includeInactive.toString(),
       };
 
       // Add type filter if specified
-      if (type != null && type.isNotEmpty) {
-        queryParams['type'] = type;
+      if (t != null && t.isNotEmpty) {
+        queryParams['type'] = t;
       }
       // Add module filter if specified
-      if (module != null && module.isNotEmpty) {
-        queryParams['module'] = module;
+      if (m != null && m.isNotEmpty) {
+        queryParams['module'] = m;
       }
 
       final response = await _apiClient.get<Map<String, dynamic>>(

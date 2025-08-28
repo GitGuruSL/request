@@ -49,10 +49,12 @@ router.get('/', async (req, res) => {
       categories = result.rows;
     }
 
-    // Surface description (legacy front-end expectation) from metadata.description if present
+    // Surface description, module, and request_type (compat fields)
     const enriched = categories.map(c => ({
       ...c,
-      description: c.description || (c.metadata && c.metadata.description) || null
+      description: c.description || (c.metadata && c.metadata.description) || null,
+      module: c.metadata && c.metadata.module ? c.metadata.module : null,
+      request_type: c.type || null,
     }));
 
     res.json({ success: true, data: enriched, count: enriched.length, isGlobalView: user.role === 'super_admin', filteredByType: type || null });
@@ -69,9 +71,9 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const category = await dbService.findById('categories', id);
+  const category = await dbService.findById('categories', id);
     if (!category) return res.status(404).json({ success: false, error: 'Category not found' });
-    res.json({ success: true, data: { ...category, description: category.metadata?.description || null } });
+  res.json({ success: true, data: { ...category, description: category.metadata?.description || null, module: category.metadata?.module || null, request_type: category.type || null } });
   } catch (error) {
     console.error('Get category error:', error);
     res.status(500).json({ success: false, error: error.message });
