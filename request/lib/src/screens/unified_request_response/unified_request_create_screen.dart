@@ -600,6 +600,32 @@ class _UnifiedRequestCreateScreenState
   Widget _buildItemFields() {
     return Column(
       children: [
+        // Category (Use Category Picker) – at top
+        _buildFlatField(
+          child: TextFormField(
+            readOnly: true,
+            decoration: const InputDecoration(
+              labelText: 'Category',
+              hintText: 'Select a category',
+              suffixIcon: Icon(Icons.arrow_drop_down),
+            ),
+            controller: TextEditingController(
+              text: _selectedSubcategory != null
+                  ? '$_selectedCategory > $_selectedSubcategory'
+                  : _selectedCategory,
+            ),
+            onTap: _showCategoryPicker,
+            validator: (value) {
+              if (_selectedCategory == 'Electronics' &&
+                  _selectedCategoryId == null) {
+                return 'Please select a category';
+              }
+              return null;
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+
         // Request Title
         _buildFlatField(
           child: TextFormField(
@@ -648,32 +674,6 @@ class _UnifiedRequestCreateScreenState
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
                 return 'Please enter a description';
-              }
-              return null;
-            },
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Category (Use Category Picker) – moved to top
-        _buildFlatField(
-          child: TextFormField(
-            readOnly: true,
-            decoration: const InputDecoration(
-              labelText: 'Category',
-              hintText: 'Select a category',
-              suffixIcon: Icon(Icons.arrow_drop_down),
-            ),
-            controller: TextEditingController(
-              text: _selectedSubcategory != null
-                  ? '$_selectedCategory > $_selectedSubcategory'
-                  : _selectedCategory,
-            ),
-            onTap: _showCategoryPicker,
-            validator: (value) {
-              if (_selectedCategory == 'Electronics' &&
-                  _selectedCategoryId == null) {
-                return 'Please select a category';
               }
               return null;
             },
@@ -3527,6 +3527,62 @@ class _UnifiedRequestCreateScreenState
   Widget _buildDeliveryFields() {
     return Column(
       children: [
+        // Item Categories (Use Category Picker) – at top
+        _buildFlatField(
+          child: GestureDetector(
+            onTap: () async {
+              final result = await showModalBottomSheet<Map<String, String>>(
+                context: context,
+                isScrollControlled: true,
+                builder: (context) => DraggableScrollableSheet(
+                  expand: false,
+                  builder: (context, scrollController) => CategoryPicker(
+                    requestType: _getRequestTypeString(_selectedType),
+                    module: _selectedType == RequestType.service
+                        ? _selectedModule
+                        : null,
+                    scrollController: scrollController,
+                  ),
+                ),
+              );
+
+              if (result != null) {
+                setState(() {
+                  _selectedCategory = result['category'] ?? _selectedCategory;
+                  _selectedSubcategory =
+                      result['subcategory'] ?? _selectedSubcategory;
+                  _selectedCategoryId =
+                      result['categoryId'] ?? _selectedCategoryId;
+                  _selectedSubCategoryId =
+                      result['subcategoryId'] ?? _selectedSubCategoryId;
+                });
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _selectedSubcategory ?? 'Select item category',
+                    style: TextStyle(
+                      color: _selectedSubcategory != null
+                          ? Colors.black
+                          : Colors.grey.shade600,
+                    ),
+                  ),
+                  const Icon(Icons.arrow_drop_down),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
         // Request Title
         _buildFlatField(
           child: TextFormField(
@@ -3595,62 +3651,6 @@ class _UnifiedRequestCreateScreenState
                 },
               ),
             ],
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Item Categories (Use Category Picker) – keep high on the form
-        _buildFlatField(
-          child: GestureDetector(
-            onTap: () async {
-              final result = await showModalBottomSheet<Map<String, String>>(
-                context: context,
-                isScrollControlled: true,
-                builder: (context) => DraggableScrollableSheet(
-                  expand: false,
-                  builder: (context, scrollController) => CategoryPicker(
-                    requestType: _getRequestTypeString(_selectedType),
-                    module: _selectedType == RequestType.service
-                        ? _selectedModule
-                        : null,
-                    scrollController: scrollController,
-                  ),
-                ),
-              );
-
-              if (result != null) {
-                setState(() {
-                  _selectedCategory = result['category'] ?? _selectedCategory;
-                  _selectedSubcategory =
-                      result['subcategory'] ?? _selectedSubcategory;
-                  _selectedCategoryId =
-                      result['categoryId'] ?? _selectedCategoryId;
-                  _selectedSubCategoryId =
-                      result['subcategoryId'] ?? _selectedSubCategoryId;
-                });
-              }
-            },
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    _selectedSubcategory ?? 'Select item category',
-                    style: TextStyle(
-                      color: _selectedSubcategory != null
-                          ? Colors.black
-                          : Colors.grey.shade600,
-                    ),
-                  ),
-                  const Icon(Icons.arrow_drop_down),
-                ],
-              ),
-            ),
           ),
         ),
         const SizedBox(height: 16),

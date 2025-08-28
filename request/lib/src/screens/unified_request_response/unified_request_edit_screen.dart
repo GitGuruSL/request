@@ -3742,6 +3742,82 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
   Widget _buildDeliveryFields() {
     return Column(
       children: [
+        // Item Categories (Use Category Picker) – moved to top
+        _buildFlatField(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Item Category',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () async {
+                  final result =
+                      await showModalBottomSheet<Map<String, String>>(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.white,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(20)),
+                    ),
+                    builder: (context) => SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.8,
+                      child: CategoryPicker(
+                        requestType: 'delivery',
+                        scrollController: ScrollController(),
+                      ),
+                    ),
+                  );
+
+                  if (result != null && result['category'] != null) {
+                    setState(() {
+                      _selectedCategory = result['category']!;
+                      _selectedSubcategory = result['subcategory'];
+                      // Prefer ID fields when provided
+                      _selectedCategoryId =
+                          result['categoryId'] ?? result['category']!;
+                      _selectedSubCategoryId =
+                          result['subcategoryId'] ?? result['subcategory'];
+                    });
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        (_selectedSubcategory != null &&
+                                _selectedSubcategory!.isNotEmpty)
+                            ? _selectedSubcategory!
+                            : (_selectedCategory.isNotEmpty
+                                ? _selectedCategory
+                                : 'Select item category'),
+                        style: TextStyle(
+                          color: (_selectedSubcategory != null &&
+                                      _selectedSubcategory!.isNotEmpty) ||
+                                  _selectedCategory.isNotEmpty
+                              ? Colors.black
+                              : Colors.grey.shade600,
+                        ),
+                      ),
+                      const Icon(Icons.arrow_drop_down),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
         // Request Title
         _buildFlatField(
           child: TextFormField(
@@ -3817,78 +3893,6 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
-
-        // Item Categories (Use Category Picker)
-        _buildFlatField(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Item Category',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: () async {
-                  final result =
-                      await showModalBottomSheet<Map<String, String>>(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.white,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.vertical(top: Radius.circular(20)),
-                    ),
-                    builder: (context) => SizedBox(
-                      height: MediaQuery.of(context).size.height * 0.8,
-                      child: CategoryPicker(
-                        requestType: 'delivery',
-                        scrollController: ScrollController(),
-                      ),
-                    ),
-                  );
-
-                  if (result != null && result['category'] != null) {
-                    setState(() {
-                      _selectedCategory = result['category']!;
-                      _selectedSubcategory = result['subcategory'];
-                      _selectedCategoryId = result['category']!;
-                      _selectedSubCategoryId = result['subcategory'];
-                    });
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade300),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        (_selectedSubcategory != null &&
-                                _selectedSubcategory!.isNotEmpty)
-                            ? _selectedSubcategory!
-                            : (_selectedCategory.isNotEmpty
-                                ? _selectedCategory
-                                : 'Select item category'),
-                        style: TextStyle(
-                          color: (_selectedSubcategory != null &&
-                                      _selectedSubcategory!.isNotEmpty) ||
-                                  _selectedCategory.isNotEmpty
-                              ? Colors.black
-                              : Colors.grey.shade600,
-                        ),
-                      ),
-                      const Icon(Icons.arrow_drop_down),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
         const SizedBox(height: 16),
 
         // Item Description
