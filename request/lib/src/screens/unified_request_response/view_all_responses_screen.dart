@@ -8,6 +8,7 @@ import '../../services/messaging_service.dart';
 import '../messaging/conversation_screen.dart';
 import 'unified_response_view_screen.dart';
 import '../account/public_profile_screen.dart';
+import '../../services/rest_request_service.dart' show ReviewsService;
 
 class ViewAllResponsesScreen extends StatefulWidget {
   final RequestModel request;
@@ -27,6 +28,9 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
   Map<String, UserModel> _responders = {};
   bool _isLoading = true;
   String _sortBy = 'date'; // 'date', 'price_low', 'price_high'
+  final Map<String, Map<String, dynamic>> _reviewStats =
+      {}; // userId -> { average_rating, review_count }
+  final Set<String> _statsLoading = {};
 
   @override
   void initState() {
@@ -135,6 +139,24 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
     final module = widget.request.type == RequestType.service
         ? (widget.request.typeSpecificData['module']?.toString() ?? '')
         : '';
+
+    // Lazy-load review stats per responder
+    final uid = response.responderId;
+    Map<String, dynamic>? stats = _reviewStats[uid];
+    if (stats == null && !_statsLoading.contains(uid) && uid.isNotEmpty) {
+      _statsLoading.add(uid);
+      ReviewsService.instance.getUserReviewStats(uid).then((value) {
+        if (!mounted) return;
+        if (value != null) {
+          setState(() {
+            _reviewStats[uid] = value;
+          });
+        }
+        _statsLoading.remove(uid);
+      }).catchError((_) {
+        if (mounted) setState(() => _statsLoading.remove(uid));
+      });
+    }
     return Stack(
       children: [
         GestureDetector(
@@ -215,6 +237,21 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
                                     decoration: TextDecoration.underline),
                               ),
                             ),
+                            if (stats != null) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  _stars((stats['average_rating'] ?? 0)
+                                      .toDouble()),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '(${(stats['review_count'] ?? 0).toString()})',
+                                    style: GlassTheme.bodySmall.copyWith(
+                                        color: GlassTheme.colors.textTertiary),
+                                  ),
+                                ],
+                              ),
+                            ],
                             Text(
                               'Response to ${_getTypeDisplayName(widget.request.type.toString().split('.').last)}',
                               style: GlassTheme.bodySmall,
@@ -392,6 +429,21 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
       ),
       padding: const EdgeInsets.all(6),
       child: const Icon(Icons.verified, color: Colors.white, size: 16),
+    );
+  }
+
+  Widget _stars(double avg) {
+    final rounded = avg.isNaN ? 0 : avg.round().clamp(0, 5);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(
+        5,
+        (i) => Icon(
+          i < rounded ? Icons.star : Icons.star_border,
+          color: Colors.amber,
+          size: 14,
+        ),
+      ),
     );
   }
 
