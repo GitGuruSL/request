@@ -598,16 +598,19 @@ class _HomeScreenState extends State<HomeScreen> {
       case 'construction':
       case 'education':
       case 'jobs':
-        // Route other service types to generic Service flow for now
-        _openUnified(RequestType.service);
+        // Route other service types to generic Service flow with module context
+        _openUnified(RequestType.service, module: type);
         break;
     }
   }
 
-  void _openUnified(RequestType type) {
+  void _openUnified(RequestType type, {String? module}) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => UnifiedRequestCreateScreen(initialType: type),
+        builder: (_) => UnifiedRequestCreateScreen(
+          initialType: type,
+          initialModule: module,
+        ),
       ),
     );
   }

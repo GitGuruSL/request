@@ -13,8 +13,11 @@ import '../../utils/currency_helper.dart';
 
 class UnifiedRequestCreateScreen extends StatefulWidget {
   final RequestType? initialType;
+  final String?
+      initialModule; // e.g., tours, events, construction, education, jobs
 
-  const UnifiedRequestCreateScreen({super.key, this.initialType});
+  const UnifiedRequestCreateScreen(
+      {super.key, this.initialType, this.initialModule});
 
   @override
   State<UnifiedRequestCreateScreen> createState() =>
@@ -51,6 +54,7 @@ class _UnifiedRequestCreateScreenState
   final _specialInstructionsController = TextEditingController();
 
   RequestType _selectedType = RequestType.item;
+  String? _selectedModule; // service subtype/module context
   String _selectedCondition = 'New';
   String _selectedUrgency = 'Flexible';
   // kept for parity with other flows if needed later
@@ -83,6 +87,15 @@ class _UnifiedRequestCreateScreenState
   void initState() {
     super.initState();
     _selectedType = widget.initialType ?? RequestType.item;
+    _selectedModule = widget.initialModule;
+    // If opened for a specific service module, reflect it in the visible label
+    if (_selectedType == RequestType.service && _selectedModule != null) {
+      final m = _selectedModule!;
+      // Use module as a temporary visible category label until user picks from CategoryPicker
+      _selectedCategory = m.isNotEmpty
+          ? m[0].toUpperCase() + (m.length > 1 ? m.substring(1) : '')
+          : _selectedCategory;
+    }
   }
 
   @override
@@ -1418,6 +1431,8 @@ class _UnifiedRequestCreateScreenState
           'serviceType': (_selectedSubcategory?.isNotEmpty == true)
               ? _selectedSubcategory
               : _selectedCategory,
+          // module/subtype hint for backend routing/analytics
+          'module': _selectedModule,
           'categoryId': _selectedCategoryId ?? '',
           'subCategoryId': _selectedSubCategoryId ?? '',
           'category': _selectedCategory,
