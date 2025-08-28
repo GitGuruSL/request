@@ -75,6 +75,23 @@ class _CategoryPickerState extends State<CategoryPicker> {
       if (m == 'rental') m = 'rent';
       if (m == 'jobs') m = 'hiring';
 
+      // If this is a service and module is not provided, don't load any categories
+      // to avoid cross-module selection. The UI will just show "No categories".
+      if (t == 'service' && (m == null || m.isEmpty)) {
+        if (mounted) {
+          setState(() {
+            _categories.clear();
+            _categoryNameToId.clear();
+            _subcategoryNameToId.clear();
+            _resolvedModule = null;
+            _totalBackend = 0;
+            _explicitMatches = 0;
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
       final all = await rest.getCategoriesWithCache(type: t, module: m);
       _totalBackend = all.length;
       _categoryNameToId.clear();
