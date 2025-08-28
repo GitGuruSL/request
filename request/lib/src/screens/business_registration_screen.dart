@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/enhanced_user_service.dart';
 import '../services/country_service.dart';
 import '../theme/app_theme.dart';
+import '../theme/glass_theme.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/file_upload_service.dart';
 import '../widgets/simple_phone_field.dart';
@@ -146,12 +147,13 @@ class _BusinessRegistrationScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+    return GlassTheme.backgroundContainer(
+        child: Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('Business Registration'),
-        backgroundColor: AppTheme.backgroundColor,
-        foregroundColor: AppTheme.textPrimary,
+        backgroundColor: Colors.transparent,
+        foregroundColor: GlassTheme.colors.textPrimary,
         elevation: 0,
       ),
       body: Form(
@@ -175,35 +177,34 @@ class _BusinessRegistrationScreenState
           ),
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
+    return GlassTheme.glassCard(
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(color: Colors.white),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.business, color: AppTheme.primaryColor, size: 32),
-              const SizedBox(width: 12),
-              const Text(
-                'Business Registration',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: GlassTheme.colors.primaryBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                child: Icon(Icons.business,
+                    color: GlassTheme.colors.primaryBlue, size: 24),
               ),
+              const SizedBox(width: 12),
+              Text('Business Registration', style: GlassTheme.titleLarge),
             ],
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Complete your business registration to start offering services on our platform.',
-            style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+            style: GlassTheme.bodyMedium,
           ),
         ],
       ),
@@ -211,29 +212,24 @@ class _BusinessRegistrationScreenState
   }
 
   Widget _buildBusinessInformationSection() {
-    return Container(
-      width: double.infinity,
+    return GlassTheme.glassCard(
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(color: Colors.white),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(
-                Icons.business_center,
-                color: AppTheme.primaryColor,
-                size: 24,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: GlassTheme.colors.primaryBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.business_center,
+                    color: GlassTheme.colors.primaryBlue, size: 20),
               ),
               const SizedBox(width: 12),
-              const Text(
-                'Business Information',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
+              Text('Business Information', style: GlassTheme.titleMedium),
             ],
           ),
           const SizedBox(height: 16),
@@ -335,35 +331,26 @@ class _BusinessRegistrationScreenState
           else
             GestureDetector(
               onTap: _openSubcategoryPicker,
-              child: InputDecorator(
-                decoration: InputDecoration(
-                  prefixIcon: Icon(
-                    Icons.list_alt,
-                    color: AppTheme.primaryColor,
-                    size: 20,
-                  ),
-                  suffixIcon: const Icon(Icons.keyboard_arrow_down),
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide.none,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide.none,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: Text(
-                  _selectedSubcategorySummary(),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: AppTheme.textPrimary,
-                  ),
+              child: Container(
+                decoration: GlassTheme.glassContainerSubtle,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.list_alt,
+                      color: GlassTheme.colors.primaryBlue,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _selectedSubcategorySummary(),
+                        style: GlassTheme.bodyMedium,
+                      ),
+                    ),
+                    const Icon(Icons.keyboard_arrow_down),
+                  ],
                 ),
               ),
             ),
@@ -558,25 +545,24 @@ class _BusinessRegistrationScreenState
   }
 
   Widget _buildBusinessDocumentsSection() {
-    return Container(
-      width: double.infinity,
+    return GlassTheme.glassCard(
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(color: Colors.white),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.description, color: AppTheme.primaryColor, size: 24),
-              const SizedBox(width: 12),
-              const Text(
-                'Business Documents',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: GlassTheme.colors.primaryBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                child: Icon(Icons.description,
+                    color: GlassTheme.colors.primaryBlue, size: 20),
               ),
+              const SizedBox(width: 12),
+              Text('Business Documents', style: GlassTheme.titleMedium),
             ],
           ),
           const SizedBox(height: 16),
@@ -610,25 +596,24 @@ class _BusinessRegistrationScreenState
   }
 
   Widget _buildBusinessLogoSection() {
-    return Container(
-      width: double.infinity,
+    return GlassTheme.glassCard(
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(color: Colors.white),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.image, color: AppTheme.primaryColor, size: 24),
-              const SizedBox(width: 12),
-              const Text(
-                'Business Logo',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: GlassTheme.colors.primaryBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                child: Icon(Icons.image,
+                    color: GlassTheme.colors.primaryBlue, size: 20),
               ),
+              const SizedBox(width: 12),
+              Text('Business Logo', style: GlassTheme.titleMedium),
             ],
           ),
           const SizedBox(height: 16),
@@ -989,13 +974,7 @@ class _BusinessRegistrationScreenState
         label: Text(
           _isSubmitting ? 'Submitting...' : 'Submit for Verification',
         ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.primaryColor,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
+        style: GlassTheme.primaryButton,
       ),
     );
   }

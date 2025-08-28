@@ -11,6 +11,7 @@ import '../services/file_upload_service.dart';
 import '../services/api_client.dart';
 import '../widgets/simple_phone_field.dart';
 import '../theme/app_theme.dart';
+import '../theme/glass_theme.dart';
 import '../services/feature_gate_service.dart';
 import '../widgets/coming_soon_widget.dart';
 
@@ -339,14 +340,17 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
       future: FeatureGateService.instance.isDriverRegistrationEnabled(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Scaffold(
-            appBar: AppBar(
-              title: const Text('Driver Registration'),
-              backgroundColor: AppTheme.backgroundColor,
-              foregroundColor: AppTheme.textPrimary,
-              elevation: 0,
+          return GlassTheme.backgroundContainer(
+            child: Scaffold(
+              backgroundColor: Colors.transparent,
+              appBar: AppBar(
+                title: const Text('Driver Registration'),
+                backgroundColor: Colors.transparent,
+                foregroundColor: GlassTheme.colors.textPrimary,
+                elevation: 0,
+              ),
+              body: const Center(child: CircularProgressIndicator()),
             ),
-            body: const Center(child: CircularProgressIndicator()),
           );
         }
 
@@ -360,12 +364,13 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
         }
 
         // Original driver registration form
-        return Scaffold(
-          backgroundColor: AppTheme.backgroundColor,
+        return GlassTheme.backgroundContainer(
+            child: Scaffold(
+          backgroundColor: Colors.transparent,
           appBar: AppBar(
-            title: const Text('Driver Verification'),
-            backgroundColor: AppTheme.backgroundColor,
-            foregroundColor: AppTheme.textPrimary,
+            title: const Text('Driver Registration'),
+            backgroundColor: Colors.transparent,
+            foregroundColor: GlassTheme.colors.textPrimary,
             elevation: 0,
           ),
           body: Form(
@@ -391,7 +396,7 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
               ),
             ),
           ),
-        );
+        ));
       },
     );
   }
@@ -428,27 +433,24 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
   }
 
   Widget _buildDriverInformation() {
-    return Container(
-      width: double.infinity,
+    return GlassTheme.glassCard(
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(
-        color: AppTheme.backgroundColor,
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.person, color: AppTheme.primaryColor, size: 24),
-              const SizedBox(width: 12),
-              const Text(
-                'About You',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: GlassTheme.colors.primaryBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                child: Icon(Icons.person,
+                    color: GlassTheme.colors.primaryBlue, size: 20),
               ),
+              const SizedBox(width: 12),
+              Text('About You', style: GlassTheme.titleMedium),
             ],
           ),
           const SizedBox(height: 16),
@@ -580,16 +582,17 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
           // Contact Details Section
           Row(
             children: [
-              Icon(Icons.contact_phone, color: AppTheme.primaryColor, size: 24),
-              const SizedBox(width: 12),
-              const Text(
-                'Contact Details',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: GlassTheme.colors.primaryBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                child: Icon(Icons.contact_phone,
+                    color: GlassTheme.colors.primaryBlue, size: 20),
               ),
+              const SizedBox(width: 12),
+              Text('Contact Details', style: GlassTheme.titleMedium),
             ],
           ),
           const SizedBox(height: 16),
@@ -660,17 +663,17 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
           // Vehicle Ownership Section
           Row(
             children: [
-              Icon(Icons.directions_car,
-                  color: AppTheme.primaryColor, size: 24),
-              const SizedBox(width: 12),
-              const Text(
-                'Vehicle Ownership',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: GlassTheme.colors.primaryBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                child: Icon(Icons.directions_car,
+                    color: GlassTheme.colors.primaryBlue, size: 20),
               ),
+              const SizedBox(width: 12),
+              Text('Vehicle Ownership', style: GlassTheme.titleMedium),
             ],
           ),
           const SizedBox(height: 16),
@@ -812,27 +815,24 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
   }
 
   Widget _buildDocumentsSection() {
-    return Container(
-      width: double.infinity,
+    return GlassTheme.glassCard(
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(
-        color: AppTheme.backgroundColor,
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.description, color: AppTheme.primaryColor, size: 24),
-              const SizedBox(width: 12),
-              const Text(
-                'Personal Document Upload',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: GlassTheme.colors.primaryBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                child: Icon(Icons.description,
+                    color: GlassTheme.colors.primaryBlue, size: 20),
               ),
+              const SizedBox(width: 12),
+              Text('Personal Document Upload', style: GlassTheme.titleMedium),
             ],
           ),
           const SizedBox(height: 4),
@@ -848,16 +848,10 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
           // Profile Photo Section
           Row(
             children: [
-              Icon(Icons.person, color: AppTheme.primaryColor, size: 20),
+              Icon(Icons.person,
+                  color: GlassTheme.colors.primaryBlue, size: 20),
               const SizedBox(width: 8),
-              const Text(
-                'Profile Photo',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
+              Text('Profile Photo', style: GlassTheme.titleSmall),
             ],
           ),
           const SizedBox(height: 8),
@@ -873,16 +867,10 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
           // Driving License Section
           Row(
             children: [
-              Icon(Icons.credit_card, color: AppTheme.primaryColor, size: 20),
+              Icon(Icons.credit_card,
+                  color: GlassTheme.colors.primaryBlue, size: 20),
               const SizedBox(width: 8),
-              const Text(
-                'Driving License',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
+              Text('Driving License', style: GlassTheme.titleSmall),
             ],
           ),
           const SizedBox(height: 8),
@@ -907,16 +895,9 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
           // National Identity Card Section
           Row(
             children: [
-              Icon(Icons.badge, color: AppTheme.primaryColor, size: 20),
+              Icon(Icons.badge, color: GlassTheme.colors.primaryBlue, size: 20),
               const SizedBox(width: 8),
-              const Text(
-                'National Identity Card',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
+              Text('National Identity Card', style: GlassTheme.titleSmall),
             ],
           ),
           const SizedBox(height: 8),
@@ -941,16 +922,10 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
           // Billing Proof Section
           Row(
             children: [
-              Icon(Icons.receipt, color: AppTheme.primaryColor, size: 20),
+              Icon(Icons.receipt,
+                  color: GlassTheme.colors.primaryBlue, size: 20),
               const SizedBox(width: 8),
-              const Text(
-                'Billing Proof (optional)',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
+              Text('Billing Proof (optional)', style: GlassTheme.titleSmall),
             ],
           ),
           const SizedBox(height: 8),
@@ -1038,28 +1013,24 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
   }
 
   Widget _buildVehicleInformation() {
-    return Container(
-      width: double.infinity,
+    return GlassTheme.glassCard(
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(
-        color: AppTheme.backgroundColor,
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.directions_car,
-                  color: AppTheme.primaryColor, size: 24),
-              const SizedBox(width: 12),
-              const Text(
-                'Vehicle Information',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: GlassTheme.colors.primaryBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                child: Icon(Icons.directions_car,
+                    color: GlassTheme.colors.primaryBlue, size: 20),
               ),
+              const SizedBox(width: 12),
+              Text('Vehicle Information', style: GlassTheme.titleMedium),
             ],
           ),
           const SizedBox(height: 16),
@@ -1227,27 +1198,24 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
   }
 
   Widget _buildVehicleDocuments() {
-    return Container(
-      width: double.infinity,
+    return GlassTheme.glassCard(
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(
-        color: AppTheme.backgroundColor,
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.assignment, color: AppTheme.primaryColor, size: 24),
-              const SizedBox(width: 12),
-              const Text(
-                'Vehicle Documents',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: GlassTheme.colors.primaryBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                child: Icon(Icons.assignment,
+                    color: GlassTheme.colors.primaryBlue, size: 20),
               ),
+              const SizedBox(width: 12),
+              Text('Vehicle Documents', style: GlassTheme.titleMedium),
             ],
           ),
           const SizedBox(height: 16),
@@ -1257,27 +1225,24 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
   }
 
   Widget _buildVehicleImages() {
-    return Container(
-      width: double.infinity,
+    return GlassTheme.glassCard(
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(
-        color: AppTheme.backgroundColor,
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.photo_camera, color: AppTheme.primaryColor, size: 24),
-              const SizedBox(width: 12),
-              const Text(
-                'Vehicle Photos',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: GlassTheme.colors.primaryBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                child: Icon(Icons.photo_camera,
+                    color: GlassTheme.colors.primaryBlue, size: 20),
               ),
+              const SizedBox(width: 12),
+              Text('Vehicle Photos', style: GlassTheme.titleMedium),
             ],
           ),
           const SizedBox(height: 8),
@@ -1534,12 +1499,7 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
       width: double.infinity,
       child: ElevatedButton(
         onPressed: _canSubmit() ? _submitVerification : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.primaryColor,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: const RoundedRectangleBorder(),
-        ),
+        style: GlassTheme.primaryButton,
         child: _isLoading
             ? const SizedBox(
                 height: 20,
