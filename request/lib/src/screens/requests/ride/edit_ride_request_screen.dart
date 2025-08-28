@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'dart:ui' as ui;
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../models/request_model.dart';
@@ -61,6 +62,7 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
   );
   Set<Marker> _markers = {};
   Set<Polyline> _polylines = {};
+  bool _shouldShowMap = false; // Delayed map loading flag
 
   bool _isLoading = false;
 
@@ -72,6 +74,15 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
     super.initState();
     _loadVehicleTypes();
     _initializeFromRequest();
+
+    // Delayed map initialization to reduce initial rendering load
+    Timer(const Duration(seconds: 1), () {
+      if (mounted) {
+        setState(() {
+          _shouldShowMap = true;
+        });
+      }
+    });
   }
 
   Future<void> _loadVehicleTypes() async {
@@ -209,40 +220,82 @@ class _EditRideRequestScreenState extends State<EditRideRequestScreen> {
       ],
       body: Stack(
         children: [
-          // Google Maps View
+          // Google Maps View with delayed loading
           Positioned.fill(
-            child: GoogleMap(
-              initialCameraPosition: _initialPosition,
-              onMapCreated: (GoogleMapController controller) {
-                _mapController = controller;
-                // If we have coordinates, update the view
-                if (_pickupLat != null && _pickupLng != null) {
-                  Future.delayed(const Duration(milliseconds: 500), () {
-                    _updateMapMarkers();
-                  });
-                }
-              },
-              markers: _markers,
-              polylines: _polylines,
-              onTap: _onMapTapped,
-              myLocationEnabled: true,
-              myLocationButtonEnabled: false,
-              zoomControlsEnabled: false,
-              mapToolbarEnabled: false,
-              // Remove lite mode to fix rendering issues
-              liteModeEnabled: false,
-              buildingsEnabled: true,
-              indoorViewEnabled: false,
-              compassEnabled: true,
-              trafficEnabled: false,
-              mapType: MapType.normal,
-              // Add these for better performance
-              minMaxZoomPreference: const MinMaxZoomPreference(10.0, 20.0),
-              rotateGesturesEnabled: true,
-              scrollGesturesEnabled: true,
-              tiltGesturesEnabled: false,
-              zoomGesturesEnabled: true,
-            ),
+            child: _shouldShowMap
+                ? GoogleMap(
+                    initialCameraPosition: _initialPosition,
+                    onMapCreated: (GoogleMapController controller) async {
+                      try {
+                        _mapController = controller;
+
+                        // Add delay for proper initialization
+                        await Future.delayed(const Duration(milliseconds: 500));
+
+                        // If we have coordinates, update the view
+                        if (_pickupLat != null && _pickupLng != null) {
+                          _updateMapMarkers();
+                        }
+
+                        print('✅ Edit Google Maps initialized successfully');
+                      } catch (e) {
+                        print('❌ Edit Google Maps initialization error: $e');
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  'Map failed to load. Please check your internet connection.'),
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    markers: _markers,
+                    polylines: _polylines,
+                    onTap: _onMapTapped,
+                    myLocationEnabled: true,
+                    myLocationButtonEnabled: false,
+                    zoomControlsEnabled: false,
+                    mapToolbarEnabled: false,
+                    // Critical fixes for frame rendering issues
+                    liteModeEnabled: false,
+                    buildingsEnabled: false, // Disable to reduce rendering load
+                    indoorViewEnabled: false,
+                    compassEnabled: false, // Disable to reduce UI elements
+                    trafficEnabled: false,
+                    mapType: MapType.normal,
+                    // Performance optimizations
+                    minMaxZoomPreference: const MinMaxZoomPreference(8.0, 18.0),
+                    rotateGesturesEnabled:
+                        false, // Disable to reduce complexity
+                    scrollGesturesEnabled: true,
+                    tiltGesturesEnabled: false,
+                    zoomGesturesEnabled: true,
+                    // Additional performance settings
+                    padding: EdgeInsets.zero,
+                    cameraTargetBounds: CameraTargetBounds.unbounded,
+                    style: null, // Use default style for better performance
+                  )
+                : Container(
+                    color: Colors.grey[300],
+                    child: const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text(
+                            'Loading Map...',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
           ),
 
           // Bottom Sheet with ride details

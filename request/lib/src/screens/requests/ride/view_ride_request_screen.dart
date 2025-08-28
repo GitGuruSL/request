@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../../../theme/glass_theme.dart';
 import '../../../widgets/glass_page.dart';
 import '../../../services/rest_auth_service.dart' hide UserModel;
@@ -50,6 +51,7 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   GoogleMapController? _mapController;
   Set<Marker> _markers = {};
   Set<Polyline> _polylines = {};
+  bool _shouldShowMap = false; // Delayed map loading flag
 
   // Quick respond (inline fare)
   final TextEditingController _fareController = TextEditingController();
@@ -60,6 +62,15 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   void initState() {
     super.initState();
     _loadRequestData();
+
+    // Delayed map initialization to reduce initial rendering load
+    Timer(const Duration(seconds: 1), () {
+      if (mounted) {
+        setState(() {
+          _shouldShowMap = true;
+        });
+      }
+    });
   }
 
   @override
@@ -447,20 +458,84 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
     return GlassTheme.backgroundContainer(
       child: Stack(
         children: [
-          // Map View
-          GoogleMap(
-            initialCameraPosition: const CameraPosition(
-              target: LatLng(6.9271, 79.8612), // Colombo, Sri Lanka
-              zoom: 14,
-            ),
-            onMapCreated: _onMapCreated,
-            markers: _markers,
-            polylines: _polylines,
-            myLocationEnabled: true,
-            myLocationButtonEnabled: false,
-            zoomControlsEnabled: false,
-            mapToolbarEnabled: false,
-          ),
+          // Map View with delayed loading and performance optimizations
+          _shouldShowMap
+              ? GoogleMap(
+                  initialCameraPosition: const CameraPosition(
+                    target: LatLng(6.9271, 79.8612), // Colombo, Sri Lanka
+                    zoom: 14,
+                  ),
+                  onMapCreated: (GoogleMapController controller) async {
+                    try {
+                      _mapController = controller;
+
+                      // Add a small delay to ensure the map is properly initialized
+                      await Future.delayed(const Duration(milliseconds: 500));
+
+                      // Use existing map setup methods
+                      if (_markers.isNotEmpty) {
+                        _fitMarkersOnMap();
+                      } else if (_request?.location != null) {
+                        _setupMapMarkers();
+                      }
+
+                      print('✅ View Google Maps initialized successfully');
+                    } catch (e) {
+                      print('❌ View Google Maps initialization error: $e');
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                'Map failed to load. Please check your internet connection.'),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  markers: _markers,
+                  polylines: _polylines,
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: false,
+                  zoomControlsEnabled: false,
+                  mapToolbarEnabled: false,
+                  // Critical fixes for frame rendering issues
+                  liteModeEnabled: false,
+                  buildingsEnabled: false, // Disable to reduce rendering load
+                  indoorViewEnabled: false,
+                  compassEnabled: false, // Disable to reduce UI elements
+                  trafficEnabled: false,
+                  mapType: MapType.normal,
+                  // Performance optimizations
+                  minMaxZoomPreference: const MinMaxZoomPreference(8.0, 18.0),
+                  rotateGesturesEnabled: false, // Disable to reduce complexity
+                  scrollGesturesEnabled: true,
+                  tiltGesturesEnabled: false,
+                  zoomGesturesEnabled: true,
+                  // Additional performance settings
+                  padding: EdgeInsets.zero,
+                  cameraTargetBounds: CameraTargetBounds.unbounded,
+                  style: null, // Use default style for better performance
+                )
+              : Container(
+                  color: Colors.grey[300],
+                  child: const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 16),
+                        Text(
+                          'Loading Map...',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
 
           // Top App Bar - Clean design without shadows
           Positioned(

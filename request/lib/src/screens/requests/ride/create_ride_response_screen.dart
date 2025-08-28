@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -37,6 +38,7 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
 
   // Google Maps Controller
   GoogleMapController? _mapController;
+  bool _shouldShowMap = false; // Delayed map loading flag
 
   // Form Controllers
   final _priceController = TextEditingController();
@@ -71,6 +73,15 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
     _requestLocationPermission();
     _loadRequesterData();
     _checkExistingResponse();
+
+    // Delayed map initialization to reduce initial rendering load
+    Timer(const Duration(seconds: 1), () {
+      if (mounted) {
+        setState(() {
+          _shouldShowMap = true;
+        });
+      }
+    });
   }
 
   Future<void> _loadVehicleTypes() async {
@@ -441,24 +452,93 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
                     )
                   : ClipRRect(
                       borderRadius: const BorderRadius.all(Radius.circular(12)),
-                      child: GoogleMap(
-                        initialCameraPosition: CameraPosition(
-                          target: _currentPosition != null
-                              ? LatLng(_currentPosition!.latitude,
-                                  _currentPosition!.longitude)
-                              : const LatLng(3.1390, 101.6869), // KL as default
-                          zoom: 14,
-                        ),
-                        markers: _markers,
-                        onMapCreated: (GoogleMapController controller) async {
-                          _mapController = controller;
-                          if (_markers.isNotEmpty) {
-                            await _updateMapMarkersAndCamera();
-                          }
-                        },
-                        myLocationEnabled: true,
-                        myLocationButtonEnabled: true,
-                      ),
+                      child: _shouldShowMap
+                          ? GoogleMap(
+                              initialCameraPosition: CameraPosition(
+                                target: _currentPosition != null
+                                    ? LatLng(_currentPosition!.latitude,
+                                        _currentPosition!.longitude)
+                                    : const LatLng(
+                                        3.1390, 101.6869), // KL as default
+                                zoom: 14,
+                              ),
+                              markers: _markers,
+                              onMapCreated:
+                                  (GoogleMapController controller) async {
+                                try {
+                                  _mapController = controller;
+
+                                  // Add a small delay to ensure the map is properly initialized
+                                  await Future.delayed(
+                                      const Duration(milliseconds: 500));
+
+                                  if (_markers.isNotEmpty) {
+                                    await _updateMapMarkersAndCamera();
+                                  }
+
+                                  print(
+                                      '✅ Response Google Maps initialized successfully');
+                                } catch (e) {
+                                  print(
+                                      '❌ Response Google Maps initialization error: $e');
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                            'Map failed to load. Please check your internet connection.'),
+                                        backgroundColor: Colors.orange,
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                              myLocationEnabled: true,
+                              myLocationButtonEnabled: true,
+                              // Critical fixes for frame rendering issues
+                              liteModeEnabled: false,
+                              buildingsEnabled:
+                                  false, // Disable to reduce rendering load
+                              indoorViewEnabled: false,
+                              compassEnabled:
+                                  false, // Disable to reduce UI elements
+                              trafficEnabled: false,
+                              mapType: MapType.normal,
+                              // Performance optimizations
+                              minMaxZoomPreference:
+                                  const MinMaxZoomPreference(8.0, 18.0),
+                              rotateGesturesEnabled:
+                                  false, // Disable to reduce complexity
+                              scrollGesturesEnabled: true,
+                              tiltGesturesEnabled: false,
+                              zoomGesturesEnabled: true,
+                              zoomControlsEnabled: false,
+                              mapToolbarEnabled: false,
+                              // Additional performance settings
+                              padding: EdgeInsets.zero,
+                              cameraTargetBounds: CameraTargetBounds.unbounded,
+                              style:
+                                  null, // Use default style for better performance
+                            )
+                          : Container(
+                              height: 200,
+                              color: Colors.grey[300],
+                              child: const Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    CircularProgressIndicator(),
+                                    SizedBox(height: 16),
+                                    Text(
+                                      'Loading Map...',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                     ),
             ),
             const SizedBox(height: 20),

@@ -84,6 +84,7 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
   bool _isLoading = false;
   bool _mapReady = false;
   bool _mapInitTimedOut = false;
+  bool _shouldShowMap = false; // Add flag to control map visibility
 
   // Dynamic vehicle types from database
   List<VehicleType> _vehicleTypes = [];
@@ -93,6 +94,16 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
     super.initState();
     _loadVehicleTypes();
     _initLocationPermission();
+
+    // Delay map loading to improve initial screen performance
+    Timer(const Duration(milliseconds: 1000), () {
+      if (mounted) {
+        setState(() {
+          _shouldShowMap = true;
+        });
+      }
+    });
+
     // If the Google Map doesn't call onMapCreated within 6s, show a hint
     Timer(const Duration(seconds: 6), () {
       if (mounted && !_mapReady) {
@@ -411,37 +422,81 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
       ],
       body: Stack(
         children: [
-          // Google Maps View
+          // Google Maps View with delayed loading
           Positioned.fill(
-            child: GoogleMap(
-              initialCameraPosition: _initialPosition,
-              onMapCreated: (GoogleMapController controller) {
-                _mapController = controller;
-                if (mounted) {
-                  setState(() => _mapReady = true);
-                }
-              },
-              markers: _markers,
-              polylines: _polylines,
-              onTap: _onMapTapped,
-              myLocationEnabled: _myLocationEnabled,
-              myLocationButtonEnabled: false,
-              zoomControlsEnabled: false,
-              mapToolbarEnabled: false,
-              // Remove lite mode to fix rendering issues
-              liteModeEnabled: false,
-              buildingsEnabled: true,
-              indoorViewEnabled: false,
-              compassEnabled: true,
-              trafficEnabled: false,
-              mapType: MapType.normal,
-              // Add these for better performance
-              minMaxZoomPreference: const MinMaxZoomPreference(10.0, 20.0),
-              rotateGesturesEnabled: true,
-              scrollGesturesEnabled: true,
-              tiltGesturesEnabled: false,
-              zoomGesturesEnabled: true,
-            ),
+            child: _shouldShowMap
+                ? GoogleMap(
+                    initialCameraPosition: _initialPosition,
+                    onMapCreated: (GoogleMapController controller) async {
+                      try {
+                        _mapController = controller;
+
+                        // Add a small delay to ensure the map is properly initialized
+                        await Future.delayed(const Duration(milliseconds: 500));
+
+                        if (mounted) {
+                          setState(() => _mapReady = true);
+                        }
+
+                        print('✅ Google Maps initialized successfully');
+                      } catch (e) {
+                        print('❌ Google Maps initialization error: $e');
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  'Map failed to load. Please check your internet connection.'),
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    markers: _markers,
+                    polylines: _polylines,
+                    onTap: _onMapTapped,
+                    myLocationEnabled: _myLocationEnabled,
+                    myLocationButtonEnabled: false,
+                    zoomControlsEnabled: false,
+                    mapToolbarEnabled: false,
+                    // Critical fixes for frame rendering issues
+                    liteModeEnabled: false,
+                    buildingsEnabled: false, // Disable to reduce rendering load
+                    indoorViewEnabled: false,
+                    compassEnabled: false, // Disable to reduce UI elements
+                    trafficEnabled: false,
+                    mapType: MapType.normal,
+                    // Performance optimizations
+                    minMaxZoomPreference: const MinMaxZoomPreference(8.0, 18.0),
+                    rotateGesturesEnabled:
+                        false, // Disable to reduce complexity
+                    scrollGesturesEnabled: true,
+                    tiltGesturesEnabled: false,
+                    zoomGesturesEnabled: true,
+                    // Additional performance settings
+                    padding: EdgeInsets.zero,
+                    cameraTargetBounds: CameraTargetBounds.unbounded,
+                    style: null, // Use default style for better performance
+                  )
+                : Container(
+                    color: Colors.grey[300],
+                    child: const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text(
+                            'Loading Map...',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
           ),
 
           // Helpful overlay if map failed to initialize (likely missing API key)
