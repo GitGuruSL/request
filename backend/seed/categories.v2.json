@@ -62,7 +62,53 @@
       },
       "events": {
         "categories": [
-          { "name": "Event Services", "subcategories": ["Catering", "Decor", "Photography"] }
+          {
+            "name": "Venues",
+            "subcategories": [
+              "Banquet Halls",
+              "Outdoor & Garden Venues",
+              "Conference Rooms",
+              "Villas & Bungalows for Parties"
+            ]
+          },
+          {
+            "name": "Food & Beverage",
+            "subcategories": [
+              "Catering Services (Buffet, Plated)",
+              "Live Cooking Stations (Hoppers, Kottu)",
+              "Cake & Dessert Makers",
+              "Bartenders & Mobile Bars"
+            ]
+          },
+          {
+            "name": "Entertainment & Talent",
+            "subcategories": [
+              "Photographers & Videographers",
+              "DJs & Live Bands",
+              "Dancers (Traditional, Modern)",
+              "MCs / Announcers",
+              "Magicians & Children's Entertainers"
+            ]
+          },
+          {
+            "name": "Services & Staff",
+            "subcategories": [
+              "Event Planners & Coordinators",
+              "Decoration Services",
+              "Servers & Waitstaff",
+              "Sound & Lighting Technicians",
+              "Security Staff"
+            ]
+          },
+          {
+            "name": "Rentals & Supplies",
+            "subcategories": [
+              "Chairs, Tables & Marquees",
+              "Sound Systems & Projectors",
+              "Lighting & Generators",
+              "Flower & Decoration Supplies"
+            ]
+          }
         ]
       },
       "construction": {

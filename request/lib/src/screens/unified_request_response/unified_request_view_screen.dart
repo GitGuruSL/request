@@ -1277,6 +1277,33 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
 
     String prettyLabel(String key) {
       switch (key) {
+        // Construction module
+        case 'projectLocationNote':
+          return 'Location Notes';
+        case 'preferredStartDate':
+          return 'Preferred Start Date';
+        case 'propertyArea':
+          return 'Property Size / Area';
+        case 'numberOfFloors':
+          return 'Number of Floors';
+        case 'plansStatus':
+          return 'Status of Plans';
+        case 'scopeOfWork':
+          return 'Scope of Work';
+        case 'approxMeasurements':
+          return 'Approximate Measurements';
+        case 'itemsList':
+          return 'List of Items';
+        case 'rentalStartDate':
+          return 'Rental Start Date';
+        case 'rentalEndDate':
+          return 'Rental End Date';
+        case 'deliveryRequired':
+          return 'Delivery Required';
+        case 'propertyType':
+          return 'Type of Property';
+        case 'landSize':
+          return 'Land Size';
         // Tours module common
         case 'startDate':
           return 'Start Date';
@@ -1387,7 +1414,9 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
     ];
 
     if (fields is Map && fields.isNotEmpty) {
+      final skipKeys = {'estimatedBudget'}; // budget shown separately
       fields.forEach((k, v) {
+        if (skipKeys.contains(k)) return;
         if (v == null || (v is String && v.toString().trim().isEmpty)) return;
         widgets.add(
           Padding(
