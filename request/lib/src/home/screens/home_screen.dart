@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/rest_auth_service.dart';
 import '../../screens/unified_request_response/unified_request_create_screen.dart';
 import '../../models/enhanced_user_model.dart' show RequestType;
@@ -29,6 +30,10 @@ class _HomeScreenState extends State<HomeScreen> {
   CountryModules? _modules;
   bool _loadingModules = false;
   int _unreadNotifications = 0;
+
+  // Favorites (persisted locally)
+  static const String _prefsFavoritesKey = 'home_favorites_v1';
+  Set<String> _favorites = <String>{};
 
   // UI: banners & popular products
   final PageController _bannerController =
@@ -70,6 +75,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadUnreadCounts();
     _loadPopularProducts();
     _loadBanners();
+    _loadFavorites();
   }
 
   @override
@@ -141,79 +147,146 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // Favorites persistence
+  Future<void> _loadFavorites() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList(_prefsFavoritesKey) ?? const [];
+      if (!mounted) return;
+      setState(() => _favorites = list.toSet());
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  Future<void> _saveFavorites() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_prefsFavoritesKey, _favorites.toList());
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  bool _isFavorite(String type) => _favorites.contains(type);
+
+  void _toggleFavorite(String type) {
+    setState(() {
+      if (_favorites.contains(type)) {
+        _favorites.remove(type);
+      } else {
+        _favorites.add(type);
+      }
+    });
+    _saveFavorites();
+  }
+
   List<_RequestType> get _requestTypes => [
+        // Grouped home: show two top-level choices to reduce cognitive load
         _RequestType(
-          type: 'item',
-          title: 'Item Request',
-          subtitle: 'Request for products or items',
+          type: 'products',
+          title: 'Products',
+          subtitle: 'Buy items or rent equipment',
           icon: Icons.shopping_bag,
           color: const Color(0xFFFF6B35),
         ),
         _RequestType(
-          type: 'service',
-          title: 'Service Request',
-          subtitle: 'Request for services',
+          type: 'services',
+          title: 'Services',
+          subtitle: 'Delivery, rides, and more',
           icon: Icons.build,
           color: const Color(0xFF00BCD4),
         ),
+      ];
+
+  // Leaf options for Products
+  List<_RequestType> get _productOptions => [
+        _RequestType(
+          type: 'item',
+          title: 'Item',
+          subtitle: 'Request for products or items',
+          icon: Icons.shopping_bag_outlined,
+          color: const Color(0xFFFF6B35),
+        ),
         _RequestType(
           type: 'rental',
-          title: 'Rental Request',
+          title: 'Rental',
           subtitle: 'Rent vehicles, equipment, or items',
           icon: Icons.vpn_key,
           color: const Color(0xFF2196F3),
         ),
+      ];
+
+  // Leaf options for Services (grouped by verticals)
+  List<_RequestType> get _serviceOptions => [
+        // Transport
         _RequestType(
           type: 'delivery',
-          title: 'Delivery Request',
-          subtitle: 'Request for delivery services',
+          title: 'Delivery',
+          subtitle: 'Send or receive anything fast',
           icon: Icons.local_shipping,
           color: const Color(0xFF4CAF50),
         ),
         _RequestType(
           type: 'ride',
-          title: 'Ride Request',
+          title: 'Ride',
           subtitle: 'Request for transportation',
           icon: Icons.directions_car,
           color: const Color(0xFF3B82F6),
         ),
+        // Experiences
         _RequestType(
           type: 'tours',
-          title: 'Tours & Travel',
-          subtitle: 'Book tours and travel packages',
+          title: 'Tours',
+          subtitle: 'Trips and travel packages',
           icon: Icons.flight,
           color: const Color(0xFF9C27B0),
         ),
-        // New Coming Soon modules
-        _RequestType(
-          type: 'construction',
-          title: 'Construction & Renovation',
-          subtitle: 'Builders, repairs and remodels',
-          icon: Icons.construction,
-          color: const Color(0xFF8D6E63),
-        ),
         _RequestType(
           type: 'events',
-          title: 'Events & Catering',
+          title: 'Events',
           subtitle: 'Weddings, parties, corporate',
           icon: Icons.celebration,
           color: const Color(0xFFFFC107),
         ),
+        // Skilled trades
+        _RequestType(
+          type: 'construction',
+          title: 'Construction',
+          subtitle: 'Builders and renovations',
+          icon: Icons.construction,
+          color: const Color(0xFF8D6E63),
+        ),
+        // Learning
+        _RequestType(
+          type: 'education',
+          title: 'Education',
+          subtitle: 'Tutoring and training',
+          icon: Icons.school,
+          color: const Color(0xFF10B981),
+        ),
+        // Hiring
         _RequestType(
           type: 'jobs',
-          title: 'Jobs & Employment',
+          title: 'Hiring',
           subtitle: 'Find work, hire talent',
           icon: Icons.work,
           color: const Color(0xFF0EA5E9),
         ),
-        _RequestType(
-          type: 'education',
-          title: 'Education & Tutoring',
-          subtitle: 'School, languages, test prep',
-          icon: Icons.school,
-          color: const Color(0xFF10B981),
-        ),
       ];
+
+  List<_RequestType> get _allLeafOptions => [
+        ..._productOptions,
+        ..._serviceOptions,
+      ];
+
+  _RequestType? _findOptionByType(String type) {
+    try {
+      return _allLeafOptions.firstWhere((o) => o.type == type);
+    } catch (_) {
+      return null;
+    }
+  }
 
   String _greetingName() {
     final user = RestAuthService.instance.currentUser;
@@ -301,6 +374,8 @@ class _HomeScreenState extends State<HomeScreen> {
   // Quick create bottom sheet removed from Home.
 
   bool _moduleEnabled(String type) {
+    // Group headers are always enabled (they open a chooser)
+    if (type == 'products' || type == 'services') return true;
     // Coming Soon modules (temporarily gated off)
     if (type == 'tours' ||
         type == 'construction' ||
@@ -318,6 +393,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _handleTap(_RequestType it) {
+    // If a grouped tile is tapped, show the subcategory selector
+    if (it.type == 'products' || it.type == 'services') {
+      _showCategorySheet(it.type);
+      return;
+    }
     if (!_moduleEnabled(it.type)) {
       Navigator.of(context).push(
         MaterialPageRoute(
@@ -332,6 +412,157 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
     _selectRequestType(it.type);
+  }
+
+  void _showCategorySheet(String group) {
+    final isProducts = group == 'products';
+
+    showModalBottomSheet(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(isProducts ? Icons.shopping_bag : Icons.build,
+                          color: AppTheme.textPrimary),
+                      const SizedBox(width: 8),
+                      Text(
+                        isProducts ? 'Products' : 'Services',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.textPrimary,
+                            ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(ctx).pop(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (!isProducts) ...[
+                    // Lightweight headings for service verticals
+                    _SectionHeader(title: 'Transport'),
+                    _OptionList(
+                      options: _serviceOptions
+                          .where(
+                              (o) => o.type == 'delivery' || o.type == 'ride')
+                          .toList(),
+                      moduleEnabled: _moduleEnabled,
+                      isFavorite: _isFavorite,
+                      onToggleFavorite: (t) {
+                        _toggleFavorite(t);
+                        setModalState(() {});
+                      },
+                      onTap: (opt) {
+                        Navigator.of(ctx).pop();
+                        _handleTap(opt);
+                      },
+                    ),
+                    const SizedBox(height: 6),
+                    _SectionHeader(title: 'Experiences'),
+                    _OptionList(
+                      options: _serviceOptions
+                          .where((o) => o.type == 'tours' || o.type == 'events')
+                          .toList(),
+                      moduleEnabled: _moduleEnabled,
+                      isFavorite: _isFavorite,
+                      onToggleFavorite: (t) {
+                        _toggleFavorite(t);
+                        setModalState(() {});
+                      },
+                      onTap: (opt) {
+                        Navigator.of(ctx).pop();
+                        _handleTap(opt);
+                      },
+                    ),
+                    const SizedBox(height: 6),
+                    _SectionHeader(title: 'Skilled Trades'),
+                    _OptionList(
+                      options: _serviceOptions
+                          .where((o) => o.type == 'construction')
+                          .toList(),
+                      moduleEnabled: _moduleEnabled,
+                      isFavorite: _isFavorite,
+                      onToggleFavorite: (t) {
+                        _toggleFavorite(t);
+                        setModalState(() {});
+                      },
+                      onTap: (opt) {
+                        Navigator.of(ctx).pop();
+                        _handleTap(opt);
+                      },
+                    ),
+                    const SizedBox(height: 6),
+                    _SectionHeader(title: 'Learning'),
+                    _OptionList(
+                      options: _serviceOptions
+                          .where((o) => o.type == 'education')
+                          .toList(),
+                      moduleEnabled: _moduleEnabled,
+                      isFavorite: _isFavorite,
+                      onToggleFavorite: (t) {
+                        _toggleFavorite(t);
+                        setModalState(() {});
+                      },
+                      onTap: (opt) {
+                        Navigator.of(ctx).pop();
+                        _handleTap(opt);
+                      },
+                    ),
+                    const SizedBox(height: 6),
+                    _SectionHeader(title: 'Hiring'),
+                    _OptionList(
+                      options: _serviceOptions
+                          .where((o) => o.type == 'jobs')
+                          .toList(),
+                      moduleEnabled: _moduleEnabled,
+                      isFavorite: _isFavorite,
+                      onToggleFavorite: (t) {
+                        _toggleFavorite(t);
+                        setModalState(() {});
+                      },
+                      onTap: (opt) {
+                        Navigator.of(ctx).pop();
+                        _handleTap(opt);
+                      },
+                    ),
+                  ] else ...[
+                    _SectionHeader(title: 'Choose type'),
+                    _OptionList(
+                      options: _productOptions,
+                      moduleEnabled: _moduleEnabled,
+                      isFavorite: _isFavorite,
+                      onToggleFavorite: (t) {
+                        _toggleFavorite(t);
+                        setModalState(() {});
+                      },
+                      onTap: (opt) {
+                        Navigator.of(ctx).pop();
+                        _handleTap(opt);
+                      },
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   void _selectRequestType(String type) {
@@ -545,6 +776,59 @@ class _HomeScreenState extends State<HomeScreen> {
                         items: _requestTypes,
                         moduleEnabled: _moduleEnabled,
                         onTap: _handleTap,
+                      ),
+
+                      // Favorites section
+                      if (_favorites.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Text('Favorites',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      color: AppTheme.textPrimary,
+                                    )),
+                            const Spacer(),
+                            TextButton(
+                              onPressed: () {
+                                setState(() => _favorites.clear());
+                                _saveFavorites();
+                              },
+                              child: const Text('Clear'),
+                            )
+                          ],
+                        ),
+                        _FavoritesWrap(
+                          favorites: _favorites
+                              .map((t) => _findOptionByType(t))
+                              .whereType<_RequestType>()
+                              .toList(),
+                          onTap: (t) {
+                            // reuse existing flow
+                            _handleTap(t);
+                          },
+                          onRemove: (t) => _toggleFavorite(t.type),
+                        ),
+                      ],
+
+                      // Always show advertisement below Favorites (or directly after Quick Actions when none)
+                      const SizedBox(height: 16),
+                      _AdCard(
+                        title: 'QuickMart — Local Deals',
+                        category: 'Shopping',
+                        sizeLabel: '22 MB',
+                        rating: 4.6,
+                        installsLabel: '1M+',
+                        icon: Icons.shopping_bag,
+                        onTap: () {
+                          // Placeholder tap handler for ad card
+                        },
+                        onInstall: () {
+                          // Placeholder install action
+                        },
                       ),
 
                       const SizedBox(height: 16),
@@ -786,8 +1070,21 @@ class _QuickActionsGrid extends StatelessWidget {
           final isLastRow = i >= items.length - 2;
           final isFirstColumn = i % 2 == 0;
           final isLastColumn = i % 2 == 1;
+          final hasSingleRow = items.length <= 2;
 
-          if (isFirstRow && isFirstColumn) {
+          if (hasSingleRow && isFirstColumn) {
+            // Single row - round both left corners
+            cardRadius = const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              bottomLeft: Radius.circular(20),
+            );
+          } else if (hasSingleRow && isLastColumn) {
+            // Single row - round both right corners
+            cardRadius = const BorderRadius.only(
+              topRight: Radius.circular(20),
+              bottomRight: Radius.circular(20),
+            );
+          } else if (isFirstRow && isFirstColumn) {
             // Top-left card - only top-left corner rounded
             cardRadius = const BorderRadius.only(topLeft: Radius.circular(20));
           } else if (isFirstRow && isLastColumn) {
@@ -869,6 +1166,352 @@ class _QuickActionsGrid extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  const _SectionHeader({required this.title});
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: AppTheme.textPrimary,
+            ),
+      ),
+    );
+  }
+}
+
+class _OptionList extends StatelessWidget {
+  final List<_RequestType> options;
+  final bool Function(String) moduleEnabled;
+  final void Function(_RequestType) onTap;
+  final bool Function(String)? isFavorite;
+  final void Function(String)? onToggleFavorite;
+  const _OptionList({
+    required this.options,
+    required this.moduleEnabled,
+    required this.onTap,
+    this.isFavorite,
+    this.onToggleFavorite,
+  });
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        for (int i = 0; i < options.length; i++)
+          _OptionTile(
+            option: options[i],
+            disabled: !moduleEnabled(options[i].type),
+            onTap: () => onTap(options[i]),
+            isLast: i == options.length - 1,
+            isFavorite: isFavorite,
+            onToggleFavorite: onToggleFavorite,
+          ),
+      ],
+    );
+  }
+}
+
+class _OptionTile extends StatelessWidget {
+  final _RequestType option;
+  final bool disabled;
+  final VoidCallback onTap;
+  final bool isLast;
+  final bool Function(String)? isFavorite;
+  final void Function(String)? onToggleFavorite;
+  const _OptionTile({
+    required this.option,
+    required this.disabled,
+    required this.onTap,
+    required this.isLast,
+    this.isFavorite,
+    this.onToggleFavorite,
+  });
+  @override
+  Widget build(BuildContext context) {
+    final titleColor =
+        disabled ? const Color(0xFF9CA3AF) : AppTheme.textPrimary;
+    final subColor =
+        disabled ? const Color(0xFFB8BFC7) : AppTheme.textSecondary;
+    return InkWell(
+      onTap: disabled ? null : onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: disabled
+                    ? Colors.grey.shade200
+                    : option.color.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(option.icon,
+                  color: disabled ? Colors.grey.shade400 : option.color),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    option.title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: titleColor,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    option.subtitle,
+                    style: TextStyle(
+                      color: subColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (onToggleFavorite != null)
+              IconButton(
+                tooltip: 'Favorite',
+                icon: Icon(
+                  (isFavorite?.call(option.type) ?? false)
+                      ? Icons.favorite
+                      : Icons.favorite_border,
+                  color: (isFavorite?.call(option.type) ?? false)
+                      ? Colors.redAccent
+                      : subColor,
+                ),
+                onPressed: () => onToggleFavorite?.call(option.type),
+              ),
+            Icon(Icons.chevron_right, color: subColor),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Favorites chips shown under Quick Actions
+class _FavoritesWrap extends StatelessWidget {
+  final List<_RequestType> favorites;
+  final void Function(_RequestType) onTap;
+  final void Function(_RequestType) onRemove;
+  const _FavoritesWrap({
+    required this.favorites,
+    required this.onTap,
+    required this.onRemove,
+  });
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final f in favorites)
+          InkWell(
+            onTap: () => onTap(f),
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(f.icon, color: f.color, size: 18),
+                  const SizedBox(width: 6),
+                  Text(
+                    f.title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  InkWell(
+                    onTap: () => onRemove(f),
+                    child: const Padding(
+                      padding: EdgeInsets.all(4.0),
+                      child: Icon(Icons.close, size: 16),
+                    ),
+                  )
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// Simple sponsored advertisement card shown below Favorites
+class _AdCard extends StatelessWidget {
+  final String title;
+  final String category;
+  final String sizeLabel; // e.g., "22 MB"
+  final double rating; // 0.0 - 5.0
+  final String installsLabel; // e.g., "1M+"
+  final IconData icon;
+  final VoidCallback? onTap;
+  final VoidCallback? onInstall;
+  const _AdCard({
+    required this.title,
+    required this.category,
+    required this.sizeLabel,
+    required this.rating,
+    required this.installsLabel,
+    required this.icon,
+    this.onTap,
+    this.onInstall,
+  });
+  @override
+  Widget build(BuildContext context) {
+    final textPrimary = AppTheme.textPrimary;
+    final textSecondary = AppTheme.textSecondary;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Icon placeholder
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: GlassTheme.colors.primaryBlue, size: 30),
+            ),
+            const SizedBox(width: 12),
+            // Texts
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: textPrimary,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'Sponsored',
+                          style: TextStyle(
+                            color: textSecondary,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.star,
+                          size: 14, color: const Color(0xFFFFB300)),
+                      const SizedBox(width: 4),
+                      Text(
+                        rating.toStringAsFixed(
+                            rating.truncateToDouble() == rating ? 0 : 1),
+                        style: TextStyle(
+                          color: textPrimary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      _Dot(),
+                      const SizedBox(width: 8),
+                      Text(category,
+                          style: TextStyle(color: textSecondary, fontSize: 12)),
+                      const SizedBox(width: 8),
+                      _Dot(),
+                      const SizedBox(width: 8),
+                      Text(sizeLabel,
+                          style: TextStyle(color: textSecondary, fontSize: 12)),
+                      const SizedBox(width: 8),
+                      _Dot(),
+                      const SizedBox(width: 8),
+                      Text(installsLabel,
+                          style: TextStyle(color: textSecondary, fontSize: 12)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            // CTA
+            TextButton(
+              onPressed: onInstall,
+              style: TextButton.styleFrom(
+                backgroundColor: GlassTheme.colors.primaryBlue,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text(
+                'Install',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Dot extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 3,
+      height: 3,
+      decoration: BoxDecoration(
+        color: AppTheme.textTertiary,
+        shape: BoxShape.circle,
       ),
     );
   }

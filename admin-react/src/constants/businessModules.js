@@ -101,6 +101,74 @@ export const BUSINESS_MODULES = {
     ],
     dependencies: ['payment', 'messaging'],
     defaultEnabled: false
+  },
+  FOOD_DELIVERY: {
+    id: 'food_delivery',
+    name: 'Food Delivery',
+    description: 'Restaurant food delivery and takeout services',
+    icon: '🍔',
+    color: '#FF9F43',
+    features: [
+      'Restaurant listings',
+      'Menu management',
+      'Order tracking',
+      'Delivery zones',
+      'Special offers',
+      'Customer reviews'
+    ],
+    dependencies: ['payment', 'location', 'driver'],
+    defaultEnabled: false
+  },
+  GROCERY: {
+    id: 'grocery',
+    name: 'Grocery Delivery',
+    description: 'Grocery and essential items delivery',
+    icon: '🛒',
+    color: '#10AC84',
+    features: [
+      'Product catalogs',
+      'Store listings',
+      'Bulk ordering',
+      'Scheduled delivery',
+      'Fresh produce',
+      'Household items'
+    ],
+    dependencies: ['payment', 'location', 'driver'],
+    defaultEnabled: false
+  },
+  BEAUTY: {
+    id: 'beauty',
+    name: 'Beauty & Wellness',
+    description: 'Beauty services, salon bookings, and wellness',
+    icon: '💄',
+    color: '#FF6B9D',
+    features: [
+      'Salon bookings',
+      'Service packages',
+      'Beauty professionals',
+      'Appointment scheduling',
+      'Treatment history',
+      'Before/after gallery'
+    ],
+    dependencies: ['payment', 'messaging', 'location'],
+    defaultEnabled: false
+  },
+  PROFESSIONAL: {
+    id: 'professional',
+    name: 'Professional Services',
+    description: 'Legal, accounting, consulting, and professional services',
+    icon: '💼',
+    color: '#3742FA',
+    features: [
+      'Professional profiles',
+      'Consultation booking',
+      'Document sharing',
+      'Secure messaging',
+      'Video consultations',
+      'Case management'
+    ],
+    dependencies: ['payment', 'messaging'],
+    defaultEnabled: false
   }
 };
 

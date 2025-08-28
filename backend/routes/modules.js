@@ -11,8 +11,12 @@ const COUNTRY_MODULE_CONFIG = {
       'service_request', 
       'rental_request',
       'delivery_request',
-      'ride_sharing', // All modules enabled for production
-      'price_request'
+      'ride_sharing',
+      'price_request',
+      'food_delivery',
+      'grocery',
+      'beauty',
+      'professional'
     ],
     disabled_modules: [] // All modules available
   },
@@ -22,7 +26,11 @@ const COUNTRY_MODULE_CONFIG = {
       'service_request',
       'rental_request',
       'delivery_request',
-      'ride_sharing'
+      'ride_sharing',
+      'food_delivery',
+      'grocery',
+      'beauty',
+      'professional'
     ],
     disabled_modules: ['price_request'] // Example: Price requests not available in US
   },
@@ -31,7 +39,11 @@ const COUNTRY_MODULE_CONFIG = {
       'item_request',
       'service_request',
       'delivery_request',
-      'ride_sharing'
+      'ride_sharing',
+      'food_delivery',
+      'grocery',
+      'beauty',
+      'professional'
     ],
     disabled_modules: ['rental_request', 'price_request']
   }
