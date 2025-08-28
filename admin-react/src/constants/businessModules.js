@@ -281,14 +281,19 @@ export const getCapabilitiesForBusinessType = (typeName) => {
 
   return {
     managePrices: isProductSeller, // price mgmt only for product sellers
-  // Any verified business can respond to common requests; ride excluded for businesses
+  // Respond rights per module (any verified business for common modules)
   respondItem: true,
   respondService: true,
   respondRent: true,
-  respondDeliveryRequest: false, // responding to delivery requests is restricted below
-  sendRide: false,
-  // Responses
-    respondDelivery: isDeliveryService,
-    respondOther: true
+  respondTours: true,
+  respondEvents: true,
+  respondConstruction: true,
+  respondEducation: true,
+  respondHiring: true,
+  respondOther: true,
+  // Delivery request is restricted to Delivery businesses
+  respondDelivery: isDeliveryService,
+  // Ride is for drivers only (never businesses)
+  respondRide: false
   };
 };
