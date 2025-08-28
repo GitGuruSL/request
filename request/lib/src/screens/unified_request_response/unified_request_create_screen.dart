@@ -118,6 +118,32 @@ class _UnifiedRequestCreateScreenState
     super.dispose();
   }
 
+  // Derive which module banner to show based on selected type and module.
+  String? _effectiveBannerModule() {
+    // If a specific module is set, use it (normalize aliases)
+    if (_selectedModule != null && _selectedModule!.isNotEmpty) {
+      final m = _selectedModule!.toLowerCase();
+      if (m == 'rental') return 'rent';
+      if (m == 'jobs') return 'hiring';
+      return m;
+    }
+    // Otherwise, map the high-level request type
+    switch (_selectedType) {
+      case RequestType.item:
+        return 'item';
+      case RequestType.rental:
+        return 'rent';
+      case RequestType.delivery:
+        return 'delivery';
+      case RequestType.ride:
+        return 'ride';
+      case RequestType.service:
+        return null; // no specific module chosen yet
+      case RequestType.price:
+        return null;
+    }
+  }
+
   String _getTypeDisplayName(RequestType type) {
     switch (type) {
       case RequestType.item:
@@ -196,9 +222,9 @@ class _UnifiedRequestCreateScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (_selectedType == RequestType.service &&
-                  _selectedModule != null)
-                _buildModuleBanner(_selectedModule!),
+              // Show banner for all modules/types: item, rent, delivery, ride, tours, events, construction, education, hiring, other
+              if (_effectiveBannerModule() != null)
+                _buildModuleBanner(_effectiveBannerModule()!),
               GlassTheme.glassCard(child: _buildTypeSpecificFields()),
             ],
           ),
