@@ -1412,8 +1412,39 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
           return 'Area Size (sqft)';
         case 'level':
           return 'Level';
+        // Education general
+        case 'studentLevel':
+          return 'Student Level';
+        case 'preferredMode':
+          return 'Preferred Mode';
+        case 'numberOfStudents':
+          return 'Number of Students';
         case 'sessionsPerWeek':
           return 'Sessions/Week';
+        case 'detailedNeeds':
+          return 'Detailed Needs';
+        // Education: Academic Tutoring
+        case 'subjects':
+          return 'Subject(s)';
+        case 'syllabus':
+          return 'Syllabus';
+        case 'syllabusOther':
+          return 'Syllabus (Other)';
+        // Education: Professional & Skill Development
+        case 'courseOrSkill':
+          return 'Course/Skill';
+        case 'desiredOutcome':
+          return 'Desired Outcome';
+        // Education: Arts & Hobbies
+        case 'artOrSport':
+          return 'Art/Sport';
+        case 'classType':
+          return 'Class Type';
+        // Education: Admissions & Consulting
+        case 'targetCountry':
+          return 'Target Country';
+        case 'fieldOfStudy':
+          return 'Field of Study';
         case 'positionType':
           return 'Position Type';
         case 'experienceYears':
