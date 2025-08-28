@@ -38,6 +38,7 @@ import {
   VisibilityOff as VisibilityOffIcon
 } from '@mui/icons-material';
 import api from '../services/apiClient';
+import { getModulesForBusinessType } from '../constants/businessModules';
 import { useAuth } from '../contexts/AuthContext';
 
 const CountryBusinessTypesManagement = () => {
@@ -284,6 +285,7 @@ const CountryBusinessTypesManagement = () => {
                     <TableCell>Description</TableCell>
                     <TableCell>Order</TableCell>
                     <TableCell>Status</TableCell>
+                    <TableCell>Modules</TableCell>
                     <TableCell>Actions</TableCell>
                   </TableRow>
                 </TableHead>
@@ -304,6 +306,24 @@ const CountryBusinessTypesManagement = () => {
                           color={type.is_active ? 'success' : 'default'}
                           size="small"
                         />
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {getModulesForBusinessType(type.name).map((m) => (
+                            <Chip
+                              key={m.id}
+                              label={m.name}
+                              size="small"
+                              sx={{
+                                backgroundColor: m.color,
+                                color: '#fff',
+                              }}
+                            />
+                          ))}
+                          {getModulesForBusinessType(type.name).length === 0 && (
+                            <Typography variant="caption" color="text.secondary">No mapped modules</Typography>
+                          )}
+                        </Box>
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', gap: 1 }}>
@@ -334,7 +354,7 @@ const CountryBusinessTypesManagement = () => {
                   ))}
                   {businessTypes.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4 }}>
+                      <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
                         <Typography color="text.secondary">
                           No business types found for this country
                         </Typography>
@@ -449,6 +469,24 @@ const CountryBusinessTypesManagement = () => {
                   onChange={(e) => setFormData({ ...formData, display_order: parseInt(e.target.value) })}
                   inputProps={{ min: 0 }}
                 />
+              </Grid>
+
+              {/* Preview mapped modules for the entered name */}
+              <Grid item xs={12}>
+                <Typography variant="subtitle2" gutterBottom>Mapped Modules</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {getModulesForBusinessType(formData.name).map((m) => (
+                    <Chip
+                      key={m.id}
+                      label={m.name}
+                      size="small"
+                      sx={{ backgroundColor: m.color, color: '#fff' }}
+                    />
+                  ))}
+                  {getModulesForBusinessType(formData.name).length === 0 && (
+                    <Typography variant="caption" color="text.secondary">No mapped modules</Typography>
+                  )}
+                </Box>
               </Grid>
             </Grid>
           </DialogContent>
