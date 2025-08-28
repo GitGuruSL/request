@@ -67,7 +67,55 @@
       },
       "construction": {
         "categories": [
-          { "name": "Skilled Trades", "subcategories": ["Masonry", "Carpentry", "Plumbing", "Electrical"] }
+          {
+            "name": "New Construction",
+            "subcategories": [
+              "Residential House",
+              "Commercial Building (Shops, Offices)",
+              "Annex or Building Extension",
+              "Boundary Wall & Gate"
+            ]
+          },
+          {
+            "name": "Renovation & Remodeling",
+            "subcategories": [
+              "Full House Renovation",
+              "Bathroom Remodeling",
+              "Kitchen Remodeling",
+              "Roof Replacement or Repair",
+              "Room Addition"
+            ]
+          },
+          {
+            "name": "Specialized Trades",
+            "subcategories": [
+              "Masonry & Concrete Work",
+              "Structural Steel & Welding",
+              "Tiling & Flooring",
+              "Plumbing Installation",
+              "Electrical Wiring",
+              "Painting & Finishing",
+              "Waterproofing",
+              "Aluminum Fabrication (Windows, Doors)"
+            ]
+          },
+          {
+            "name": "Consultation & Design",
+            "subcategories": [
+              "Architectural Design & Drawings",
+              "Structural Engineering Plans",
+              "BOQ (Bill of Quantities) Preparation",
+              "Land Surveying"
+            ]
+          },
+          {
+            "name": "Material & Equipment",
+            "subcategories": [
+              "Building Material Supply (Sand, Cement, Bricks)",
+              "Hardware Supply (Pipes, Fittings, Wires)",
+              "Construction Equipment Rental (Mixers, Scaffolding)"
+            ]
+          }
         ]
       },
       "education": {

@@ -57,6 +57,19 @@ class _UnifiedRequestCreateScreenState
   final _durationDaysController = TextEditingController(); // tours
   final _guestsCountController = TextEditingController(); // events
   final _areaSizeController = TextEditingController(); // construction (sqft)
+  // Construction module
+  final _projectLocationNoteController = TextEditingController();
+  String _constructionMainCategory = '';
+  String _constructionScopeOfWork = 'Labor & Materials (Provide a full quote)';
+  final _constructionMeasurementsController = TextEditingController();
+  final _constructionItemsListController = TextEditingController();
+  bool _constructionDeliveryRequired = false;
+  DateTime? _rentalStartDate; // for equipment rental
+  DateTime? _rentalEndDate; // for equipment rental
+  int _numberOfFloors = 1;
+  String _plansStatus = '';
+  String _propertyType = 'Residential Land';
+  final _landSizeController = TextEditingController();
   final _sessionsPerWeekController = TextEditingController(); // education
   final _experienceYearsController = TextEditingController(); // hiring
   bool _needsGuide = false; // tours
@@ -177,6 +190,11 @@ class _UnifiedRequestCreateScreenState
     _itineraryController.dispose();
     _flightNumberController.dispose();
     _flightTimeController.dispose();
+    // construction
+    _projectLocationNoteController.dispose();
+    _constructionMeasurementsController.dispose();
+    _constructionItemsListController.dispose();
+    _landSizeController.dispose();
     super.dispose();
   }
 
@@ -1137,21 +1155,7 @@ class _UnifiedRequestCreateScreenState
           ],
         );
       case 'construction':
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildFlatField(
-              child: TextFormField(
-                controller: _areaSizeController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Area Size (sqft)',
-                  hintText: 'Approximate area size',
-                ),
-              ),
-            ),
-          ],
-        );
+        return _buildConstructionModuleFields();
       case 'education':
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1298,11 +1302,7 @@ class _UnifiedRequestCreateScreenState
               : null,
         }..removeWhere((k, v) => v == null);
       case 'construction':
-        return {
-          'areaSizeSqft': _areaSizeController.text.trim().isNotEmpty
-              ? double.tryParse(_areaSizeController.text.trim())
-              : null,
-        }..removeWhere((k, v) => v == null);
+        return _buildConstructionPayload();
       case 'education':
         return {
           'level': _educationLevel,
@@ -1724,6 +1724,364 @@ class _UnifiedRequestCreateScreenState
       );
     }
     return const SizedBox.shrink();
+  }
+
+  // Construction module UI builder
+  Widget _buildConstructionModuleFields() {
+    // Detect selected main category from picker
+    _constructionMainCategory = _selectedCategory;
+    final main = _constructionMainCategory.toLowerCase();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // General fields (apply to all Construction requests)
+        _buildFlatField(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Project Location',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+              const SizedBox(height: 8),
+              AccurateLocationPickerWidget(
+                controller: _locationController,
+                countryCode: CountryService.instance.countryCode,
+                labelText: '',
+                hintText: 'Enter site address or drop a pin',
+                isRequired: true,
+                prefixIcon: Icons.location_on,
+                onLocationSelected: (address, lat, lng) {
+                  setState(() {
+                    _locationController.text = address;
+                    _selectedLatitude = lat;
+                    _selectedLongitude = lng;
+                  });
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _projectLocationNoteController,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                    labelText: 'Location Notes (optional)',
+                    hintText: 'Landmark, access notes...'),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Project Type and Service Needed are implicitly handled by CategoryPicker selection
+        _buildFlatField(
+          child: TextFormField(
+            controller: _descriptionController,
+            maxLines: 4,
+            decoration: const InputDecoration(
+                labelText: 'Detailed Project Description',
+                hintText: 'Describe the work and expectations...'),
+            validator: (v) => (v == null || v.trim().isEmpty)
+                ? 'Please enter a description'
+                : null,
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        _buildFlatField(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Upload Plans or Photos',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+              const SizedBox(height: 8),
+              ImageUploadWidget(
+                uploadPath: 'request_images/construction',
+                onImagesChanged: (urls) {
+                  setState(() {
+                    _imageUrls = urls;
+                  });
+                },
+                maxImages: 8,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        _buildFlatField(
+          child: TextFormField(
+            controller: _budgetController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: CurrencyHelper.instance.getBudgetLabel(),
+              hintText: 'Estimated Budget (optional)',
+              prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        _buildFlatField(
+          child: InkWell(
+            onTap: () async {
+              final date = await showDatePicker(
+                context: context,
+                initialDate: DateTime.now(),
+                firstDate: DateTime.now(),
+                lastDate: DateTime.now().add(const Duration(days: 365)),
+              );
+              if (date != null) setState(() => _preferredDateTime = date);
+            },
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              color: const Color(0xFFF8F9FA),
+              child: Text(
+                _preferredDateTime == null
+                    ? 'Preferred Start Date'
+                    : _formatDate(_preferredDateTime!),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        if (main == 'new construction' ||
+            main == 'renovation & remodeling') ...[
+          _buildFlatField(
+            child: TextFormField(
+              controller: _areaSizeController,
+              decoration: const InputDecoration(
+                labelText: 'Property Size / Area',
+                hintText: 'e.g., 1200 sqft or 10 perches',
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildFlatField(
+            child: _buildCounterRow('Number of Floors', _numberOfFloors, (v) {
+              setState(() => _numberOfFloors = v);
+            }, min: 1),
+          ),
+          const SizedBox(height: 16),
+          _buildFlatField(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Status of Plans'),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('I have approved architectural plans.'),
+                  value: _plansStatus == 'approved_plans',
+                  onChanged: (v) {
+                    setState(
+                        () => _plansStatus = v == true ? 'approved_plans' : '');
+                  },
+                ),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('I have a basic sketch or idea.'),
+                  value: _plansStatus == 'basic_sketch',
+                  onChanged: (v) {
+                    setState(
+                        () => _plansStatus = v == true ? 'basic_sketch' : '');
+                  },
+                ),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('I need design and planning help.'),
+                  value: _plansStatus == 'need_design_help',
+                  onChanged: (v) {
+                    setState(() =>
+                        _plansStatus = v == true ? 'need_design_help' : '');
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        if (main == 'specialized trades') ...[
+          _buildFlatField(
+            child: DropdownButtonFormField<String>(
+              value: _constructionScopeOfWork,
+              decoration: const InputDecoration(labelText: 'Scope of Work'),
+              items: const [
+                DropdownMenuItem(
+                    value: 'Labor Only (I will provide materials).',
+                    child: Text('Labor Only (I will provide materials).')),
+                DropdownMenuItem(
+                    value: 'Labor & Materials (Provide a full quote).',
+                    child: Text('Labor & Materials (Provide a full quote).')),
+              ],
+              onChanged: (v) => setState(() =>
+                  _constructionScopeOfWork = v ?? _constructionScopeOfWork),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildFlatField(
+            child: TextFormField(
+              controller: _constructionMeasurementsController,
+              decoration: const InputDecoration(
+                labelText: 'Approximate Measurements',
+                hintText: 'e.g., 250 sq. ft. tiling; 50 ft. wall',
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        if (main == 'material & equipment') ...[
+          _buildFlatField(
+            child: TextFormField(
+              controller: _constructionItemsListController,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                labelText: 'List of Items',
+                hintText: 'e.g., 500 cement bricks, 1 cube of sand',
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildFlatField(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Rental Period (if renting equipment)'),
+                const SizedBox(height: 8),
+                Row(children: [
+                  Expanded(
+                      child: InkWell(
+                    onTap: () async {
+                      final d = await showDatePicker(
+                          context: context,
+                          initialDate: _rentalStartDate ?? DateTime.now(),
+                          firstDate: DateTime.now(),
+                          lastDate:
+                              DateTime.now().add(const Duration(days: 365)));
+                      if (d != null) setState(() => _rentalStartDate = d);
+                    },
+                    child: Container(
+                        padding: const EdgeInsets.all(12),
+                        color: const Color(0xFFF8F9FA),
+                        child: Text(_rentalStartDate == null
+                            ? 'Rental Start Date'
+                            : _formatDate(_rentalStartDate!))),
+                  )),
+                  const SizedBox(width: 12),
+                  Expanded(
+                      child: InkWell(
+                    onTap: () async {
+                      final d = await showDatePicker(
+                          context: context,
+                          initialDate: _rentalEndDate ??
+                              (_rentalStartDate ?? DateTime.now()),
+                          firstDate: _rentalStartDate ?? DateTime.now(),
+                          lastDate:
+                              DateTime.now().add(const Duration(days: 365)));
+                      if (d != null) setState(() => _rentalEndDate = d);
+                    },
+                    child: Container(
+                        padding: const EdgeInsets.all(12),
+                        color: const Color(0xFFF8F9FA),
+                        child: Text(_rentalEndDate == null
+                            ? 'Rental End Date'
+                            : _formatDate(_rentalEndDate!))),
+                  )),
+                ]),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildFlatField(
+            child: SwitchListTile(
+              title: const Text('Delivery Required?'),
+              value: _constructionDeliveryRequired,
+              onChanged: (v) =>
+                  setState(() => _constructionDeliveryRequired = v),
+            ),
+          ),
+        ],
+
+        if (main == 'consultation & design') ...[
+          _buildFlatField(
+            child: DropdownButtonFormField<String>(
+              value: _propertyType,
+              decoration: const InputDecoration(labelText: 'Type of Property'),
+              items: const [
+                DropdownMenuItem(
+                    value: 'Residential Land', child: Text('Residential Land')),
+                DropdownMenuItem(
+                    value: 'Commercial Property',
+                    child: Text('Commercial Property')),
+              ],
+              onChanged: (v) =>
+                  setState(() => _propertyType = v ?? _propertyType),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildFlatField(
+            child: TextFormField(
+              controller: _landSizeController,
+              decoration: const InputDecoration(
+                labelText: 'Land Size',
+                hintText: 'in Perches or Acres',
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Map<String, dynamic> _buildConstructionPayload() {
+    final main = _selectedCategory; // main category name from picker
+    final payload = <String, dynamic>{
+      'projectLocationNote':
+          _projectLocationNoteController.text.trim().isNotEmpty
+              ? _projectLocationNoteController.text.trim()
+              : null,
+      'estimatedBudget': _budgetController.text.trim().isNotEmpty
+          ? double.tryParse(_budgetController.text.trim())
+          : null,
+      'preferredStartDate': _preferredDateTime?.millisecondsSinceEpoch,
+    };
+
+    final lower = main.toLowerCase();
+    if (lower == 'new construction' || lower == 'renovation & remodeling') {
+      payload.addAll({
+        'propertyArea': _areaSizeController.text.trim().isNotEmpty
+            ? _areaSizeController.text.trim()
+            : null,
+        'numberOfFloors': _numberOfFloors,
+        'plansStatus': _plansStatus.isNotEmpty ? _plansStatus : null,
+      });
+    } else if (lower == 'specialized trades') {
+      payload.addAll({
+        'scopeOfWork': _constructionScopeOfWork,
+        'approxMeasurements':
+            _constructionMeasurementsController.text.trim().isNotEmpty
+                ? _constructionMeasurementsController.text.trim()
+                : null,
+      });
+    } else if (lower == 'material & equipment') {
+      payload.addAll({
+        'itemsList': _constructionItemsListController.text.trim().isNotEmpty
+            ? _constructionItemsListController.text.trim()
+            : null,
+        'rentalStartDate': _rentalStartDate?.millisecondsSinceEpoch,
+        'rentalEndDate': _rentalEndDate?.millisecondsSinceEpoch,
+        'deliveryRequired': _constructionDeliveryRequired,
+      });
+    } else if (lower == 'consultation & design') {
+      payload.addAll({
+        'propertyType': _propertyType,
+        'landSize': _landSizeController.text.trim().isNotEmpty
+            ? _landSizeController.text.trim()
+            : null,
+      });
+    }
+
+    payload.removeWhere((k, v) => v == null);
+    return payload;
   }
 
   // Helpers
