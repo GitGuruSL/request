@@ -232,3 +232,42 @@ export const getModulesUsingDependency = (moduleId) => {
     return module.dependencies.includes(moduleId);
   });
 };
+
+// Map business types to the modules they use.
+// Keep IDs in lower-case to match BUSINESS_MODULES[id].id
+export const BUSINESS_TYPE_TO_MODULES = {
+  // Current active LK types
+  'Product Seller': ['item', 'service', 'rent', 'price'], // price is public but sellers manage prices
+  'Delivery Service': ['delivery'],
+
+  // Future verticals (disabled by default at country level)
+  'Tours': ['tours'],
+  'Events': ['events'],
+  'Construction': ['construction'],
+  'Education': ['education'],
+  'Hiring': ['hiring'],
+  'Other': ['other']
+};
+
+// Helper: get module configs for a business type (filters unknowns safely)
+export const getModulesForBusinessType = (typeName) => {
+  const ids = BUSINESS_TYPE_TO_MODULES[typeName] || [];
+  return ids
+    .map(id => BUSINESS_MODULES[id.toUpperCase()])
+    .filter(Boolean);
+};
+
+// Helper: check if a business type can use a specific module
+export const canBusinessTypeUseModule = (typeName, moduleId) => {
+  const ids = BUSINESS_TYPE_TO_MODULES[typeName] || [];
+  return ids.includes(moduleId);
+};
+
+// Helper: merge modules for multiple business types (unique by id)
+export const getModulesForBusinessTypes = (typeNames = []) => {
+  const set = new Set();
+  typeNames.forEach(t => (BUSINESS_TYPE_TO_MODULES[t] || []).forEach(id => set.add(id)));
+  return Array.from(set)
+    .map(id => BUSINESS_MODULES[id.toUpperCase()])
+    .filter(Boolean);
+};
