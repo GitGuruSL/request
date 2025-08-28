@@ -687,6 +687,9 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
               ),
             ),
           ],
+          // Module + fields context for service requests
+          if (widget.request.type == RequestType.service)
+            ..._buildServiceModuleContext(widget.request.typeSpecificData),
         ],
       ),
     );
@@ -707,6 +710,114 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
       case RequestType.price:
         return Icons.compare_arrows;
     }
+  }
+
+  List<Widget> _buildServiceModuleContext(Map<String, dynamic> tsd) {
+    final module = tsd['module']?.toString();
+    final fields = tsd['moduleFields'];
+    if (module == null || module.isEmpty) return const [];
+
+    String prettyLabel(String key) {
+      switch (key) {
+        case 'peopleCount':
+          return 'People Count';
+        case 'durationDays':
+          return 'Duration (days)';
+        case 'needsGuide':
+          return 'Needs Guide';
+        case 'pickupRequired':
+          return 'Pickup Required';
+        case 'guestsCount':
+          return 'Guests Count';
+        case 'areaSizeSqft':
+          return 'Area Size (sqft)';
+        case 'level':
+          return 'Level';
+        case 'sessionsPerWeek':
+          return 'Sessions/Week';
+        case 'positionType':
+          return 'Position Type';
+        case 'experienceYears':
+          return 'Experience (years)';
+        default:
+          return key
+              .replaceAllMapped(RegExp(r'([A-Z])'), (m) => ' ${m.group(1)}')
+              .replaceAll('_', ' ')
+              .trim()
+              .split(' ')
+              .map((w) =>
+                  w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
+              .join(' ');
+      }
+    }
+
+    final rows = <Widget>[
+      const SizedBox(height: 12),
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8F9FA),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFE9ECEF)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.category, size: 16, color: Colors.black54),
+                const SizedBox(width: 6),
+                Text(
+                  'Service Module: ${module[0].toUpperCase()}${module.substring(1)}',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+            if (fields is Map && fields.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              ...fields.entries
+                  .map((e) {
+                    final k = prettyLabel(e.key);
+                    final v = e.value;
+                    if (v == null || (v is String && v.trim().isEmpty)) {
+                      return const SizedBox.shrink();
+                    }
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: 140,
+                            child: Text(
+                              '$k:',
+                              style: TextStyle(
+                                color: Colors.grey[700],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              v.toString(),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w400),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  })
+                  .where((w) => w is! SizedBox)
+                  .toList(),
+            ],
+          ],
+        ),
+      ),
+    ];
+
+    return rows;
   }
 
   Widget _buildResponseFields() {

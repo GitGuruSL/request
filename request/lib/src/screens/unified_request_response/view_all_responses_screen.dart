@@ -131,6 +131,9 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
     final fallbackName = addl['responder_name']?.toString();
     final fallbackEmail = addl['responder_email']?.toString();
     final fallbackPhone = addl['responder_phone']?.toString();
+    final module = widget.request.type == RequestType.service
+        ? (widget.request.typeSpecificData['module']?.toString() ?? '')
+        : '';
     return Stack(
       children: [
         GestureDetector(
@@ -216,6 +219,33 @@ class _ViewAllResponsesScreenState extends State<ViewAllResponsesScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
+
+                  // Module badge for service requests
+                  if (module.isNotEmpty) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.blueGrey.withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(6),
+                        border:
+                            Border.all(color: Colors.blueGrey.withOpacity(0.2)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.category,
+                              size: 14, color: Colors.black54),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Module: ${module[0].toUpperCase()}${module.substring(1)}',
+                            style: GlassTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
 
                   // Price
                   if (response.price != null) ...[

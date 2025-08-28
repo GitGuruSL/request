@@ -1047,6 +1047,9 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                                 ],
                               ),
                             ),
+                          // Service module context (if applicable)
+                          if (_getCurrentRequestType() == RequestType.service)
+                            ..._buildServiceModuleContext(r),
                           // Then metadata entries with proper formatting (excluding IDs)
                           ...r.metadata!.entries
                               .where((e) => !_shouldHideField(e.key))
@@ -1235,6 +1238,9 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
       'subcategoryid',
       'sub_category_id',
       'type', // Also hide the type since it's already shown in the header
+      // hide service module metadata keys because we render a nicer section
+      'module',
+      'modulefields',
     ];
 
     // Also hide any field that ends with "id" or contains "categoryid" or "subcategoryid"
@@ -1243,6 +1249,103 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
             (keyLower.contains('category') || keyLower.contains('subcategory'));
 
     return shouldHide;
+  }
+
+  List<Widget> _buildServiceModuleContext(rest.RequestModel r) {
+    final meta = r.metadata ?? {};
+    final rawModule = meta['module']?.toString();
+    final module = rawModule == null || rawModule.isEmpty
+        ? (meta['typeSpecificData'] is Map
+            ? (meta['typeSpecificData']['module']?.toString())
+            : null)
+        : rawModule;
+    final fields = meta['moduleFields'] ??
+        (meta['typeSpecificData'] is Map
+            ? meta['typeSpecificData']['moduleFields']
+            : null);
+
+    if (module == null || module.isEmpty) return const [];
+
+    String prettyLabel(String key) {
+      switch (key) {
+        case 'peopleCount':
+          return 'People Count';
+        case 'durationDays':
+          return 'Duration (days)';
+        case 'needsGuide':
+          return 'Needs Guide';
+        case 'pickupRequired':
+          return 'Pickup Required';
+        case 'guestsCount':
+          return 'Guests Count';
+        case 'areaSizeSqft':
+          return 'Area Size (sqft)';
+        case 'level':
+          return 'Level';
+        case 'sessionsPerWeek':
+          return 'Sessions/Week';
+        case 'positionType':
+          return 'Position Type';
+        case 'experienceYears':
+          return 'Experience (years)';
+        default:
+          return key
+              .replaceAllMapped(RegExp(r'([A-Z])'), (m) => ' ${m.group(1)}')
+              .replaceAll('_', ' ')
+              .trim()
+              .split(' ')
+              .map((w) =>
+                  w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
+              .join(' ');
+      }
+    }
+
+    final widgets = <Widget>[
+      Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Row(
+          children: [
+            const Icon(Icons.category, size: 16, color: Colors.black54),
+            const SizedBox(width: 6),
+            Text(
+              'Service Module: ${module[0].toUpperCase()}${module.substring(1)}',
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ];
+
+    if (fields is Map && fields.isNotEmpty) {
+      fields.forEach((k, v) {
+        if (v == null || (v is String && v.toString().trim().isEmpty)) return;
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 80,
+                  child: Text('${prettyLabel(k)}:',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w500, fontSize: 12)),
+                ),
+                Expanded(
+                  child:
+                      Text(v.toString(), style: const TextStyle(fontSize: 12)),
+                ),
+              ],
+            ),
+          ),
+        );
+      });
+    }
+
+    return widgets;
   }
 
   Widget _responsesSection() {

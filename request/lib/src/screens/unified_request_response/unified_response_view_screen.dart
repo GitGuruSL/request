@@ -367,7 +367,15 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
       case RequestType.item:
         return _buildItemDetails(additionalInfo);
       case RequestType.service:
-        return _buildServiceDetails(additionalInfo);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Show request module context and moduleFields so the response is read in context
+            _buildRequestModuleContext(),
+            const SizedBox(height: 12),
+            _buildServiceDetails(additionalInfo),
+          ],
+        );
       case RequestType.delivery:
         return _buildDeliveryDetails(additionalInfo);
       case RequestType.ride:
@@ -446,6 +454,93 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
           _buildDetailRow('Timeframe', info['timeframe']),
         ],
       ],
+    );
+  }
+
+  // Renders the request's service module and any captured moduleFields for added context
+  Widget _buildRequestModuleContext() {
+    final tsd = widget.request.typeSpecificData;
+    final module = tsd['module']?.toString();
+    final fields = tsd['moduleFields'];
+    if (module == null || module.isEmpty) return const SizedBox.shrink();
+
+    String prettyLabel(String key) {
+      // map known keys to friendly labels
+      switch (key) {
+        case 'peopleCount':
+          return 'People Count';
+        case 'durationDays':
+          return 'Duration (days)';
+        case 'needsGuide':
+          return 'Needs Guide';
+        case 'pickupRequired':
+          return 'Pickup Required';
+        case 'guestsCount':
+          return 'Guests Count';
+        case 'areaSizeSqft':
+          return 'Area Size (sqft)';
+        case 'level':
+          return 'Level';
+        case 'sessionsPerWeek':
+          return 'Sessions/Week';
+        case 'positionType':
+          return 'Position Type';
+        case 'experienceYears':
+          return 'Experience (years)';
+        default:
+          // Title-case fallback
+          return key
+              .replaceAllMapped(RegExp(r'([A-Z])'), (m) => ' ${m.group(1)}')
+              .replaceAll('_', ' ')
+              .trim()
+              .split(' ')
+              .map((w) =>
+                  w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
+              .join(' ');
+      }
+    }
+
+    List<Widget> fieldRows = [];
+    if (fields is Map) {
+      fields.forEach((k, v) {
+        if (v == null || (v is String && v.toString().trim().isEmpty)) return;
+        fieldRows.add(_buildDetailRow(prettyLabel(k), v.toString()));
+        fieldRows.add(const SizedBox(height: 6));
+      });
+      if (fieldRows.isNotEmpty) {
+        fieldRows.removeLast(); // remove trailing SizedBox
+      }
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.category, size: 16, color: Colors.black54),
+              const SizedBox(width: 6),
+              Text(
+                'Service Module: ${module[0].toUpperCase()}${module.substring(1)}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
+          if (fieldRows.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ...fieldRows,
+          ],
+        ],
+      ),
     );
   }
 
