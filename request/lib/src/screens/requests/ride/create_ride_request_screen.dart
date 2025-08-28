@@ -96,7 +96,8 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
     _initLocationPermission();
 
     // Delay map loading to improve initial screen performance
-    Timer(const Duration(milliseconds: 1000), () {
+    Timer(const Duration(milliseconds: 3000), () {
+      // Increased from 1s to 3s
       if (mounted) {
         setState(() {
           _shouldShowMap = true;
@@ -431,8 +432,9 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                       try {
                         _mapController = controller;
 
-                        // Add a small delay to ensure the map is properly initialized
-                        await Future.delayed(const Duration(milliseconds: 500));
+                        // Add a longer delay to ensure the map is properly initialized
+                        await Future.delayed(const Duration(
+                            milliseconds: 2000)); // Increased from 500ms to 2s
 
                         if (mounted) {
                           setState(() => _mapReady = true);
@@ -455,12 +457,13 @@ class _CreateRideRequestScreenState extends State<CreateRideRequestScreen> {
                     markers: _markers,
                     polylines: _polylines,
                     onTap: _onMapTapped,
-                    myLocationEnabled: _myLocationEnabled,
+                    myLocationEnabled: false, // Disable for lite mode
                     myLocationButtonEnabled: false,
                     zoomControlsEnabled: false,
                     mapToolbarEnabled: false,
-                    // Critical fixes for frame rendering issues
-                    liteModeEnabled: false,
+                    // Critical fixes for frame rendering issues - ENABLE LITE MODE
+                    liteModeEnabled:
+                        true, // Use static map image to avoid frame issues
                     buildingsEnabled: false, // Disable to reduce rendering load
                     indoorViewEnabled: false,
                     compassEnabled: false, // Disable to reduce UI elements

@@ -75,7 +75,8 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
     _checkExistingResponse();
 
     // Delayed map initialization to reduce initial rendering load
-    Timer(const Duration(seconds: 1), () {
+    Timer(const Duration(seconds: 3), () {
+      // Increased delay from 1s to 3s
       if (mounted) {
         setState(() {
           _shouldShowMap = true;
@@ -468,9 +469,10 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
                                 try {
                                   _mapController = controller;
 
-                                  // Add a small delay to ensure the map is properly initialized
-                                  await Future.delayed(
-                                      const Duration(milliseconds: 500));
+                                  // Add a longer delay to ensure the map is properly initialized
+                                  await Future.delayed(const Duration(
+                                      milliseconds:
+                                          2000)); // Increased from 500ms to 2s
 
                                   if (_markers.isNotEmpty) {
                                     await _updateMapMarkersAndCamera();
@@ -492,10 +494,11 @@ class _CreateRideResponseScreenState extends State<CreateRideResponseScreen> {
                                   }
                                 }
                               },
-                              myLocationEnabled: true,
-                              myLocationButtonEnabled: true,
-                              // Critical fixes for frame rendering issues
-                              liteModeEnabled: false,
+                              myLocationEnabled: false, // Disable for lite mode
+                              myLocationButtonEnabled: false,
+                              // Critical fixes for frame rendering issues - ENABLE LITE MODE
+                              liteModeEnabled:
+                                  true, // Use static map image to avoid frame issues
                               buildingsEnabled:
                                   false, // Disable to reduce rendering load
                               indoorViewEnabled: false,

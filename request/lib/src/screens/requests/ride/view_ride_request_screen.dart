@@ -64,7 +64,8 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
     _loadRequestData();
 
     // Delayed map initialization to reduce initial rendering load
-    Timer(const Duration(seconds: 1), () {
+    Timer(const Duration(seconds: 3), () {
+      // Increased from 1s to 3s
       if (mounted) {
         setState(() {
           _shouldShowMap = true;
@@ -470,7 +471,8 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                       _mapController = controller;
 
                       // Add a small delay to ensure the map is properly initialized
-                      await Future.delayed(const Duration(milliseconds: 500));
+                      await Future.delayed(const Duration(
+                          milliseconds: 2000)); // Increased from 500ms to 2s
 
                       // Use existing map setup methods
                       if (_markers.isNotEmpty) {
@@ -495,12 +497,13 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                   },
                   markers: _markers,
                   polylines: _polylines,
-                  myLocationEnabled: true,
+                  myLocationEnabled: false, // Disable for lite mode
                   myLocationButtonEnabled: false,
                   zoomControlsEnabled: false,
                   mapToolbarEnabled: false,
-                  // Critical fixes for frame rendering issues
-                  liteModeEnabled: false,
+                  // Critical fixes for frame rendering issues - ENABLE LITE MODE
+                  liteModeEnabled:
+                      true, // Use static map image to avoid frame issues
                   buildingsEnabled: false, // Disable to reduce rendering load
                   indoorViewEnabled: false,
                   compassEnabled: false, // Disable to reduce UI elements
