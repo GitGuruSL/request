@@ -5,6 +5,7 @@ class Category {
   final String name;
   final String? description;
   final String? iconUrl;
+  final String? module; // service module (tours, events, etc) if present
   final String countryCode;
   final bool isActive;
   final int displayOrder;
@@ -18,6 +19,7 @@ class Category {
     required this.name,
     this.description,
     this.iconUrl,
+    this.module,
     required this.countryCode,
     required this.isActive,
     required this.displayOrder,
@@ -30,11 +32,16 @@ class Category {
     // Attempt to read various possible field names for type
     final dynamicType =
         json['type'] ?? json['request_type'] ?? json['category_type'];
+    final Map<String, dynamic>? metadata =
+        json['metadata'] is Map<String, dynamic>
+            ? json['metadata'] as Map<String, dynamic>
+            : null;
     return Category(
       id: json['id'].toString(),
       name: json['name'] ?? '',
       description: json['description'],
       iconUrl: json['icon_url'],
+      module: metadata != null ? (metadata['module'] as String?) : null,
       countryCode: json['country_code'] ?? 'LK',
       isActive: json['is_active'] ?? true,
       displayOrder: json['display_order'] ?? 0,
@@ -124,6 +131,7 @@ class RestCategoryService {
     String countryCode = 'LK',
     bool includeInactive = false,
     String? type, // Add type parameter
+    String? module, // Optional module filter for service categories
   }) async {
     try {
       final queryParams = {
@@ -134,6 +142,10 @@ class RestCategoryService {
       // Add type filter if specified
       if (type != null && type.isNotEmpty) {
         queryParams['type'] = type;
+      }
+      // Add module filter if specified
+      if (module != null && module.isNotEmpty) {
+        queryParams['module'] = module;
       }
 
       final response = await _apiClient.get<Map<String, dynamic>>(
@@ -210,9 +222,11 @@ class RestCategoryService {
     String countryCode = 'LK',
     bool includeInactive = false,
     String? type, // Add type parameter
+    String? module,
     bool forceRefresh = false,
   }) async {
-    final cacheKey = '${countryCode}_${includeInactive}_${type ?? 'all'}';
+    final cacheKey =
+        '${countryCode}_${includeInactive}_${type ?? 'all'}_${module ?? 'all'}';
 
     if (!forceRefresh && _categoriesCache.containsKey(cacheKey)) {
       return _categoriesCache[cacheKey]!;
@@ -222,6 +236,7 @@ class RestCategoryService {
       countryCode: countryCode,
       includeInactive: includeInactive,
       type: type,
+      module: module,
     );
 
     _categoriesCache[cacheKey] = categories;

@@ -146,7 +146,7 @@ class _UnifiedRequestCreateScreenState
       case RequestType.delivery:
         return 'delivery';
       case RequestType.rental:
-        return 'rent';
+        return 'rental';
       case RequestType.ride:
         return 'ride';
       case RequestType.price:
@@ -165,6 +165,7 @@ class _UnifiedRequestCreateScreenState
         minChildSize: 0.5,
         builder: (context, scrollController) => CategoryPicker(
           requestType: _getRequestTypeString(_selectedType),
+          module: _selectedType == RequestType.service ? _selectedModule : null,
           scrollController: scrollController,
         ),
       ),

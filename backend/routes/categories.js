@@ -10,16 +10,28 @@ const router = express.Router();
  */
 router.get('/', async (req, res) => {
   try {
-    const { includeInactive = false, country = 'LK', type } = req.query;
+    const { includeInactive = false, country = 'LK', type, module } = req.query;
     const user = req.user || { role: 'super_admin' }; // Default for testing
 
     let categories;
 
     if (user.role === 'super_admin') {
-      const conditions = {};
-      if (!includeInactive) conditions.is_active = true;
-      if (type) conditions.type = type;
-      categories = await dbService.findMany('categories', conditions, { orderBy: 'name', orderDirection: 'ASC' });
+      // Use raw SQL when filtering by module (JSONB)
+      if (module) {
+        let query = `SELECT * FROM categories WHERE 1=1`;
+        const params = [];
+        if (!includeInactive) query += ` AND is_active = true`;
+        if (type) { query += ` AND type = $${params.length + 1}`; params.push(type); }
+        query += ` AND (metadata->>'module') = $${params.length + 1}`; params.push(module);
+        query += ` ORDER BY name ASC`;
+        const result = await dbService.query(query, params);
+        categories = result.rows;
+      } else {
+        const conditions = {};
+        if (!includeInactive) conditions.is_active = true;
+        if (type) conditions.type = type;
+        categories = await dbService.findMany('categories', conditions, { orderBy: 'name', orderDirection: 'ASC' });
+      }
     } else {
       const countryCode = user.country_code || country;
       let query = `
@@ -31,6 +43,7 @@ router.get('/', async (req, res) => {
             `;
       const params = [countryCode];
       if (type) { query += ` AND c.type = $${params.length + 1}`; params.push(type); }
+      if (module) { query += ` AND (c.metadata->>'module') = $${params.length + 1}`; params.push(module); }
       query += ' ORDER BY cc.display_order ASC NULLS LAST, c.name ASC';
       const result = await dbService.query(query, params);
       categories = result.rows;

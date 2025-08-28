@@ -3,9 +3,13 @@ import '../services/rest_category_service.dart';
 
 class CategoryPicker extends StatefulWidget {
   final String requestType; // 'item','service','delivery','rent'
+  final String? module; // optional module filter when requestType == 'service'
   final ScrollController scrollController;
   const CategoryPicker(
-      {super.key, required this.requestType, required this.scrollController});
+      {super.key,
+      required this.requestType,
+      this.module,
+      required this.scrollController});
   @override
   State<CategoryPicker> createState() => _CategoryPickerState();
 }
@@ -35,9 +39,9 @@ class _CategoryPickerState extends State<CategoryPicker> {
       setState(() => _isLoading = true);
       final rest = RestCategoryService.instance;
 
-      // Pass the request type to filter categories
+      // Filter by type and optional module
       final all = await rest.getCategoriesWithCache(
-          type: widget.requestType.toLowerCase());
+          type: widget.requestType.toLowerCase(), module: widget.module);
       _totalBackend = all.length;
       _categoryNameToId.clear();
       _subcategoryNameToId.clear();
@@ -62,7 +66,7 @@ class _CategoryPickerState extends State<CategoryPicker> {
       }
       if (mounted) setState(() => _isLoading = false);
       debugPrint(
-          'CategoryPicker debug: totalBackend=$_totalBackend explicitMatches=$_explicitMatches type=${widget.requestType} showing=${_categories.length} (showAll=$_showAll)');
+          'CategoryPicker debug: totalBackend=$_totalBackend explicitMatches=$_explicitMatches type=${widget.requestType} module=${widget.module} showing=${_categories.length} (showAll=$_showAll)');
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
       debugPrint('CategoryPicker error: $e');
