@@ -105,6 +105,7 @@ const businessRegistrationFormRoutes = require('./routes/business-registration-f
 const modulesRoutes = require('./routes/modules'); // NEW - module management
 const adminSmsRoutes = require('./routes/admin-sms'); // NEW - SMS configuration management
 const smsConfigRoutes = require('./routes/sms-config'); // NEW - SMS config API for frontend
+const reviewsRoutes = require('./routes/reviews'); // NEW - user reviews API
 
 // Import centralized data routes
 const masterProductsRoutes = require('./routes/master-products');
@@ -206,6 +207,7 @@ safeUse('/api/business-registration', businessRegistrationFormRoutes, 'businessR
 safeUse('/api/modules', modulesRoutes, 'modulesRoutes'); // NEW - module management
 safeUse('/api/admin', adminSmsRoutes, 'adminSmsRoutes'); // NEW - SMS configuration management
 safeUse('/api/sms', smsConfigRoutes, 'smsConfigRoutes'); // NEW - SMS config API for frontend
+safeUse('/api/reviews', reviewsRoutes, 'reviewsRoutes'); // NEW - user reviews
 console.log('🔧 Driver-verifications route registered at /api/driver-verifications');
 console.log('🔧 Business-verifications route registered at /api/business-verifications');
 console.log('🔧 Business-types route registered at /api/business-types');

@@ -720,6 +720,26 @@ router.put('/:id/clear-accepted', auth.authMiddleware(), async (req, res) => {
   }
 });
 
+// Mark request as completed (owner only, requires an accepted response)
+router.put('/:id/mark-completed', auth.authMiddleware(), async (req, res) => {
+  try {
+    const requestId = req.params.id;
+    const userId = req.user.id;
+    const request = await database.queryOne('SELECT id, user_id, status, accepted_response_id FROM requests WHERE id=$1', [requestId]);
+    if (!request) return res.status(404).json({ success: false, message: 'Request not found' });
+    if (request.user_id !== userId && req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Not permitted' });
+    if (!request.accepted_response_id) return res.status(400).json({ success: false, message: 'Cannot complete without an accepted response' });
+    if ((request.status || '').toLowerCase() === 'completed') {
+      return res.json({ success: true, message: 'Already completed', data: request });
+    }
+    const updated = await database.queryOne('UPDATE requests SET status=\'completed\', updated_at=NOW() WHERE id=$1 RETURNING *', [requestId]);
+    return res.json({ success: true, message: 'Request marked as completed', data: updated });
+  } catch (error) {
+    console.error('Error marking request completed:', error);
+    res.status(500).json({ success: false, message: 'Error marking request completed', error: error.message });
+  }
+});
+
 // Test endpoint for debugging
 router.post('/test', auth.authMiddleware(), async (req, res) => {
   try {

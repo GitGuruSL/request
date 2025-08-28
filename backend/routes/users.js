@@ -99,7 +99,7 @@ router.put('/:userId', auth.authMiddleware(), async (req, res) => {
   }
 });
 
-// Get user profile
+// Get user profile (private - self/admin)
 router.get('/:userId', auth.authMiddleware(), async (req, res) => {
   try {
     const { userId } = req.params;
@@ -141,6 +141,50 @@ router.get('/:userId', auth.authMiddleware(), async (req, res) => {
       success: false,
       error: 'Failed to fetch profile'
     });
+  }
+});
+
+// Public user profile (no auth): aggregates basic info + business/driver + reviews + responses count
+router.get('/public/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await database.queryOne(
+      'SELECT id, display_name, photo_url, email, phone, created_at FROM users WHERE id = $1',
+      [userId]
+    );
+    if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+
+    const business = await database.queryOne(
+      'SELECT id, business_name, status, country, business_category as category FROM business_verifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1',
+      [userId]
+    );
+    const driver = await database.queryOne(
+      'SELECT id, full_name, status, country, vehicle_type_name FROM driver_verifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1',
+      [userId]
+    );
+    const reviewsStats = await database.queryOne(
+      'SELECT COALESCE(AVG(rating),0)::numeric(10,2) AS average_rating, COUNT(*)::int AS review_count FROM reviews WHERE reviewee_id = $1',
+      [userId]
+    );
+    const responsesCount = await database.queryOne(
+      'SELECT COUNT(*)::int AS responses_count FROM responses WHERE user_id = $1',
+      [userId]
+    );
+
+    res.json({
+      success: true,
+      data: {
+        user,
+        business,
+        driver,
+        reviews: reviewsStats,
+        responses: responsesCount,
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching public profile:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch public profile' });
   }
 });
 
