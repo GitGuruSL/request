@@ -76,7 +76,8 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
   TimeOfDay? _eventStartTime;
   TimeOfDay? _eventEndTime;
   String _eventType = 'Wedding';
-  final TextEditingController _eventOtherTypeController = TextEditingController();
+  final TextEditingController _eventOtherTypeController =
+      TextEditingController();
   // Venues
   String _venueType = 'Indoor';
   final Set<String> _requiredFacilities = <String>{};
@@ -86,14 +87,17 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
   final TextEditingController _dietaryNeedsController = TextEditingController();
   // Entertainment & Talent
   String _talentType = '';
-  final TextEditingController _durationRequiredController = TextEditingController();
+  final TextEditingController _durationRequiredController =
+      TextEditingController();
   String _talentVenueType = 'Indoor';
   // Services & Staff
   String _staffType = '';
   int _staffCount = 1;
-  final TextEditingController _hoursRequiredController = TextEditingController();
+  final TextEditingController _hoursRequiredController =
+      TextEditingController();
   // Rentals & Supplies
-  final TextEditingController _rentalItemsListController = TextEditingController();
+  final TextEditingController _rentalItemsListController =
+      TextEditingController();
   final Set<String> _rentalRequiredServices = <String>{};
 
   // Tours & Experiences
@@ -326,6 +330,73 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
             case 'events':
               final gc = mf['guestsCount'];
               if (gc != null) _guestsCountController.text = gc.toString();
+              final et = mf['eventType'];
+              if (et is String && et.isNotEmpty) _eventType = et;
+              final doe = mf['dateOfEvent'];
+              if (doe is int)
+                _eventDate = DateTime.fromMillisecondsSinceEpoch(doe);
+              final st = mf['startTime'];
+              if (st is String && st.contains(':')) {
+                final parts = st.split(':');
+                final h = int.tryParse(parts[0]) ?? 0;
+                final m = int.tryParse(parts[1]) ?? 0;
+                _eventStartTime = TimeOfDay(hour: h, minute: m);
+              }
+              final en = mf['endTime'];
+              if (en is String && en.contains(':')) {
+                final parts = en.split(':');
+                final h = int.tryParse(parts[0]) ?? 0;
+                final m = int.tryParse(parts[1]) ?? 0;
+                _eventEndTime = TimeOfDay(hour: h, minute: m);
+              }
+
+              // Category-specific hydration
+              final cat = _selectedCategory.toLowerCase();
+              if (cat == 'venues') {
+                final vt = mf['venueType'];
+                if (vt is String && vt.isNotEmpty) _venueType = vt;
+                final rf = mf['requiredFacilities'];
+                if (rf is List) {
+                  _requiredFacilities
+                    ..clear()
+                    ..addAll(rf.whereType<String>());
+                }
+              } else if (cat == 'food & beverage' ||
+                  cat == 'food & beverages') {
+                final ct = mf['cuisineTypes'];
+                if (ct is List) {
+                  _cuisineTypes
+                    ..clear()
+                    ..addAll(ct.whereType<String>());
+                }
+                final ss = mf['serviceStyle'];
+                if (ss is String && ss.isNotEmpty) _serviceStyle = ss;
+                final dn = mf['dietaryNeeds'];
+                if (dn is String) _dietaryNeedsController.text = dn;
+              } else if (cat == 'entertainment & talent') {
+                final tt = mf['talentType'];
+                if (tt is String && tt.isNotEmpty) _talentType = tt;
+                final dr = mf['durationRequired'];
+                if (dr is String) _durationRequiredController.text = dr;
+                final vt = mf['venueType'];
+                if (vt is String && vt.isNotEmpty) _talentVenueType = vt;
+              } else if (cat == 'services & staff') {
+                final stp = mf['staffType'];
+                if (stp is String && stp.isNotEmpty) _staffType = stp;
+                final ns = mf['numberOfStaff'];
+                if (ns is int) _staffCount = ns;
+                final hr = mf['hoursRequired'];
+                if (hr is String) _hoursRequiredController.text = hr;
+              } else if (cat.startsWith('rentals')) {
+                final il = mf['itemsList'];
+                if (il is String) _rentalItemsListController.text = il;
+                final rs = mf['requiredServices'];
+                if (rs is List) {
+                  _rentalRequiredServices
+                    ..clear()
+                    ..addAll(rs.whereType<String>());
+                }
+              }
               break;
             case 'construction':
               // General
@@ -512,6 +583,12 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
     _constructionMeasurementsController.dispose();
     _constructionItemsListController.dispose();
     _landSizeController.dispose();
+    // events
+    _eventOtherTypeController.dispose();
+    _dietaryNeedsController.dispose();
+    _durationRequiredController.dispose();
+    _hoursRequiredController.dispose();
+    _rentalItemsListController.dispose();
     super.dispose();
   }
 
@@ -1034,6 +1111,170 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           const SizedBox(height: 16),
         ],
 
+        // Events module: General fields (edit)
+        if (_selectedType == RequestType.service &&
+            (_selectedModule?.toLowerCase() == 'events')) ...[
+          _buildFlatField(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Event Location',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 8),
+                AccurateLocationPickerWidget(
+                  controller: _locationController,
+                  countryCode: CountryService.instance.countryCode,
+                  labelText: '',
+                  hintText: 'Enter the event location',
+                  isRequired: true,
+                  prefixIcon: Icons.location_on,
+                  onLocationSelected: (address, lat, lng) {
+                    setState(() {
+                      _locationController.text = address;
+                      _selectedLatitude = lat;
+                      _selectedLongitude = lng;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildFlatField(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Event Date',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: _eventDate ?? DateTime.now(),
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (date != null) setState(() => _eventDate = date);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    width: double.infinity,
+                    color: const Color(0xFFF8F9FA),
+                    child: Text(
+                      _eventDate == null
+                          ? 'Select event date'
+                          : _formatDate(_eventDate!),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildFlatField(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Event Time',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () async {
+                          final t = await showTimePicker(
+                              context: context,
+                              initialTime: _eventStartTime ?? TimeOfDay.now());
+                          if (t != null) setState(() => _eventStartTime = t);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          color: const Color(0xFFF8F9FA),
+                          child: Text(
+                            _eventStartTime == null
+                                ? 'Start Time'
+                                : _eventStartTime!.format(context),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () async {
+                          final t = await showTimePicker(
+                              context: context,
+                              initialTime: _eventEndTime ?? TimeOfDay.now());
+                          if (t != null) setState(() => _eventEndTime = t);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          color: const Color(0xFFF8F9FA),
+                          child: Text(
+                            _eventEndTime == null
+                                ? 'End Time'
+                                : _eventEndTime!.format(context),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildFlatField(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DropdownButtonFormField<String>(
+                  value: _eventType,
+                  decoration: const InputDecoration(labelText: 'Type of Event'),
+                  items: const [
+                    DropdownMenuItem(value: 'Wedding', child: Text('Wedding')),
+                    DropdownMenuItem(
+                        value: 'Birthday', child: Text('Birthday')),
+                    DropdownMenuItem(
+                        value: 'Corporate', child: Text('Corporate')),
+                    DropdownMenuItem(
+                        value: 'Religious', child: Text('Religious')),
+                    DropdownMenuItem(value: 'Other', child: Text('Other')),
+                  ],
+                  onChanged: (v) => setState(() => _eventType = v ?? 'Wedding'),
+                ),
+                if (_eventType == 'Other')
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: TextFormField(
+                      controller: _eventOtherTypeController,
+                      decoration: const InputDecoration(
+                          labelText: 'Specify Event Type'),
+                    ),
+                  ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _guestsCountController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Guests Count',
+                    hintText: 'How many people will attend?',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+
         // Request Title
         _buildFlatField(
           child: TextFormField(
@@ -1072,87 +1313,99 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
         ),
         const SizedBox(height: 16),
 
-        // Location (Use Location Picker Widget)
-        _buildFlatField(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Location',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 8),
-              AccurateLocationPickerWidget(
-                controller: _locationController,
-                countryCode: CountryService.instance.countryCode,
-                labelText: '',
-                hintText: 'Enter service location',
-                isRequired: true,
-                prefixIcon: Icons.location_on,
-                onLocationSelected: (address, lat, lng) {
-                  setState(() {
-                    _locationController.text = address;
-                    _selectedLatitude = lat;
-                    _selectedLongitude = lng;
-                  });
-                },
-              ),
-            ],
+        // Location (Use Location Picker Widget) - skip for Tours/Events since handled above
+        if (!(_selectedType == RequestType.service &&
+            ((_selectedModule?.toLowerCase() == 'tours') ||
+                (_selectedModule?.toLowerCase() == 'events'))))
+          _buildFlatField(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Location',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 8),
+                AccurateLocationPickerWidget(
+                  controller: _locationController,
+                  countryCode: CountryService.instance.countryCode,
+                  labelText: '',
+                  hintText: 'Enter service location',
+                  isRequired: true,
+                  prefixIcon: Icons.location_on,
+                  onLocationSelected: (address, lat, lng) {
+                    setState(() {
+                      _locationController.text = address;
+                      _selectedLatitude = lat;
+                      _selectedLongitude = lng;
+                    });
+                  },
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 16),
+        if (!(_selectedType == RequestType.service &&
+            ((_selectedModule?.toLowerCase() == 'tours') ||
+                (_selectedModule?.toLowerCase() == 'events'))))
+          const SizedBox(height: 16),
 
-        // Preferred Date & Time (Remove Border)
-        _buildFlatField(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Preferred Date & Time',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 8),
-              InkWell(
-                onTap: () async {
-                  final date = await showDatePicker(
-                    context: context,
-                    initialDate: DateTime.now(),
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime.now().add(const Duration(days: 365)),
-                  );
-                  if (date != null) {
-                    final time = await showTimePicker(
+        // Preferred Date & Time (Remove Border) - skip for Tours/Events
+        if (!(_selectedType == RequestType.service &&
+            ((_selectedModule?.toLowerCase() == 'tours') ||
+                (_selectedModule?.toLowerCase() == 'events'))))
+          _buildFlatField(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Preferred Date & Time',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: () async {
+                    final date = await showDatePicker(
                       context: context,
-                      initialTime: TimeOfDay.now(),
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
                     );
-                    if (time != null) {
-                      setState(() {
-                        _preferredDateTime = DateTime(
-                          date.year,
-                          date.month,
-                          date.day,
-                          time.hour,
-                          time.minute,
-                        );
-                      });
+                    if (date != null) {
+                      final time = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay.now(),
+                      );
+                      if (time != null) {
+                        setState(() {
+                          _preferredDateTime = DateTime(
+                            date.year,
+                            date.month,
+                            date.day,
+                            time.hour,
+                            time.minute,
+                          );
+                        });
+                      }
                     }
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  width: double.infinity,
-                  color: const Color(0xFFF8F9FA),
-                  child: Text(
-                    _preferredDateTime == null
-                        ? 'Select date and time'
-                        : '${_preferredDateTime!.day}/${_preferredDateTime!.month}/${_preferredDateTime!.year} at ${TimeOfDay.fromDateTime(_preferredDateTime!).format(context)}',
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    width: double.infinity,
+                    color: const Color(0xFFF8F9FA),
+                    child: Text(
+                      _preferredDateTime == null
+                          ? 'Select date and time'
+                          : '${_preferredDateTime!.day}/${_preferredDateTime!.month}/${_preferredDateTime!.year} at ${TimeOfDay.fromDateTime(_preferredDateTime!).format(context)}',
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 16),
+        if (!(_selectedType == RequestType.service &&
+            ((_selectedModule?.toLowerCase() == 'tours') ||
+                (_selectedModule?.toLowerCase() == 'events'))))
+          const SizedBox(height: 16),
 
         // Urgency
         _buildFlatField(
@@ -1237,6 +1490,25 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
     _pickupRequiredForTour = false;
     _educationLevel = 'Beginner';
     _positionType = 'Full-time';
+    // events
+    _eventDate = null;
+    _eventStartTime = null;
+    _eventEndTime = null;
+    _eventType = 'Wedding';
+    _eventOtherTypeController.clear();
+    _venueType = 'Indoor';
+    _requiredFacilities.clear();
+    _cuisineTypes.clear();
+    _serviceStyle = 'Buffet';
+    _dietaryNeedsController.clear();
+    _talentType = '';
+    _durationRequiredController.clear();
+    _talentVenueType = 'Indoor';
+    _staffType = '';
+    _staffCount = 1;
+    _hoursRequiredController.clear();
+    _rentalItemsListController.clear();
+    _rentalRequiredServices.clear();
   }
 
   Widget _buildServiceDynamicFields() {
@@ -1248,21 +1520,263 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
       case 'tours':
         return _buildToursModuleFields();
       case 'events':
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildFlatField(
-              child: TextFormField(
-                controller: _guestsCountController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Guests Count',
-                  hintText: 'How many people will attend?',
+        final cat = _selectedCategory.toLowerCase();
+        if (cat == 'venues') {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildFlatField(
+                child: DropdownButtonFormField<String>(
+                  value: _venueType,
+                  decoration: const InputDecoration(labelText: 'Venue Type'),
+                  items: const [
+                    DropdownMenuItem(value: 'Indoor', child: Text('Indoor')),
+                    DropdownMenuItem(value: 'Outdoor', child: Text('Outdoor')),
+                    DropdownMenuItem(
+                        value: 'Poolside', child: Text('Poolside')),
+                    DropdownMenuItem(value: 'Garden', child: Text('Garden')),
+                    DropdownMenuItem(value: 'Hall', child: Text('Hall')),
+                  ],
+                  onChanged: (v) => setState(() => _venueType = v ?? 'Indoor'),
                 ),
               ),
-            ),
-          ],
-        );
+              const SizedBox(height: 16),
+              _buildFlatField(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Required Facilities'),
+                    ...['AC', 'Parking', 'In-house Sound', 'Stage', 'Generator']
+                        .map((f) {
+                      final selected = _requiredFacilities.contains(f);
+                      return CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(f),
+                        value: selected,
+                        onChanged: (v) => setState(() {
+                          if (v == true) {
+                            _requiredFacilities.add(f);
+                          } else {
+                            _requiredFacilities.remove(f);
+                          }
+                        }),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ],
+          );
+        } else if (cat == 'food & beverage' || cat == 'food & beverages') {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildFlatField(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Preferred Cuisine Types'),
+                    ...[
+                      'Sri Lankan',
+                      'Indian',
+                      'Chinese',
+                      'Western',
+                      'BBQ',
+                      'Vegan/Vegetarian'
+                    ].map((c) {
+                      final selected = _cuisineTypes.contains(c);
+                      return CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(c),
+                        value: selected,
+                        onChanged: (v) => setState(() {
+                          if (v == true) {
+                            _cuisineTypes.add(c);
+                          } else {
+                            _cuisineTypes.remove(c);
+                          }
+                        }),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildFlatField(
+                child: DropdownButtonFormField<String>(
+                  value: _serviceStyle,
+                  decoration: const InputDecoration(labelText: 'Service Style'),
+                  items: const [
+                    DropdownMenuItem(value: 'Buffet', child: Text('Buffet')),
+                    DropdownMenuItem(value: 'Plated', child: Text('Plated')),
+                    DropdownMenuItem(
+                        value: 'Family Style', child: Text('Family Style')),
+                    DropdownMenuItem(
+                        value: 'Live Stations', child: Text('Live Stations')),
+                  ],
+                  onChanged: (v) =>
+                      setState(() => _serviceStyle = v ?? 'Buffet'),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildFlatField(
+                child: TextFormField(
+                  controller: _dietaryNeedsController,
+                  decoration: const InputDecoration(
+                    labelText: 'Dietary Requirements',
+                    hintText: 'e.g., Halal, Vegan, Gluten-free',
+                  ),
+                ),
+              ),
+            ],
+          );
+        } else if (cat == 'entertainment & talent') {
+          final defaultTalent = _selectedSubcategory ?? 'DJ';
+          if (_talentType.isEmpty) _talentType = defaultTalent;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildFlatField(
+                child: DropdownButtonFormField<String>(
+                  value: _talentType,
+                  decoration: const InputDecoration(labelText: 'Talent Type'),
+                  items: const [
+                    DropdownMenuItem(
+                        value: 'Photographer', child: Text('Photographer')),
+                    DropdownMenuItem(
+                        value: 'Videographer', child: Text('Videographer')),
+                    DropdownMenuItem(value: 'DJ', child: Text('DJ')),
+                    DropdownMenuItem(
+                        value: 'Live Band', child: Text('Live Band')),
+                    DropdownMenuItem(value: 'Dancers', child: Text('Dancers')),
+                    DropdownMenuItem(
+                        value: 'MC / Announcer', child: Text('MC / Announcer')),
+                    DropdownMenuItem(
+                        value: 'Magician / Kids Entertainer',
+                        child: Text('Magician / Kids Entertainer')),
+                  ],
+                  onChanged: (v) =>
+                      setState(() => _talentType = v ?? defaultTalent),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildFlatField(
+                child: TextFormField(
+                  controller: _durationRequiredController,
+                  decoration: const InputDecoration(
+                    labelText: 'Duration Required',
+                    hintText: 'e.g., 3 hours',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildFlatField(
+                child: DropdownButtonFormField<String>(
+                  value: _talentVenueType,
+                  decoration: const InputDecoration(labelText: 'Venue Type'),
+                  items: const [
+                    DropdownMenuItem(value: 'Indoor', child: Text('Indoor')),
+                    DropdownMenuItem(value: 'Outdoor', child: Text('Outdoor')),
+                  ],
+                  onChanged: (v) =>
+                      setState(() => _talentVenueType = v ?? 'Indoor'),
+                ),
+              ),
+            ],
+          );
+        } else if (cat == 'services & staff') {
+          final defaultStaff = _selectedSubcategory ?? 'Servers / Waitstaff';
+          if (_staffType.isEmpty) _staffType = defaultStaff;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildFlatField(
+                child: DropdownButtonFormField<String>(
+                  value: _staffType,
+                  decoration: const InputDecoration(labelText: 'Staff Type'),
+                  items: const [
+                    DropdownMenuItem(
+                        value: 'Event Planner / Coordinator',
+                        child: Text('Event Planner / Coordinator')),
+                    DropdownMenuItem(
+                        value: 'Decoration Services',
+                        child: Text('Decoration Services')),
+                    DropdownMenuItem(
+                        value: 'Servers / Waitstaff',
+                        child: Text('Servers / Waitstaff')),
+                    DropdownMenuItem(
+                        value: 'Sound & Lighting Technician',
+                        child: Text('Sound & Lighting Technician')),
+                    DropdownMenuItem(
+                        value: 'Security Staff', child: Text('Security Staff')),
+                  ],
+                  onChanged: (v) =>
+                      setState(() => _staffType = v ?? defaultStaff),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildFlatField(
+                child: _buildCounterRow('Number of Staff', _staffCount,
+                    (v) => setState(() => _staffCount = v),
+                    min: 1),
+              ),
+              const SizedBox(height: 16),
+              _buildFlatField(
+                child: TextFormField(
+                  controller: _hoursRequiredController,
+                  decoration: const InputDecoration(
+                    labelText: 'Hours Required',
+                    hintText: 'e.g., 6 hours',
+                  ),
+                ),
+              ),
+            ],
+          );
+        } else if (cat == 'rentals & supplies' ||
+            cat == 'rentals & supply' ||
+            cat == 'rentals') {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildFlatField(
+                child: TextFormField(
+                  controller: _rentalItemsListController,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Items Needed',
+                    hintText:
+                        'List the items to rent (chairs, tables, marquee, etc.)',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildFlatField(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Required Services'),
+                    ...['Delivery & Pickup', 'On-site Setup'].map((s) {
+                      final selected = _rentalRequiredServices.contains(s);
+                      return CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(s),
+                        value: selected,
+                        onChanged: (v) => setState(() {
+                          if (v == true) {
+                            _rentalRequiredServices.add(s);
+                          } else {
+                            _rentalRequiredServices.remove(s);
+                          }
+                        }),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }
+        return const SizedBox.shrink();
       case 'construction':
         return _buildConstructionModuleFields();
       case 'education':
@@ -1405,10 +1919,74 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           'pickupRequired': _pickupRequiredForTour,
         }..removeWhere((k, v) => v == null);
       case 'events':
+        String? startStr;
+        String? endStr;
+        if (_eventStartTime != null) {
+          final h = _eventStartTime!.hour.toString().padLeft(2, '0');
+          final m = _eventStartTime!.minute.toString().padLeft(2, '0');
+          startStr = '$h:$m';
+        }
+        if (_eventEndTime != null) {
+          final h = _eventEndTime!.hour.toString().padLeft(2, '0');
+          final m = _eventEndTime!.minute.toString().padLeft(2, '0');
+          endStr = '$h:$m';
+        }
         return {
+          // General
+          'eventType': _eventType == 'Other'
+              ? (_eventOtherTypeController.text.trim().isNotEmpty
+                  ? _eventOtherTypeController.text.trim()
+                  : 'Other')
+              : _eventType,
+          'dateOfEvent': _eventDate?.millisecondsSinceEpoch,
+          'startTime': startStr,
+          'endTime': endStr,
           'guestsCount': _guestsCountController.text.trim().isNotEmpty
               ? int.tryParse(_guestsCountController.text.trim())
               : null,
+          // Category-specific
+          if (_selectedCategory.toLowerCase() == 'venues') ...{
+            'venueType': _venueType,
+            'requiredFacilities': _requiredFacilities.isNotEmpty
+                ? _requiredFacilities.toList()
+                : null,
+          },
+          if (_selectedCategory.toLowerCase() == 'food & beverage' ||
+              _selectedCategory.toLowerCase() == 'food & beverages') ...{
+            'cuisineTypes':
+                _cuisineTypes.isNotEmpty ? _cuisineTypes.toList() : null,
+            'serviceStyle': _serviceStyle,
+            'dietaryNeeds': _dietaryNeedsController.text.trim().isNotEmpty
+                ? _dietaryNeedsController.text.trim()
+                : null,
+          },
+          if (_selectedCategory.toLowerCase() == 'entertainment & talent') ...{
+            'talentType': _talentType.isNotEmpty
+                ? _talentType
+                : (_selectedSubcategory ?? ''),
+            'durationRequired':
+                _durationRequiredController.text.trim().isNotEmpty
+                    ? _durationRequiredController.text.trim()
+                    : null,
+            'venueType': _talentVenueType,
+          },
+          if (_selectedCategory.toLowerCase() == 'services & staff') ...{
+            'staffType': _staffType.isNotEmpty
+                ? _staffType
+                : (_selectedSubcategory ?? ''),
+            'numberOfStaff': _staffCount,
+            'hoursRequired': _hoursRequiredController.text.trim().isNotEmpty
+                ? _hoursRequiredController.text.trim()
+                : null,
+          },
+          if (_selectedCategory.toLowerCase().startsWith('rentals')) ...{
+            'itemsList': _rentalItemsListController.text.trim().isNotEmpty
+                ? _rentalItemsListController.text.trim()
+                : null,
+            'requiredServices': _rentalRequiredServices.isNotEmpty
+                ? _rentalRequiredServices.toList()
+                : null,
+          },
         }..removeWhere((k, v) => v == null);
       case 'construction':
         return _buildConstructionPayload();

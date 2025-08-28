@@ -1362,6 +1362,42 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
           return 'Meals with Host Family';
         case 'hostelRoomType':
           return 'Hostel Room Type';
+        // Events general
+        case 'eventType':
+          return 'Event Type';
+        case 'dateOfEvent':
+          return 'Event Date';
+        case 'startTime':
+          return 'Start Time';
+        case 'endTime':
+          return 'End Time';
+        // Events: Venues
+        case 'venueType':
+          return 'Venue Type';
+        case 'requiredFacilities':
+          return 'Required Facilities';
+        // Events: Food & Beverage
+        case 'cuisineTypes':
+          return 'Cuisine Types';
+        case 'serviceStyle':
+          return 'Service Style';
+        case 'dietaryNeeds':
+          return 'Dietary Requirements';
+        // Events: Entertainment & Talent
+        case 'talentType':
+          return 'Talent Type';
+        case 'durationRequired':
+          return 'Duration Required';
+        // Events: Services & Staff
+        case 'staffType':
+          return 'Staff Type';
+        case 'numberOfStaff':
+          return 'Number of Staff';
+        case 'hoursRequired':
+          return 'Hours Required';
+        // Events: Rentals & Supplies
+        case 'requiredServices':
+          return 'Required Services';
         case 'peopleCount':
           return 'People Count';
         case 'durationDays':
