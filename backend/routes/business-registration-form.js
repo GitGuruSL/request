@@ -43,7 +43,7 @@ router.get('/form-data', async (req, res) => {
       businessTypesRows = r.rows;
     }
 
-    // 2) Only item-type subcategories available for this country via country_subcategories
+    // 2) Item subcategories available for this country via country_subcategories (legacy field kept for backward compatibility)
     const itemCountrySubsQ = `
       SELECT 
         cs.id                       AS country_subcategory_id,
@@ -56,7 +56,7 @@ router.get('/form-data', async (req, res) => {
       FROM country_subcategories cs
       JOIN sub_categories sc ON cs.subcategory_id = sc.id AND sc.is_active = true
       JOIN categories c ON sc.category_id = c.id AND c.is_active = true
-      WHERE cs.country_code = $1 AND cs.is_active = true AND c.type = 'item'
+      WHERE cs.country_code = $1 AND cs.is_active = true AND (c.type = 'item' OR c.request_type = 'item' OR (c.metadata->>'module') = 'item')
       ORDER BY c.name, sc.name
     `;
     const itemSubs = await database.query(itemCountrySubsQ, [country_code]);
@@ -80,13 +80,104 @@ router.get('/form-data', async (req, res) => {
     }
     const itemSubcategoriesByCategory = Array.from(byCategoryMap.values());
 
-    res.json({
+    // 3) Build module-based subcategory groups for supported service modules
+    async function fetchModuleGroups(moduleKey) {
+      if (moduleKey === 'item') {
+        // Use the already-built item groups
+        return itemSubcategoriesByCategory;
+      }
+      const q = `
+        SELECT 
+          cs.id                       AS country_subcategory_id,
+          sc.id                       AS subcategory_id,
+          sc.name                     AS subcategory_name,
+          sc.slug,
+          sc.category_id,
+          c.name                      AS category_name,
+          c.type                      AS category_type,
+          (c.metadata->>'module')     AS category_module
+        FROM country_subcategories cs
+        JOIN sub_categories sc ON cs.subcategory_id = sc.id AND sc.is_active = true
+        JOIN categories c ON sc.category_id = c.id AND c.is_active = true
+        WHERE cs.country_code = $1 
+          AND cs.is_active = true 
+          AND (
+            (c.metadata->>'module') = $2 OR c.request_type = $2
+          )
+        ORDER BY c.name, sc.name
+      `;
+      const r = await database.query(q, [country_code, moduleKey]);
+      const map = new Map();
+      for (const row of r.rows) {
+        if (!map.has(row.category_id)) {
+          map.set(row.category_id, {
+            category_id: row.category_id,
+            category_name: row.category_name,
+            module: moduleKey,
+            subcategories: []
+          });
+        }
+        map.get(row.category_id).subcategories.push({
+          country_subcategory_id: row.country_subcategory_id,
+          id: row.subcategory_id,
+          name: row.subcategory_name,
+          slug: row.slug
+        });
+      }
+      return Array.from(map.values());
+    }
+
+  const MODULES = ['item','tours','events','construction','education','hiring','other'];
+    const subcategoriesByModule = {};
+    for (const m of MODULES) {
+      subcategoriesByModule[m] = await fetchModuleGroups(m);
+    }
+
+    // 4) Map business types to modules and pre-compute per-business-type groups
+    function normalizeName(s) {
+      return String(s || '').toLowerCase();
+    }
+    function modulesForBusinessType(name) {
+      const n = normalizeName(name);
+      if (n.includes('product')) return ['item'];
+      if (n.includes('delivery')) return [];
+      if (n.includes('tour')) return ['tours'];
+      if (n.includes('event')) return ['events'];
+      if (n.includes('construct')) return ['construction'];
+      if (n.includes('educat') || n.includes('training')) return ['education'];
+      if (n.includes('recruit') || n.includes('staff') || n.includes('hiring')) return ['hiring'];
+      if (n.includes('other')) return ['other'];
+      return [];
+    }
+
+    // Key mapping by global_business_type_id when present, fallback to id
+    const subcategoriesByBusinessType = {};
+    for (const bt of businessTypesRows) {
+      const key = (bt.global_business_type_id || bt.id).toString();
+      const mlist = modulesForBusinessType(bt.name);
+      const groups = [];
+      for (const m of mlist) {
+        const arr = subcategoriesByModule[m] || [];
+        for (const g of arr) groups.push(g);
+      }
+      // Ensure Product Seller uses item groups
+      const modulesResolved = mlist.length ? mlist : (normalizeName(bt.name).includes('product') ? ['item'] : []);
+      if (modulesResolved.includes('item') && groups.length === 0) {
+        for (const g of itemSubcategoriesByCategory) groups.push(g);
+      }
+      subcategoriesByBusinessType[key] = { modules: modulesResolved, groups };
+    }
+
+  res.json({
       success: true,
       data: {
         businessTypes: businessTypesRows,
         // New: item-only subcategories available in this country (for multi-select)
         itemSubcategories: itemSubs.rows,
-        itemSubcategoriesByCategory
+    itemSubcategoriesByCategory,
+    // Newer: module-based subcategories for modern business types
+    subcategoriesByModule,
+    subcategoriesByBusinessType
       }
     });
   } catch (error) {

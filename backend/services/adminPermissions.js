@@ -235,18 +235,16 @@ async function autoActivateCountryData(countryCode, countryName, adminUserId, ad
         let typesToSeed = globalTypes.rows;
     if (!typesToSeed || typesToSeed.length === 0) {
           console.warn('   ⚠️ No active rows found in business_types. Seeding from built-in defaults.');
+          // Pruned set per new direction
           typesToSeed = [
-            { id: null, name: 'Product Seller', description: 'Businesses that sell physical products (electronics, food, clothing, etc.)', icon: '🛍️', display_order: 1, is_active: true },
-            { id: null, name: 'Service Provider', description: 'Businesses that provide services (repairs, consultations, etc.)', icon: '🔧', display_order: 2, is_active: true },
-            { id: null, name: 'Rental Business', description: 'Businesses that rent out items (vehicles, equipment, etc.)', icon: '🏠', display_order: 3, is_active: true },
-            { id: null, name: 'Restaurant/Food', description: 'Restaurants, cafes, food delivery businesses', icon: '🍽️', display_order: 4, is_active: true },
-            { id: null, name: 'Delivery Service', description: 'Courier, logistics, and delivery companies', icon: '🚚', display_order: 5, is_active: true },
-      { id: null, name: 'Tours & Experiences', description: 'Tour operators, guides, accommodation providers for tourism', icon: '🧭', display_order: 6, is_active: true },
-      { id: null, name: 'Event Services', description: 'Event planners, venues, catering, entertainment and rentals', icon: '🎉', display_order: 7, is_active: true },
-      { id: null, name: 'Construction Services', description: 'Contractors, trades, design and material suppliers', icon: '🏗️', display_order: 8, is_active: true },
-      { id: null, name: 'Education & Training', description: 'Tutors, institutes, skills and professional courses', icon: '🎓', display_order: 9, is_active: true },
-      { id: null, name: 'Recruitment & Staffing', description: 'Agencies and businesses hiring for multiple roles', icon: '🧑\u200d💼', display_order: 10, is_active: true },
-      { id: null, name: 'Other Business', description: 'Businesses that don\'t fit into other categories', icon: '🏢', display_order: 99, is_active: true }
+            { id: null, name: 'Product Seller', description: 'Businesses that sell physical products (electronics, clothing, etc.)', icon: '🛍️', display_order: 1, is_active: true },
+            { id: null, name: 'Delivery Service', description: 'Courier, logistics, and delivery companies', icon: '🚚', display_order: 2, is_active: true },
+            { id: null, name: 'Tours', description: 'Tours and experiences operators and guides', icon: '🧭', display_order: 10, is_active: true },
+            { id: null, name: 'Events', description: 'Event planners, venues, rentals, catering', icon: '🎉', display_order: 11, is_active: true },
+            { id: null, name: 'Construction', description: 'Contractors, trades, design and materials', icon: '🏗️', display_order: 12, is_active: true },
+            { id: null, name: 'Education', description: 'Tutors, institutes, skills and professional courses', icon: '🎓', display_order: 13, is_active: true },
+            { id: null, name: 'Hiring', description: 'Recruitment and staffing services', icon: '🧑\u200d💼', display_order: 14, is_active: true },
+            { id: null, name: 'Other', description: 'Businesses that don\'t fit other categories', icon: '🏢', display_order: 99, is_active: true }
           ];
         }
 

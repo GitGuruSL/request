@@ -35,9 +35,12 @@ class _BusinessRegistrationScreenState
   List<dynamic> _businessTypes = [];
   String? _selectedBusinessTypeGlobalId; // use global_business_type_id for POST
   List<dynamic> _itemSubcategoriesByCategory = [];
+  Map<String, dynamic> _subcategoriesByBusinessType = {};
+  List<dynamic> _currentSubcategoriesByCategory = [];
   final Set<String> _selectedSubcategoryIds = <String>{};
   final Map<String, String> _subcategoryNameById = <String, String>{};
-  bool _isProductBusinessType = false; // controls visibility of subcategories
+  bool _showSubcategoryPicker =
+      false; // show subcategory selector when selected type has groups
   bool _loadingFormData = false;
   String? _formDataError;
 
@@ -109,6 +112,10 @@ class _BusinessRegistrationScreenState
           _businessTypes = (data['businessTypes'] as List?) ?? [];
           _itemSubcategoriesByCategory =
               (data['itemSubcategoriesByCategory'] as List?) ?? [];
+          _subcategoriesByBusinessType =
+              (data['subcategoriesByBusinessType'] as Map?)
+                      ?.map((k, v) => MapEntry(k.toString(), v)) ??
+                  {};
           _subcategoryNameById.clear();
           for (final cat in _itemSubcategoriesByCategory) {
             final subs = (cat['subcategories'] as List?) ?? [];
@@ -280,7 +287,7 @@ class _BusinessRegistrationScreenState
           ),
           _buildBusinessTypeDropdown(),
           const SizedBox(height: 8),
-          if (_isProductBusinessType) _buildItemSubcategoriesField(),
+          if (_showSubcategoryPicker) _buildItemSubcategoriesField(),
           _buildTextField(
             controller: _licenseNumberController,
             label: 'Business License Number',
@@ -305,7 +312,7 @@ class _BusinessRegistrationScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Item Subcategories (multi-select)',
+            'Preferred Subcategories (multi-select)',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
@@ -320,9 +327,9 @@ class _BusinessRegistrationScreenState
               _formDataError!,
               style: const TextStyle(color: Colors.red, fontSize: 12),
             )
-          else if (_itemSubcategoriesByCategory.isEmpty)
+          else if (_currentSubcategoriesByCategory.isEmpty)
             const Text(
-              'No item subcategories available for your country.',
+              'No subcategories available for your selection.',
               style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
             )
           else
@@ -391,17 +398,17 @@ class _BusinessRegistrationScreenState
         String query = '';
         return StatefulBuilder(
           builder: (context, setModalState) {
-            List<dynamic> filteredCats = _itemSubcategoriesByCategory
+            List<dynamic> filteredCats = _currentSubcategoriesByCategory
                 .map((cat) {
                   final List subs = (cat['subcategories'] as List?) ?? [];
                   final filteredSubs = query.isEmpty
                       ? subs
                       : subs
-                            .where(
-                              (s) => (s['name']?.toString().toLowerCase() ?? '')
-                                  .contains(query.toLowerCase()),
-                            )
-                            .toList();
+                          .where(
+                            (s) => (s['name']?.toString().toLowerCase() ?? '')
+                                .contains(query.toLowerCase()),
+                          )
+                          .toList();
                   return {
                     'category_name': cat['category_name'],
                     'subcategories': filteredSubs,
@@ -758,18 +765,31 @@ class _BusinessRegistrationScreenState
                 ),
               ),
               items: _businessTypes.map((bt) {
-                final id = (bt['global_business_type_id'] ?? bt['id'])
-                    .toString();
+                final id =
+                    (bt['global_business_type_id'] ?? bt['id']).toString();
                 final name = bt['name']?.toString() ?? 'Unknown';
                 return DropdownMenuItem<String>(value: id, child: Text(name));
               }).toList(),
               onChanged: (value) {
                 setState(() {
                   _selectedBusinessTypeGlobalId = value;
-                  _isProductBusinessType = _detectIsProductType(value);
-                  if (!_isProductBusinessType) {
-                    _selectedSubcategoryIds.clear();
+                  // Compute groups for this business type
+                  final groups = (_subcategoriesByBusinessType[value]?['groups']
+                          as List?) ??
+                      [];
+                  _currentSubcategoriesByCategory = groups;
+                  _showSubcategoryPicker = groups.isNotEmpty;
+                  // refresh name map for summary
+                  _subcategoryNameById.clear();
+                  for (final cat in _currentSubcategoriesByCategory) {
+                    final subs = (cat['subcategories'] as List?) ?? [];
+                    for (final s in subs) {
+                      final id = s['id']?.toString();
+                      final name = s['name']?.toString() ?? '';
+                      if (id != null) _subcategoryNameById[id] = name;
+                    }
                   }
+                  if (!_showSubcategoryPicker) _selectedSubcategoryIds.clear();
                 });
               },
             ),
@@ -778,29 +798,7 @@ class _BusinessRegistrationScreenState
     );
   }
 
-  // Tries to determine whether the selected business type is "Product".
-  // Prefers an explicit 'type' field if present, otherwise falls back to name match.
-  bool _detectIsProductType(String? selectedId) {
-    if (selectedId == null) return false;
-    for (final bt in _businessTypes) {
-      final id = (bt['global_business_type_id'] ?? bt['id']).toString();
-      if (id == selectedId) {
-        final typeRaw = (bt['type'] ?? bt['business_type'] ?? '')
-            .toString()
-            .toLowerCase();
-        if (typeRaw == 'product' ||
-            typeRaw == 'products' ||
-            typeRaw == 'item' ||
-            typeRaw == 'items') {
-          return true;
-        }
-        final name = (bt['name'] ?? '').toString().toLowerCase();
-        if (name.contains('product')) return true;
-        return false;
-      }
-    }
-    return false;
-  }
+  // Removed legacy product-type detector; now we rely on server-provided group mapping
 
   Widget _buildDocumentUpload({
     required String title,
@@ -1143,9 +1141,8 @@ class _BusinessRegistrationScreenState
         'businessDescription': _businessDescriptionController.text.trim(),
         // Use new server-backed fields
         'businessTypeId': _selectedBusinessTypeGlobalId,
-        'categories': _isProductBusinessType
-            ? _selectedSubcategoryIds.toList()
-            : null,
+        'categories':
+            _showSubcategoryPicker ? _selectedSubcategoryIds.toList() : null,
         'licenseNumber': _licenseNumberController.text.trim(),
         'taxId': _taxIdController.text.trim().isEmpty
             ? null
@@ -1162,9 +1159,8 @@ class _BusinessRegistrationScreenState
         // Document status tracking
         'businessLicenseStatus': 'pending',
         'taxCertificateStatus': taxCertificateUrl != null ? 'pending' : null,
-        'insuranceDocumentStatus': insuranceDocumentUrl != null
-            ? 'pending'
-            : null,
+        'insuranceDocumentStatus':
+            insuranceDocumentUrl != null ? 'pending' : null,
         'businessLogoStatus': businessLogoUrl != null ? 'pending' : null,
         // Document verification nested structure
         'documentVerification': {
