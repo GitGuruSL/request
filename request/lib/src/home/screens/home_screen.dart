@@ -267,7 +267,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         // Hiring
         _RequestType(
-          type: 'jobs',
+          type: 'hiring',
           title: 'Hiring',
           subtitle: 'Find work, hire talent',
           icon: Icons.work,
@@ -388,7 +388,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (type == 'tours' ||
         type == 'construction' ||
         type == 'events' ||
-        type == 'jobs' ||
+        type == 'hiring' ||
         type == 'education' ||
         type == 'other') return true;
 
@@ -545,7 +545,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     _SectionHeader(title: 'Hiring'),
                     _OptionList(
                       options: _serviceOptions
-                          .where((o) => o.type == 'jobs')
+                          .where((o) => o.type == 'hiring')
                           .toList(),
                       moduleEnabled: _moduleEnabled,
                       isFavorite: _isFavorite,
@@ -623,7 +623,7 @@ class _HomeScreenState extends State<HomeScreen> {
       case 'events':
       case 'construction':
       case 'education':
-      case 'jobs':
+      case 'hiring':
         // Route other service types to generic Service flow with module context
         _openUnified(RequestType.service, module: type);
         break;

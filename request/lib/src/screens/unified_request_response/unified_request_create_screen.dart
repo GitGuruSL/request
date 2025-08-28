@@ -14,7 +14,7 @@ import '../../utils/currency_helper.dart';
 class UnifiedRequestCreateScreen extends StatefulWidget {
   final RequestType? initialType;
   final String?
-      initialModule; // e.g., tours, events, construction, education, jobs
+      initialModule; // e.g., item, rent, delivery, ride, tours, events, construction, education, hiring, other
 
   const UnifiedRequestCreateScreen(
       {super.key, this.initialType, this.initialModule});
@@ -230,6 +230,15 @@ class _UnifiedRequestCreateScreenState
     if (_selectedType == RequestType.service && _selectedModule != null) {
       final m = _selectedModule!.toLowerCase();
       switch (m) {
+        case 'item':
+          return 'Item Request';
+        case 'rent':
+        case 'rental':
+          return 'Rental Request';
+        case 'delivery':
+          return 'Delivery Request';
+        case 'ride':
+          return 'Ride Request';
         case 'tours':
           return 'Tour Request';
         case 'events':
@@ -238,7 +247,7 @@ class _UnifiedRequestCreateScreenState
           return 'Construction Request';
         case 'education':
           return 'Education Request';
-        case 'jobs':
+        case 'hiring':
           return 'Hiring Request';
         case 'other':
           return 'Other Service Request';
@@ -292,6 +301,35 @@ class _UnifiedRequestCreateScreenState
 
   _ModuleTheme _moduleTheme(String module) {
     switch (module.toLowerCase()) {
+      case 'item':
+        return _ModuleTheme(
+          title: 'Item Request',
+          subtitle: 'Buy or request items',
+          icon: Icons.shopping_bag,
+          gradient: const [Color(0xFF2563EB), Color(0xFF60A5FA)],
+        );
+      case 'rent':
+      case 'rental':
+        return _ModuleTheme(
+          title: 'Rental',
+          subtitle: 'Rent items and equipment',
+          icon: Icons.business_center,
+          gradient: const [Color(0xFF0EA5E9), Color(0xFF22D3EE)],
+        );
+      case 'delivery':
+        return _ModuleTheme(
+          title: 'Delivery',
+          subtitle: 'Pickup and drop-off made easy',
+          icon: Icons.local_shipping,
+          gradient: const [Color(0xFFF97316), Color(0xFFF59E0B)],
+        );
+      case 'ride':
+        return _ModuleTheme(
+          title: 'Ride',
+          subtitle: 'Get a driver quickly',
+          icon: Icons.directions_car,
+          gradient: const [Color(0xFF06B6D4), Color(0xFF22C55E)],
+        );
       case 'tours':
         return _ModuleTheme(
           title: 'Tours & Travel',
@@ -320,7 +358,7 @@ class _UnifiedRequestCreateScreenState
           icon: Icons.school,
           gradient: const [Color(0xFF22C55E), Color(0xFF06B6D4)],
         );
-      case 'jobs':
+      case 'hiring':
         return _ModuleTheme(
           title: 'Hiring',
           subtitle: 'Find talent or gigs',
