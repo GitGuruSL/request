@@ -9,6 +9,7 @@ import '../../services/user_registration_service.dart';
 import '../../widgets/image_upload_widget.dart';
 import '../../utils/currency_helper.dart';
 import '../../widgets/accurate_location_picker_widget.dart';
+import '../../utils/module_field_localizer.dart';
 
 class UnifiedResponseEditScreen extends StatefulWidget {
   final RequestModel request;
@@ -334,7 +335,7 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                 pickupTimeRaw is int
                     ? pickupTimeRaw
                     : int.parse(pickupTimeRaw.toString()));
-            _estimatedPickupTimeController.text = _formatDateTime(pickupTime);
+            _estimatedPickupTimeController.text = _formatDate(pickupTime);
           } catch (e) {
             print('Error parsing pickup time: $e');
           }
@@ -347,7 +348,7 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                 dropoffTimeRaw is int
                     ? dropoffTimeRaw
                     : int.parse(dropoffTimeRaw.toString()));
-            _estimatedDropoffTimeController.text = _formatDateTime(dropoffTime);
+            _estimatedDropoffTimeController.text = _formatDate(dropoffTime);
           } catch (e) {
             print('Error parsing dropoff time: $e');
           }
@@ -509,27 +510,22 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
     return double.tryParse(sanitized);
   }
 
-  String _formatDateTime(DateTime dt) {
+  // Date-only formatting for display
+  String _formatDate(DateTime dt) {
     final two = (int n) => n.toString().padLeft(2, '0');
-    final date = '${dt.year}-${two(dt.month)}-${two(dt.day)}';
-    final time = '${two(dt.hour)}:${two(dt.minute)}';
-    return '$date $time';
+    return '${dt.year}-${two(dt.month)}-${two(dt.day)}';
   }
 
-  int? _parseDateTimeToMillis(String input) {
+  // Parse YYYY-MM-DD to epoch ms
+  int? _parseDateToMillis(String input) {
     if (input.isEmpty) return null;
     try {
-      final parts = input.split(' ');
-      if (parts.length != 2) return null;
-      final dateParts = parts[0].split('-');
-      final timeParts = parts[1].split(':');
-      if (dateParts.length != 3 || timeParts.length != 2) return null;
+      final dateParts = input.split('-');
+      if (dateParts.length != 3) return null;
       final year = int.parse(dateParts[0]);
       final month = int.parse(dateParts[1]);
       final day = int.parse(dateParts[2]);
-      final hour = int.parse(timeParts[0]);
-      final minute = int.parse(timeParts[1]);
-      return DateTime(year, month, day, hour, minute).millisecondsSinceEpoch;
+      return DateTime(year, month, day).millisecondsSinceEpoch;
     } catch (_) {
       return null;
     }
@@ -717,39 +713,7 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
     final fields = tsd['moduleFields'];
     if (module == null || module.isEmpty) return const [];
 
-    String prettyLabel(String key) {
-      switch (key) {
-        case 'peopleCount':
-          return 'People Count';
-        case 'durationDays':
-          return 'Duration (days)';
-        case 'needsGuide':
-          return 'Needs Guide';
-        case 'pickupRequired':
-          return 'Pickup Required';
-        case 'guestsCount':
-          return 'Guests Count';
-        case 'areaSizeSqft':
-          return 'Area Size (sqft)';
-        case 'level':
-          return 'Level';
-        case 'sessionsPerWeek':
-          return 'Sessions/Week';
-        case 'positionType':
-          return 'Position Type';
-        case 'experienceYears':
-          return 'Experience (years)';
-        default:
-          return key
-              .replaceAllMapped(RegExp(r'([A-Z])'), (m) => ' ${m.group(1)}')
-              .replaceAll('_', ' ')
-              .trim()
-              .split(' ')
-              .map((w) =>
-                  w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
-              .join(' ');
-      }
-    }
+    String prettyLabel(String key) => ModuleFieldLocalizer.getLabel(key);
 
     final rows = <Widget>[
       const SizedBox(height: 12),
@@ -1877,7 +1841,7 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
         ),
         const SizedBox(height: 16),
 
-        // Estimated Times
+        // Estimated Dates (date-only)
         Container(
           padding: const EdgeInsets.all(20),
           decoration: const BoxDecoration(color: Colors.white),
@@ -1885,7 +1849,7 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Estimated Times*',
+                'Estimated Dates*',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 16),
@@ -1896,8 +1860,8 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                       controller: _estimatedPickupTimeController,
                       readOnly: true,
                       decoration: const InputDecoration(
-                        labelText: 'Pickup Date & Time',
-                        hintText: 'Select pickup',
+                        labelText: 'Pickup Date',
+                        hintText: 'Select pickup date',
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.all(16),
                         filled: true,
@@ -1913,15 +1877,7 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                               DateTime.now().add(const Duration(days: 365)),
                         );
                         if (date == null) return;
-                        final time = await showTimePicker(
-                          context: context,
-                          initialTime: TimeOfDay.now(),
-                        );
-                        if (time == null) return;
-                        final dt = DateTime(date.year, date.month, date.day,
-                            time.hour, time.minute);
-                        _estimatedPickupTimeController.text =
-                            _formatDateTime(dt);
+                        _estimatedPickupTimeController.text = _formatDate(date);
                         setState(() {});
                       },
                     ),
@@ -1932,8 +1888,8 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                       controller: _estimatedDropoffTimeController,
                       readOnly: true,
                       decoration: const InputDecoration(
-                        labelText: 'Drop-off Date & Time',
-                        hintText: 'Select drop-off',
+                        labelText: 'Drop-off Date',
+                        hintText: 'Select drop-off date',
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.all(16),
                         filled: true,
@@ -1949,15 +1905,8 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
                               DateTime.now().add(const Duration(days: 365)),
                         );
                         if (date == null) return;
-                        final time = await showTimePicker(
-                          context: context,
-                          initialTime: TimeOfDay.now(),
-                        );
-                        if (time == null) return;
-                        final dt = DateTime(date.year, date.month, date.day,
-                            time.hour, time.minute);
                         _estimatedDropoffTimeController.text =
-                            _formatDateTime(dt);
+                            _formatDate(date);
                         setState(() {});
                       },
                     ),
@@ -2171,10 +2120,10 @@ class _UnifiedResponseEditScreenState extends State<UnifiedResponseEditScreen> {
           price = _parsePriceInput(_deliveryFeeController.text.trim());
           additionalInfo = {
             'vehicleType': _selectedVehicleType,
-            'estimatedPickupTime': _parseDateTimeToMillis(
-                _estimatedPickupTimeController.text.trim()),
-            'estimatedDropoffTime': _parseDateTimeToMillis(
-                _estimatedDropoffTimeController.text.trim()),
+            'estimatedPickupTime':
+                _parseDateToMillis(_estimatedPickupTimeController.text.trim()),
+            'estimatedDropoffTime':
+                _parseDateToMillis(_estimatedDropoffTimeController.text.trim()),
             'specialInstructions': _specialInstructionsController.text.trim(),
           };
           break;

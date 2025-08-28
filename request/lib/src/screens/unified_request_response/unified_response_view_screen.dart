@@ -8,6 +8,7 @@ import '../../services/enhanced_user_service.dart';
 import '../../services/messaging_service.dart';
 import '../messaging/conversation_screen.dart';
 import 'unified_response_edit_screen.dart';
+import '../../utils/module_field_localizer.dart';
 
 class UnifiedResponseViewScreen extends StatefulWidget {
   final RequestModel request;
@@ -28,15 +29,14 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
   final EnhancedRequestService _requestService = EnhancedRequestService();
   final EnhancedUserService _userService = EnhancedUserService();
 
-  UserModel? _responder;
   UserModel? _currentUser;
-  // Fallback responder details extracted from response.additionalInfo
+  UserModel? _responder;
   String? _responderNameFallback;
   String? _responderEmailFallback;
   String? _responderPhoneFallback;
+  bool _anyAcceptedForRequest = false;
   bool _isLoading = true;
   bool _isProcessing = false;
-  bool _anyAcceptedForRequest = false;
 
   @override
   void initState() {
@@ -47,7 +47,6 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
   Future<void> _loadData() async {
     try {
       final currentUser = await _userService.getCurrentUserModel();
-      // Avoid 403s on protected profiles; rely on fallbacks from additionalInfo
       UserModel? responder;
       try {
         responder = await _userService.getUserById(widget.response.responderId);
@@ -63,23 +62,25 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
 
       // Fetch responses to determine if any has been accepted
       try {
-        final page = await EnhancedRequestService()
-            .getResponsesForRequest(widget.request.id);
+        final page =
+            await _requestService.getResponsesForRequest(widget.request.id);
         _anyAcceptedForRequest = page.any((r) => r.isAccepted);
       } catch (_) {
         _anyAcceptedForRequest = widget.response.isAccepted;
       }
 
-      setState(() {
-        _currentUser = currentUser;
-        _responder = responder;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
       if (mounted) {
+        setState(() {
+          _currentUser = currentUser;
+          _responder = responder;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error loading response details: $e'),
@@ -464,47 +465,12 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
     final fields = tsd['moduleFields'];
     if (module == null || module.isEmpty) return const SizedBox.shrink();
 
-    String prettyLabel(String key) {
-      // map known keys to friendly labels
-      switch (key) {
-        case 'peopleCount':
-          return 'People Count';
-        case 'durationDays':
-          return 'Duration (days)';
-        case 'needsGuide':
-          return 'Needs Guide';
-        case 'pickupRequired':
-          return 'Pickup Required';
-        case 'guestsCount':
-          return 'Guests Count';
-        case 'areaSizeSqft':
-          return 'Area Size (sqft)';
-        case 'level':
-          return 'Level';
-        case 'sessionsPerWeek':
-          return 'Sessions/Week';
-        case 'positionType':
-          return 'Position Type';
-        case 'experienceYears':
-          return 'Experience (years)';
-        default:
-          // Title-case fallback
-          return key
-              .replaceAllMapped(RegExp(r'([A-Z])'), (m) => ' ${m.group(1)}')
-              .replaceAll('_', ' ')
-              .trim()
-              .split(' ')
-              .map((w) =>
-                  w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
-              .join(' ');
-      }
-    }
-
     List<Widget> fieldRows = [];
     if (fields is Map) {
       fields.forEach((k, v) {
         if (v == null || (v is String && v.toString().trim().isEmpty)) return;
-        fieldRows.add(_buildDetailRow(prettyLabel(k), v.toString()));
+        fieldRows.add(
+            _buildDetailRow(ModuleFieldLocalizer.getLabel(k), v.toString()));
         fieldRows.add(const SizedBox(height: 6));
       });
       if (fieldRows.isNotEmpty) {
@@ -553,11 +519,17 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
           const SizedBox(height: 8),
         ],
         if (info['estimatedPickupTime'] != null) ...[
-          _buildDetailRow('Pickup Time', info['estimatedPickupTime']),
+          _buildDetailRow(
+            'Pickup Date',
+            _formatEpochDate(info['estimatedPickupTime']),
+          ),
           const SizedBox(height: 8),
         ],
         if (info['estimatedDropoffTime'] != null) ...[
-          _buildDetailRow('Drop-off Time', info['estimatedDropoffTime']),
+          _buildDetailRow(
+            'Drop-off Date',
+            _formatEpochDate(info['estimatedDropoffTime']),
+          ),
         ],
       ],
     );
@@ -613,6 +585,22 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
       return priceValue.round().toString();
     } else {
       return priceValue.toString();
+    }
+  }
+
+  String _formatEpochDate(dynamic value) {
+    try {
+      int? ms;
+      if (value is int) {
+        ms = value;
+      } else if (value is String) {
+        ms = int.tryParse(value);
+      }
+      if (ms == null) return value.toString();
+      final d = DateTime.fromMillisecondsSinceEpoch(ms);
+      return '${d.day}/${d.month}/${d.year}';
+    } catch (_) {
+      return value.toString();
     }
   }
 

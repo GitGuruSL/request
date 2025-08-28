@@ -10,6 +10,7 @@ import '../../widgets/image_upload_widget.dart';
 import '../../utils/currency_helper.dart';
 import '../../widgets/accurate_location_picker_widget.dart';
 import '../../services/country_service.dart';
+import '../../utils/module_field_localizer.dart';
 
 class UnifiedResponseCreateScreen extends StatefulWidget {
   final RequestModel request;
@@ -111,27 +112,20 @@ class _UnifiedResponseCreateScreenState
     super.dispose();
   }
 
-  String _formatDateTime(DateTime dt) {
+  String _formatDate(DateTime dt) {
     final two = (int n) => n.toString().padLeft(2, '0');
-    final date = '${dt.year}-${two(dt.month)}-${two(dt.day)}';
-    final time = '${two(dt.hour)}:${two(dt.minute)}';
-    return '$date $time';
+    return '${dt.year}-${two(dt.month)}-${two(dt.day)}';
   }
 
-  int? _parseDateTimeToMillis(String input) {
+  int? _parseDateToMillis(String input) {
     if (input.isEmpty) return null;
     try {
-      final parts = input.split(' ');
-      if (parts.length != 2) return null;
-      final dateParts = parts[0].split('-');
-      final timeParts = parts[1].split(':');
-      if (dateParts.length != 3 || timeParts.length != 2) return null;
+      final dateParts = input.split('-');
+      if (dateParts.length != 3) return null;
       final year = int.parse(dateParts[0]);
       final month = int.parse(dateParts[1]);
       final day = int.parse(dateParts[2]);
-      final hour = int.parse(timeParts[0]);
-      final minute = int.parse(timeParts[1]);
-      return DateTime(year, month, day, hour, minute).millisecondsSinceEpoch;
+      return DateTime(year, month, day).millisecondsSinceEpoch;
     } catch (_) {
       return null;
     }
@@ -210,33 +204,48 @@ class _UnifiedResponseCreateScreenState
       title: 'Respond to ${_getTypeDisplayName(widget.request.type)}',
       body: Form(
         key: _formKey,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              GlassTheme.glassCard(child: _buildRequestSummary()),
-              const SizedBox(height: 16),
-              GlassTheme.glassCard(child: _buildResponseFields()),
-            ],
-          ),
-        ),
-      ),
-      bottomBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _isLoading ? null : _submitResponse,
-              style: GlassTheme.primaryButton,
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Submit Response'),
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: ConstrainedBox(
+              constraints:
+                  BoxConstraints(minHeight: constraints.maxHeight - 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  GlassTheme.glassCard(child: _buildRequestSummary()),
+                  const SizedBox(height: 16),
+                  _buildResponseFields(),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _isLoading ? null : _submitResponse,
+                      icon: _isLoading
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor:
+                                    AlwaysStoppedAnimation(Colors.white),
+                              ),
+                            )
+                          : const Icon(Icons.send),
+                      label: Text(
+                        _isLoading ? 'Submitting...' : 'Submit Response',
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1976D2),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 14, horizontal: 16),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
             ),
           ),
         ),
@@ -367,40 +376,6 @@ class _UnifiedResponseCreateScreenState
     final fields = tsd['moduleFields'];
     if (module == null || module.isEmpty) return const SizedBox.shrink();
 
-    String prettyLabel(String key) {
-      switch (key) {
-        case 'peopleCount':
-          return 'People Count';
-        case 'durationDays':
-          return 'Duration (days)';
-        case 'needsGuide':
-          return 'Needs Guide';
-        case 'pickupRequired':
-          return 'Pickup Required';
-        case 'guestsCount':
-          return 'Guests Count';
-        case 'areaSizeSqft':
-          return 'Area Size (sqft)';
-        case 'level':
-          return 'Level';
-        case 'sessionsPerWeek':
-          return 'Sessions/Week';
-        case 'positionType':
-          return 'Position Type';
-        case 'experienceYears':
-          return 'Experience (years)';
-        default:
-          return key
-              .replaceAllMapped(RegExp(r'([A-Z])'), (m) => ' ${m.group(1)}')
-              .replaceAll('_', ' ')
-              .trim()
-              .split(' ')
-              .map((w) =>
-                  w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
-              .join(' ');
-      }
-    }
-
     final rows = <Widget>[
       Row(
         children: [
@@ -423,7 +398,7 @@ class _UnifiedResponseCreateScreenState
           children: [
             SizedBox(
               width: 140,
-              child: Text('${prettyLabel(k)}:',
+              child: Text('${ModuleFieldLocalizer.getLabel(k)}:',
                   style: TextStyle(
                       color: Colors.grey[700], fontWeight: FontWeight.w500)),
             ),
@@ -1510,7 +1485,7 @@ class _UnifiedResponseCreateScreenState
         ),
         const SizedBox(height: 16),
 
-        // Estimated Times
+        // Estimated Dates (date-only)
         Container(
           padding: const EdgeInsets.all(20),
           decoration: const BoxDecoration(color: Colors.white),
@@ -1518,7 +1493,7 @@ class _UnifiedResponseCreateScreenState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Estimated Times*',
+                'Estimated Dates*',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 16),
@@ -1529,8 +1504,8 @@ class _UnifiedResponseCreateScreenState
                       controller: _estimatedPickupTimeController,
                       readOnly: true,
                       decoration: const InputDecoration(
-                        labelText: 'Pickup Date & Time',
-                        hintText: 'Select pickup',
+                        labelText: 'Pickup Date',
+                        hintText: 'Select pickup date',
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.all(16),
                         filled: true,
@@ -1545,15 +1520,7 @@ class _UnifiedResponseCreateScreenState
                               DateTime.now().add(const Duration(days: 365)),
                         );
                         if (date == null) return;
-                        final time = await showTimePicker(
-                          context: context,
-                          initialTime: TimeOfDay.now(),
-                        );
-                        if (time == null) return;
-                        final dt = DateTime(date.year, date.month, date.day,
-                            time.hour, time.minute);
-                        _estimatedPickupTimeController.text =
-                            _formatDateTime(dt);
+                        _estimatedPickupTimeController.text = _formatDate(date);
                         setState(() {});
                       },
                     ),
@@ -1564,8 +1531,8 @@ class _UnifiedResponseCreateScreenState
                       controller: _estimatedDropoffTimeController,
                       readOnly: true,
                       decoration: const InputDecoration(
-                        labelText: 'Drop-off Date & Time',
-                        hintText: 'Select drop-off',
+                        labelText: 'Drop-off Date',
+                        hintText: 'Select drop-off date',
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.all(16),
                         filled: true,
@@ -1580,15 +1547,8 @@ class _UnifiedResponseCreateScreenState
                               DateTime.now().add(const Duration(days: 365)),
                         );
                         if (date == null) return;
-                        final time = await showTimePicker(
-                          context: context,
-                          initialTime: TimeOfDay.now(),
-                        );
-                        if (time == null) return;
-                        final dt = DateTime(date.year, date.month, date.day,
-                            time.hour, time.minute);
                         _estimatedDropoffTimeController.text =
-                            _formatDateTime(dt);
+                            _formatDate(date);
                         setState(() {});
                       },
                     ),
@@ -1797,10 +1757,10 @@ class _UnifiedResponseCreateScreenState
           additionalInfo = {
             'vehicleType': _selectedVehicleType,
             // Store as millisecondsSinceEpoch if parseable
-            'estimatedPickupTime': _parseDateTimeToMillis(
-                _estimatedPickupTimeController.text.trim()),
-            'estimatedDropoffTime': _parseDateTimeToMillis(
-                _estimatedDropoffTimeController.text.trim()),
+            'estimatedPickupTime':
+                _parseDateToMillis(_estimatedPickupTimeController.text.trim()),
+            'estimatedDropoffTime':
+                _parseDateToMillis(_estimatedDropoffTimeController.text.trim()),
             'specialInstructions': _specialInstructionsController.text.trim(),
           };
           break;
