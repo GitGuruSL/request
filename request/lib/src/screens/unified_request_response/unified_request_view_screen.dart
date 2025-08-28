@@ -12,6 +12,7 @@ import 'view_all_responses_screen.dart';
 import 'unified_response_edit_screen.dart';
 import '../chat/conversation_screen.dart';
 import '../../services/chat_service.dart';
+import '../../services/rest_request_service.dart' show ReviewsService;
 
 /// UnifiedRequestViewScreen (Minimal REST Migration)
 /// Legacy Firebase-based logic removed. Displays core request info only.
@@ -34,6 +35,7 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
   // Removed per simplification: individual response update/delete no longer supported here
   bool _updatingRequest = false;
   bool _deletingRequest = false;
+  bool _submittingReview = false;
 
   @override
   void initState() {
@@ -423,6 +425,87 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
     }
   }
 
+  Future<void> _markCompleted() async {
+    if (_request == null) return;
+    final updated = await _service.markRequestCompleted(_request!.id);
+    if (updated != null) {
+      setState(() => _request = updated);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Request marked as completed')));
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to mark as completed')));
+    }
+  }
+
+  Future<void> _promptReviewAcceptedResponder() async {
+    if (_request == null) return;
+    final acceptedId = _request!.acceptedResponseId;
+    if (acceptedId == null) return;
+    // Find the accepted response to show context
+  // Ensure responses loaded; dialog does not display responder info for now
+    int rating = 5;
+    final commentCtrl = TextEditingController();
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Rate your experience'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('How was the responder?'),
+            const SizedBox(height: 8),
+            StatefulBuilder(builder: (ctx, setD) {
+              return Row(
+                children: List.generate(5, (i) {
+                  final filled = i < rating;
+                  return IconButton(
+                    icon: Icon(
+                      filled ? Icons.star : Icons.star_border,
+                      color: Colors.amber,
+                    ),
+                    onPressed: () => setD(() => rating = i + 1),
+                  );
+                }),
+              );
+            }),
+            TextField(
+              controller: commentCtrl,
+              decoration: const InputDecoration(hintText: 'Optional comment'),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: _submittingReview
+                ? null
+                : () async {
+                    setState(() => _submittingReview = true);
+                    final ok = await ReviewsService.instance.createReview(
+                      requestId: _request!.id,
+                      rating: rating,
+                      comment: commentCtrl.text.trim(),
+                    );
+                    if (mounted) setState(() => _submittingReview = false);
+                    if (!mounted) return;
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(ok ? 'Review submitted' : 'Failed to submit review')));
+                  },
+            child: _submittingReview
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Text('Submit'),
+          ),
+        ],
+      ),
+    );
+  }
+
   // Removed edit & delete response methods (aggregate-only view)
 
   void _openEditRequestSheet() {
@@ -527,6 +610,29 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
           );
         }),
       ),
+    );
+  }
+
+  Widget _ownerActions() {
+    if (_request == null || !_isOwner) return const SizedBox.shrink();
+    final status = _request!.status.toLowerCase();
+    final hasAccepted = _request!.acceptedResponseId != null;
+    return Row(
+      children: [
+        if (hasAccepted && status != 'completed')
+          FilledButton.icon(
+            onPressed: _markCompleted,
+            icon: const Icon(Icons.flag_circle_outlined),
+            label: const Text('Mark completed'),
+          ),
+        const SizedBox(width: 12),
+        if (status == 'completed' && hasAccepted)
+          OutlinedButton.icon(
+            onPressed: _promptReviewAcceptedResponder,
+            icon: const Icon(Icons.rate_review_outlined),
+            label: const Text('Review responder'),
+          ),
+      ],
     );
   }
 

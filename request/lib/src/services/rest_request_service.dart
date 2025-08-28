@@ -687,4 +687,63 @@ class RestRequestService {
       return null;
     }
   }
+
+  /// Mark a request as completed (owner only)
+  Future<RequestModel?> markRequestCompleted(String requestId) async {
+    try {
+      final res = await _apiClient.put<Map<String, dynamic>>(
+        '/api/requests/$requestId/mark-completed',
+      );
+      if (res.isSuccess && res.data != null) {
+        final data = res.data!['data'] as Map<String, dynamic>?;
+        if (data != null) return RequestModel.fromJson(data);
+      }
+      return null;
+    } catch (e) {
+      print('Error marking request completed: $e');
+      return null;
+    }
+  }
+}
+
+class ReviewsService {
+  ReviewsService._();
+  static final ReviewsService instance = ReviewsService._();
+  final ApiClient _apiClient = ApiClient.instance;
+
+  Future<bool> createReview({
+    required String requestId,
+    required int rating,
+    String? comment,
+  }) async {
+    try {
+      final res = await _apiClient.post<Map<String, dynamic>>(
+        '/api/reviews',
+        data: {
+          'request_id': requestId,
+          'rating': rating,
+          if (comment != null && comment.trim().isNotEmpty) 'comment': comment,
+        },
+      );
+      return res.isSuccess == true;
+    } catch (e) {
+      print('Error creating review: $e');
+      return false;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getUserReviewStats(String userId) async {
+    try {
+      final res = await _apiClient.get<Map<String, dynamic>>(
+        '/api/reviews/stats/$userId',
+      );
+      if (res.isSuccess && res.data != null) {
+        return res.data!['data'] as Map<String, dynamic>?;
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching review stats: $e');
+      return null;
+    }
+  }
 }
