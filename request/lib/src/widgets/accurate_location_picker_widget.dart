@@ -40,6 +40,7 @@ class _AccurateLocationPickerWidgetState
   final LayerLink _layerLink = LayerLink();
   OverlayEntry? _overlayEntry;
   final FocusNode _focusNode = FocusNode();
+  final GlobalKey _fieldKey = GlobalKey();
 
   @override
   void initState() {
@@ -115,16 +116,20 @@ class _AccurateLocationPickerWidgetState
   void _showOverlay() {
     _removeOverlay();
 
+    // Compute width to match the text field
+    final box = _fieldKey.currentContext?.findRenderObject() as RenderBox?;
+    final fieldWidth = box?.size.width ?? MediaQuery.of(context).size.width;
+
     _overlayEntry = OverlayEntry(
-      builder: (context) => Positioned(
-        width: MediaQuery.of(context).size.width - 32, // Account for padding
-        child: CompositedTransformFollower(
-          link: _layerLink,
-          showWhenUnlinked: false,
-          offset: const Offset(0, 60),
-          child: Material(
-            elevation: 8,
-            borderRadius: BorderRadius.circular(8),
+      builder: (context) => CompositedTransformFollower(
+        link: _layerLink,
+        showWhenUnlinked: false,
+        offset: const Offset(0, 60),
+        child: Material(
+          elevation: 8,
+          borderRadius: BorderRadius.circular(8),
+          child: SizedBox(
+            width: fieldWidth,
             child: Container(
               constraints: const BoxConstraints(maxHeight: 200),
               decoration: BoxDecoration(
@@ -169,7 +174,10 @@ class _AccurateLocationPickerWidgetState
       ),
     );
 
-    Overlay.of(context).insert(_overlayEntry!);
+    final overlay = Overlay.of(context);
+    if (overlay.mounted) {
+      overlay.insert(_overlayEntry!);
+    }
   }
 
   void _removeOverlay() {
@@ -272,11 +280,45 @@ class _AccurateLocationPickerWidgetState
     }
   }
 
+  Future<void> _geocodeTypedAddress() async {
+    final text = widget.controller.text.trim();
+    if (text.isEmpty) return;
+    setState(() => _isLoading = true);
+    try {
+      final details = await GooglePlacesService.geocodeAddress(
+        text,
+        countryCode: widget.countryCode,
+      );
+      if (details != null) {
+        final cleaned = AddressUtils.cleanAddress(details.formattedAddress);
+        widget.controller.text = cleaned;
+        widget.onLocationSelected?.call(
+          cleaned,
+          details.latitude,
+          details.longitude,
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not find that address. Try refining it.'),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Geocode failed: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return CompositedTransformTarget(
       link: _layerLink,
       child: TextFormField(
+        key: _fieldKey,
         controller: widget.controller,
         focusNode: _focusNode,
         decoration: InputDecoration(
@@ -299,19 +341,32 @@ class _AccurateLocationPickerWidgetState
                   padding: const EdgeInsets.all(12),
                   child: const CircularProgressIndicator(strokeWidth: 2),
                 )
-              : widget.controller.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        widget.controller.clear();
-                        _clearSuggestions();
-                        _focusNode.unfocus();
-                      },
-                    )
-                  : null,
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (widget.controller.text.isNotEmpty)
+                      IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          widget.controller.clear();
+                          _clearSuggestions();
+                          _focusNode.unfocus();
+                          setState(() {});
+                        },
+                      ),
+                    IconButton(
+                      tooltip: 'Search address',
+                      icon: const Icon(Icons.search),
+                      onPressed: _geocodeTypedAddress,
+                    ),
+                  ],
+                ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
           ),
+          // Allow enough width for clear + search icons
+          suffixIconConstraints:
+              const BoxConstraints(minWidth: 96, maxWidth: 128, maxHeight: 48),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
             borderSide: BorderSide(color: Colors.grey.shade300),
@@ -321,6 +376,7 @@ class _AccurateLocationPickerWidgetState
             borderSide: BorderSide(color: Theme.of(context).primaryColor),
           ),
         ),
+        textInputAction: TextInputAction.search,
         validator: widget.isRequired
             ? (value) {
                 if (value == null || value.isEmpty) {
@@ -334,6 +390,7 @@ class _AccurateLocationPickerWidgetState
             _showOverlay();
           }
         },
+        onFieldSubmitted: (_) => _geocodeTypedAddress(),
       ),
     );
   }

@@ -106,6 +106,46 @@ class GooglePlacesService {
 
     return null;
   }
+
+  // Forward geocoding - get coordinates from a free-form address
+  static Future<PlaceDetails?> geocodeAddress(String address,
+      {String? countryCode}) async {
+    if (address.trim().isEmpty) return null;
+
+    final params = <String, String>{
+      'address': address,
+      'key': _apiKey,
+      'language': 'en',
+    };
+    if (countryCode != null && countryCode.trim().isNotEmpty) {
+      params['components'] = 'country:${countryCode.toUpperCase()}';
+    }
+
+    final url =
+        Uri.parse('$_baseUrl/geocode/json').replace(queryParameters: params);
+
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'OK' && data['results'].isNotEmpty) {
+          final result = data['results'][0];
+          final geometry = result['geometry']['location'];
+          return PlaceDetails(
+            placeId: (result['place_id'] ?? '').toString(),
+            name: result['formatted_address'] ?? '',
+            formattedAddress: result['formatted_address'] ?? '',
+            latitude: (geometry['lat'] as num).toDouble(),
+            longitude: (geometry['lng'] as num).toDouble(),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error forward geocoding: $e');
+    }
+
+    return null;
+  }
 }
 
 class PlaceSuggestion {
