@@ -92,6 +92,96 @@ sudo cp backend/deploy/redeploy.sh /opt/request-backend/
 sudo chmod +x /opt/request-backend/redeploy.sh
 ```
 
+Alternative install (no repo on server)
+```bash
+sudo mkdir -p /opt/request-backend
+sudo tee /opt/request-backend/redeploy.sh > /dev/null <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+NAME="request-backend-container"
+PORT="3001"
+HOST_BIND="127.0.0.1"
+ENV_FILE="/opt/request-backend/production.env"
+REPO="ghcr.io/gitgurusl/request-backend"
+
+usage() {
+  echo "Usage: $(basename "$0") <tag-or-full-image> [--public]"
+  echo "  <tag-or-full-image>  Either an image tag/sha (e.g., latest or <sha>) or a full image ref"
+  echo "  --public              Bind to 0.0.0.0 instead of 127.0.0.1"
+}
+
+if [[ ${1:-} == "" ]]; then
+  usage
+  exit 1
+fi
+
+IMAGE_ARG="$1"; shift || true
+if [[ ${1:-} == "--public" ]]; then
+  HOST_BIND="0.0.0.0"
+fi
+
+if [[ "$IMAGE_ARG" == *":"* && "$IMAGE_ARG" == ghcr.io/* ]]; then
+  IMAGE="$IMAGE_ARG"
+else
+  IMAGE="$REPO:$IMAGE_ARG"
+fi
+
+echo "Deploying image: $IMAGE"
+echo "Container name: $NAME"
+echo "Host bind:      $HOST_BIND:$PORT -> 3001"
+echo "Env file:       $ENV_FILE"
+
+docker pull "$IMAGE"
+docker rm -f "$NAME" >/dev/null 2>&1 || true
+docker run -d --name "$NAME" \
+  --restart unless-stopped \
+  --env-file "$ENV_FILE" \
+  -p "$HOST_BIND:$PORT:3001" \
+  "$IMAGE"
+
+ATTEMPTS=30
+for i in $(seq 1 $ATTEMPTS); do
+  if curl -fsS "http://localhost:$PORT/health" >/dev/null 2>&1; then
+    echo "Healthy at http://localhost:$PORT/health"
+    exit 0
+  fi
+  sleep 2
+done
+
+echo "Health check failed. Showing logs:"
+docker logs --tail=200 "$NAME" || true
+exit 1
+EOF
+sudo chmod +x /opt/request-backend/redeploy.sh
+```
+
+Troubleshooting: no space left on device (Docker pull/extract)
+```bash
+# Inspect usage
+df -h
+docker system df
+
+# Free Docker space (removes unused containers/images/build cache)
+sudo docker system prune -af
+sudo docker builder prune -af
+# Optional: prune unused volumes (skip if you rely on named volumes)
+# sudo docker volume prune -f
+
+# Trim large Docker container logs
+sudo find /var/lib/docker/containers -name '*-json.log' -type f -exec sudo truncate -s 0 {} +
+
+# Clean OS caches and logs
+sudo apt-get clean
+sudo journalctl --vacuum-time=2d
+
+# Retry deploy
+sudo /opt/request-backend/redeploy.sh <tag-or-sha>
+curl -sS http://localhost:3001/health
+```
+
+Tip: If you want pretty JSON in health output, install jq: `sudo apt-get install -y jq`, then use `curl -sS http://localhost:3001/health | jq .`.
+
 <!-- ci: trigger backend build - 2025-08-27T10:30Z -->
  - GHCR repository owner must be lowercase; the workflow normalizes owner for tags, but set GHCR_USER secret in lowercase to avoid auth issues.
 
