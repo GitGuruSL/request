@@ -649,6 +649,9 @@ class _UnifiedRequestCreateScreenState
                 maxChildSize: 0.95,
                 builder: (context, scrollController) => CategoryPicker(
                   requestType: _getRequestTypeString(_selectedType),
+                  module: _selectedType == RequestType.service
+                      ? _selectedModule
+                      : null,
                   scrollController: scrollController,
                 ),
               ),
@@ -960,6 +963,9 @@ class _UnifiedRequestCreateScreenState
                       height: MediaQuery.of(context).size.height * 0.8,
                       child: CategoryPicker(
                         requestType: _getRequestTypeString(_selectedType),
+                        module: _selectedType == RequestType.service
+                            ? _selectedModule
+                            : null,
                         scrollController: ScrollController(),
                       ),
                     ),
@@ -1299,6 +1305,9 @@ class _UnifiedRequestCreateScreenState
                   expand: false,
                   builder: (context, scrollController) => CategoryPicker(
                     requestType: _getRequestTypeString(_selectedType),
+                    module: _selectedType == RequestType.service
+                        ? _selectedModule
+                        : null,
                     scrollController: scrollController,
                   ),
                 ),
