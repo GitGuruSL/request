@@ -166,7 +166,43 @@
       },
       "education": {
         "categories": [
-          { "name": "Learning", "subcategories": ["Tutoring", "Language", "Music"] }
+          {
+            "name": "Academic Tutoring",
+            "subcategories": [
+              "School Level (Grade 1 - 9)",
+              "O/L (Ordinary Level) Subjects",
+              "A/L (Advanced Level) Streams",
+              "University & Higher Education Subjects",
+              "International School Curriculums (Cambridge, Edexcel)"
+            ]
+          },
+          {
+            "name": "Professional & Skill Development",
+            "subcategories": [
+              "Language Courses (Spoken English, IELTS, Japanese)",
+              "IT & Software Courses (Programming, Graphic Design)",
+              "Business & Marketing Skills (CIMA, Digital Marketing)",
+              "Vocational & Technical Training (Mechanics, Electrical)"
+            ]
+          },
+          {
+            "name": "Arts & Hobbies",
+            "subcategories": [
+              "Music Lessons (Guitar, Piano, Violin, Vocals)",
+              "Art & Design Classes (Drawing, Painting, Fashion Design)",
+              "Dance & Drama Classes",
+              "Cooking & Baking Workshops",
+              "Sports Coaching (Cricket, Swimming, Athletics)"
+            ]
+          },
+          {
+            "name": "Admissions & Consulting",
+            "subcategories": [
+              "University Admission Guidance (Local & Foreign)",
+              "Career Counseling & Mentoring",
+              "Scholarship & Visa Assistance"
+            ]
+          }
         ]
       },
     "hiring": {

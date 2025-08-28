@@ -71,6 +71,23 @@ class _UnifiedRequestCreateScreenState
   String _propertyType = 'Residential Land';
   final _landSizeController = TextEditingController();
   final _sessionsPerWeekController = TextEditingController(); // education
+  // Education module
+  String _preferredEducationMode = 'Online'; // Online, In-Person, Both
+  final _studentsCountController = TextEditingController();
+  final _detailedNeedsController = TextEditingController();
+  // Education: Academic Tutoring
+  final _subjectsController = TextEditingController();
+  String _syllabus = 'Local (National)';
+  final _syllabusOtherController = TextEditingController();
+  // Education: Professional & Skill Development
+  final _courseOrSkillController = TextEditingController();
+  final _desiredOutcomeControllerEdu = TextEditingController();
+  // Education: Arts & Hobbies
+  final _artOrSportController = TextEditingController();
+  String _classType = 'Individual'; // Individual, Group, Workshop
+  // Education: Admissions & Consulting
+  final _targetCountryController = TextEditingController();
+  final _fieldOfStudyController = TextEditingController();
   final _experienceYearsController = TextEditingController(); // hiring
   bool _needsGuide = false; // tours
   bool _pickupRequiredForTour = false; // tours
@@ -214,6 +231,15 @@ class _UnifiedRequestCreateScreenState
     _guestsCountController.dispose();
     _areaSizeController.dispose();
     _sessionsPerWeekController.dispose();
+  _studentsCountController.dispose();
+  _detailedNeedsController.dispose();
+  _subjectsController.dispose();
+  _syllabusOtherController.dispose();
+  _courseOrSkillController.dispose();
+  _desiredOutcomeControllerEdu.dispose();
+  _artOrSportController.dispose();
+  _targetCountryController.dispose();
+  _fieldOfStudyController.dispose();
     _experienceYearsController.dispose();
     _otherLanguageController.dispose();
     _tourPickupController.dispose();
@@ -1166,9 +1192,12 @@ class _UnifiedRequestCreateScreenState
         const SizedBox(height: 16),
 
         // Location for services other than Tours/Events (handled above for those)
-        if (!(_selectedType == RequestType.service &&
-            ((_selectedModule?.toLowerCase() == 'tours') ||
-                (_selectedModule?.toLowerCase() == 'events'))))
+    if (!(_selectedType == RequestType.service &&
+      (((_selectedModule?.toLowerCase() == 'tours') ||
+          (_selectedModule?.toLowerCase() == 'events')) ||
+        // Hide location when Education is strictly online
+        ((_selectedModule?.toLowerCase() == 'education') &&
+          _preferredEducationMode == 'Online'))))
           _buildFlatField(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1334,10 +1363,22 @@ class _UnifiedRequestCreateScreenState
     _guestsCountController.clear();
     _areaSizeController.clear();
     _sessionsPerWeekController.clear();
+  _studentsCountController.clear();
+  _detailedNeedsController.clear();
+  _subjectsController.clear();
+  _syllabus = 'Local (National)';
+  _syllabusOtherController.clear();
+  _courseOrSkillController.clear();
+  _desiredOutcomeControllerEdu.clear();
+  _artOrSportController.clear();
+  _classType = 'Individual';
+  _targetCountryController.clear();
+  _fieldOfStudyController.clear();
     _experienceYearsController.clear();
     _needsGuide = false;
     _pickupRequiredForTour = false;
     _educationLevel = 'Beginner';
+  _preferredEducationMode = 'Online';
     _positionType = 'Full-time';
     // events
     _eventDate = null;
@@ -1630,34 +1671,206 @@ class _UnifiedRequestCreateScreenState
       case 'construction':
         return _buildConstructionModuleFields();
       case 'education':
+        // Education: general + category-specific fields
+        final cat = _selectedCategory.toLowerCase();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // General education details
             _buildFlatField(
-              child: DropdownButtonFormField<String>(
-                value: _educationLevel,
-                decoration: const InputDecoration(labelText: 'Level'),
-                items: const [
-                  DropdownMenuItem(value: 'Beginner', child: Text('Beginner')),
-                  DropdownMenuItem(
-                      value: 'Intermediate', child: Text('Intermediate')),
-                  DropdownMenuItem(value: 'Advanced', child: Text('Advanced')),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  DropdownButtonFormField<String>(
+                    value: _educationLevel,
+                    decoration: const InputDecoration(
+                        labelText: "Student's Current Level"),
+                    items: const [
+                      DropdownMenuItem(
+                          value: 'Primary (Grade 1-5)',
+                          child: Text('Primary (Grade 1-5)')),
+                      DropdownMenuItem(
+                          value: 'Secondary (Grade 6-11 / O/L)',
+                          child: Text('Secondary (Grade 6-11 / O/L)')),
+                      DropdownMenuItem(
+                          value: 'A/L (Advanced Level)',
+                          child: Text('A/L (Advanced Level)')),
+                      DropdownMenuItem(
+                          value: 'Undergraduate', child: Text('Undergraduate')),
+                      DropdownMenuItem(
+                          value: 'Postgraduate', child: Text('Postgraduate')),
+                      DropdownMenuItem(
+                          value: 'Professional', child: Text('Professional')),
+                      DropdownMenuItem(value: 'Other', child: Text('Other')),
+                    ],
+                    onChanged: (v) =>
+                        setState(() => _educationLevel = v ?? 'Other'),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: _preferredEducationMode,
+                    decoration:
+                        const InputDecoration(labelText: 'Preferred Mode'),
+                    items: const [
+                      DropdownMenuItem(value: 'Online', child: Text('Online')),
+                      DropdownMenuItem(
+                          value: 'In-Person', child: Text('In-Person')),
+                      DropdownMenuItem(value: 'Both', child: Text('Both')),
+                    ],
+                    onChanged: (v) => setState(
+                        () => _preferredEducationMode = v ?? 'Online'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _studentsCountController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Number of Students',
+                      hintText: 'e.g., 1',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _sessionsPerWeekController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Sessions per week',
+                      hintText: 'e.g., 2',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _detailedNeedsController,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: 'Detailed Needs',
+                      hintText:
+                          'Describe the specific topics, schedule, or preferences',
+                    ),
+                  ),
                 ],
-                onChanged: (v) =>
-                    setState(() => _educationLevel = v ?? 'Beginner'),
               ),
             ),
             const SizedBox(height: 16),
-            _buildFlatField(
-              child: TextFormField(
-                controller: _sessionsPerWeekController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Sessions per week',
-                  hintText: 'e.g., 2',
+
+            // Category-specific
+            if (cat == 'academic tutoring')
+              _buildFlatField(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextFormField(
+                      controller: _subjectsController,
+                      decoration: const InputDecoration(
+                        labelText: 'Subject(s)',
+                        hintText: 'e.g., Mathematics, Science',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: _syllabus,
+                      decoration:
+                          const InputDecoration(labelText: 'Syllabus'),
+                      items: const [
+                        DropdownMenuItem(
+                            value: 'Local (National)',
+                            child: Text('Local (National)')),
+                        DropdownMenuItem(
+                            value: 'Cambridge', child: Text('Cambridge')),
+                        DropdownMenuItem(
+                            value: 'Edexcel', child: Text('Edexcel')),
+                        DropdownMenuItem(value: 'IB', child: Text('IB')),
+                        DropdownMenuItem(value: 'Other', child: Text('Other')),
+                      ],
+                      onChanged: (v) => setState(() => _syllabus = v ?? _syllabus),
+                    ),
+                    if (_syllabus == 'Other')
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: TextFormField(
+                          controller: _syllabusOtherController,
+                          decoration: const InputDecoration(
+                              labelText: 'Specify Syllabus'),
+                        ),
+                      ),
+                  ],
+                ),
+              )
+            else if (cat == 'professional & skill development')
+              _buildFlatField(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextFormField(
+                      controller: _courseOrSkillController,
+                      decoration: const InputDecoration(
+                        labelText: 'Specific Course/Skill',
+                        hintText: 'e.g., IELTS, JavaScript, CIMA',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _desiredOutcomeControllerEdu,
+                      decoration: const InputDecoration(
+                        labelText: 'Desired Outcome',
+                        hintText: 'e.g., Exam pass, certification, portfolio',
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else if (cat == 'arts & hobbies')
+              _buildFlatField(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextFormField(
+                      controller: _artOrSportController,
+                      decoration: const InputDecoration(
+                        labelText: 'Instrument / Art Form / Sport',
+                        hintText: 'e.g., Guitar, Painting, Cricket',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: _classType,
+                      decoration:
+                          const InputDecoration(labelText: 'Class Type'),
+                      items: const [
+                        DropdownMenuItem(
+                            value: 'Individual', child: Text('Individual')),
+                        DropdownMenuItem(value: 'Group', child: Text('Group')),
+                        DropdownMenuItem(
+                            value: 'Workshop', child: Text('Workshop')),
+                      ],
+                      onChanged: (v) => setState(() => _classType = v ?? 'Individual'),
+                    ),
+                  ],
+                ),
+              )
+            else if (cat == 'admissions & consulting')
+              _buildFlatField(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextFormField(
+                      controller: _targetCountryController,
+                      decoration: const InputDecoration(
+                        labelText: 'Target Country',
+                        hintText: 'e.g., UK, Canada, Japan',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _fieldOfStudyController,
+                      decoration: const InputDecoration(
+                        labelText: 'Desired Field of Study',
+                        hintText: 'e.g., Computer Science, Business',
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
           ],
         );
       case 'hiring':
@@ -1841,12 +2054,54 @@ class _UnifiedRequestCreateScreenState
       case 'construction':
         return _buildConstructionPayload();
       case 'education':
-        return {
-          'level': _educationLevel,
-          'sessionsPerWeek': _sessionsPerWeekController.text.trim().isNotEmpty
-              ? int.tryParse(_sessionsPerWeekController.text.trim())
-              : null,
-        }..removeWhere((k, v) => v == null);
+    return {
+      // General education
+      'studentLevel': _educationLevel,
+      'preferredMode': _preferredEducationMode,
+      'numberOfStudents': _studentsCountController.text.trim().isNotEmpty
+        ? int.tryParse(_studentsCountController.text.trim())
+        : null,
+      'sessionsPerWeek': _sessionsPerWeekController.text.trim().isNotEmpty
+        ? int.tryParse(_sessionsPerWeekController.text.trim())
+        : null,
+      'detailedNeeds': _detailedNeedsController.text.trim().isNotEmpty
+        ? _detailedNeedsController.text.trim()
+        : null,
+      // Category-specific
+      if (_selectedCategory.toLowerCase() == 'academic tutoring') ...{
+      'subjects': _subjectsController.text.trim().isNotEmpty
+        ? _subjectsController.text.trim()
+        : null,
+      'syllabus': _syllabus,
+      'syllabusOther': _syllabus == 'Other'
+        ? _syllabusOtherController.text.trim()
+        : null,
+      },
+      if (_selectedCategory.toLowerCase() ==
+        'professional & skill development') ...{
+      'courseOrSkill': _courseOrSkillController.text.trim().isNotEmpty
+        ? _courseOrSkillController.text.trim()
+        : null,
+      'desiredOutcome':
+        _desiredOutcomeControllerEdu.text.trim().isNotEmpty
+          ? _desiredOutcomeControllerEdu.text.trim()
+          : null,
+      },
+      if (_selectedCategory.toLowerCase() == 'arts & hobbies') ...{
+      'artOrSport': _artOrSportController.text.trim().isNotEmpty
+        ? _artOrSportController.text.trim()
+        : null,
+      'classType': _classType,
+      },
+      if (_selectedCategory.toLowerCase() == 'admissions & consulting') ...{
+      'targetCountry': _targetCountryController.text.trim().isNotEmpty
+        ? _targetCountryController.text.trim()
+        : null,
+      'fieldOfStudy': _fieldOfStudyController.text.trim().isNotEmpty
+        ? _fieldOfStudyController.text.trim()
+        : null,
+      },
+    }..removeWhere((k, v) => v == null);
       case 'hiring':
         return {
           'positionType': _positionType,
