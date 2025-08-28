@@ -320,10 +320,17 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                                 ? _buildEmptyState()
                                 : RefreshIndicator(
                                     onRefresh: _loadInitial,
-                                    child: ListView.builder(
+                                    child: GridView.builder(
                                       controller: _scrollController,
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 16),
+                                      gridDelegate:
+                                          const SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: 2,
+                                        childAspectRatio: 0.75,
+                                        crossAxisSpacing: 12,
+                                        mainAxisSpacing: 12,
+                                      ),
                                       itemCount: _filteredRequests.length +
                                           (_fetchingMore ? 1 : 0),
                                       itemBuilder: (context, index) {
@@ -1070,91 +1077,126 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
     final requestType = _displayTypeFor(request);
     final style = _typeStyle(requestType);
 
-    return GlassTheme.glassCard(
-      margin: const EdgeInsets.only(bottom: 12),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        // Flat design - no shadows or borders
+      ),
       child: InkWell(
         onTap: () => _showRequestDetails(request),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: style.bg.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(style.icon, color: style.bg, size: 28),
+              // Type badge section
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: style.bg.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '$requestType Request',
+                  style: TextStyle(
+                    color: style.bg,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          request.title,
-                          style: GlassTheme.titleSmall,
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: style.bg.withOpacity(0.10),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                '$requestType Request',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: style.bg,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              _relativeTime(request.createdAt),
-                              style: GlassTheme.bodySmall,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                ),
               ),
               const SizedBox(height: 12),
+
+              // Title with better typography
               Text(
-                request.description,
-                style: GlassTheme.bodyMedium,
-                textAlign: TextAlign.center,
+                request.title,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  height: 1.2,
+                  color: GlassTheme.colors.textPrimary,
+                ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 14),
+
+              const SizedBox(height: 8),
+
+              // Description
+              Expanded(
+                child: Text(
+                  request.description,
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.4,
+                    color: GlassTheme.colors.textSecondary,
+                    fontWeight: FontWeight.w400,
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Bottom section with like and response icons only
+              Row(
+                children: [
+                  // Like count
+                  Icon(
+                    Icons.favorite_border,
+                    size: 16,
+                    color: GlassTheme.colors.textSecondary,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '0', // Placeholder for likes
+                    style: TextStyle(
+                      color: GlassTheme.colors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  // Response count
+                  Icon(
+                    Icons.chat_bubble_outline,
+                    size: 16,
+                    color: GlassTheme.colors.textSecondary,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${request.responses.length}',
+                    style: TextStyle(
+                      color: GlassTheme.colors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ), // Location with proper spacing
+              if (request.location?.city != null) const SizedBox(height: 8),
               if (request.location?.city != null)
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.location_on_outlined,
-                        size: 16, color: GlassTheme.colors.textSecondary),
-                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.location_on_outlined,
+                      size: 16,
+                      color: GlassTheme.colors.textSecondary,
+                    ),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         request.location!.city!,
-                        style: GlassTheme.bodySmall,
+                        style: TextStyle(
+                          color: GlassTheme.colors.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -1238,71 +1280,77 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
 
   // Loading skeleton shimmer-like blocks
   Widget _buildLoadingSkeleton() {
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      itemCount: 5,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+    return GridView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.75,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: 6,
       itemBuilder: (context, index) {
-        return GlassTheme.glassCard(
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: GlassTheme.colors.textTertiary.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          height: 16,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color:
-                                GlassTheme.colors.textTertiary.withOpacity(0.3),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          height: 12,
-                          width: 120,
-                          decoration: BoxDecoration(
-                            color:
-                                GlassTheme.colors.textTertiary.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              // Type badge skeleton
+              Container(
+                height: 28,
+                width: 80,
+                decoration: BoxDecoration(
+                  color: GlassTheme.colors.textTertiary.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               const SizedBox(height: 12),
+              // Title skeleton
               Container(
-                height: 14,
+                height: 16,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: GlassTheme.colors.textTertiary.withOpacity(0.2),
+                  color: GlassTheme.colors.textTertiary.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
+              // Description skeleton
+              Expanded(
+                child: Column(
+                  children: [
+                    Container(
+                      height: 12,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: GlassTheme.colors.textTertiary.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      height: 12,
+                      width: double.infinity * 0.7,
+                      decoration: BoxDecoration(
+                        color: GlassTheme.colors.textTertiary.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Budget skeleton
               Container(
-                height: 14,
-                width: MediaQuery.of(context).size.width * 0.6,
+                height: 28,
+                width: 100,
                 decoration: BoxDecoration(
-                  color: GlassTheme.colors.textTertiary.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(4),
+                  color: GlassTheme.colors.textTertiary.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(8),
                 ),
               ),
             ],
