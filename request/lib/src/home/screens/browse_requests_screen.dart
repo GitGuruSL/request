@@ -60,7 +60,12 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
       switch (m) {
         case 'item':
         case 'items':
-          return 'Item';
+          // Special-case: If module is set to item, still infer from text to
+          // catch rentals like "van hire". Only show Item when inference
+          // stays Items.
+          final inferred =
+              _getRequestTypeFromCategory(r.type.name, r.title, r.description);
+          return inferred != 'Items' ? inferred : 'Item';
         case 'rent':
         case 'rental':
         case 'rentals':
