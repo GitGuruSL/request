@@ -102,72 +102,89 @@ export const BUSINESS_MODULES = {
     dependencies: ['payment', 'messaging'],
     defaultEnabled: false
   },
-  FOOD_DELIVERY: {
-    id: 'food_delivery',
-    name: 'Food Delivery',
-    description: 'Restaurant food delivery and takeout services',
-    icon: '🍔',
-    color: '#FF9F43',
+  // New service modules (country toggles)
+  TOURS: {
+    id: 'tours',
+    name: 'Tours & Experiences',
+    description: 'Guided tours, experiences, accommodation, and transport',
+    icon: '🧭',
+    color: '#7D5BA6',
     features: [
-      'Restaurant listings',
-      'Menu management',
-      'Order tracking',
-      'Delivery zones',
-      'Special offers',
-      'Customer reviews'
+      'Tour packages',
+      'Experience booking',
+      'Accommodation',
+      'Transport'
     ],
-    dependencies: ['payment', 'location', 'driver'],
+    dependencies: ['messaging', 'location'],
     defaultEnabled: false
   },
-  GROCERY: {
-    id: 'grocery',
-    name: 'Grocery Delivery',
-    description: 'Grocery and essential items delivery',
-    icon: '🛒',
-    color: '#10AC84',
+  EVENTS: {
+    id: 'events',
+    name: 'Event Services',
+    description: 'Venues, catering, entertainment, rentals, staffing',
+    icon: '🎉',
+    color: '#E67E22',
     features: [
-      'Product catalogs',
-      'Store listings',
-      'Bulk ordering',
-      'Scheduled delivery',
-      'Fresh produce',
-      'Household items'
+      'Venue listings',
+      'Catering & supplies',
+      'Entertainment',
+      'Event staffing'
     ],
-    dependencies: ['payment', 'location', 'driver'],
+    dependencies: ['messaging'],
     defaultEnabled: false
   },
-  BEAUTY: {
-    id: 'beauty',
-    name: 'Beauty & Wellness',
-    description: 'Beauty services, salon bookings, and wellness',
-    icon: '💄',
-    color: '#FF6B9D',
+  CONSTRUCTION: {
+    id: 'construction',
+    name: 'Construction Services',
+    description: 'New builds, renovations, trades, consultation, materials',
+    icon: '🏗️',
+    color: '#C0392B',
     features: [
-      'Salon bookings',
-      'Service packages',
-      'Beauty professionals',
-      'Appointment scheduling',
-      'Treatment history',
-      'Before/after gallery'
+      'Trades & contractors',
+      'Renovations',
+      'Design & BOQ',
+      'Materials & equipment'
     ],
-    dependencies: ['payment', 'messaging', 'location'],
+    dependencies: ['messaging', 'location'],
     defaultEnabled: false
   },
-  PROFESSIONAL: {
-    id: 'professional',
-    name: 'Professional Services',
-    description: 'Legal, accounting, consulting, and professional services',
-    icon: '💼',
-    color: '#3742FA',
+  EDUCATION: {
+    id: 'education',
+    name: 'Education & Training',
+    description: 'Tutoring, courses, arts & hobbies, admissions consulting',
+    icon: '🎓',
+    color: '#3F51B5',
     features: [
-      'Professional profiles',
-      'Consultation booking',
-      'Document sharing',
-      'Secure messaging',
-      'Video consultations',
-      'Case management'
+      'Course listings',
+      'Levels & skills',
+      'Scheduling'
     ],
-    dependencies: ['payment', 'messaging'],
+    dependencies: ['messaging'],
+    defaultEnabled: false
+  },
+  HIRING: {
+    id: 'hiring',
+    name: 'Recruitment & Staffing',
+    description: 'Jobs across hospitality, retail, IT, construction, logistics',
+    icon: '🧑‍💼',
+    color: '#16A085',
+    features: [
+      'Job categories',
+      'Applicant messaging'
+    ],
+    dependencies: ['messaging'],
+    defaultEnabled: false
+  },
+  OTHER: {
+    id: 'other',
+    name: 'Other Services',
+    description: 'Miscellaneous services not covered elsewhere',
+    icon: '🧩',
+    color: '#95A5A6',
+    features: [
+      'General service listings'
+    ],
+    dependencies: ['messaging'],
     defaultEnabled: false
   }
 };
