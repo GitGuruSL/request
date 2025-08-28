@@ -244,6 +244,50 @@ class _EnhancedBrowseScreenState extends State<EnhancedBrowseScreen> {
     }
   }
 
+  // Prefer module from metadata when available; fall back to main type name.
+  String _getModuleOrTypeLabel(RequestModel request) {
+    final raw = (request.typeSpecificData['module'] ??
+            request.typeSpecificData['request_type'] ??
+            request.typeSpecificData['type'])
+        ?.toString()
+        .toLowerCase()
+        .trim();
+
+    switch (raw) {
+      case 'item':
+      case 'items':
+        return 'Item';
+      case 'service':
+      case 'services':
+        return 'Service';
+      case 'rental':
+      case 'rent':
+        return 'Rental';
+      case 'delivery':
+        return 'Delivery';
+      case 'ride':
+        return 'Ride';
+      case 'price':
+      case 'price_check':
+        return 'Price';
+      case 'tours':
+      case 'tour':
+        return 'Tours';
+      case 'events':
+      case 'event':
+        return 'Events';
+      case 'construction':
+        return 'Construction';
+      case 'education':
+        return 'Education';
+      case 'hiring':
+      case 'hire':
+        return 'Hiring';
+      default:
+        return _getTypeDisplayName(request.type);
+    }
+  }
+
   Widget _buildUserRoleIndicator() {
     if (_currentUser == null) return const SizedBox.shrink();
 
@@ -403,7 +447,7 @@ class _EnhancedBrowseScreenState extends State<EnhancedBrowseScreen> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          _getTypeDisplayName(request.type),
+                          _getModuleOrTypeLabel(request),
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
