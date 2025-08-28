@@ -14,6 +14,7 @@ import 'account/user_profile_screen.dart';
 import 'about_us_simple_screen.dart';
 import 'pricing/business_product_dashboard.dart';
 import 'settings_screen.dart';
+import '../widgets/smart_network_image.dart';
 
 class ModernMenuScreen extends StatefulWidget {
   const ModernMenuScreen({super.key});
@@ -53,6 +54,11 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
       json['name'] = authUser.fullName;
       _currentUser = json;
     }
+    // Also seed avatar from any cached enhanced user profile if present
+    final cachedEnhanced = EnhancedUserService.instance.currentUser;
+    if (cachedEnhanced != null) {
+      _profileImageUrl = cachedEnhanced.profilePictureUrl ?? _profileImageUrl;
+    }
     _isLoading = false; // render UI instantly; fill details in background
     // Kick off background refresh
     scheduleMicrotask(_refreshMenuData);
@@ -71,7 +77,10 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
             .timeout(const Duration(seconds: 3))
             .then((fresh) {
           if (fresh != null && mounted) {
-            setState(() => _currentUser = fresh.toMap());
+            setState(() {
+              _currentUser = fresh.toMap();
+              _profileImageUrl = fresh.profilePictureUrl ?? _profileImageUrl;
+            });
           }
         }).catchError((_) {}));
       }
@@ -221,12 +230,18 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
 
         // Centered Profile Picture
         GestureDetector(
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const UserProfileScreen(),
-            ),
-          ),
+          onTap: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const UserProfileScreen(),
+              ),
+            );
+            if (mounted) {
+              // Refresh user details & avatar after returning
+              await _refreshMenuData();
+            }
+          },
           child: Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
@@ -248,24 +263,22 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                 ),
               ],
             ),
-            child: CircleAvatar(
-              radius: 50,
-              backgroundImage:
-                  _profileImageUrl != null && _profileImageUrl!.isNotEmpty
-                      ? NetworkImage(_profileImageUrl!)
-                      : null,
-              backgroundColor: GlassTheme.isDarkMode
-                  ? const Color(0xFF404040)
-                  : const Color(0xFFF1F5F9),
-              child: _profileImageUrl == null || _profileImageUrl!.isEmpty
-                  ? Icon(
-                      Icons.person,
-                      color: GlassTheme.isDarkMode
-                          ? Colors.white70
-                          : const Color(0xFF64748B),
-                      size: 50,
-                    )
-                  : null,
+            child: SizedBox(
+              width: 100,
+              height: 100,
+              child: ClipOval(
+                child:
+                    (_profileImageUrl != null && _profileImageUrl!.isNotEmpty)
+                        ? SmartNetworkImage(
+                            imageUrl: _profileImageUrl!,
+                            fit: BoxFit.cover,
+                            width: 100,
+                            height: 100,
+                            errorBuilder: (c, e, st) => _avatarFallback(),
+                            placeholder: _avatarShimmer(),
+                          )
+                        : _avatarFallback(),
+              ),
             ),
           ),
         ),
@@ -673,6 +686,34 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
       ),
     );
   }
+}
+
+Widget _avatarFallback() {
+  return Container(
+    color: GlassTheme.isDarkMode
+        ? const Color(0xFF404040)
+        : const Color(0xFFF1F5F9),
+    child: Icon(
+      Icons.person,
+      color: GlassTheme.isDarkMode ? Colors.white70 : const Color(0xFF64748B),
+      size: 50,
+    ),
+  );
+}
+
+Widget _avatarShimmer() {
+  return Container(
+    color: GlassTheme.isDarkMode
+        ? const Color(0xFF404040)
+        : const Color(0xFFF1F5F9),
+    child: const Center(
+      child: SizedBox(
+        width: 22,
+        height: 22,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+    ),
+  );
 }
 
 class _MenuItem {

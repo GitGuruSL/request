@@ -19,6 +19,7 @@ import '../../theme/app_theme.dart';
 import '../../services/banner_service.dart';
 import '../../models/banner_item.dart' as model;
 import '../../widgets/smart_network_image.dart';
+import '../../services/enhanced_user_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -640,7 +641,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = RestAuthService.instance.currentUser;
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
@@ -712,24 +712,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     builder: (_) => const UserProfileScreen(),
                   ),
                 );
+                // Refresh any state that may have changed (including potential avatar)
                 await _loadUnreadCounts();
+                if (mounted) setState(() {});
               },
-              icon: CircleAvatar(
-                radius: 16,
-                backgroundColor: GlassTheme.colors.primaryBlue,
-                child: Text(
-                  (user?.displayName?.isNotEmpty == true
-                          ? user!.displayName![0]
-                          : user?.email.isNotEmpty == true
-                              ? user!.email[0]
-                              : 'U')
-                      .toUpperCase(),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
+              icon: _AppBarAvatar(),
             ),
           ),
         ],
@@ -936,6 +923,94 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
+
+class _AppBarAvatar extends StatefulWidget {
+  @override
+  State<_AppBarAvatar> createState() => _AppBarAvatarState();
+}
+
+class _AppBarAvatarState extends State<_AppBarAvatar> {
+  String? _photoUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      // Try enhanced user service for richer profile (photo_url)
+      final u = await EnhancedUserService.instance.getCurrentUserModel();
+      if (!mounted) return;
+      setState(() {
+        _photoUrl = u?.profilePictureUrl;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _photoUrl = null);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _AppBarAvatar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Re-fetch when parent rebuilds (e.g., after returning from profile page)
+    _load();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = RestAuthService.instance.currentUser;
+    // Try to use cached enhanced user photo if available
+    _photoUrl = _photoUrl ??
+        EnhancedUserService.instance.currentUser?.profilePictureUrl;
+    final fallbackInitial = (user?.displayName?.isNotEmpty == true
+            ? user!.displayName![0]
+            : user?.email.isNotEmpty == true
+                ? user!.email[0]
+                : 'U')
+        .toUpperCase();
+    if (_photoUrl != null && _photoUrl!.isNotEmpty) {
+      return ClipOval(
+        child: SizedBox(
+          width: 32,
+          height: 32,
+          child: SmartNetworkImage(
+            imageUrl: _photoUrl!,
+            fit: BoxFit.cover,
+            errorBuilder: (c, e, st) => _buildInitialsAvatar(fallbackInitial),
+            placeholder: Container(
+              color: Colors.grey.shade200,
+              child: const Center(
+                child: SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    return _buildInitialsAvatar(fallbackInitial);
+  }
+}
+
+Widget _buildInitialsAvatar(String ch) {
+  return CircleAvatar(
+    radius: 16,
+    backgroundColor: GlassTheme.colors.primaryBlue,
+    child: Text(
+      ch,
+      style: const TextStyle(
+        fontWeight: FontWeight.bold,
+        color: Colors.white,
+      ),
+    ),
+  );
 }
 
 class _NetworkBannerCard extends StatelessWidget {
