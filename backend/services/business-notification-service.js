@@ -36,9 +36,9 @@ class BusinessNotificationService {
         return await this.getProductSellerBusinesses(countryCode);
       }
 
-      // Common requests: product sellers and delivery businesses should respond
+      // Common requests: anyone can respond (notify all verified businesses, prioritize category matches)
       if (COMMON.includes(type)) {
-        return await this.getBusinessesByTypeNames(countryCode, ['product seller', 'delivery', 'delivery service']);
+        return await this.getAllBusinessesWithCategoryPreference(categoryId, subcategoryId, countryCode);
       }
 
       // For item/service/rent requests, notify all verified businesses in country

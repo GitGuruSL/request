@@ -264,10 +264,10 @@ const GlobalBusinessTypesManagement = () => {
                           const cap = getCapabilitiesForBusinessType(type.name);
                           const chips = [];
                           if (cap.managePrices) chips.push(<Chip key="cap-prices" label="Manage Prices" size="small" color="secondary" />);
-                          if (cap.sendItem) chips.push(<Chip key="cap-item" label="Send Item" size="small" />);
-                          if (cap.sendService) chips.push(<Chip key="cap-service" label="Send Service" size="small" />);
-                          if (cap.sendRent) chips.push(<Chip key="cap-rent" label="Send Rent" size="small" />);
-                          if (cap.sendDelivery) chips.push(<Chip key="cap-delivery" label="Send Delivery" size="small" />);
+                          if (cap.respondItem) chips.push(<Chip key="cap-item" label="Respond Item" size="small" />);
+                          if (cap.respondService) chips.push(<Chip key="cap-service" label="Respond Service" size="small" />);
+                          if (cap.respondRent) chips.push(<Chip key="cap-rent" label="Respond Rent" size="small" />);
+                          if (cap.respondDeliveryRequest) chips.push(<Chip key="cap-delivery" label="Respond Delivery Request" size="small" />);
                           if (cap.respondDelivery) chips.push(<Chip key="cap-respond-delivery" label="Respond Delivery" size="small" color="success" />);
                           if (cap.respondOther) chips.push(<Chip key="cap-respond-other" label="Respond Other" size="small" color="success" />);
                           return (
@@ -479,10 +479,10 @@ const GlobalBusinessTypesManagement = () => {
                   const cap = getCapabilitiesForBusinessType(formData.name);
                   const chips = [];
                   if (cap.managePrices) chips.push(<Chip key="cap-prices" label="Manage Prices" size="small" color="secondary" />);
-                  if (cap.sendItem) chips.push(<Chip key="cap-item" label="Send Item" size="small" />);
-                  if (cap.sendService) chips.push(<Chip key="cap-service" label="Send Service" size="small" />);
-                  if (cap.sendRent) chips.push(<Chip key="cap-rent" label="Send Rent" size="small" />);
-                  if (cap.sendDelivery) chips.push(<Chip key="cap-delivery" label="Send Delivery" size="small" />);
+                  if (cap.respondItem) chips.push(<Chip key="cap-item" label="Respond Item" size="small" />);
+                  if (cap.respondService) chips.push(<Chip key="cap-service" label="Respond Service" size="small" />);
+                  if (cap.respondRent) chips.push(<Chip key="cap-rent" label="Respond Rent" size="small" />);
+                  if (cap.respondDeliveryRequest) chips.push(<Chip key="cap-delivery" label="Respond Delivery Request" size="small" />);
                   if (cap.respondDelivery) chips.push(<Chip key="cap-respond-delivery" label="Respond Delivery" size="small" color="success" />);
                   if (cap.respondOther) chips.push(<Chip key="cap-respond-other" label="Respond Other" size="small" color="success" />);
                   return (
