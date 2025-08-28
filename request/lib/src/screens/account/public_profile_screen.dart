@@ -128,7 +128,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
             radius: 28,
             backgroundColor: Colors.grey[200],
             // Use foregroundImage so child fallback shows until load and on error
-            foregroundImage:
+            backgroundImage:
                 displayUrl != null ? NetworkImage(displayUrl) : null,
             child: Text(
               p.displayName.isNotEmpty ? p.displayName[0].toUpperCase() : 'U',

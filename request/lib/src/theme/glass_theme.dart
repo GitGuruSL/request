@@ -269,6 +269,8 @@ class GlassTheme {
   }) {
     return Container(
       decoration: backgroundGradient,
+      // Ensure it fills the entire available space
+      constraints: const BoxConstraints.expand(),
       child: child,
     );
   }

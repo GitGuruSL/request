@@ -46,7 +46,8 @@ class GlassPage extends StatelessWidget {
               GlassTheme.isDarkMode ? Brightness.light : Brightness.dark,
           statusBarBrightness:
               GlassTheme.isDarkMode ? Brightness.dark : Brightness.light,
-          systemNavigationBarColor: Colors.transparent,
+          // Use a light nav bar color to avoid black strip on some devices
+          systemNavigationBarColor: const Color(0xFFF5F5F5),
           systemNavigationBarIconBrightness:
               GlassTheme.isDarkMode ? Brightness.light : Brightness.dark,
           systemNavigationBarDividerColor: Colors.transparent,
