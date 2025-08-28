@@ -655,7 +655,7 @@ class _UnifiedRequestCreateScreenState
         ),
         const SizedBox(height: 16),
 
-        // Category (Use Category Picker)
+        // Category (Use Category Picker) – moved to top
         _buildFlatField(
           child: TextFormField(
             readOnly: true,
@@ -3204,45 +3204,7 @@ class _UnifiedRequestCreateScreenState
   Widget _buildRentalFields() {
     return Column(
       children: [
-        // Request Title
-        _buildFlatField(
-          child: TextFormField(
-            controller: _titleController,
-            decoration: const InputDecoration(
-              labelText: 'Request Title',
-              hintText: 'Enter a short, descriptive title',
-            ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Please enter a title';
-              }
-              return null;
-            },
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Description
-        _buildFlatField(
-          child: TextFormField(
-            controller: _descriptionController,
-            maxLines: 4,
-            decoration: const InputDecoration(
-              labelText: 'Description',
-              hintText:
-                  'Provide detailed information about the rental needed...',
-            ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Please enter a description';
-              }
-              return null;
-            },
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Item to Rent (Use Category Picker)
+        // Item to Rent (Use Category Picker) – moved to top
         _buildFlatField(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -3312,6 +3274,45 @@ class _UnifiedRequestCreateScreenState
           ),
         ),
         const SizedBox(height: 16),
+        // Request Title
+        _buildFlatField(
+          child: TextFormField(
+            controller: _titleController,
+            decoration: const InputDecoration(
+              labelText: 'Request Title',
+              hintText: 'Enter a short, descriptive title',
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter a title';
+              }
+              return null;
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Description
+        _buildFlatField(
+          child: TextFormField(
+            controller: _descriptionController,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              labelText: 'Description',
+              hintText:
+                  'Provide detailed information about the rental needed...',
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter a description';
+              }
+              return null;
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Category moved to the top
 
         // Start Date & Time
         _buildFlatField(
@@ -3598,7 +3599,7 @@ class _UnifiedRequestCreateScreenState
         ),
         const SizedBox(height: 16),
 
-        // Item Categories (Use Category Picker)
+        // Item Categories (Use Category Picker) – keep high on the form
         _buildFlatField(
           child: GestureDetector(
             onTap: () async {

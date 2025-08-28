@@ -140,8 +140,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
   String _tourType = 'Cultural & Heritage';
   String _preferredLanguage = 'English';
   final _otherLanguageController = TextEditingController();
-  final Set<String> _timeOfDayPrefs =
-      <String>{}; // Morning, Afternoon, Evening, Full Day
+  final Set<String> _timeOfDayPrefs = <String>{}; // Morning, Afternoon, etc.
   bool _jeepIncluded = false;
   String _skillLevel = 'Beginner';
 
@@ -149,8 +148,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
   String _transportType = 'Hire Driver for Tour';
   final _tourPickupController = TextEditingController();
   final _tourDropoffController = TextEditingController();
-  final Set<String> _vehicleTypes =
-      <String>{}; // Car (Sedan), Van (AC), Tuk-Tuk, Motorbike/Scooter, Luxury Vehicle
+  final Set<String> _vehicleTypes = <String>{};
   String _luggageOption = 'Small Bags Only';
   final _itineraryController = TextEditingController();
   final _flightNumberController = TextEditingController();
@@ -871,6 +869,31 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
   Widget _buildItemFields() {
     return Column(
       children: [
+        // Category (Use Category Picker) – moved to top
+        _buildFlatField(
+          child: TextFormField(
+            readOnly: true,
+            decoration: const InputDecoration(
+              labelText: 'Category',
+              hintText: 'Select a category',
+              suffixIcon: Icon(Icons.arrow_drop_down),
+            ),
+            controller: TextEditingController(
+              text: _selectedSubcategory != null
+                  ? '$_selectedCategory > $_selectedSubcategory'
+                  : _selectedCategory,
+            ),
+            onTap: _showCategoryPicker,
+            validator: (value) {
+              if (_selectedCategory == 'Electronics' &&
+                  _selectedCategoryId == null) {
+                return 'Please select a category';
+              }
+              return null;
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
         // Request Title
         _buildFlatField(
           child: TextFormField(
@@ -926,31 +949,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
         ),
         const SizedBox(height: 16),
 
-        // Category (Use Category Picker)
-        _buildFlatField(
-          child: TextFormField(
-            readOnly: true,
-            decoration: const InputDecoration(
-              labelText: 'Category',
-              hintText: 'Select a category',
-              suffixIcon: Icon(Icons.arrow_drop_down),
-            ),
-            controller: TextEditingController(
-              text: _selectedSubcategory != null
-                  ? '$_selectedCategory > $_selectedSubcategory'
-                  : _selectedCategory,
-            ),
-            onTap: _showCategoryPicker,
-            validator: (value) {
-              if (_selectedCategory == 'Electronics' &&
-                  _selectedCategoryId == null) {
-                return 'Please select a category';
-              }
-              return null;
-            },
-          ),
-        ),
-        const SizedBox(height: 16),
+        // Category moved to the top
 
         // Quantity
         _buildFlatField(
@@ -3416,45 +3415,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
   Widget _buildRentalFields() {
     return Column(
       children: [
-        // Request Title
-        _buildFlatField(
-          child: TextFormField(
-            controller: _titleController,
-            decoration: const InputDecoration(
-              labelText: 'Request Title',
-              hintText: 'Enter a short, descriptive title',
-            ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Please enter a title';
-              }
-              return null;
-            },
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Description
-        _buildFlatField(
-          child: TextFormField(
-            controller: _descriptionController,
-            maxLines: 4,
-            decoration: const InputDecoration(
-              labelText: 'Description',
-              hintText:
-                  'Provide detailed information about the rental needed...',
-            ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Please enter a description';
-              }
-              return null;
-            },
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Item to Rent (Use Category Picker)
+        // Item to Rent (Use Category Picker) – moved to top
         _buildFlatField(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -3527,6 +3488,45 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           ),
         ),
         const SizedBox(height: 16),
+        // Request Title
+        _buildFlatField(
+          child: TextFormField(
+            controller: _titleController,
+            decoration: const InputDecoration(
+              labelText: 'Request Title',
+              hintText: 'Enter a short, descriptive title',
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter a title';
+              }
+              return null;
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Description
+        _buildFlatField(
+          child: TextFormField(
+            controller: _descriptionController,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              labelText: 'Description',
+              hintText:
+                  'Provide detailed information about the rental needed...',
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter a description';
+              }
+              return null;
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Category moved to the top
 
         // Start Date & Time
         _buildFlatField(
