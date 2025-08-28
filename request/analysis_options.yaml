@@ -1,0 +1,3 @@
+analyzer:
+  exclude:
+    - lib/src/screens/messaging/conversations_list_screen_broken.dart

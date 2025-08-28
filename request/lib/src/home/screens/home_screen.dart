@@ -103,7 +103,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _loadModules() async {
+  Future<void> _loadModules({bool forceRefresh = false}) async {
     if (_loadingModules) return;
     setState(() => _loadingModules = true);
     try {
@@ -112,7 +112,8 @@ class _HomeScreenState extends State<HomeScreen> {
         await cs.loadPersistedCountry();
       }
       final code = CountryService.instance.countryCode ?? 'US';
-      final mods = await ModuleService.getCountryModules(code);
+      final mods = await ModuleService.getCountryModules(code,
+          forceRefresh: forceRefresh);
       if (!mounted) return;
       setState(() => _modules = mods);
     } catch (_) {
@@ -737,7 +738,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: SafeArea(
           child: RefreshIndicator(
             onRefresh: () async {
-              await _loadModules();
+              await _loadModules(forceRefresh: true);
               await _loadPopularProducts();
               await _loadBanners(); // also refresh banners
             },
