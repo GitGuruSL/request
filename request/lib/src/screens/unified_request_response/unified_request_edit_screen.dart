@@ -32,110 +32,163 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
   final _descriptionController = TextEditingController();
   final _locationController = TextEditingController();
   final _budgetController = TextEditingController();
-  Widget _buildDeliveryFieldsDupe() {
-    return Column(
-      children: [
-        // Item Categories (Use Category Picker) – moved to top
-        _buildFlatField(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Item Category',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: () async {
-                  final result =
-                      await showModalBottomSheet<Map<String, String>>(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.white,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.vertical(top: Radius.circular(20)),
-                    ),
-                    builder: (context) => SizedBox(
-                      height: MediaQuery.of(context).size.height * 0.8,
-                      child: CategoryPicker(
-                        requestType: 'delivery',
-                        scrollController: ScrollController(),
-                      ),
-                    ),
-                  );
 
-                  if (result != null && result['category'] != null) {
-                    setState(() {
-                      _selectedCategory = result['category']!;
-                      _selectedSubcategory = result['subcategory'];
-                      // Prefer ID fields when provided
-                      _selectedCategoryId =
-                          result['categoryId'] ?? result['category']!;
-                      _selectedSubCategoryId =
-                          result['subcategoryId'] ?? result['subcategory'];
-                    });
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade300),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        (_selectedSubcategory != null &&
-                                _selectedSubcategory!.isNotEmpty)
-                            ? _selectedSubcategory!
-                            : (_selectedCategory.isNotEmpty
-                                ? _selectedCategory
-                                : 'Select item category'),
-                        style: TextStyle(
-                          color: (_selectedSubcategory != null &&
-                                      _selectedSubcategory!.isNotEmpty) ||
-                                  _selectedCategory.isNotEmpty
-                              ? Colors.black
-                              : Colors.grey.shade600,
-                        ),
-                      ),
-                      const Icon(Icons.arrow_drop_down),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
+  // Item-specific controllers
+  final _itemNameController = TextEditingController();
+  final _quantityController = TextEditingController();
+  final _categoryController = TextEditingController();
+
+  // Service-specific controllers
+  final _specialInstructionsController = TextEditingController();
+  // Service module dynamic controllers/fields (mirror create screen)
+  final _peopleCountController = TextEditingController(); // tours/events
+  final _durationDaysController = TextEditingController(); // tours
+  final _guestsCountController = TextEditingController(); // events
+  final _areaSizeController = TextEditingController(); // construction (sqft)
+  // Construction module
+  final _projectLocationNoteController = TextEditingController();
+  String _constructionMainCategory = '';
+  String _constructionScopeOfWork = 'Labor & Materials (Provide a full quote).';
+  final _constructionMeasurementsController = TextEditingController();
+  final _constructionItemsListController = TextEditingController();
+  bool _constructionDeliveryRequired = false;
+  DateTime? _rentalStartDate; // for equipment rental
+  DateTime? _rentalEndDate; // for equipment rental
+  int _numberOfFloors = 1;
+  String _plansStatus = '';
+  String _propertyType = 'Residential Land';
+  final _landSizeController = TextEditingController();
+  final _sessionsPerWeekController = TextEditingController(); // education
+  // Education module
+  String _preferredEducationMode = 'Online';
+  final _studentsCountController = TextEditingController();
+  final _detailedNeedsController = TextEditingController();
+  // Education: Academic Tutoring
+  final _subjectsController = TextEditingController();
+  String _syllabus = 'Local (National)';
+  final _syllabusOtherController = TextEditingController();
+  // Education: Professional & Skill Development
+  final _courseOrSkillController = TextEditingController();
+  final _desiredOutcomeControllerEdu = TextEditingController();
+  // Education: Arts & Hobbies
+  final _artOrSportController = TextEditingController();
+  String _classType = 'Individual';
+  // Education: Admissions & Consulting
+  final _targetCountryController = TextEditingController();
+  final _fieldOfStudyController = TextEditingController();
+  final _experienceYearsController = TextEditingController(); // hiring
+  bool _needsGuide = false; // tours
+  bool _pickupRequiredForTour = false; // tours
+  String _educationLevel = 'Beginner'; // education
+  String _positionType = 'Full-time'; // hiring
+  // Hiring module (edit)
+  final TextEditingController _jobTitleController = TextEditingController();
+  final TextEditingController _companyNameController = TextEditingController();
+  final TextEditingController _salaryController = TextEditingController();
+  String _payPeriod = 'Monthly'; // Monthly, Weekly, Daily, Hourly
+  bool _isSalaryNegotiable = false;
+  final Set<String> _benefits =
+      <String>{}; // EPF/ETF, Meals, Accommodation, Transport, OT
+  String _workArrangement = 'On-site'; // On-site, Hybrid, Remote
+  String _educationRequirement =
+      'O/L'; // O/L, A/L, Diploma, Degree, Postgraduate
+  final TextEditingController _skillsController =
+      TextEditingController(); // comma separated
+  String _applyMethod = 'In-App'; // In-App, Call, Email
+  final TextEditingController _contactPersonController =
+      TextEditingController();
+  final TextEditingController _contactPhoneController = TextEditingController();
+  final TextEditingController _contactEmailController = TextEditingController();
+  DateTime? _applicationDeadline; // date-only
+
+  // Tours module – general and category-specific state (edit)
+  DateTime? _tourStartDate; // date-only
+  DateTime? _tourEndDate; // date-only
+  int _adults = 2;
+  int _children = 0;
+
+  // Events module – general and category-specific state (edit)
+  DateTime? _eventDate; // date-only
+  TimeOfDay? _eventStartTime;
+  TimeOfDay? _eventEndTime;
+  String _eventType = 'Wedding';
+  final TextEditingController _eventOtherTypeController =
+      TextEditingController();
+  // Venues
+  String _venueType = 'Indoor';
+  final Set<String> _requiredFacilities = <String>{};
+  // Food & Beverage
+  final Set<String> _cuisineTypes = <String>{};
+  String _serviceStyle = 'Buffet';
+  final TextEditingController _dietaryNeedsController = TextEditingController();
+  // Entertainment & Talent
+  String _talentType = '';
+  final TextEditingController _durationRequiredController =
+      TextEditingController();
+  String _talentVenueType = 'Indoor';
+  // Services & Staff
+  String _staffType = '';
+  int _staffCount = 1;
+  final TextEditingController _hoursRequiredController =
+      TextEditingController();
+  // Rentals & Supplies
+  final TextEditingController _rentalItemsListController =
+      TextEditingController();
+  final Set<String> _rentalRequiredServices = <String>{};
+
+  // Tours & Experiences
+  String _tourType = 'Cultural & Heritage';
+  String _preferredLanguage = 'English';
+  final _otherLanguageController = TextEditingController();
+  final Set<String> _timeOfDayPrefs = <String>{}; // Morning, Afternoon, etc.
+  bool _jeepIncluded = false;
+  String _skillLevel = 'Beginner';
+
+  // Transportation (within tours)
+  String _transportType = 'Hire Driver for Tour';
+  final _tourPickupController = TextEditingController();
+  final _tourDropoffController = TextEditingController();
+  final Set<String> _vehicleTypes = <String>{};
+  String _luggageOption = 'Small Bags Only';
+  final _itineraryController = TextEditingController();
+  final _flightNumberController = TextEditingController();
+  final _flightTimeController = TextEditingController();
+  bool _licenseConfirmed = false;
+
+  // Accommodation (within tours)
+  String _accommodationType = 'Hotel';
+  int _unitsCount = 1; // rooms or beds
+  String _unitsType = 'rooms'; // 'rooms' or 'beds'
+  final Set<String> _amenities =
+      <String>{}; // AC, Hot Water, Wi-Fi, Kitchen, Pool, Parking
+  String _boardBasis = 'Room Only';
+  bool _cookStaffRequired = false;
+  bool _mealsWithHostFamily = false;
+  String _hostelRoomType = 'Dormitory';
+
+  // Rental-specific controllers
+  final _itemToRentController = TextEditingController();
+  final _rentalItemController = TextEditingController();
+
+  // Delivery-specific controllers
+  final _pickupLocationController = TextEditingController();
+  final _dropoffLocationController = TextEditingController();
+  final _itemCategoryController = TextEditingController();
+  final _itemDescriptionController = TextEditingController();
+  final _weightController = TextEditingController();
+  final _dimensionsController = TextEditingController();
+
+  RequestType _selectedType = RequestType.item;
+  String? _selectedModule; // inferred module for service type
+  String _selectedCondition = 'New';
+  String _selectedUrgency = 'Flexible';
+  String _selectedCategory = 'Electronics';
   String? _selectedCategoryId;
   String? _selectedSubCategoryId;
   String? _selectedSubcategory;
   String _pickupDropoffPreference = 'pickup';
   DateTime? _startDate;
-        // Request Title
-        _buildFlatField(
-          child: TextFormField(
-            controller: _titleController,
-            decoration: const InputDecoration(
-              labelText: 'Request Title',
-              hintText: 'Enter a short, descriptive title',
-            ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Please enter a title';
-              }
-              return null;
-            },
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Pickup Location
+  DateTime? _endDate;
   DateTime? _preferredDateTime;
   DateTime? _startDateTime;
   DateTime? _endDateTime;
@@ -540,7 +593,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
             '';
         _selectedCategoryId = typeData['categoryId']?.toString() ??
             typeData['itemCategory']?.toString() ??
-      // Drop-off Location
+            typeData['category']?.toString();
         _selectedSubcategory = typeData['subcategory']?.toString();
         _selectedSubCategoryId = typeData['subcategoryId']?.toString() ??
             typeData['subcategory']?.toString();
@@ -3689,82 +3742,6 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
   Widget _buildDeliveryFields() {
     return Column(
       children: [
-        // Item Categories (Use Category Picker) – moved to top
-        _buildFlatField(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Item Category',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: () async {
-                  final result =
-                      await showModalBottomSheet<Map<String, String>>(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.white,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.vertical(top: Radius.circular(20)),
-                    ),
-                    builder: (context) => SizedBox(
-                      height: MediaQuery.of(context).size.height * 0.8,
-                      child: CategoryPicker(
-                        requestType: 'delivery',
-                        scrollController: ScrollController(),
-                      ),
-                    ),
-                  );
-
-                  if (result != null && result['category'] != null) {
-                    setState(() {
-                      _selectedCategory = result['category']!;
-                      _selectedSubcategory = result['subcategory'];
-                      // Prefer ID fields when provided
-                      _selectedCategoryId =
-                          result['categoryId'] ?? result['category']!;
-                      _selectedSubCategoryId =
-                          result['subcategoryId'] ?? result['subcategory'];
-                    });
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade300),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        (_selectedSubcategory != null &&
-                                _selectedSubcategory!.isNotEmpty)
-                            ? _selectedSubcategory!
-                            : (_selectedCategory.isNotEmpty
-                                ? _selectedCategory
-                                : 'Select item category'),
-                        style: TextStyle(
-                          color: (_selectedSubcategory != null &&
-                                      _selectedSubcategory!.isNotEmpty) ||
-                                  _selectedCategory.isNotEmpty
-                              ? Colors.black
-                              : Colors.grey.shade600,
-                        ),
-                      ),
-                      const Icon(Icons.arrow_drop_down),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-
         // Request Title
         _buildFlatField(
           child: TextFormField(
@@ -3776,7 +3753,79 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
                 return 'Please enter a title';
+              }
+              return null;
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
 
+        // Pickup Location
+        _buildFlatField(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Pickup Location',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              AccurateLocationPickerWidget(
+                controller: _pickupLocationController,
+                labelText: '',
+                hintText: 'Enter pickup location',
+                isRequired: true,
+                prefixIcon: Icons.location_on,
+                onLocationSelected: (address, lat, lng) {
+                  setState(() {
+                    _pickupLocationController.text = address;
+                    _pickupLatitude = lat;
+                    _pickupLongitude = lng;
+                  });
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Drop-off Location
+        _buildFlatField(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Drop-off Location',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              AccurateLocationPickerWidget(
+                controller: _dropoffLocationController,
+                labelText: '',
+                hintText: 'Enter dropoff location',
+                isRequired: true,
+                prefixIcon: Icons.location_on,
+                onLocationSelected: (address, lat, lng) {
+                  setState(() {
+                    _dropoffLocationController.text = address;
+                    _dropoffLatitude = lat;
+                    _dropoffLongitude = lng;
+                  });
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Item Categories (Use Category Picker)
+        _buildFlatField(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Item Category',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 8),
               GestureDetector(
@@ -3840,9 +3889,9 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
             ],
           ),
         ),
-  const SizedBox(height: 16),
+        const SizedBox(height: 16),
 
-  // Item Description
+        // Item Description
         _buildFlatField(
           child: TextFormField(
             controller: _descriptionController,
@@ -3861,7 +3910,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
         ),
         const SizedBox(height: 16),
 
-  // Weight & Dimensions
+        // Weight & Dimensions
         _buildFlatField(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -3898,7 +3947,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
         ),
         const SizedBox(height: 16),
 
-  // Preferred Delivery Time
+        // Preferred Delivery Time
         _buildFlatField(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -3950,7 +3999,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
         ),
         const SizedBox(height: 16),
 
-  // Special Instructions
+        // Special Instructions
         _buildFlatField(
           child: TextFormField(
             controller: _specialInstructionsController,
@@ -3963,7 +4012,7 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
         ),
         const SizedBox(height: 16),
 
-  // Photo Upload
+        // Photo Upload
         _buildFlatField(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
