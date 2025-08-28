@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../services/database');
 const auth = require('../services/auth');
+const notif = require('../services/notification-helper');
 
 // Ensure reviews table exists (idempotent)
 async function ensureReviewsTable() {
@@ -74,6 +75,26 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       VALUES ($1,$2,$3,$4,$5,$6,$7)
       RETURNING *
     `, [request_id, reqRow.accepted_response_id, reviewerId, reqRow.responder_id, rate, comment || null, reqRow.country_code || null]);
+
+    // Best-effort: notify the responder that they received a review
+    try {
+      await notif.createNotification({
+        recipientId: reqRow.responder_id,
+        senderId: reviewerId,
+        type: 'review.received',
+        title: 'You received a review',
+        message: `You were rated ${rate}/5` + (comment && String(comment).trim() ? `: "${String(comment).trim().slice(0, 140)}"` : ''),
+        data: {
+          request_id,
+          response_id: reqRow.accepted_response_id,
+          review_id: inserted.id,
+          rating: rate,
+          country_code: reqRow.country_code || null,
+        },
+      });
+    } catch (notifyError) {
+      console.warn('reviews.create: failed to send notification (non-fatal):', notifyError.message);
+    }
 
     return res.status(201).json({ success: true, message: 'Review submitted', data: inserted });
   } catch (error) {
