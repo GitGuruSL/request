@@ -57,9 +57,6 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final baseBg = GlassTheme.isDarkMode
-        ? const Color(0xFF0E0F10)
-        : const Color(0xFFF6F7FB);
     if (_loading) {
       return const GlassPage(
         title: 'Profile',
@@ -83,7 +80,8 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: Container(
-            color: baseBg,
+            // Transparent to let Glass gradient show
+            color: Colors.transparent,
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,19 +127,16 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
           CircleAvatar(
             radius: 28,
             backgroundColor: Colors.grey[200],
-            backgroundImage:
+            // Use foregroundImage so child fallback shows until load and on error
+            foregroundImage:
                 displayUrl != null ? NetworkImage(displayUrl) : null,
-            child: displayUrl == null
-                ? Text(
-                    p.displayName.isNotEmpty
-                        ? p.displayName[0].toUpperCase()
-                        : 'U',
-                    style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black54),
-                  )
-                : null,
+            child: Text(
+              p.displayName.isNotEmpty ? p.displayName[0].toUpperCase() : 'U',
+              style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black54),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
