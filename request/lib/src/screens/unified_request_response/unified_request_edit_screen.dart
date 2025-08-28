@@ -81,6 +81,24 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
   bool _pickupRequiredForTour = false; // tours
   String _educationLevel = 'Beginner'; // education
   String _positionType = 'Full-time'; // hiring
+  // Hiring module (edit)
+  final TextEditingController _jobTitleController = TextEditingController();
+  final TextEditingController _companyNameController = TextEditingController();
+  final TextEditingController _salaryController = TextEditingController();
+  String _payPeriod = 'Monthly'; // Monthly, Weekly, Daily, Hourly
+  bool _isSalaryNegotiable = false;
+  final Set<String> _benefits =
+    <String>{}; // EPF/ETF, Meals, Accommodation, Transport, OT
+  String _workArrangement = 'On-site'; // On-site, Hybrid, Remote
+  String _educationRequirement = 'O/L'; // O/L, A/L, Diploma, Degree, Postgraduate
+  final TextEditingController _skillsController =
+    TextEditingController(); // comma separated
+  String _applyMethod = 'In-App'; // In-App, Call, Email
+  final TextEditingController _contactPersonController =
+    TextEditingController();
+  final TextEditingController _contactPhoneController = TextEditingController();
+  final TextEditingController _contactEmailController = TextEditingController();
+  DateTime? _applicationDeadline; // date-only
 
   // Tours module – general and category-specific state (edit)
   DateTime? _tourStartDate; // date-only
@@ -507,11 +525,52 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
               }
               break;
             case 'hiring':
+              final jt = mf['jobTitle'];
+              if (jt is String) _jobTitleController.text = jt;
+              final cn = mf['companyName'];
+              if (cn is String) _companyNameController.text = cn;
               final pt = mf['positionType'];
               if (pt is String && pt.isNotEmpty) _positionType = pt;
+              final wa = mf['workArrangement'];
+              if (wa is String && wa.isNotEmpty) _workArrangement = wa;
+              final sal = mf['salary'];
+              if (sal != null) _salaryController.text = sal.toString();
+              final pp = mf['payPeriod'];
+              if (pp is String && pp.isNotEmpty) _payPeriod = pp;
+              _isSalaryNegotiable = (mf['salaryNegotiable'] == true);
+              final ben = mf['benefits'];
+              if (ben is List) {
+                _benefits
+                  ..clear()
+                  ..addAll(ben.whereType<String>());
+              }
               final exp = mf['experienceYears'];
               if (exp != null) {
                 _experienceYearsController.text = exp.toString();
+              }
+              final edr = mf['educationRequirement'];
+              if (edr is String && edr.isNotEmpty) {
+                _educationRequirement = edr;
+              }
+              final skills = mf['skills'];
+              if (skills is List) {
+                _skillsController.text =
+                    skills.whereType<String>().toList().join(', ');
+              } else if (skills is String) {
+                _skillsController.text = skills;
+              }
+              final am = mf['applyMethod'];
+              if (am is String && am.isNotEmpty) _applyMethod = am;
+              final cp = mf['contactPerson'];
+              if (cp is String) _contactPersonController.text = cp;
+              final cph = mf['contactPhone'];
+              if (cph is String) _contactPhoneController.text = cph;
+              final ce = mf['contactEmail'];
+              if (ce is String) _contactEmailController.text = ce;
+              final ad = mf['applicationDeadline'];
+              if (ad is int) {
+                _applicationDeadline =
+                    DateTime.fromMillisecondsSinceEpoch(ad);
               }
               break;
           }
@@ -649,6 +708,14 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
     _durationRequiredController.dispose();
     _hoursRequiredController.dispose();
     _rentalItemsListController.dispose();
+  // hiring
+  _jobTitleController.dispose();
+  _companyNameController.dispose();
+  _salaryController.dispose();
+  _skillsController.dispose();
+  _contactPersonController.dispose();
+  _contactPhoneController.dispose();
+  _contactEmailController.dispose();
     super.dispose();
   }
 
@@ -1568,6 +1635,21 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
     _targetCountryController.clear();
     _fieldOfStudyController.clear();
     _positionType = 'Full-time';
+  // hiring
+  _jobTitleController.clear();
+  _companyNameController.clear();
+  _salaryController.clear();
+  _payPeriod = 'Monthly';
+  _isSalaryNegotiable = false;
+  _benefits.clear();
+  _workArrangement = 'On-site';
+  _educationRequirement = 'O/L';
+  _skillsController.clear();
+  _applyMethod = 'In-App';
+  _contactPersonController.clear();
+  _contactPhoneController.clear();
+  _contactEmailController.clear();
+  _applicationDeadline = null;
     // events
     _eventDate = null;
     _eventStartTime = null;
@@ -2061,30 +2143,246 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Job Title
+            _buildFlatField(
+              child: TextFormField(
+                controller: _jobTitleController,
+                decoration: const InputDecoration(
+                  labelText: 'Job Title',
+                  hintText: 'e.g., Sales Executive',
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Company Name
+            _buildFlatField(
+              child: TextFormField(
+                controller: _companyNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Company / Brand (optional)',
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Employment Type
             _buildFlatField(
               child: DropdownButtonFormField<String>(
                 value: _positionType,
-                decoration: const InputDecoration(labelText: 'Position Type'),
+                decoration: const InputDecoration(labelText: 'Employment Type'),
                 items: const [
                   DropdownMenuItem(
                       value: 'Full-time', child: Text('Full-time')),
                   DropdownMenuItem(
                       value: 'Part-time', child: Text('Part-time')),
                   DropdownMenuItem(value: 'Contract', child: Text('Contract')),
+                  DropdownMenuItem(
+                      value: 'Freelance', child: Text('Freelance')),
+                  DropdownMenuItem(
+                      value: 'Internship', child: Text('Internship')),
                 ],
                 onChanged: (v) =>
                     setState(() => _positionType = v ?? 'Full-time'),
               ),
             ),
             const SizedBox(height: 16),
+            // Work Arrangement
+            _buildFlatField(
+              child: DropdownButtonFormField<String>(
+                value: _workArrangement,
+                decoration:
+                    const InputDecoration(labelText: 'Work Arrangement'),
+                items: const [
+                  DropdownMenuItem(value: 'On-site', child: Text('On-site')),
+                  DropdownMenuItem(value: 'Hybrid', child: Text('Hybrid')),
+                  DropdownMenuItem(value: 'Remote', child: Text('Remote')),
+                ],
+                onChanged: (v) =>
+                    setState(() => _workArrangement = v ?? 'On-site'),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Salary & Pay Period
+            _buildFlatField(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextFormField(
+                    controller: _salaryController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: 'Salary / Pay',
+                      prefixText: CurrencyHelper.instance.getCurrencyPrefix(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: _payPeriod,
+                    decoration: const InputDecoration(labelText: 'Pay Period'),
+                    items: const [
+                      DropdownMenuItem(
+                          value: 'Monthly', child: Text('Monthly')),
+                      DropdownMenuItem(value: 'Weekly', child: Text('Weekly')),
+                      DropdownMenuItem(value: 'Daily', child: Text('Daily')),
+                      DropdownMenuItem(value: 'Hourly', child: Text('Hourly')),
+                    ],
+                    onChanged: (v) => setState(() => _payPeriod = v ?? 'Monthly'),
+                  ),
+                  const SizedBox(height: 8),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Salary is negotiable'),
+                    value: _isSalaryNegotiable,
+                    onChanged: (v) =>
+                        setState(() => _isSalaryNegotiable = v ?? false),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Benefits
+            _buildFlatField(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Benefits'),
+                  ...['EPF/ETF', 'Meals', 'Accommodation', 'Transport', 'OT']
+                      .map((b) {
+                    final selected = _benefits.contains(b);
+                    return CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(b),
+                      value: selected,
+                      onChanged: (v) => setState(() {
+                        if (v == true) {
+                          _benefits.add(b);
+                        } else {
+                          _benefits.remove(b);
+                        }
+                      }),
+                    );
+                  }),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Experience & Education
+            _buildFlatField(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextFormField(
+                    controller: _experienceYearsController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Experience (years)',
+                      hintText: 'e.g., 3',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: _educationRequirement,
+                    decoration:
+                        const InputDecoration(labelText: 'Minimum Education'),
+                    items: const [
+                      DropdownMenuItem(value: 'O/L', child: Text('O/L')),
+                      DropdownMenuItem(value: 'A/L', child: Text('A/L')),
+                      DropdownMenuItem(
+                          value: 'Diploma', child: Text('Diploma')),
+                      DropdownMenuItem(value: 'Degree', child: Text('Degree')),
+                      DropdownMenuItem(
+                          value: 'Postgraduate', child: Text('Postgraduate')),
+                    ],
+                    onChanged: (v) =>
+                        setState(() => _educationRequirement = v ?? 'O/L'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Skills
             _buildFlatField(
               child: TextFormField(
-                controller: _experienceYearsController,
-                keyboardType: TextInputType.number,
+                controller: _skillsController,
                 decoration: const InputDecoration(
-                  labelText: 'Experience (years)',
-                  hintText: 'e.g., 3',
+                  labelText: 'Key Skills (comma separated)',
+                  hintText: 'e.g., Sales, Communication, Excel',
                 ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // How to Apply
+            _buildFlatField(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  DropdownButtonFormField<String>(
+                    value: _applyMethod,
+                    decoration:
+                        const InputDecoration(labelText: 'How to Apply'),
+                    items: const [
+                      DropdownMenuItem(value: 'In-App', child: Text('In-App')),
+                      DropdownMenuItem(value: 'Call', child: Text('Call')),
+                      DropdownMenuItem(value: 'Email', child: Text('Email')),
+                    ],
+                    onChanged: (v) => setState(() => _applyMethod = v ?? 'In-App'),
+                  ),
+                  const SizedBox(height: 12),
+                  if (_applyMethod != 'In-App') ...[
+                    TextFormField(
+                      controller: _contactPersonController,
+                      decoration:
+                          const InputDecoration(labelText: 'Contact Person'),
+                    ),
+                    const SizedBox(height: 8),
+                    if (_applyMethod == 'Call')
+                      TextFormField(
+                        controller: _contactPhoneController,
+                        keyboardType: TextInputType.phone,
+                        decoration:
+                            const InputDecoration(labelText: 'Contact Phone'),
+                      ),
+                    if (_applyMethod == 'Email')
+                      TextFormField(
+                        controller: _contactEmailController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration:
+                            const InputDecoration(labelText: 'Contact Email'),
+                      ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Application Deadline (date-only)
+            _buildFlatField(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Application Deadline',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                  const SizedBox(height: 8),
+                  InkWell(
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: _applicationDeadline ?? DateTime.now(),
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (date != null) setState(() => _applicationDeadline = date);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      width: double.infinity,
+                      color: const Color(0xFFF8F9FA),
+                      child: Text(
+                        _applicationDeadline == null
+                            ? 'Select deadline date'
+                            : _formatDate(_applicationDeadline!),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -2285,12 +2583,46 @@ class _UnifiedRequestEditScreenState extends State<UnifiedRequestEditScreen> {
           },
         }..removeWhere((k, v) => v == null);
       case 'hiring':
-        return {
-          'positionType': _positionType,
-          'experienceYears': _experienceYearsController.text.trim().isNotEmpty
-              ? int.tryParse(_experienceYearsController.text.trim())
-              : null,
-        }..removeWhere((k, v) => v == null);
+    final skills = _skillsController.text
+      .split(',')
+      .map((e) => e.trim())
+      .where((e) => e.isNotEmpty)
+      .toList();
+    return {
+      'jobTitle': _jobTitleController.text.trim().isNotEmpty
+        ? _jobTitleController.text.trim()
+        : null,
+      'companyName': _companyNameController.text.trim().isNotEmpty
+        ? _companyNameController.text.trim()
+        : null,
+      'positionType': _positionType,
+      'workArrangement': _workArrangement,
+      'salary': _salaryController.text.trim().isNotEmpty
+        ? int.tryParse(_salaryController.text.trim())
+        : null,
+      'payPeriod': _payPeriod,
+      'salaryNegotiable': _isSalaryNegotiable,
+      'benefits': _benefits.isNotEmpty ? _benefits.toList() : null,
+      'experienceYears': _experienceYearsController.text.trim().isNotEmpty
+        ? int.tryParse(_experienceYearsController.text.trim())
+        : null,
+      'educationRequirement': _educationRequirement,
+      'skills': skills.isNotEmpty ? skills : null,
+      'applyMethod': _applyMethod,
+      'contactPerson': _applyMethod != 'In-App' &&
+          _contactPersonController.text.trim().isNotEmpty
+        ? _contactPersonController.text.trim()
+        : null,
+      'contactPhone': _applyMethod == 'Call' &&
+          _contactPhoneController.text.trim().isNotEmpty
+        ? _contactPhoneController.text.trim()
+        : null,
+      'contactEmail': _applyMethod == 'Email' &&
+          _contactEmailController.text.trim().isNotEmpty
+        ? _contactEmailController.text.trim()
+        : null,
+      'applicationDeadline': _applicationDeadline?.millisecondsSinceEpoch,
+    }..removeWhere((k, v) => v == null);
       default:
         return {};
     }

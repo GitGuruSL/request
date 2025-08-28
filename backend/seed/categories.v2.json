@@ -205,9 +205,80 @@
           }
         ]
       },
-    "hiring": {
+      "hiring": {
         "categories": [
-      { "name": "Hiring", "subcategories": ["Full-time", "Part-time", "Freelance"] }
+          {
+            "name": "Hospitality & Tourism",
+            "subcategories": [
+              "Hotel Staff (Receptionist, Housekeeping)",
+              "Chef & Kitchen Staff",
+              "Restaurant & Cafe Staff (Waiters, Baristas)",
+              "Tour Guides & Drivers"
+            ]
+          },
+          {
+            "name": "Retail & Sales",
+            "subcategories": [
+              "Sales Associate & Cashier",
+              "Store Manager / Supervisor",
+              "Merchandiser",
+              "Sales Representative"
+            ]
+          },
+          {
+            "name": "IT & Software",
+            "subcategories": [
+              "Software Engineer / Developer",
+              "UI/UX Designer",
+              "Quality Assurance (QA) Tester",
+              "IT Support & Technician"
+            ]
+          },
+          {
+            "name": "Construction & Skilled Trades",
+            "subcategories": [
+              "Mason, Carpenter, Painter",
+              "Plumber, Electrician",
+              "Welder",
+              "Site Supervisor"
+            ]
+          },
+          {
+            "name": "Office & Administration",
+            "subcategories": [
+              "Accountant / Bookkeeper",
+              "Secretary & Administrative Assistant",
+              "Data Entry Operator",
+              "Human Resources (HR)"
+            ]
+          },
+          {
+            "name": "Transportation & Logistics",
+            "subcategories": [
+              "Driver (Car, Van, Lorry, Bus)",
+              "Delivery Rider",
+              "Warehouse & Stores Assistant"
+            ]
+          },
+          {
+            "name": "Domestic & Home Services",
+            "subcategories": [
+              "Maid / Housekeeper",
+              "Nanny / Babysitter",
+              "Cook",
+              "Gardener",
+              "Caregiver for Elders"
+            ]
+          },
+          {
+            "name": "Creative & Media",
+            "subcategories": [
+              "Graphic Designer",
+              "Content Writer / Translator",
+              "Social Media Manager",
+              "Photographer / Videographer"
+            ]
+          }
         ]
       },
       "other": {

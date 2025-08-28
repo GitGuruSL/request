@@ -1449,6 +1449,35 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
           return 'Position Type';
         case 'experienceYears':
           return 'Experience (years)';
+        // Hiring extended
+        case 'jobTitle':
+          return 'Job Title';
+        case 'companyName':
+          return 'Company';
+        case 'workArrangement':
+          return 'Work Arrangement';
+        case 'salary':
+          return 'Salary / Pay';
+        case 'payPeriod':
+          return 'Pay Period';
+        case 'salaryNegotiable':
+          return 'Salary Negotiable';
+        case 'benefits':
+          return 'Benefits';
+        case 'educationRequirement':
+          return 'Minimum Education';
+        case 'skills':
+          return 'Key Skills';
+        case 'applyMethod':
+          return 'How to Apply';
+        case 'contactPerson':
+          return 'Contact Person';
+        case 'contactPhone':
+          return 'Contact Phone';
+        case 'contactEmail':
+          return 'Contact Email';
+        case 'applicationDeadline':
+          return 'Application Deadline';
         default:
           return key
               .replaceAllMapped(RegExp(r'([A-Z])'), (m) => ' ${m.group(1)}')
