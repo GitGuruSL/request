@@ -300,27 +300,6 @@ const CountryBusinessTypesManagement = () => {
                           {type.description || '-'}
                         </Typography>
                       </TableCell>
-                      <TableCell>
-                        {(() => {
-                          const cap = getCapabilitiesForBusinessType(type.name);
-                          const chips = [];
-                          if (cap.managePrices) chips.push(<Chip key="cap-prices" label="Manage Prices" size="small" color="secondary" />);
-                          if (cap.respondDelivery) chips.push(<Chip key="cap-respond-delivery" label="Respond Delivery" size="small" color="success" />);
-                          // Specific verticals
-                          if (cap.respondTours) chips.push(<Chip key="cap-tours" label="Respond Tours" size="small" />);
-                          if (cap.respondEvents) chips.push(<Chip key="cap-events" label="Respond Events" size="small" />);
-                          if (cap.respondConstruction) chips.push(<Chip key="cap-construction" label="Respond Construction" size="small" />);
-                          if (cap.respondEducation) chips.push(<Chip key="cap-education" label="Respond Education" size="small" />);
-                          if (cap.respondHiring) chips.push(<Chip key="cap-hiring" label="Respond Hiring" size="small" />);
-                          // Keep one general chip for item/service/rent/other
-                          if (cap.respondOther) chips.push(<Chip key="cap-respond-other" label="Respond Common" size="small" color="success" />);
-                          return (
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                              {chips.length ? chips : <Typography variant="caption" color="text.secondary">No capabilities</Typography>}
-                            </Box>
-                          );
-                        })()}
-                      </TableCell>
                       <TableCell>{type.display_order || 0}</TableCell>
                       <TableCell>
                         <Chip 
@@ -346,6 +325,27 @@ const CountryBusinessTypesManagement = () => {
                             <Typography variant="caption" color="text.secondary">No mapped modules</Typography>
                           )}
                         </Box>
+                      </TableCell>
+                      <TableCell>
+                        {(() => {
+                          const cap = getCapabilitiesForBusinessType(type.name);
+                          const chips = [];
+                          if (cap.managePrices) chips.push(<Chip key="cap-prices" label="Manage Prices" size="small" color="secondary" />);
+                          if (cap.respondItem) chips.push(<Chip key="cap-item" label="Respond Item" size="small" />);
+                          if (cap.respondService) chips.push(<Chip key="cap-service" label="Respond Service" size="small" />);
+                          if (cap.respondRent) chips.push(<Chip key="cap-rent" label="Respond Rent" size="small" />);
+                          if (cap.respondTours) chips.push(<Chip key="cap-tours" label="Respond Tours" size="small" />);
+                          if (cap.respondEvents) chips.push(<Chip key="cap-events" label="Respond Events" size="small" />);
+                          if (cap.respondConstruction) chips.push(<Chip key="cap-construction" label="Respond Construction" size="small" />);
+                          if (cap.respondEducation) chips.push(<Chip key="cap-education" label="Respond Education" size="small" />);
+                          if (cap.respondHiring) chips.push(<Chip key="cap-hiring" label="Respond Hiring" size="small" />);
+                          if (cap.respondDelivery) chips.push(<Chip key="cap-respond-delivery" label="Respond Delivery" size="small" color="success" />);
+                          return (
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                              {chips.length ? chips : <Typography variant="caption" color="text.secondary">No capabilities</Typography>}
+                            </Box>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', gap: 1 }}>
@@ -518,13 +518,16 @@ const CountryBusinessTypesManagement = () => {
                   const cap = getCapabilitiesForBusinessType(formData.name);
                   const chips = [];
                   if (cap.managePrices) chips.push(<Chip key="cap-prices" label="Manage Prices" size="small" color="secondary" />);
+                  if (cap.respondItem) chips.push(<Chip key="cap-item" label="Respond Item" size="small" />);
+                  if (cap.respondService) chips.push(<Chip key="cap-service" label="Respond Service" size="small" />);
+                  if (cap.respondRent) chips.push(<Chip key="cap-rent" label="Respond Rent" size="small" />);
                   if (cap.respondDelivery) chips.push(<Chip key="cap-respond-delivery" label="Respond Delivery" size="small" color="success" />);
                   if (cap.respondTours) chips.push(<Chip key="cap-tours" label="Respond Tours" size="small" />);
                   if (cap.respondEvents) chips.push(<Chip key="cap-events" label="Respond Events" size="small" />);
                   if (cap.respondConstruction) chips.push(<Chip key="cap-construction" label="Respond Construction" size="small" />);
                   if (cap.respondEducation) chips.push(<Chip key="cap-education" label="Respond Education" size="small" />);
                   if (cap.respondHiring) chips.push(<Chip key="cap-hiring" label="Respond Hiring" size="small" />);
-                  if (cap.respondOther) chips.push(<Chip key="cap-respond-other" label="Respond Common" size="small" color="success" />);
+                  // no general 'Respond Common' chip; show granular modules only
                   return (
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                       {chips.length ? chips : <Typography variant="caption" color="text.secondary">No capabilities</Typography>}

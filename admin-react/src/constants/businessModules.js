@@ -281,7 +281,7 @@ export const getCapabilitiesForBusinessType = (typeName) => {
 
   return {
     managePrices: isProductSeller, // price mgmt only for product sellers
-  // Respond rights per module (any verified business for common modules)
+  // Any verified business can respond to module requests (granular toggles)
   respondItem: true,
   respondService: true,
   respondRent: true,
@@ -290,10 +290,9 @@ export const getCapabilitiesForBusinessType = (typeName) => {
   respondConstruction: true,
   respondEducation: true,
   respondHiring: true,
-  respondOther: true,
-  // Delivery request is restricted to Delivery businesses
+  // Delivery is restricted to Delivery type
   respondDelivery: isDeliveryService,
-  // Ride is for drivers only (never businesses)
-  respondRide: false
+  // Rides are for drivers only (no business)
+  sendRide: false
   };
 };
