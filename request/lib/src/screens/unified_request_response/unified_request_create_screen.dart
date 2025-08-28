@@ -52,6 +52,17 @@ class _UnifiedRequestCreateScreenState
   final _weightController = TextEditingController();
   final _dimensionsController = TextEditingController();
   final _specialInstructionsController = TextEditingController();
+  // Service module dynamic controllers/fields
+  final _peopleCountController = TextEditingController(); // tours/events
+  final _durationDaysController = TextEditingController(); // tours
+  final _guestsCountController = TextEditingController(); // events
+  final _areaSizeController = TextEditingController(); // construction (sqft)
+  final _sessionsPerWeekController = TextEditingController(); // education
+  final _experienceYearsController = TextEditingController(); // hiring
+  bool _needsGuide = false; // tours
+  bool _pickupRequiredForTour = false; // tours
+  String _educationLevel = 'Beginner'; // education
+  String _positionType = 'Full-time'; // hiring
 
   RequestType _selectedType = RequestType.item;
   String? _selectedModule; // service subtype/module context
@@ -115,6 +126,13 @@ class _UnifiedRequestCreateScreenState
     _weightController.dispose();
     _dimensionsController.dispose();
     _specialInstructionsController.dispose();
+    // dispose dynamic controllers
+    _peopleCountController.dispose();
+    _durationDaysController.dispose();
+    _guestsCountController.dispose();
+    _areaSizeController.dispose();
+    _sessionsPerWeekController.dispose();
+    _experienceYearsController.dispose();
     super.dispose();
   }
 
@@ -244,7 +262,7 @@ class _UnifiedRequestCreateScreenState
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text('Create ${_getTypeDisplayName(_selectedType)}'),
+                  : Text('Create ${_getTypeDisplayNameWithModule()}'),
             ),
           ),
         ),
@@ -666,6 +684,7 @@ class _UnifiedRequestCreateScreenState
                     result['categoryId'] ?? _selectedCategoryId;
                 _selectedSubCategoryId =
                     result['subcategoryId'] ?? _selectedSubCategoryId;
+                _resetServiceDynamicFields();
               });
             }
           },
@@ -893,8 +912,224 @@ class _UnifiedRequestCreateScreenState
             ],
           ),
         ),
+        const SizedBox(height: 16),
+
+        // Module/Subcategory-specific dynamic fields
+        _buildServiceDynamicFields(),
       ],
     );
+  }
+
+  void _resetServiceDynamicFields() {
+    _peopleCountController.clear();
+    _durationDaysController.clear();
+    _guestsCountController.clear();
+    _areaSizeController.clear();
+    _sessionsPerWeekController.clear();
+    _experienceYearsController.clear();
+    _needsGuide = false;
+    _pickupRequiredForTour = false;
+    _educationLevel = 'Beginner';
+    _positionType = 'Full-time';
+  }
+
+  Widget _buildServiceDynamicFields() {
+    if (_selectedType != RequestType.service || _selectedModule == null) {
+      return const SizedBox.shrink();
+    }
+    final module = _selectedModule!.toLowerCase();
+    switch (module) {
+      case 'tours':
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildFlatField(
+              child: TextFormField(
+                controller: _peopleCountController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Number of People',
+                  hintText: 'Enter headcount for the tour',
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildFlatField(
+              child: TextFormField(
+                controller: _durationDaysController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Duration (days)',
+                  hintText: 'e.g., 3',
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildFlatField(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Need a tour guide?'),
+                    value: _needsGuide,
+                    onChanged: (v) => setState(() => _needsGuide = v ?? false),
+                  ),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Pickup required'),
+                    value: _pickupRequiredForTour,
+                    onChanged: (v) =>
+                        setState(() => _pickupRequiredForTour = v ?? false),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      case 'events':
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildFlatField(
+              child: TextFormField(
+                controller: _guestsCountController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Guests Count',
+                  hintText: 'How many people will attend?',
+                ),
+              ),
+            ),
+          ],
+        );
+      case 'construction':
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildFlatField(
+              child: TextFormField(
+                controller: _areaSizeController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Area Size (sqft)',
+                  hintText: 'Approximate area size',
+                ),
+              ),
+            ),
+          ],
+        );
+      case 'education':
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildFlatField(
+              child: DropdownButtonFormField<String>(
+                value: _educationLevel,
+                decoration: const InputDecoration(labelText: 'Level'),
+                items: const [
+                  DropdownMenuItem(value: 'Beginner', child: Text('Beginner')),
+                  DropdownMenuItem(
+                      value: 'Intermediate', child: Text('Intermediate')),
+                  DropdownMenuItem(value: 'Advanced', child: Text('Advanced')),
+                ],
+                onChanged: (v) =>
+                    setState(() => _educationLevel = v ?? 'Beginner'),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildFlatField(
+              child: TextFormField(
+                controller: _sessionsPerWeekController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Sessions per week',
+                  hintText: 'e.g., 2',
+                ),
+              ),
+            ),
+          ],
+        );
+      case 'hiring':
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildFlatField(
+              child: DropdownButtonFormField<String>(
+                value: _positionType,
+                decoration: const InputDecoration(labelText: 'Position Type'),
+                items: const [
+                  DropdownMenuItem(
+                      value: 'Full-time', child: Text('Full-time')),
+                  DropdownMenuItem(
+                      value: 'Part-time', child: Text('Part-time')),
+                  DropdownMenuItem(value: 'Contract', child: Text('Contract')),
+                ],
+                onChanged: (v) =>
+                    setState(() => _positionType = v ?? 'Full-time'),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildFlatField(
+              child: TextFormField(
+                controller: _experienceYearsController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Experience (years)',
+                  hintText: 'e.g., 3',
+                ),
+              ),
+            ),
+          ],
+        );
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  Map<String, dynamic> _buildModuleFieldsPayload() {
+    final module = _selectedModule?.toLowerCase();
+    switch (module) {
+      case 'tours':
+        return {
+          'peopleCount': _peopleCountController.text.trim().isNotEmpty
+              ? int.tryParse(_peopleCountController.text.trim())
+              : null,
+          'durationDays': _durationDaysController.text.trim().isNotEmpty
+              ? int.tryParse(_durationDaysController.text.trim())
+              : null,
+          'needsGuide': _needsGuide,
+          'pickupRequired': _pickupRequiredForTour,
+        }..removeWhere((k, v) => v == null);
+      case 'events':
+        return {
+          'guestsCount': _guestsCountController.text.trim().isNotEmpty
+              ? int.tryParse(_guestsCountController.text.trim())
+              : null,
+        }..removeWhere((k, v) => v == null);
+      case 'construction':
+        return {
+          'areaSizeSqft': _areaSizeController.text.trim().isNotEmpty
+              ? double.tryParse(_areaSizeController.text.trim())
+              : null,
+        }..removeWhere((k, v) => v == null);
+      case 'education':
+        return {
+          'level': _educationLevel,
+          'sessionsPerWeek': _sessionsPerWeekController.text.trim().isNotEmpty
+              ? int.tryParse(_sessionsPerWeekController.text.trim())
+              : null,
+        }..removeWhere((k, v) => v == null);
+      case 'hiring':
+        return {
+          'positionType': _positionType,
+          'experienceYears': _experienceYearsController.text.trim().isNotEmpty
+              ? int.tryParse(_experienceYearsController.text.trim())
+              : null,
+        }..removeWhere((k, v) => v == null);
+      default:
+        return {};
+    }
   }
 
   Widget _buildRentalFields() {
@@ -1582,7 +1817,7 @@ class _UnifiedRequestCreateScreenState
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-                '${_getTypeDisplayName(_selectedType)} created successfully!'),
+                '${_getTypeDisplayNameWithModule()} created successfully!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -1628,6 +1863,7 @@ class _UnifiedRequestCreateScreenState
           'subcategory': _selectedSubcategory,
           'preferredDateTime': _preferredDateTime?.millisecondsSinceEpoch,
           'urgency': _selectedUrgency,
+          'moduleFields': _buildModuleFieldsPayload(),
         };
       case RequestType.delivery:
         return {
