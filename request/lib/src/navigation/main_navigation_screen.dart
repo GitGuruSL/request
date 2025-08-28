@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../theme/glass_theme.dart';
 import '../services/rest_notification_service.dart';
 import '../home/screens/home_screen.dart';
 import '../home/screens/browse_requests_screen.dart';
@@ -68,19 +69,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBody: true,
       body: _navigationItems[_currentIndex].screen,
       bottomNavigationBar: SafeArea(
         top: false,
         child: DecoratedBox(
-          decoration: const BoxDecoration(
-            // Transparent so the page background is visible under the bar
-            color: Colors.transparent,
-            border: Border(
+          decoration: BoxDecoration(
+            // Opaque to match Home background
+            color: GlassTheme.backgroundColor,
+            border: const Border(
               top: BorderSide(
-                color:
-                    Color.fromARGB(64, 187, 186, 186), // ~25% black as divider
-                width: 0.2,
+                color: Color.fromARGB(64, 148, 147, 147), // subtle divider
+                width: 0.6,
               ),
             ),
           ),

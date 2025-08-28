@@ -591,7 +591,7 @@ class _EnhancedMainDashboardState extends State<EnhancedMainDashboard> {
       top: false,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          // Match HomeScreen background color
+          // Opaque background matching Home
           color: GlassTheme.backgroundColor,
           border: Border(
             top: BorderSide(
@@ -601,7 +601,7 @@ class _EnhancedMainDashboardState extends State<EnhancedMainDashboard> {
           ),
         ),
         child: NavigationBar(
-          backgroundColor: Theme.of(context).colorScheme.background,
+          backgroundColor: Colors.transparent,
           surfaceTintColor: Colors.transparent,
           height: 64,
           selectedIndex: _currentIndex,
