@@ -1453,33 +1453,34 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
   _TypeStyle _typeStyle(String type) {
     switch (type) {
       case 'Delivery':
-        return _TypeStyle(
-            Icons.local_shipping, const Color(0xFF4CAF50), Colors.white);
+        return _TypeStyle(Icons.local_shipping, const Color(0xFF4CAF50),
+            Colors.white); // green
       case 'Ride':
-        return _TypeStyle(
-            Icons.directions_car, const Color(0xFF3B82F6), Colors.white);
+        return _TypeStyle(Icons.directions_car, const Color(0xFF3B82F6),
+            Colors.white); // blue
       case 'Service':
         return _TypeStyle(Icons.build, const Color(0xFF00BCD4), Colors.white);
       case 'Rent':
-        return _TypeStyle(Icons.vpn_key, const Color(0xFF2196F3), Colors.white);
-      case 'Price':
         return _TypeStyle(
-            Icons.attach_money, const Color(0xFF9C27B0), Colors.white);
+            Icons.vpn_key, const Color(0xFF2196F3), Colors.white); // blue
+      case 'Price':
+        return _TypeStyle(Icons.attach_money, const Color(0xFF9C27B0),
+            Colors.white); // purple
       case 'Education':
         return _TypeStyle(
-            Icons.school, const Color(0xFF673AB7), Colors.white); // deep purple
+            Icons.school, const Color(0xFF10B981), Colors.white); // emerald
       case 'Hiring':
-        return _TypeStyle(Icons.work_outline, const Color(0xFFFFA000),
-            Colors.white); // amber 700
-      case 'Construction':
         return _TypeStyle(
-            Icons.construction, const Color(0xFF795548), Colors.white); // brown
+            Icons.work_outline, const Color(0xFF0EA5E9), Colors.white); // cyan
+      case 'Construction':
+        return _TypeStyle(Icons.construction, const Color(0xFF8D6E63),
+            Colors.white); // brown (match Home sheet)
       case 'Events':
         return _TypeStyle(
-            Icons.event, const Color(0xFFE91E63), Colors.white); // pink
+            Icons.event, const Color(0xFFFFC107), Colors.white); // amber
       case 'Tours':
-        return _TypeStyle(Icons.travel_explore, const Color(0xFF3F51B5),
-            Colors.white); // indigo
+        return _TypeStyle(Icons.travel_explore, const Color(0xFF9C27B0),
+            Colors.white); // purple
       case 'Items':
       default:
         return _TypeStyle(
