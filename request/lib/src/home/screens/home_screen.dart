@@ -263,7 +263,7 @@ class _HomeScreenState extends State<HomeScreen> {
           title: 'Education',
           subtitle: 'Tutoring and training',
           icon: Icons.school,
-          color: const Color(0xFF10B981),
+          color: const Color(0xFF6366F1),
         ),
         // Hiring
         _RequestType(

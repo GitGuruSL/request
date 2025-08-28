@@ -1468,7 +1468,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
             Colors.white); // purple
       case 'Education':
         return _TypeStyle(
-            Icons.school, const Color(0xFF10B981), Colors.white); // emerald
+            Icons.school, const Color(0xFF6366F1), Colors.white); // indigo
       case 'Hiring':
         return _TypeStyle(
             Icons.work_outline, const Color(0xFF0EA5E9), Colors.white); // cyan
