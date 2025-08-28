@@ -36,7 +36,7 @@ class AppTheme {
     ),
     navigationBarTheme: NavigationBarThemeData(
       elevation: 8,
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.transparent,
       indicatorColor: const Color(0xFF4B9D62).withValues(alpha: 0.18),
       indicatorShape: const StadiumBorder(),
       labelTextStyle: WidgetStateProperty.resolveWith<TextStyle?>((states) {
@@ -65,7 +65,7 @@ class AppTheme {
     ),
     navigationBarTheme: NavigationBarThemeData(
       elevation: 8,
-      backgroundColor: const Color(0xFF111315),
+      backgroundColor: Colors.transparent,
       indicatorColor: primaryLight.withValues(alpha: 0.22),
       indicatorShape: const StadiumBorder(),
       labelTextStyle: WidgetStateProperty.resolveWith<TextStyle?>((states) {

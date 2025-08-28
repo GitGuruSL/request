@@ -585,24 +585,37 @@ class _EnhancedMainDashboardState extends State<EnhancedMainDashboard> {
   Widget _buildBottomNavigation() {
     final navItems = _getNavItemsForRole(currentUser!.activeRole);
 
-    return NavigationBar(
-      height: 64,
-      selectedIndex: _currentIndex,
-      onDestinationSelected: (index) => setState(() => _currentIndex = index),
-      indicatorColor: Theme.of(context).colorScheme.primary.withOpacity(0.15),
-      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-      destinations: navItems.map((item) {
-        final isMessages =
-            (item['label'] as String).toLowerCase() == 'messages';
-        final hasBadge = isMessages && _unreadNotifications > 0;
-        return NavigationDestination(
-          icon: _buildNavIcon(
-              item['icon'] as IconData, hasBadge ? _unreadNotifications : null),
-          selectedIcon: _buildNavIcon(
-              item['icon'] as IconData, hasBadge ? _unreadNotifications : null),
-          label: item['label'] as String,
-        );
-      }).toList(),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(
+          top: BorderSide(
+            color: Theme.of(context).dividerColor.withOpacity(0.25),
+            width: 0.6,
+          ),
+        ),
+      ),
+      child: NavigationBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        height: 64,
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (index) => setState(() => _currentIndex = index),
+        indicatorColor: Theme.of(context).colorScheme.primary.withOpacity(0.15),
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        destinations: navItems.map((item) {
+          final isMessages =
+              (item['label'] as String).toLowerCase() == 'messages';
+          final hasBadge = isMessages && _unreadNotifications > 0;
+          return NavigationDestination(
+            icon: _buildNavIcon(item['icon'] as IconData,
+                hasBadge ? _unreadNotifications : null),
+            selectedIcon: _buildNavIcon(item['icon'] as IconData,
+                hasBadge ? _unreadNotifications : null),
+            label: item['label'] as String,
+          );
+        }).toList(),
+      ),
     );
   }
 

@@ -69,25 +69,39 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _navigationItems[_currentIndex].screen,
-      bottomNavigationBar: NavigationBar(
-        height: 64,
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (index) {
-          setState(() => _currentIndex = index);
-          _persistIndex(index);
-        },
-        indicatorColor: Theme.of(context).colorScheme.primary.withOpacity(0.15),
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        destinations: _navigationItems.map((item) {
-          final isMessages = item.label.toLowerCase() == 'messages';
-          final hasBadge = isMessages && _unreadMessages > 0;
-          return NavigationDestination(
-            icon: _buildIcon(item.icon, hasBadge ? _unreadMessages : null),
-            selectedIcon:
-                _buildIcon(item.activeIcon, hasBadge ? _unreadMessages : null),
-            label: item.label,
-          );
-        }).toList(),
+      bottomNavigationBar: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          border: Border(
+            top: BorderSide(
+              color: Theme.of(context).dividerColor.withOpacity(0.25),
+              width: 0.6,
+            ),
+          ),
+        ),
+        child: NavigationBar(
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          height: 64,
+          selectedIndex: _currentIndex,
+          onDestinationSelected: (index) {
+            setState(() => _currentIndex = index);
+            _persistIndex(index);
+          },
+          indicatorColor:
+              Theme.of(context).colorScheme.primary.withOpacity(0.15),
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          destinations: _navigationItems.map((item) {
+            final isMessages = item.label.toLowerCase() == 'messages';
+            final hasBadge = isMessages && _unreadMessages > 0;
+            return NavigationDestination(
+              icon: _buildIcon(item.icon, hasBadge ? _unreadMessages : null),
+              selectedIcon: _buildIcon(
+                  item.activeIcon, hasBadge ? _unreadMessages : null),
+              label: item.label,
+            );
+          }).toList(),
+        ),
       ),
     );
   }
