@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/subscription_service.dart';
 import '../../services/country_service.dart';
 import '../../theme/glass_theme.dart';
@@ -30,6 +31,7 @@ class _MembershipScreenState extends State<MembershipScreen> {
   Map<String, dynamic>? _current;
   String _planType = 'user_response'; // 'user_response' | 'product_seller'
   bool _checkingOut = false;
+  String? _selectedRole; // general | driver | delivery | professional
 
   @override
   void initState() {
@@ -79,14 +81,21 @@ class _MembershipScreenState extends State<MembershipScreen> {
 
   List<SubscriptionPlan> _filterUserResponsePlans(
       List<SubscriptionPlan> plans) {
-    if (widget.requiredSubscriptionType == 'driver') {
+  final requiredType = widget.requiredSubscriptionType ??
+    ((_selectedRole == 'driver')
+      ? 'driver'
+      : (_selectedRole == 'delivery' || _selectedRole == 'professional')
+        ? 'business'
+        : null);
+
+  if (requiredType == 'driver') {
       // For drivers: show free plan + ride-specific plans
       return plans
           .where((plan) =>
               plan.planType == 'free' ||
               plan.planType.toLowerCase().contains('ride'))
           .toList();
-    } else if (widget.requiredSubscriptionType == 'business') {
+  } else if (requiredType == 'business') {
       // For regular business: show free plan + all response plans
       return plans.where((plan) {
         final t = plan.planType.toLowerCase();
@@ -95,7 +104,7 @@ class _MembershipScreenState extends State<MembershipScreen> {
             t.contains('other') ||
             t.contains('general');
       }).toList();
-    } else if (widget.isProductSellerRequired) {
+  } else if (widget.isProductSellerRequired) {
       // For product sellers: only show free plan (3 responses) unless they get product subscription
       return plans.where((plan) => plan.planType == 'free').toList();
     }
@@ -154,6 +163,9 @@ class _MembershipScreenState extends State<MembershipScreen> {
         return;
       }
 
+      // Mark membership onboarding complete locally (role chosen + plan picked)
+      await _markMembershipCompleted();
+
       final status = (created['status'] ?? created['state'] ?? '').toString();
       final subId =
           (created['id'] ?? created['subscription_id'] ?? '').toString();
@@ -164,6 +176,7 @@ class _MembershipScreenState extends State<MembershipScreen> {
         _toast('Subscription activated');
         await _load();
         if (widget.promptOnboarding && mounted) {
+          await _maybeNavigateRoleRegistration();
           Navigator.pushNamedAndRemoveUntil(context, '/home', (r) => false);
         }
         return;
@@ -279,6 +292,23 @@ class _MembershipScreenState extends State<MembershipScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  Future<void> _markMembershipCompleted() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('membership_completed', true);
+    } catch (_) {}
+  }
+
+  Future<void> _maybeNavigateRoleRegistration() async {
+    // After selecting a plan during onboarding, take user to role-specific registration if applicable
+    if (_selectedRole == 'driver') {
+      Navigator.pushNamed(context, '/driver-registration');
+    } else if (_selectedRole == 'delivery' || _selectedRole == 'professional' || _selectedRole == 'business') {
+      // Use business registration for delivery/professional/business
+      Navigator.pushNamed(context, '/business-registration');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final currencyFmt = CountryService.instance.getCurrencySymbol();
@@ -307,6 +337,8 @@ class _MembershipScreenState extends State<MembershipScreen> {
                   padding: const EdgeInsets.all(16),
                   children: [
                     if (_current != null) _buildCurrentCard(),
+
+                    if (widget.promptOnboarding) _buildRoleOnboarding(),
 
                     // Show tabs or context-specific header
                     _buildPlanTypeSelector(),
@@ -383,7 +415,9 @@ class _MembershipScreenState extends State<MembershipScreen> {
     }
 
     // Context-specific headers for different user types
-    if (widget.requiredSubscriptionType == 'driver') {
+  final requiredType = widget.requiredSubscriptionType ??
+    ((_selectedRole == 'driver') ? 'driver' : null);
+  if (requiredType == 'driver') {
       return Container(
         decoration: GlassTheme.glassContainer,
         padding: const EdgeInsets.all(16),
@@ -415,7 +449,10 @@ class _MembershipScreenState extends State<MembershipScreen> {
       );
     }
 
-    if (widget.requiredSubscriptionType == 'business') {
+  if ((widget.requiredSubscriptionType == 'business') ||
+    (_selectedRole == 'delivery') ||
+    (_selectedRole == 'professional') ||
+    (_selectedRole == 'business')) {
       return Container(
         decoration: GlassTheme.glassContainer,
         padding: const EdgeInsets.all(16),
@@ -487,6 +524,59 @@ class _MembershipScreenState extends State<MembershipScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildRoleOnboarding() {
+    // Simple role chooser shown during onboarding
+    return Container(
+      decoration: GlassTheme.glassContainer,
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Choose how you will use Request',
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: GlassTheme.colors.textPrimary)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _roleChip('General Responder', 'general', Icons.handshake),
+              _roleChip('Driver', 'driver', Icons.drive_eta),
+              _roleChip('Delivery Service', 'delivery', Icons.local_shipping),
+              _roleChip('Professional', 'professional', Icons.badge),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _selectedRole == 'driver'
+                ? '3 free ride responses per month. Upgrade for unlimited and contact visibility.'
+                : '3 free responses per month. Upgrade for unlimited and contact visibility.',
+            style: TextStyle(color: GlassTheme.colors.textSecondary, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _roleChip(String title, String value, IconData icon) {
+    final selected = _selectedRole == value;
+    return ChoiceChip(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [Icon(icon, size: 16), const SizedBox(width: 6), Text(title)],
+      ),
+      selected: selected,
+      onSelected: (_) {
+        setState(() {
+          _selectedRole = value;
+        });
+      },
     );
   }
 

@@ -335,13 +335,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
   }
 
   Widget _buildMenuGrid() {
-    final accountItems = [
-      _MenuItem(
-        title: 'Roles',
-        icon: Icons.work_outline,
-        color: const Color(0xFF6366F1), // Indigo
-        route: '/role-management',
-      ),
+  final accountItems = [
       _MenuItem(
         title: 'Products',
         icon: Icons.inventory_2_outlined,

@@ -25,6 +25,9 @@ import '../../../services/user_registration_service.dart';
 import '../../../services/google_directions_service.dart';
 import '../../../services/rest_request_service.dart' as rest;
 import '../../../utils/currency_helper.dart';
+import '../../membership/quick_upgrade_sheet.dart';
+import '../../../services/entitlements_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ViewRideRequestScreen extends StatefulWidget {
   final String requestId;
@@ -57,11 +60,14 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   final TextEditingController _fareController = TextEditingController();
   bool _isSubmittingResponse = false;
   String? _fareError;
+  bool _membershipCompleted = false;
+  EntitlementsSummary? _entitlements;
 
   @override
   void initState() {
     super.initState();
-    _loadRequestData();
+  _loadGateState();
+  _loadRequestData();
 
     // Delayed map initialization to reduce initial rendering load
     Timer(const Duration(seconds: 2), () {
@@ -72,6 +78,20 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
         });
       }
     });
+  }
+
+  Future<void> _loadGateState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final completed = prefs.getBool('membership_completed') ?? false;
+      final ent = await EntitlementsService.getEntitlementsSummary();
+      if (mounted) {
+        setState(() {
+          _membershipCompleted = completed;
+          _entitlements = ent;
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -203,8 +223,11 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   bool _canUserRespond() {
     if (_request == null) return false;
     if (_isOwner) return false;
-    // Only approved drivers (driver_verifications.status == approved)
-    return _isApprovedDriver;
+  // Membership + entitlements gating
+  if (!_membershipCompleted) return false;
+  if (!(_entitlements?.canRespond ?? false)) return false;
+  // Only approved drivers (driver_verifications.status == approved)
+  return _isApprovedDriver;
   }
 
   bool _hasUserResponded() {
@@ -387,16 +410,6 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
     } catch (e) {
       // Non-fatal: keep map usable even if directions fail
       // print('Failed to draw navigation route: $e');
-    }
-  }
-
-  void _onMapCreated(GoogleMapController controller) {
-    _mapController = controller;
-    if (_markers.isNotEmpty) {
-      _fitMarkersOnMap();
-    } else if (_request?.location != null) {
-      // If request data is loaded but markers aren't set yet, set them up
-      _setupMapMarkers();
     }
   }
 
@@ -621,7 +634,39 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                         // Respond Area for non-owners (single entry point)
                         if (!_isOwner) ...[
                           const SizedBox(height: 24),
-                          if (_canUserRespond()) _buildQuickRespondSection(),
+                          if (_canUserRespond())
+                            _buildQuickRespondSection()
+                          else
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.orange[50],
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Upgrade to respond',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 6),
+                                  const Text(
+                                      'Complete membership and upgrade to respond and view contact details.'),
+                                  const SizedBox(height: 8),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: ElevatedButton(
+                                      onPressed: () async {
+                                        await QuickUpgradeSheet.show(
+                                            context, 'driver');
+                                        await _loadGateState();
+                                      },
+                                      child: const Text('See Plans'),
+                                    ),
+                                  )
+                                ],
+                              ),
+                            ),
                         ],
 
                         const SizedBox(height: 80), // Space for FAB
@@ -1117,6 +1162,11 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                 children: [
                   IconButton(
                     onPressed: () async {
+                      if (!_membershipCompleted || !(_entitlements?.canSeeContactDetails ?? false)) {
+                        await QuickUpgradeSheet.show(context, 'driver');
+                        await _loadGateState();
+                        return;
+                      }
                       // Prefer requester's user phone, fallback to metadata phone
                       final meta = _request?.typeSpecificData ?? {};
                       final fallbackPhone =

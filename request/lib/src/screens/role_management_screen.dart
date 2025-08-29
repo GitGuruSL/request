@@ -355,14 +355,34 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => _registerRole(role),
-                icon: const Icon(Icons.add, size: 18),
-                label: Text('Register as $roleTitle'),
-                style: AppTheme.primaryButtonStyle,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _registerRole(role),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: Text('Register as $roleTitle'),
+                    style: AppTheme.primaryButtonStyle,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      if (role == UserRole.driver) {
+                        Navigator.pushNamed(context, '/membership',
+                            arguments: {'requiredSubscriptionType': 'driver'});
+                      } else if (role == UserRole.business) {
+                        Navigator.pushNamed(context, '/membership', arguments: {
+                          'requiredSubscriptionType': 'business'
+                        });
+                      }
+                    },
+                    icon: const Icon(Icons.verified_user_outlined, size: 18),
+                    label: const Text('View Plans'),
+                  ),
+                ),
+              ],
             ),
           ]
         ],

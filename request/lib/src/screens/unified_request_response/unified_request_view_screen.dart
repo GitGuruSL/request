@@ -16,6 +16,9 @@ import '../../services/chat_service.dart';
 import '../../services/rest_request_service.dart' show ReviewsService;
 import '../account/public_profile_screen.dart';
 import '../../services/rest_user_service.dart';
+import '../membership/quick_upgrade_sheet.dart';
+import '../../services/entitlements_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// UnifiedRequestViewScreen (Minimal REST Migration)
 /// Legacy Firebase-based logic removed. Displays core request info only.
@@ -41,11 +44,30 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
   bool _submittingReview = false;
   bool _alreadyReviewed = false;
   String? _requesterPhotoUrl;
+  // Entitlements and membership gating
+  EntitlementsSummary? _entitlements;
+  bool _membershipCompleted = false;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _loadEntitlementsAndPrefs();
+  }
+
+  Future<void> _loadEntitlementsAndPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final completed = prefs.getBool('membership_completed') ?? false;
+      final ent = await EntitlementsService.getEntitlementsSummary();
+      if (!mounted) return;
+      setState(() {
+        _membershipCompleted = completed;
+        _entitlements = ent;
+      });
+    } catch (_) {
+      // Non-fatal
+    }
   }
 
   Widget _buildRequesterAvatar(rest.RequestModel r) {
@@ -163,6 +185,10 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
     if (!(status == 'active' || status == 'open')) return false;
     // Respect backend gating flag
     if (_request?.canMessage == false) return false;
+    // Require membership completion before permitting responses
+    if (!_membershipCompleted) return false;
+    // If entitlements loaded, enforce canRespond as well
+    if (_entitlements != null && !_entitlements!.canRespond) return false;
     // Only allow one response per user on this screen
     return !_responses.any((r) => r.userId == userId);
   }
@@ -192,10 +218,29 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
             content: const Text('Upgrade membership to continue responding'),
             action: SnackBarAction(
               label: 'View Plans',
-              onPressed: () => Navigator.pushNamed(context, '/membership'),
+              onPressed: () async {
+                final reqType =
+                    (_request?.requestType ?? _request?.categoryType ?? '')
+                        .toString()
+                        .toLowerCase();
+                final isRide = reqType.contains('ride');
+                await QuickUpgradeSheet.show(
+                    context, isRide ? 'driver' : 'business');
+              },
             ),
           ),
         );
+        return;
+      }
+      // Gate by membership completion and entitlements
+      if (!_membershipCompleted ||
+          (_entitlements != null && !_entitlements!.canRespond)) {
+        if (!mounted) return;
+        final reqType = (_request?.requestType ?? _request?.categoryType ?? '')
+            .toString()
+            .toLowerCase();
+        final isRide = reqType.contains('ride');
+        await QuickUpgradeSheet.show(context, isRide ? 'driver' : 'business');
         return;
       }
       if (!mounted) return;
@@ -243,7 +288,16 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
           content: const Text('Upgrade membership to message requesters'),
           action: SnackBarAction(
             label: 'View Plans',
-            onPressed: () => Navigator.pushNamed(context, '/membership'),
+            onPressed: () {
+              final reqType =
+                  (_request?.requestType ?? _request?.categoryType ?? '')
+                      .toString()
+                      .toLowerCase();
+              final isRide = reqType.contains('ride');
+              Navigator.pushNamed(context, '/membership', arguments: {
+                'requiredSubscriptionType': isRide ? 'driver' : 'business'
+              });
+            },
           ),
         ),
       );
@@ -692,45 +746,49 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                                 final desc = descController.text.trim();
                                 if (title.isEmpty || desc.isEmpty) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content: Text(
-                                              'Title & description required')));
+                                    const SnackBar(
+                                        content: Text(
+                                            'Title and description are required')),
+                                  );
                                   return;
                                 }
-                                final budget = double.tryParse(
-                                    budgetController.text.trim());
-                                setState(() => _updatingRequest = true);
-                                setSheet(() => {});
-
-                                final updates = <String, dynamic>{
-                                  'title': title,
-                                  'description': desc,
-                                  if (budget != null) 'budget': budget
-                                };
-                                final updated =
-                                    await _service.updateRequest(r.id, updates);
-                                if (updated != null) {
-                                  setState(() => _request = updated);
-                                  if (mounted) Navigator.pop(ctx);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content: Text('Request updated')));
-                                } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content: Text(
-                                              'Failed to update request')));
+                                setSheet(() => _updatingRequest = true);
+                                try {
+                                  final budgetText =
+                                      budgetController.text.trim();
+                                  final payload = <String, dynamic>{
+                                    'title': title,
+                                    'description': desc,
+                                    if (budgetText.isNotEmpty)
+                                      'budget': double.tryParse(budgetText),
+                                  };
+                                  final updated = await _service.updateRequest(
+                                      _request!.id, payload);
+                                  if (updated != null) {
+                                    if (mounted) {
+                                      setState(() => _request = updated);
+                                      Navigator.pop(ctx);
+                                    }
+                                  } else {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(const SnackBar(
+                                              content: Text(
+                                                  'Failed to save changes')));
+                                    }
+                                  }
+                                } catch (e) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                            content: Text(
+                                                'Error: ${e.toString()}')));
+                                  }
+                                } finally {
+                                  setSheet(() => _updatingRequest = false);
                                 }
-                                if (mounted)
-                                  setState(() => _updatingRequest = false);
                               },
-                        icon: busy
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: Colors.white))
-                            : const Icon(Icons.save),
+                        icon: const Icon(Icons.save_outlined),
                         label: Text(busy ? 'Saving...' : 'Save Changes'),
                       )),
                   const SizedBox(height: 12),
@@ -1169,15 +1227,33 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                             ),
                           ),
                           if (!_isOwner) ...[
-                            IconButton(
-                              onPressed: () => _messageRequester(r),
-                              icon: Icon(
-                                Icons.message,
-                                color: _getTypeColor(_getCurrentRequestType()),
-                                size: 20,
+                            if ((_entitlements?.canSendMessages ?? false) &&
+                                _membershipCompleted)
+                              IconButton(
+                                onPressed: () => _messageRequester(r),
+                                icon: Icon(
+                                  Icons.message,
+                                  color:
+                                      _getTypeColor(_getCurrentRequestType()),
+                                  size: 20,
+                                ),
+                                tooltip: 'Message Requester',
+                              )
+                            else
+                              TextButton.icon(
+                                onPressed: () async {
+                                  final reqType = (_request?.requestType ??
+                                          _request?.categoryType ??
+                                          '')
+                                      .toString()
+                                      .toLowerCase();
+                                  final isRide = reqType.contains('ride');
+                                  await QuickUpgradeSheet.show(
+                                      context, isRide ? 'driver' : 'business');
+                                },
+                                icon: const Icon(Icons.lock_outline),
+                                label: const Text('Subscribe to message'),
                               ),
-                              tooltip: 'Message Requester',
-                            ),
                           ],
                         ]),
                         const SizedBox(height: 8),
@@ -1727,8 +1803,6 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
           return 'Contact Person';
         case 'contactPhone':
           return 'Contact Phone';
-        case 'contactEmail':
-          return 'Contact Email';
         case 'applicationDeadline':
           return 'Application Deadline';
         default:
@@ -1737,8 +1811,9 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
               .replaceAll('_', ' ')
               .trim()
               .split(' ')
-              .map((w) =>
-                  w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
+              .map((w) => w.isEmpty
+                  ? w
+                  : w[0].toUpperCase() + w.substring(1).toLowerCase())
               .join(' ');
       }
     }
@@ -1761,34 +1836,31 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
         ),
       ),
     ];
-
-    if (fields is Map && fields.isNotEmpty) {
-      final skipKeys = {'estimatedBudget'}; // budget shown separately
-      fields.forEach((k, v) {
-        if (skipKeys.contains(k)) return;
-        if (v == null || (v is String && v.toString().trim().isEmpty)) return;
-        widgets.add(
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  width: 80,
-                  child: Text('${prettyLabel(k)}:',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w500, fontSize: 12)),
-                ),
-                Expanded(
-                  child: Text(_formatValue(v),
-                      style: const TextStyle(fontSize: 12)),
-                ),
-              ],
-            ),
+    final skipKeys = {'estimatedBudget'}; // budget shown separately
+    fields.forEach((k, v) {
+      if (skipKeys.contains(k)) return;
+      if (v == null || (v is String && v.toString().trim().isEmpty)) return;
+      widgets.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 80,
+                child: Text('${prettyLabel(k)}:',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w500, fontSize: 12)),
+              ),
+              Expanded(
+                child:
+                    Text(_formatValue(v), style: const TextStyle(fontSize: 12)),
+              ),
+            ],
           ),
-        );
-      });
-    }
+        ),
+      );
+    });
 
     return widgets;
   }
