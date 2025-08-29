@@ -73,14 +73,19 @@ router.put('/:id', auth.authMiddleware(), auth.roleMiddleware(['super_admin']), 
 // Country pricing CRUD (country admin)
 router.get('/:id/country-pricing', auth.authMiddleware(), auth.roleMiddleware(['super_admin','country_admin']), async (req,res)=>{
   try {
+    console.log('Country pricing request:', { id: req.params.id, country: req.query.country, user: req.user?.id });
     const { id } = req.params;
     const { country } = req.query;
     const params=[id];
     const where=['plan_id = $1::uuid'];
     if (country){ params.push(country); where.push(`country_code = $${params.length}`); }
     const r = await db.query(`SELECT * FROM subscription_country_pricing WHERE ${where.join(' AND ')} ORDER BY country_code`, params);
+    console.log('Country pricing result:', r.rows.length, 'rows');
     res.json({ success:true, data:r.rows });
-  } catch (e) { console.error(e); res.status(500).json({ success:false, error:'Failed to list country pricing' }); }
+  } catch (e) { 
+    console.error('Country pricing error:', e); 
+    res.status(500).json({ success:false, error:'Failed to list country pricing' }); 
+  }
 });
 
 router.post('/:id/country-pricing', auth.authMiddleware(), auth.roleMiddleware(['super_admin','country_admin']), async (req,res)=>{

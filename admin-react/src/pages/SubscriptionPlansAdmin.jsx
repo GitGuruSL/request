@@ -86,7 +86,8 @@ export default function SubscriptionPlansAdmin() {
                 { params: { country: myCountry } });
               const pricing = res.data?.data?.[0];
               return { ...plan, pricing };
-            } catch {
+            } catch (err) {
+              console.warn(`No pricing found for plan ${plan.id} in ${myCountry}:`, err.response?.status);
               return { ...plan, pricing: null };
             }
           })
@@ -94,6 +95,7 @@ export default function SubscriptionPlansAdmin() {
         setMyPricing(allPricing);
       } catch (e) {
         console.error('Failed to load my pricing', e);
+        setError('Failed to load pricing data. Please check if the subscription system is properly deployed.');
       }
     } else if (isSuperAdmin) {
       // Load pending approvals
@@ -102,6 +104,9 @@ export default function SubscriptionPlansAdmin() {
         setPendingApprovals(res.data?.data || []);
       } catch (e) {
         console.error('Failed to load pending approvals', e);
+        if (e.response?.status === 404) {
+          setError('Subscription approval system not found. Please check deployment.');
+        }
       }
     }
   };
@@ -167,6 +172,22 @@ export default function SubscriptionPlansAdmin() {
 
   useEffect(() => { loadPlans(); }, []);
   useEffect(() => { if (plans.length) loadMyData(); }, [plans, isCountryAdmin, isSuperAdmin, myCountry]);
+
+  // Debug check for subscription routes
+  useEffect(() => {
+    const debugCheck = async () => {
+      try {
+        const res = await api.get('/subscription-plans-new/debug');
+        console.log('✅ Subscription routes are accessible:', res.data);
+      } catch (err) {
+        console.error('❌ Subscription routes not accessible:', err.response?.status || err.message);
+        if (err.response?.status === 404) {
+          setError('Subscription system is not deployed on the server. Please redeploy the backend.');
+        }
+      }
+    };
+    debugCheck();
+  }, []);
 
   return (
     <Box>
