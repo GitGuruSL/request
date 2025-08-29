@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -e
+set -u
+# Enable pipefail when supported
+set -o pipefail 2>/dev/null || true
 
 # Standardized Docker redeploy script for Request backend
 # - Uses a single canonical container name
