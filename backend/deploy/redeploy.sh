@@ -50,6 +50,15 @@ if [[ -n "${GHCR_TOKEN:-}" && -n "${GHCR_USER:-}" ]]; then
 fi
 docker pull "$IMAGE"
 
+# Resolve tag to immutable digest if available
+RUNTIME_IMAGE="$IMAGE"
+if DIGEST_REF=$(docker inspect --format='{{index .RepoDigests 0}}' "$IMAGE" 2>/dev/null); then
+  if [[ -n "$DIGEST_REF" ]]; then
+    echo "🔖 Resolved to digest: $DIGEST_REF"
+    RUNTIME_IMAGE="$DIGEST_REF"
+  fi
+fi
+
 echo "🧹 Removing any existing containers for this app (by name, label, or image repo)..."
 # Remove by canonical name
 docker rm -f "$NAME" >/dev/null 2>&1 || true
@@ -85,13 +94,19 @@ docker run -d --name "$NAME" \
   --env-file "$ENV_FILE" \
   --label "${LABEL_KEY}=${LABEL_VAL}" \
   -p "$HOST_BIND:$PORT:3001" \
-  "$IMAGE"
+  "$RUNTIME_IMAGE"
 
 echo "⏱️  Waiting for health..."
 ATTEMPTS=30
 for i in $(seq 1 $ATTEMPTS); do
   if curl -fsS "http://localhost:$PORT/health" >/dev/null 2>&1; then
     echo "✅ Healthy at http://localhost:$PORT/health"
+    if [[ "$RUNTIME_IMAGE" == *"@"* ]]; then
+      PINNED_REF="${RUNTIME_IMAGE##*@}"
+    else
+      PINNED_REF="${RUNTIME_IMAGE##*:}"
+    fi
+    printf "%s" "$PINNED_REF" > /opt/request-backend/last_successful.sha || true
     exit 0
   fi
   sleep 2
