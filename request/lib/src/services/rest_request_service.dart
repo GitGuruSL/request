@@ -624,11 +624,16 @@ class RestRequestService {
       if (res.isSuccess && res.data != null) {
         final json = res.data!['data'] as Map<String, dynamic>?;
         if (json != null) return ResponseModel.fromJson(json);
+        // If success but no data, treat as failure
+        throw Exception('Failed to parse response');
+      } else {
+        // Bubble up clear error for UI (e.g., monthly limit reached)
+        final msg = res.error ?? res.message ?? 'Failed to create response';
+        throw Exception(msg);
       }
-      return null;
     } catch (e) {
       print('Error creating response: $e');
-      return null;
+      rethrow;
     }
   }
 

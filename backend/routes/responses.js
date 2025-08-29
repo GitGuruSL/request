@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router({ mergeParams: true });
 const db = require('../services/database');
 const auth = require('../services/auth');
+const entitlements = require('../entitlements');
 const notify = require('../services/notification-helper');
 
 // Dev-friendly optional auth (copied pattern from master-products)
@@ -94,7 +95,7 @@ router.get('/', optionalAuth(async (req, res) => {
 }));
 
 // Create a response (one per user per request enforced by unique index)
-router.post('/', optionalAuth(async (req, res) => {
+router.post('/', auth.authMiddleware(), entitlements.requireResponseEntitlement(), async (req, res) => {
   try {
     const requestId = req.params.requestId;
     const userId = req.user?.id || req.user?.userId; // auth middleware sets id
@@ -152,6 +153,16 @@ router.post('/', optionalAuth(async (req, res) => {
         data: { requestId, responseId: insert.id }
       });
     } catch (e) { console.warn('notify newResponse failed', e?.message || e); }
+    // Increment usage count for free users (normal audience without active sub)
+    try {
+      const ent = req.entitlements;
+      if (ent && ent.audience === 'normal' && !ent.isSubscribed) {
+        await entitlements.incrementResponseCount(userId);
+      }
+    } catch (e) {
+      console.warn('[responses][create] failed to increment usage count', e?.message || e);
+    }
+
     res.status(201).json({ success: true, message: 'Response created', data: insert });
   } catch (error) {
     if (error.code === '23505') { // unique violation
@@ -160,7 +171,7 @@ router.post('/', optionalAuth(async (req, res) => {
     console.error('Error creating response:', error);
     res.status(500).json({ success: false, message: 'Error creating response', error: error.message });
   }
-}));
+});
 
 // Update a response (only owner)
 router.put('/:responseId', auth.authMiddleware(), async (req, res) => {

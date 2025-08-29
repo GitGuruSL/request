@@ -106,6 +106,8 @@ const modulesRoutes = require('./routes/modules'); // NEW - module management
 const adminSmsRoutes = require('./routes/admin-sms'); // NEW - SMS configuration management
 const smsConfigRoutes = require('./routes/sms-config'); // NEW - SMS config API for frontend
 const reviewsRoutes = require('./routes/reviews'); // NEW - user reviews API
+const authService = require('./services/auth');
+const entitlementSvc = require('./entitlements');
 
 // Import centralized data routes
 const masterProductsRoutes = require('./routes/master-products');
@@ -208,6 +210,16 @@ safeUse('/api/modules', modulesRoutes, 'modulesRoutes'); // NEW - module managem
 safeUse('/api/admin', adminSmsRoutes, 'adminSmsRoutes'); // NEW - SMS configuration management
 safeUse('/api/sms', smsConfigRoutes, 'smsConfigRoutes'); // NEW - SMS config API for frontend
 safeUse('/api/reviews', reviewsRoutes, 'reviewsRoutes'); // NEW - user reviews
+// Current user entitlements (for gating in app)
+app.get('/api/me/entitlements', authService.authMiddleware(), async (req, res) => {
+  try {
+    const data = await entitlementSvc.getEntitlements(req.user.id, req.user.role);
+    res.json({ success: true, data });
+  } catch (e) {
+    console.error('entitlements route error', e);
+    res.status(500).json({ success: false, error: 'failed' });
+  }
+});
 console.log('🔧 Driver-verifications route registered at /api/driver-verifications');
 console.log('🔧 Business-verifications route registered at /api/business-verifications');
 console.log('🔧 Business-types route registered at /api/business-types');

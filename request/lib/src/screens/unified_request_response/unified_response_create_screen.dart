@@ -1945,9 +1945,13 @@ class _UnifiedResponseCreateScreenState
       }
     } catch (e) {
       if (mounted) {
+        final msg = e.toString();
+        final human = msg.contains('limit')
+            ? 'Monthly response limit reached. Subscribe to continue.'
+            : msg.replaceAll('Exception: ', '');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error submitting response: $e'),
+            content: Text(human.isNotEmpty ? human : 'Error submitting response'),
             backgroundColor: Colors.red,
           ),
         );

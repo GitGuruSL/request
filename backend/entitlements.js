@@ -68,7 +68,9 @@ function requireResponseEntitlement() {
       const userId = req.user?.id; // set by auth middleware
       const role = req.user?.role; // 'normal' | 'business'
       if (!userId) return res.status(401).json({ error: 'unauthorized' });
-      const ent = await getEntitlements(userId, role);
+  const ent = await getEntitlements(userId, role);
+  // attach to request for downstream handlers
+  req.entitlements = ent;
       if (ent.audience === 'normal' && !ent.isSubscribed && ent.responseCountThisMonth >= 3) {
         return res.status(402).json({ error: 'limit_reached', message: 'Monthly response limit reached' });
       }
