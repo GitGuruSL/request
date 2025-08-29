@@ -3,6 +3,16 @@ const router = express.Router();
 const db = require('../services/database');
 const auth = require('../services/auth');
 
+// Debug endpoint to test if routes are working
+router.get('/debug', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'Subscription routes are working',
+    timestamp: new Date().toISOString(),
+    userAgent: req.get('User-Agent')
+  });
+});
+
 // List plans (optionally by type)
 router.get('/', async (req, res) => {
   try {

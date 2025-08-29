@@ -196,7 +196,7 @@ export default function SubscriptionPlansAdmin() {
             <Typography variant="h6" gutterBottom>Global Plans</Typography>
             <Grid container spacing={2}>
               {plans.map((plan) => (
-                <Grid item xs={12} md={6} lg={4} key={plan.id}>
+                <Grid size={{ xs: 12, md: 6, lg: 4 }} key={plan.id}>
                   <Card>
                     <CardContent>
                       <Typography variant="h6">{plan.name}</Typography>
@@ -281,7 +281,7 @@ export default function SubscriptionPlansAdmin() {
           <Typography variant="h6" gutterBottom>Set Pricing for Your Country</Typography>
           <Grid container spacing={3}>
             {myPricing.map((item) => (
-              <Grid item xs={12} md={6} key={item.id}>
+              <Grid size={{ xs: 12, md: 6 }} key={item.id}>
                 <PricingCard 
                   plan={item} 
                   pricing={item.pricing}
