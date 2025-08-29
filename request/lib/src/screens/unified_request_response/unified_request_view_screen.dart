@@ -1107,6 +1107,29 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                     _chip(Icons.flag, r.countryCode),
                     _chip(Icons.access_time, _relativeTime(r.createdAt)),
                     _chip(Icons.info_outline, r.status.toUpperCase()),
+                    if (r.isUrgent)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.red.shade200),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(Icons.priority_high,
+                                size: 14, color: Colors.redAccent),
+                            SizedBox(width: 4),
+                            Text('Urgent',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.redAccent,
+                                    fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
                   ]),
 
                   // Requester Information Section
@@ -1157,17 +1180,50 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                             ),
                           ],
                         ]),
-                        // TODO: Add phone number display when available in the model
-                        // if (r.phone != null) ...[
-                        //   const SizedBox(height: 4),
-                        //   Row(children: [
-                        //     Icon(Icons.phone, size: 16, color: Colors.grey[600]),
-                        //     const SizedBox(width: 8),
-                        //     Expanded(
-                        //         child: Text(r.phone!,
-                        //             style: TextStyle(color: Colors.grey[700]))),
-                        //   ]),
-                        // ],
+                        const SizedBox(height: 8),
+                        if (r.contactVisible &&
+                            (r.userPhone?.isNotEmpty == true))
+                          Row(children: [
+                            Icon(Icons.phone,
+                                size: 16, color: Colors.grey[600]),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(r.userPhone!,
+                                  style: TextStyle(color: Colors.grey[700])),
+                            ),
+                          ])
+                        else if (!_isOwner && !r.contactVisible) ...[
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.amber.shade200),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.lock_outline,
+                                    size: 16, color: Colors.amber.shade700),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Contact details are hidden. Subscribe to view and message instantly.',
+                                    style: TextStyle(
+                                      color: Colors.amber.shade800,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.pushNamed(
+                                      context, '/membership'),
+                                  child: const Text('View Plans'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),

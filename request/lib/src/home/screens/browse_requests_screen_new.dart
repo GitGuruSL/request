@@ -471,6 +471,32 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  if (request.isUrgent)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade600,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(Icons.priority_high,
+                              size: 12, color: Colors.white),
+                          SizedBox(width: 4),
+                          Text(
+                            'URGENT',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   const Spacer(),
                   Container(
                     padding:
