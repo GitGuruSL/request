@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/subscription_service.dart';
 import '../../services/country_service.dart';
-import '../../services/entitlements_service.dart';
 import '../../theme/glass_theme.dart';
 import '../../theme/app_theme.dart';
 
@@ -96,6 +95,36 @@ class _MembershipScreenState extends State<MembershipScreen> {
     }
     // Default: show all plans
     return plans;
+  }
+
+  String _getContextSpecificTitle() {
+    if (widget.isProductSellerRequired) {
+      return 'Choose your marketplace plan';
+    }
+    if (widget.requiredSubscriptionType == 'driver') {
+      return 'Choose your driver plan';
+    }
+    if (widget.requiredSubscriptionType == 'business') {
+      return 'Choose your business plan';
+    }
+    return _planType == 'user_response'
+        ? 'Choose your response plan'
+        : 'Choose your marketplace plan';
+  }
+
+  String _getContextSpecificDescription() {
+    if (widget.isProductSellerRequired) {
+      return 'Choose how you want to pay for your product listings in our marketplace.';
+    }
+    if (widget.requiredSubscriptionType == 'driver') {
+      return 'Free plan gives 3 ride responses with contact details. Paid plans unlock unlimited responses, contact visibility, and instant notifications.';
+    }
+    if (widget.requiredSubscriptionType == 'business') {
+      return 'Free plan gives 3 responses with contact details. Paid plans unlock unlimited responses, contact visibility, and instant notifications.';
+    }
+    return _planType == 'user_response'
+        ? 'Free plan gives limited responses. Paid plans unlock unlimited responses, contact visibility, and instant notifications.'
+        : 'Choose how you want to pay for your product listings in our marketplace.';
   }
 
   List<SubscriptionPlan> get _currentPlans {
@@ -282,19 +311,13 @@ class _MembershipScreenState extends State<MembershipScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                              _planType == 'user_response'
-                                  ? 'Choose your response plan'
-                                  : 'Choose your marketplace plan',
+                          Text(_getContextSpecificTitle(),
                               style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                   color: GlassTheme.colors.textPrimary)),
                           const SizedBox(height: 8),
-                          Text(
-                              _planType == 'user_response'
-                                  ? 'Free plan gives limited responses. Paid plans unlock unlimited responses, contact visibility, and instant notifications.'
-                                  : 'Choose how you want to pay for your product listings in our marketplace.',
+                          Text(_getContextSpecificDescription(),
                               style: TextStyle(
                                   color: GlassTheme.colors.textSecondary)),
                           const SizedBox(height: 12),
@@ -352,8 +375,73 @@ class _MembershipScreenState extends State<MembershipScreen> {
         ),
       );
     }
-    
-    // For regular users, show plan type tabs
+
+    // Context-specific headers for different user types
+    if (widget.requiredSubscriptionType == 'driver') {
+      return Container(
+        decoration: GlassTheme.glassContainer,
+        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.drive_eta, color: GlassTheme.colors.primaryBlue),
+                const SizedBox(width: 8),
+                Text(
+                  'Driver Response Plans',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: GlassTheme.colors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Special plans for drivers to respond to ride requests. Free plan gives 3 responses, then upgrade for unlimited responses and contact visibility.',
+              style: TextStyle(color: GlassTheme.colors.textSecondary),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (widget.requiredSubscriptionType == 'business') {
+      return Container(
+        decoration: GlassTheme.glassContainer,
+        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.business, color: GlassTheme.colors.primaryBlue),
+                const SizedBox(width: 8),
+                Text(
+                  'Business Response Plans',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: GlassTheme.colors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Plans for responding to various requests. Free plan gives 3 responses, then upgrade for unlimited responses and contact visibility.',
+              style: TextStyle(color: GlassTheme.colors.textSecondary),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // For regular users without specific context, show plan type tabs
     return Container(
       decoration: GlassTheme.glassContainer,
       padding: const EdgeInsets.all(16),
@@ -396,7 +484,8 @@ class _MembershipScreenState extends State<MembershipScreen> {
     );
   }
 
-  Widget _buildPlanTypeButton(String title, String subtitle, IconData icon, String type) {
+  Widget _buildPlanTypeButton(
+      String title, String subtitle, IconData icon, String type) {
     final isSelected = _planType == type;
     return GestureDetector(
       onTap: () {
@@ -408,11 +497,15 @@ class _MembershipScreenState extends State<MembershipScreen> {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           border: Border.all(
-            color: isSelected ? GlassTheme.colors.primaryBlue : Colors.grey.shade300,
+            color: isSelected
+                ? GlassTheme.colors.primaryBlue
+                : Colors.grey.shade300,
             width: isSelected ? 2 : 1,
           ),
           borderRadius: BorderRadius.circular(8),
-          color: isSelected ? GlassTheme.colors.primaryBlue.withOpacity(0.1) : Colors.transparent,
+          color: isSelected
+              ? GlassTheme.colors.primaryBlue.withOpacity(0.1)
+              : Colors.transparent,
         ),
         child: Column(
           children: [
@@ -426,7 +519,9 @@ class _MembershipScreenState extends State<MembershipScreen> {
               title,
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color: isSelected ? GlassTheme.colors.primaryBlue : GlassTheme.colors.textPrimary,
+                color: isSelected
+                    ? GlassTheme.colors.primaryBlue
+                    : GlassTheme.colors.textPrimary,
                 fontSize: 12,
               ),
               textAlign: TextAlign.center,
