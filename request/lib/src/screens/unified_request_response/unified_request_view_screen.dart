@@ -6,6 +6,7 @@ import '../../services/rest_auth_service.dart';
 import '../../models/request_model.dart';
 import '../../models/enhanced_user_model.dart';
 import '../../utils/image_url_helper.dart';
+import '../../widgets/smart_network_image.dart';
 import 'unified_response_create_screen.dart';
 import 'unified_request_edit_screen.dart';
 import 'view_all_responses_screen.dart';
@@ -721,8 +722,8 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
           children: [
             Center(
               child: InteractiveViewer(
-                child: Image.network(
-                  fullImageUrl,
+                child: SmartNetworkImage(
+                  imageUrl: fullImageUrl,
                   fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) => Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -741,28 +742,6 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                       ),
                     ],
                   ),
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircularProgressIndicator(
-                            value: loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded /
-                                    loadingProgress.expectedTotalBytes!
-                                : null,
-                            color: Colors.white,
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'Loading image...',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
                 ),
               ),
             ),
@@ -962,9 +941,11 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                                 ),
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(8),
-                                  child: Image.network(
-                                    validImageUrls[index],
+                                  child: SmartNetworkImage(
+                                    imageUrl: validImageUrls[index],
                                     fit: BoxFit.cover,
+                                    width: 120,
+                                    height: 120,
                                     errorBuilder: (context, error, stackTrace) {
                                       // Debug the image URL issue
                                       ImageUrlHelper.debugImageUrl(
@@ -994,40 +975,6 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                                               ),
                                             ),
                                           ],
-                                        ),
-                                      );
-                                    },
-                                    loadingBuilder:
-                                        (context, child, loadingProgress) {
-                                      if (loadingProgress == null) return child;
-                                      return Container(
-                                        color: Colors.grey[100],
-                                        child: Center(
-                                          child: Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              CircularProgressIndicator(
-                                                value: loadingProgress
-                                                            .expectedTotalBytes !=
-                                                        null
-                                                    ? loadingProgress
-                                                            .cumulativeBytesLoaded /
-                                                        loadingProgress
-                                                            .expectedTotalBytes!
-                                                    : null,
-                                                strokeWidth: 2,
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                'Loading...',
-                                                style: TextStyle(
-                                                  fontSize: 8,
-                                                  color: Colors.grey[600],
-                                                ),
-                                              ),
-                                            ],
-                                          ),
                                         ),
                                       );
                                     },
@@ -1147,6 +1094,7 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                     ),
                   ],
 
+                  // Request Details Section
                   if (r.metadata != null && r.metadata!.isNotEmpty) ...[
                     const SizedBox(height: 24),
                     const Text('Request Details',
