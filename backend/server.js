@@ -312,19 +312,12 @@ app.get('/health', async (req, res) => {
 
 
 // Test endpoint
-
 app.get('/test', (req, res) => {
-
   res.json({ 
-
-    message: 'Server is running!', 
-
+    message: 'Server is running!',
     timestamp: new Date().toISOString(),
-
     environment: process.env.NODE_ENV || 'development'
-
   });
-
 });
 
 
@@ -332,20 +325,44 @@ app.get('/test', (req, res) => {
 // Serve static files (uploaded images)
 
 app.use('/uploads', express.static('uploads', {
-
   setHeaders: (res, path) => {
-
     // Set CORS headers for images
-
     res.setHeader('Access-Control-Allow-Origin', '*');
-
     res.setHeader('Access-Control-Allow-Methods', 'GET');
-
     res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-
   }
-
 }));
+
+// Alias: /api/health (same payload as /health)
+app.get('/api/health', async (req, res) => {
+  try {
+    const dbHealth = await dbService.healthCheck();
+    const isDbHealthy = dbHealth && (dbHealth.status === 'healthy' || dbHealth.timestamp);
+    if (!isDbHealthy) {
+      const diag = await dbService.diagnoseConnectivity().catch(() => null);
+      return res.status(503).json({
+        status: 'unhealthy',
+        timestamp: new Date().toISOString(),
+        database: dbHealth,
+        diagnosis: diag
+      });
+    }
+    return res.status(200).json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      database: dbHealth,
+      version: process.env.npm_package_version || '1.0.0'
+    });
+  } catch (error) {
+    const diag = await dbService.diagnoseConnectivity().catch(() => null);
+    return res.status(503).json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      error: error.message,
+      diagnosis: diag
+    });
+  }
+});
 
 
 
