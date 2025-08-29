@@ -1277,9 +1277,11 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top row: type badge + requester avatar
+              // Top row: requester avatar on the left, type badge aligned right
               Row(
                 children: [
+                  _buildRequesterAvatar(request),
+                  const Spacer(),
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -1297,8 +1299,6 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                       ),
                     ),
                   ),
-                  const Spacer(),
-                  _buildRequesterAvatar(request),
                 ],
               ),
               const SizedBox(height: 12),
