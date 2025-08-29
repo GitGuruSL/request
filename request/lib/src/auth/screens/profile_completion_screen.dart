@@ -100,9 +100,10 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
 
         if (result.success) {
           print('🔧 [ProfileCompletion] User registered successfully');
+          // After registration, navigate to membership onboarding to choose free/paid
           Navigator.pushNamedAndRemoveUntil(
             context,
-            '/home',
+            '/onboarding/membership',
             (route) => false,
           );
           return;
@@ -130,9 +131,10 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
         print(
             '🔧 [ProfileCompletion] Profile completed successfully, navigating to home...');
         // Profile completed successfully
+        // Existing user completing profile, send to membership screen too
         Navigator.pushNamedAndRemoveUntil(
           context,
-          '/home',
+          '/onboarding/membership',
           (route) => false,
         );
       } else {

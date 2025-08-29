@@ -356,6 +356,12 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
         badgeCount: _unreadMessages,
       ),
       _MenuItem(
+        title: 'Membership',
+        icon: Icons.verified_user_outlined,
+        color: const Color(0xFF8B5CF6), // Violet
+        route: '/membership',
+      ),
+      _MenuItem(
         title: 'My Activities',
         icon: Icons.history,
         color: const Color(0xFF06B6D4), // Cyan
