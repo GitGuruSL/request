@@ -115,6 +115,7 @@ const masterProductsRoutes = require('./routes/master-products');
 const brandsRoutes = require('./routes/brands');
 const subcategoriesRoutes = require('./routes/subcategories');
 const variableTypesRoutes = require('./routes/variable-types');
+const promoCodesRoutes = require('./routes/promo-codes'); // NEW - promo codes admin
 
 // Import country-specific routes
 const countryProductsRoutes = require('./routes/country-products');
@@ -181,6 +182,7 @@ safeUse('/api/master-products', masterProductsRoutes, 'masterProductsRoutes');
 safeUse('/api/brands', brandsRoutes, 'brandsRoutes');
 safeUse('/api/subcategories', subcategoriesRoutes, 'subcategoriesRoutes');
 safeUse('/api/variable-types', variableTypesRoutes, 'variableTypesRoutes');
+safeUse('/api/promo-codes', promoCodesRoutes, 'promoCodesRoutes'); // NEW - promo codes admin
 
 // Country-specific routes
 safeUse('/api/country-products', countryProductsRoutes, 'countryProductsRoutes');
