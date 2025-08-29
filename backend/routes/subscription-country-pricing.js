@@ -3,9 +3,27 @@ const router = express.Router();
 const db = require('../services/database');
 const auth = require('../services/auth');
 
+// Ensure table exists (idempotent) to avoid 500s on first use
+async function ensureTable(){
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS subscription_plan_country_pricing (
+      plan_id UUID NOT NULL,
+      country_code VARCHAR(10) NOT NULL,
+      price NUMERIC,
+      currency VARCHAR(10),
+      limitations JSONB DEFAULT '{}'::jsonb,
+      is_active BOOLEAN,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (plan_id, country_code)
+    )
+  `);
+}
+
 // List effective plans for a country (merge base + overrides)
 router.get('/', async (req, res) => {
   try {
+    await ensureTable();
     const { country } = req.query;
     const base = await db.query('SELECT * FROM subscription_plans_new WHERE is_active = true ORDER BY created_at DESC');
     if (!country) return res.json(base.rows);
@@ -32,6 +50,7 @@ router.get('/', async (req, res) => {
 // Upsert override (country_admin limited to own country)
 router.put('/:planId/:country', auth.authMiddleware(), auth.roleMiddleware(['super_admin','country_admin']), async (req, res) => {
   try {
+  await ensureTable();
     const { planId, country } = req.params;
     const body = req.body || {};
     const cc = String(country).toUpperCase();
@@ -58,6 +77,7 @@ router.put('/:planId/:country', auth.authMiddleware(), auth.roleMiddleware(['sup
 // Delete override
 router.delete('/:planId/:country', auth.authMiddleware(), auth.roleMiddleware(['super_admin','country_admin']), async (req, res) => {
   try {
+  await ensureTable();
     const { planId, country } = req.params;
     const cc = String(country).toUpperCase();
     if (req.user.role === 'country_admin') {

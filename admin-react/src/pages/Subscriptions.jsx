@@ -75,74 +75,7 @@ const SUBSCRIPTION_PLANS = [
   { value: 'pay_per_click', label: 'Pay Per Click' }
 ];
 
-// Default subscription plans that super admin can create
-const DEFAULT_SUBSCRIPTION_PLANS = {
-  rider_free: {
-    name: 'Rider Free Plan',
-    type: 'rider',
-    planType: 'monthly',
-    description: 'Limited free plan for riders with basic features',
-    isActive: true,
-    features: [
-      'Browse service requests',
-      'Up to 2 responses per month',
-      'Basic profile creation',
-      'View contact information after selection'
-    ],
-    limitations: {
-      maxResponsesPerMonth: 2,
-      riderRequestNotifications: false,
-      unlimitedResponses: false
-    },
-    isGlobal: true,
-    requiresCountryPricing: false,
-    defaultPrice: 0
-  },
-  rider_premium: {
-    name: 'Rider Premium Plan',
-    type: 'rider',
-    planType: 'monthly',
-    description: 'Unlimited plan for active riders',
-    isActive: true,
-    features: [
-      'Browse all service requests',
-      'Unlimited responses per month',
-      'Priority listing in search results',
-      'Instant rider request notifications',
-      'Advanced profile features',
-      'Analytics and insights'
-    ],
-    limitations: {
-      maxResponsesPerMonth: -1, // -1 means unlimited
-      riderRequestNotifications: true,
-      unlimitedResponses: true
-    },
-    isGlobal: true,
-    requiresCountryPricing: true,
-    defaultPrice: 10 // USD base price, will be converted per country
-  },
-  business_pay_per_click: {
-    name: 'Business Pay Per Click',
-    type: 'business',
-    planType: 'pay_per_click',
-    description: 'Pay only when someone responds to your requests',
-    isActive: true,
-    features: [
-      'Post unlimited service requests',
-      'Pay only for responses received',
-      'Business profile verification',
-      'Priority customer support',
-      'Request analytics and reporting'
-    ],
-    limitations: {
-      payPerResponse: true,
-      unlimitedRequests: true
-    },
-    isGlobal: true,
-    requiresCountryPricing: true,
-    defaultPrice: 2 // USD base price per click, will be converted per country
-  }
-};
+// (Removed) Old default subscription plans seeding logic
 
 const Subscriptions = () => {
   const { user, adminData, userRole, userCountry } = useAuth();
@@ -224,10 +157,6 @@ const Subscriptions = () => {
           (plan.isDefaultPlan && !plan.requiresCountryPricing)
         );
       }
-      if (plans.length === 0 && isSuperAdmin) {
-        await initializeDefaultPlans();
-        return;
-      }
       setSubscriptionPlans(plans);
     } catch (error) {
       console.error('Error fetching subscription plans:', error);
@@ -252,53 +181,7 @@ const Subscriptions = () => {
     }
   };
 
-  // Initialize default subscription plans (Super Admin only)
-  const initializeDefaultPlans = async () => {
-    if (!isSuperAdmin) return;
-    
-    try {
-      setLoading(true);
-      let createdCount = 0;
-      let existingCount = 0;
-      
-      for (const [planId, planData] of Object.entries(DEFAULT_SUBSCRIPTION_PLANS)) {
-        try {
-          await api.post('/subscription-plans/defaults', { planId, ...planData });
-          createdCount++;
-        } catch (e) {
-          existingCount++;
-        }
-      }
-      
-      // Show appropriate success message
-      if (createdCount > 0) {
-        setSnackbar({
-          open: true,
-          message: `Successfully created ${createdCount} new default subscription plans`,
-          severity: 'success'
-        });
-      } else if (existingCount > 0) {
-        setSnackbar({
-          open: true,
-          message: 'All default subscription plans already exist',
-          severity: 'info'
-        });
-      }
-      
-      // Refresh the plans list
-      fetchSubscriptionPlans();
-    } catch (error) {
-      console.error('Error initializing default plans:', error);
-      setError('Failed to initialize default plans');
-      setSnackbar({
-        open: true,
-        message: 'Failed to initialize default subscription plans',
-        severity: 'error'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  // (Removed) initializeDefaultPlans handler and seeding side-effects
 
   // Add country pricing to a global plan (Country Admin function)
   const addCountryPricing = async (planId, countryCode, pricing) => {
@@ -705,24 +588,14 @@ const Subscriptions = () => {
             </FormControl>
           )}
           {isSuperAdmin && (
-            <>
-              <Button
-                variant="outlined"
-                onClick={initializeDefaultPlans}
-                disabled={loading}
-                color="info"
-              >
-                Initialize Default Plans
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<Add />}
-                onClick={() => setDialogOpen(true)}
-                disabled={loading}
-              >
-                Add Custom Plan
-              </Button>
-            </>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={() => setDialogOpen(true)}
+              disabled={loading}
+            >
+              Add Custom Plan
+            </Button>
           )}
         </Box>
       </Box>
