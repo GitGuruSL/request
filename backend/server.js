@@ -84,6 +84,7 @@ const bannersRoutes = require('./routes/banners'); // NEW - Banners CRUD
 const reviewsRoutes = require('./routes/reviews'); // NEW - User reviews API
 const promoCodesRoutes = require('./routes/promo-codes'); // NEW - Promo codes admin
 const subscriptionsRoutes = require('./routes/subscriptions'); // NEW - Subscriptions (me/start/cancel)
+const subscriptionCountryPricingRoutes = require('./routes/subscription-country-pricing'); // NEW - Country pricing overrides
 
 
 
@@ -412,6 +413,7 @@ app.use('/api/product-sync', productSyncRoutes);
 app.use('/api/entity-activations', entityActivationRoutes);
 
 app.use('/api/subscription-plans-new', subscriptionPlansNewRoutes);
+app.use('/api/subscription-country', subscriptionCountryPricingRoutes); // Country-specific overrides CRUD and merged listing
 
 app.use('/api', subscriptionPlansLegacyRoutes);
 

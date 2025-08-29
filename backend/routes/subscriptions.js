@@ -11,8 +11,10 @@ router.get('/me', auth.authMiddleware(), async (req, res) => {
       `SELECT s.*, row_to_json(p) AS plan
        FROM subscriptions s
        JOIN subscription_plans_new p ON p.id = s.plan_id
-       WHERE s.user_id = $1 AND s.status IN ('active','trialing')
-       ORDER BY s.current_period_end DESC NULLS LAST
+       WHERE s.user_id = $1
+         AND s.status IN ('active','trialing')
+         AND (s.current_period_end IS NULL OR s.current_period_end > NOW())
+       ORDER BY COALESCE(s.current_period_end, s.start_at) DESC NULLS LAST
        LIMIT 1`,
       [userId]
     );

@@ -16,7 +16,7 @@ async function getEntitlements(userId, role, now = new Date()) {
     const yearMonth = ym(now);
 
     const subRes = await client.query(
-      `SELECT s.status, s.current_period_end, p.audience, p.model
+  `SELECT s.status, s.current_period_end, p.audience, p.model
        FROM subscriptions s
        JOIN subscription_plans p ON p.id = s.plan_id
        WHERE s.user_id = $1 AND s.status IN ('active','trialing')
@@ -45,13 +45,24 @@ async function getEntitlements(userId, role, now = new Date()) {
       // Determine free monthly limit from default rider plan limitations
       let limit = 3; // fallback
       try {
+  // Fetch user's country for country-specific overrides
+  const ures = await client.query('SELECT country_code FROM users WHERE id=$1', [userId]);
+  const userCountry = (ures.rows[0]?.country_code || '').toUpperCase();
         const freePlan = await client.query(
-          `SELECT limitations FROM subscription_plans_new
-           WHERE type = 'rider' AND is_default_plan = true
-           ORDER BY created_at DESC NULLS LAST
-           LIMIT 1`
+          `SELECT id, limitations FROM subscription_plans_new
+             WHERE type = 'rider' AND is_default_plan = true
+             ORDER BY created_at DESC NULLS LAST
+             LIMIT 1`
         );
-        const limitations = freePlan.rows[0]?.limitations || null;
+        let limitations = freePlan.rows[0]?.limitations || null;
+  // Merge country override if available
+  if (userCountry && freePlan.rowCount) {
+          const ov = await client.query('SELECT limitations FROM subscription_plan_country_pricing WHERE plan_id=$1 AND country_code=$2', [freePlan.rows[0].id, String(userCountry).toUpperCase()]);
+          if (ov.rowCount) {
+            const l2 = ov.rows[0].limitations || {};
+            limitations = { ...(limitations||{}), ...(l2||{}) };
+          }
+        }
         if (limitations && typeof limitations === 'object') {
           const m = limitations.maxResponsesPerMonth;
           if (typeof m === 'number') limit = m;

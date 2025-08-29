@@ -6,7 +6,23 @@ const authService = require('../services/auth');
 // Basic list
 router.get('/', async (req,res)=>{
   try {
-    const { type, active } = req.query;
+    const { type, active, country } = req.query;
+    if (country) {
+      // Delegate to merged view in subscription-country-pricing
+      const db2 = require('../services/database');
+      const base = await db2.query('SELECT * FROM subscription_plans_new ' + (active!==undefined? 'WHERE is_active = $1' : '') + ' ORDER BY created_at DESC', active!==undefined? [active==='true']: []);
+      const cc = String(country).toUpperCase();
+      const overrides = await db2.query('SELECT * FROM subscription_plan_country_pricing WHERE country_code = $1', [cc]);
+      const map = new Map(overrides.rows.map(o => [o.plan_id, o]));
+      let rows = base.rows;
+      if (type) rows = rows.filter(r=>r.type===type);
+      const merged = rows.map(p => {
+        const o = map.get(p.id);
+        if (!o) return p;
+        return { ...p, price: o.price ?? p.price, currency: o.currency ?? p.currency, limitations: { ...(p.limitations||{}), ...(o.limitations||{}) }, is_active: (o.is_active==null? p.is_active : o.is_active) };
+      });
+      return res.json(merged);
+    }
     const conditions = {};
     if(type) conditions.type = type;
     if(active !== undefined) conditions.is_active = active === 'true';
