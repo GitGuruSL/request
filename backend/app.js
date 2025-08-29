@@ -120,6 +120,7 @@ const priceListingsRoutes = require('./routes/price-listings');
 const paymentMethodsRoutes = require('./routes/payment-methods');
 const s3Routes = require('./routes/uploadS3');
 const countryPaymentGatewaysRoutes = require('./routes/country-payment-gateways');
+const paymentsRoutes = require('./routes/payments'); // NEW - payments/checkout/webhooks
 
 console.log('🔧 About to register driver-verifications route');
 
@@ -187,6 +188,7 @@ safeUse('/api/country-variable-types', countryVariableTypesRoutes, 'countryVaria
 safeUse('/api/price-listings', priceListingsRoutes, 'priceListingsRoutes');
 safeUse('/api/payment-methods', paymentMethodsRoutes, 'paymentMethodsRoutes');
 safeUse('/api/country-payment-gateways', countryPaymentGatewaysRoutes, 'countryPaymentGatewaysRoutes');
+safeUse('/api/payments', paymentsRoutes, 'paymentsRoutes');
 safeUse('/api/s3', s3Routes, 's3Routes');
 safeUse('/api/banners', bannersRoutes, 'bannersRoutes'); // NEW - banners CRUD
 
