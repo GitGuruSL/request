@@ -45,14 +45,16 @@ class SubscriptionServiceApi {
   static final SubscriptionServiceApi instance = SubscriptionServiceApi._();
   final ApiClient _api = ApiClient.instance;
 
-  Future<List<SubscriptionPlan>> fetchPlans(
-      {String type = 'rider', bool activeOnly = true}) async {
+  Future<List<SubscriptionPlan>> fetchPlans({
+    String type = 'rider',
+    bool activeOnly = true,
+  }) async {
     final qp = <String, String>{'type': type};
     if (activeOnly) qp['active'] = 'true';
-    final res = await _api.get<List<dynamic>>('/api/subscription-plans-new',
+    final res = await _api.get<Map<String, dynamic>>('/api/subscription-plans',
         queryParameters: qp);
     if (res.isSuccess && res.data != null) {
-      final list = res.data!;
+      final list = (res.data!['data'] as List?) ?? [];
       return list
           .map((e) => SubscriptionPlan.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -62,24 +64,59 @@ class SubscriptionServiceApi {
 
   Future<Map<String, dynamic>?> getMySubscription() async {
     final res = await _api.get<Map<String, dynamic>>('/api/subscriptions/me');
-    if (res.isSuccess && res.data != null)
+    if (res.isSuccess && res.data != null) {
       return res.data!['data'] as Map<String, dynamic>?;
+    }
     return null;
   }
 
-  Future<bool> startSubscription(String planId, {String? promoCode}) async {
-    final data = <String, dynamic>{'plan_id': planId};
-    if (promoCode != null && promoCode.isNotEmpty)
-      data['promo_code'] = promoCode;
-    final res = await _api
-        .post<Map<String, dynamic>>('/api/subscriptions/start', data: data);
-    return res.isSuccess == true;
+  Future<Map<String, dynamic>?> createSubscription({
+    required String planId,
+    required String countryCode,
+    String? promoCode,
+  }) async {
+    final data = <String, dynamic>{
+      'plan_id': planId,
+      'country_code': countryCode,
+      if (promoCode != null && promoCode.isNotEmpty) 'promo_code': promoCode,
+    };
+    final res = await _api.post<Map<String, dynamic>>(
+      '/api/subscriptions',
+      data: data,
+    );
+    if (res.isSuccess && res.data != null) {
+      return res.data!['data'] as Map<String, dynamic>?;
+    }
+    return null;
   }
 
-  Future<bool> cancelSubscription({bool immediate = false}) async {
+  Future<Map<String, dynamic>?> checkoutSubscription({
+    required String subscriptionId,
+    String? provider,
+  }) async {
     final res = await _api.post<Map<String, dynamic>>(
-        '/api/subscriptions/cancel',
-        data: {'immediate': immediate});
-    return res.isSuccess == true;
+      '/api/payments/checkout-subscription',
+      data: {
+        'subscription_id': subscriptionId,
+        if (provider != null) 'provider': provider,
+      },
+    );
+    if (res.isSuccess && res.data != null) {
+      return res.data!['data'] as Map<String, dynamic>?;
+    }
+    return null;
+  }
+
+  Future<List<Map<String, dynamic>>> getCountryGateways(
+      String countryCode) async {
+    final res = await _api.get<Map<String, dynamic>>(
+      '/api/country-payment-gateways',
+      queryParameters: {'country': countryCode},
+    );
+    if (res.isSuccess && res.data != null) {
+      final list = (res.data!['data'] as List?) ?? [];
+      return list.cast<Map<String, dynamic>>();
+    }
+    return [];
   }
 }
