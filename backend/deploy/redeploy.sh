@@ -60,6 +60,12 @@ if DIGEST_REF=$(docker inspect --format='{{index .RepoDigests 0}}' "$IMAGE" 2>/d
 fi
 
 echo "🧹 Removing any existing containers for this app (by name, label, or image repo)..."
+# First, stop any PM2-managed Node app on the same port/name to avoid port conflicts
+if command -v pm2 >/dev/null 2>&1; then
+  echo "🛑 Stopping PM2 app (if exists): request-backend"
+  pm2 stop request-backend >/dev/null 2>&1 || true
+  pm2 delete request-backend >/dev/null 2>&1 || true
+fi
 # Remove by canonical name
 docker rm -f "$NAME" >/dev/null 2>&1 || true
 # Remove by legacy/accidental name
@@ -88,6 +94,9 @@ while read -r CID CNM PRTS; do
   fi
 done < <(docker ps --format '{{.ID}} {{.Names}} {{.Ports}}')
 
+echo "📁 Ensuring app state dir exists (/opt/request-backend)"
+sudo mkdir -p /opt/request-backend || true
+
 echo "🚀 Starting container..."
 docker run -d --name "$NAME" \
   --restart unless-stopped \
@@ -114,4 +123,34 @@ done
 
 echo "❌ Health check failed after $((ATTEMPTS*2))s. Showing logs:"
 docker logs --tail=200 "$NAME" || true
+
+# Attempt automatic rollback to last known good image if recorded
+if [[ -f /opt/request-backend/last_successful.sha ]]; then
+  PREV_REF=$(cat /opt/request-backend/last_successful.sha | tr -d '\n' || true)
+  if [[ -n "$PREV_REF" ]]; then
+    echo "↩️  Attempting rollback to previous healthy image digest: $PREV_REF"
+    docker rm -f "$NAME" >/dev/null 2>&1 || true
+    docker pull "$REPO@$PREV_REF" || true
+    docker run -d --name "$NAME" \
+      --restart unless-stopped \
+      --env-file "$ENV_FILE" \
+      --label "${LABEL_KEY}=${LABEL_VAL}" \
+      -p "$HOST_BIND:$PORT:3001" \
+      "$REPO@$PREV_REF"
+    echo "⏱️  Rechecking health after rollback..."
+    for i in $(seq 1 15); do
+      if curl -fsS "http://localhost:$PORT/health" >/dev/null 2>&1; then
+        echo "✅ Rolled back and healthy at http://localhost:$PORT/health"
+        exit 0
+      fi
+      sleep 2
+    done
+    echo "❌ Rollback did not recover health."
+  else
+    echo "ℹ️  No previous digest recorded for rollback."
+  fi
+else
+  echo "ℹ️  No rollback file found at /opt/request-backend/last_successful.sha"
+fi
+
 exit 1
