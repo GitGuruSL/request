@@ -20,7 +20,6 @@ import 'src/screens/business_verification_screen.dart';
 import 'src/screens/business_registration_screen.dart';
 import 'src/screens/delivery_verification_screen.dart';
 import 'src/screens/verification_status_screen.dart';
-import 'src/screens/role_management_screen.dart';
 import 'src/screens/modern_menu_screen.dart';
 import 'src/screens/content_page_screen.dart';
 import 'src/screens/legal_page_screen.dart';
@@ -183,8 +182,11 @@ class MyApp extends StatelessWidget {
               builder: (context) => const DriverVerificationScreen(),
             );
           case '/role-management':
+            // Legacy route: redirect to membership onboarding flow
             return MaterialPageRoute(
-              builder: (context) => const RoleManagementScreen(),
+              builder: (context) => const MembershipScreen(
+                promptOnboarding: true,
+              ),
             );
           case '/main-dashboard':
           case '/home':
