@@ -217,8 +217,15 @@ class MyApp extends StatelessWidget {
               builder: (context) => const NotificationScreen(),
             );
           case '/membership':
+            final args = settings.arguments as Map<String, dynamic>?;
             return MaterialPageRoute(
-              builder: (context) => const MembershipScreen(),
+              builder: (context) => MembershipScreen(
+                promptOnboarding: args?['promptOnboarding'] == true,
+                requiredSubscriptionType:
+                    args?['requiredSubscriptionType'] as String?,
+                isProductSellerRequired:
+                    args?['isProductSellerRequired'] == true,
+              ),
             );
           case '/onboarding/membership':
             return MaterialPageRoute(

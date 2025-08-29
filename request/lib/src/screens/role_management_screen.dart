@@ -495,25 +495,57 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
     if (role == UserRole.driver ||
         role == UserRole.business ||
         role == UserRole.delivery) {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.end,
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          IconButton(
-            onPressed: () => role == UserRole.driver
-                ? _manageDriverDetails()
-                : _manageRole(role),
-            icon: const Icon(Icons.settings, size: 24),
-            style: IconButton.styleFrom(
-              backgroundColor: _getVerificationStatusColor(status),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.all(12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              IconButton(
+                onPressed: () => role == UserRole.driver
+                    ? _manageDriverDetails()
+                    : _manageRole(role),
+                icon: const Icon(Icons.settings, size: 24),
+                style: IconButton.styleFrom(
+                  backgroundColor: _getVerificationStatusColor(status),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.all(12),
+                ),
+                tooltip: role == UserRole.driver
+                    ? 'Manage Driver Profile'
+                    : role == UserRole.delivery
+                        ? 'Manage Delivery Profile'
+                        : 'Manage Business Profile',
+              )
+            ],
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                if (role == UserRole.driver) {
+                  Navigator.pushNamed(
+                    context,
+                    '/membership',
+                    arguments: {
+                      'requiredSubscriptionType': 'driver',
+                    },
+                  );
+                } else if (role == UserRole.business) {
+                  Navigator.pushNamed(
+                    context,
+                    '/membership',
+                    arguments: {
+                      'requiredSubscriptionType': 'business',
+                    },
+                  );
+                }
+              },
+              icon: const Icon(Icons.verified_user_outlined, size: 18),
+              label: const Text('Manage Subscription'),
             ),
-            tooltip: role == UserRole.driver
-                ? 'Manage Driver Profile'
-                : role == UserRole.delivery
-                    ? 'Manage Delivery Profile'
-                    : 'Manage Business Profile',
-          )
+          ),
         ],
       );
     }

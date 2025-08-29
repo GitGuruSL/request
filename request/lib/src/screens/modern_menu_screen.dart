@@ -437,7 +437,15 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                                 const BusinessProductDashboard()),
                       );
                     } else {
-                      await Navigator.pushNamed(context, item.route!);
+                      if (item.route == '/membership') {
+                        // Provide a simple, role-aware default
+                        await Navigator.pushNamed(
+                            context, '/membership', arguments: {
+                          if (_isDriver) 'requiredSubscriptionType': 'driver'
+                        });
+                      } else {
+                        await Navigator.pushNamed(context, item.route!);
+                      }
                     }
                     // Refresh badges after returning
                     if (mounted) _refreshMenuData();

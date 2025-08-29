@@ -82,13 +82,19 @@ class _MembershipScreenState extends State<MembershipScreen> {
     if (widget.requiredSubscriptionType == 'driver') {
       // For drivers: show free plan + ride-specific plans
       return plans
-          .where((plan) => plan.planType == 'free' || plan.planType == 'ride')
+          .where((plan) =>
+              plan.planType == 'free' ||
+              plan.planType.toLowerCase().contains('ride'))
           .toList();
     } else if (widget.requiredSubscriptionType == 'business') {
       // For regular business: show free plan + all response plans
-      return plans
-          .where((plan) => plan.planType == 'free' || plan.planType == 'all')
-          .toList();
+      return plans.where((plan) {
+        final t = plan.planType.toLowerCase();
+        return plan.planType == 'free' ||
+            t.contains('all') ||
+            t.contains('other') ||
+            t.contains('general');
+      }).toList();
     } else if (widget.isProductSellerRequired) {
       // For product sellers: only show free plan (3 responses) unless they get product subscription
       return plans.where((plan) => plan.planType == 'free').toList();
