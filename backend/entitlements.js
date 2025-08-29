@@ -17,13 +17,11 @@ async function getEntitlements(userId, role, now = new Date()) {
 
     const subRes = await client.query(
       `SELECT s.status, s.current_period_end, p.audience, p.model
-         FROM subscriptions s
-         JOIN subscription_plans p ON p.id = s.plan_id
-        WHERE s.user_id = $1
-          AND s.status IN ('active','trialing')
-          AND (s.current_period_end IS NULL OR s.current_period_end > NOW())
-        ORDER BY COALESCE(s.current_period_end, s.start_at) DESC NULLS LAST
-        LIMIT 1`,
+       FROM subscriptions s
+       JOIN subscription_plans p ON p.id = s.plan_id
+       WHERE s.user_id = $1 AND s.status IN ('active','trialing')
+       ORDER BY s.current_period_end DESC NULLS LAST
+       LIMIT 1`,
       [userId]
     );
 
