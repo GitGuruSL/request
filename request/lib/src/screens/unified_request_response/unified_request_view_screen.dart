@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../widgets/glass_page.dart';
 import '../../theme/glass_theme.dart';
 import '../../services/rest_request_service.dart' as rest;
-import '../../services/entitlement_service.dart';
 import '../../services/rest_auth_service.dart';
 import '../../models/request_model.dart';
 import '../../models/enhanced_user_model.dart';
@@ -162,6 +161,8 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
     if (userId == _request!.userId) return false; // owner cannot respond
     final status = _request!.status.toLowerCase();
     if (!(status == 'active' || status == 'open')) return false;
+    // Respect backend gating flag
+    if (_request?.canMessage == false) return false;
     // Only allow one response per user on this screen
     return !_responses.any((r) => r.userId == userId);
   }
@@ -169,9 +170,8 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
   void _openCreateResponseSheet() {
     if (_request == null) return;
     () async {
-      // Soft-gate by entitlements before navigation
-      final ent = await EntitlementService.instance.getMyEntitlements();
-      final canMessage = ent == null ? true : (ent['canMessage'] == true);
+      // Prefer backend gating flag on the loaded request
+      final canMessage = _request?.canMessage ?? true;
       if (!canMessage) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -181,6 +181,18 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
             action: SnackBarAction(
               label: 'OK',
               onPressed: () {},
+            ),
+          ),
+        );
+        // Offer quick navigation to membership page
+        await Future.delayed(const Duration(milliseconds: 200));
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Upgrade membership to continue responding'),
+            action: SnackBarAction(
+              label: 'View Plans',
+              onPressed: () => Navigator.pushNamed(context, '/membership'),
             ),
           ),
         );
@@ -211,9 +223,8 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
               Text('This is your own request. You cannot message yourself.')));
       return;
     }
-    // Gate messaging by entitlements (same as respond capability)
-    final ent = await EntitlementService.instance.getMyEntitlements();
-    final canMessage = ent == null ? true : (ent['canMessage'] == true);
+    // Gate messaging using backend-provided flag
+    final canMessage = _request?.canMessage ?? true;
     if (!canMessage) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -222,6 +233,17 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
           action: SnackBarAction(
             label: 'OK',
             onPressed: () {},
+          ),
+        ),
+      );
+      await Future.delayed(const Duration(milliseconds: 200));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Upgrade membership to message requesters'),
+          action: SnackBarAction(
+            label: 'View Plans',
+            onPressed: () => Navigator.pushNamed(context, '/membership'),
           ),
         ),
       );

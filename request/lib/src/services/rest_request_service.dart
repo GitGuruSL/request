@@ -40,6 +40,11 @@ class RequestModel {
   final Map<String, dynamic>? metadata;
   final String? requestType; // Add request_type field from database
   final int responseCount; // Number of responses (from backend aggregate)
+  // Subscription gating flags from backend responses
+  final bool contactVisible;
+  final bool canMessage;
+  // Urgent flag for boosted visibility
+  final bool isUrgent;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -71,6 +76,9 @@ class RequestModel {
     this.metadata,
     this.requestType, // Add requestType to constructor
     this.responseCount = 0,
+    this.contactVisible = false,
+    this.canMessage = true,
+    this.isUrgent = false,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -113,6 +121,9 @@ class RequestModel {
       responseCount: json['response_count'] is int
           ? (json['response_count'] as int)
           : int.tryParse((json['response_count'] ?? '0').toString()) ?? 0,
+      contactVisible: (json['contact_visible'] == true),
+      canMessage: (json['can_message'] != false),
+      isUrgent: (json['is_urgent'] == true),
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
     );
@@ -142,6 +153,9 @@ class RequestModel {
       'image_urls': imageUrls,
       'metadata': metadata,
       'response_count': responseCount,
+      'contact_visible': contactVisible,
+      'can_message': canMessage,
+      'is_urgent': isUrgent,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
