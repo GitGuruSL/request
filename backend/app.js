@@ -108,6 +108,7 @@ const smsConfigRoutes = require('./routes/sms-config'); // NEW - SMS config API 
 const reviewsRoutes = require('./routes/reviews'); // NEW - user reviews API
 const authService = require('./services/auth');
 const entitlementSvc = require('./entitlements');
+const subscriptionsRoutes = require('./routes/subscriptions');
 
 // Import centralized data routes
 const masterProductsRoutes = require('./routes/master-products');
@@ -210,6 +211,7 @@ safeUse('/api/modules', modulesRoutes, 'modulesRoutes'); // NEW - module managem
 safeUse('/api/admin', adminSmsRoutes, 'adminSmsRoutes'); // NEW - SMS configuration management
 safeUse('/api/sms', smsConfigRoutes, 'smsConfigRoutes'); // NEW - SMS config API for frontend
 safeUse('/api/reviews', reviewsRoutes, 'reviewsRoutes'); // NEW - user reviews
+safeUse('/api/subscriptions', subscriptionsRoutes, 'subscriptionsRoutes');
 // Current user entitlements (for gating in app)
 app.get('/api/me/entitlements', authService.authMiddleware(), async (req, res) => {
   try {

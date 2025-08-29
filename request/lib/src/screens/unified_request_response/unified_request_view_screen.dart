@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../widgets/glass_page.dart';
 import '../../theme/glass_theme.dart';
 import '../../services/rest_request_service.dart' as rest;
+import '../../services/entitlement_service.dart';
 import '../../services/rest_auth_service.dart';
 import '../../models/request_model.dart';
 import '../../models/enhanced_user_model.dart';
@@ -167,14 +168,30 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
 
   void _openCreateResponseSheet() {
     if (_request == null) return;
-    final requestModel = _convertToRequestModel(_request!);
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) =>
-            UnifiedResponseCreateScreen(request: requestModel),
-      ),
-    ).then((_) => _reloadResponses());
+    () async {
+      // Soft-gate by entitlements before navigation
+      final ent = await EntitlementService.instance.getMyEntitlements();
+      final canMessage = ent == null ? true : (ent['canMessage'] == true);
+      if (!canMessage) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content:
+                Text('Monthly response limit reached. Subscribe to continue.'),
+          ),
+        );
+        return;
+      }
+      if (!mounted) return;
+      final requestModel = _convertToRequestModel(_request!);
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) =>
+              UnifiedResponseCreateScreen(request: requestModel),
+        ),
+      ).then((_) => _reloadResponses());
+    }();
   }
 
   Future<void> _messageRequester(rest.RequestModel r) async {
@@ -188,6 +205,16 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content:
               Text('This is your own request. You cannot message yourself.')));
+      return;
+    }
+    // Gate messaging by entitlements (same as respond capability)
+    final ent = await EntitlementService.instance.getMyEntitlements();
+    final canMessage = ent == null ? true : (ent['canMessage'] == true);
+    if (!canMessage) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content:
+              Text('Monthly response limit reached. Subscribe to continue.')));
       return;
     }
     try {

@@ -1951,7 +1951,8 @@ class _UnifiedResponseCreateScreenState
             : msg.replaceAll('Exception: ', '');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(human.isNotEmpty ? human : 'Error submitting response'),
+            content:
+                Text(human.isNotEmpty ? human : 'Error submitting response'),
             backgroundColor: Colors.red,
           ),
         );
