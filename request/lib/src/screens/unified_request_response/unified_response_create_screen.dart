@@ -1954,6 +1954,14 @@ class _UnifiedResponseCreateScreenState
             content:
                 Text(human.isNotEmpty ? human : 'Error submitting response'),
             backgroundColor: Colors.red,
+            action: human.contains('Monthly response limit')
+                ? SnackBarAction(
+                    label: 'Subscribe',
+                    textColor: Colors.white,
+                    onPressed: () =>
+                        Navigator.pushNamed(context, '/subscriptions'),
+                  )
+                : null,
           ),
         );
       }

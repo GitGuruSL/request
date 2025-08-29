@@ -32,6 +32,7 @@ import 'src/screens/notification_screen.dart';
 import 'src/screens/ride/rider_browse_drivers_screen.dart';
 import 'src/services/notification_service.dart';
 import 'src/services/notification_center.dart';
+import 'src/screens/subscription_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -83,6 +84,7 @@ class MyApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       navigatorKey: navigatorKey,
       initialRoute: '/',
+      // Import for subscription screen
       onGenerateRoute: (settings) {
         switch (settings.name) {
           case '/':
@@ -212,6 +214,10 @@ class MyApp extends StatelessWidget {
           case '/notifications':
             return MaterialPageRoute(
               builder: (context) => const NotificationScreen(),
+            );
+          case '/subscriptions':
+            return MaterialPageRoute(
+              builder: (context) => const SubscriptionScreen(),
             );
           case '/rider/browse-drivers':
             return MaterialPageRoute(

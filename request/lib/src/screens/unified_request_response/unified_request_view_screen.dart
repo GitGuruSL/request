@@ -175,9 +175,13 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
       if (!canMessage) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content:
-                Text('Monthly response limit reached. Subscribe to continue.'),
+          SnackBar(
+            content: const Text(
+                'Monthly response limit reached. Subscribe to continue.'),
+            action: SnackBarAction(
+              label: 'Subscribe',
+              onPressed: () => Navigator.pushNamed(context, '/subscriptions'),
+            ),
           ),
         );
         return;
@@ -212,9 +216,16 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
     final canMessage = ent == null ? true : (ent['canMessage'] == true);
     if (!canMessage) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content:
-              Text('Monthly response limit reached. Subscribe to continue.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+              'Monthly response limit reached. Subscribe to continue.'),
+          action: SnackBarAction(
+            label: 'Subscribe',
+            onPressed: () => Navigator.pushNamed(context, '/subscriptions'),
+          ),
+        ),
+      );
       return;
     }
     try {

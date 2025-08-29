@@ -33,7 +33,9 @@ class SubscriptionPlan {
       description: json['description']?.toString(),
       price: json['price'] as num?,
       currency: json['currency']?.toString(),
-      durationDays: json['duration_days'] is int ? json['duration_days'] as int : int.tryParse('${json['duration_days']}'),
+      durationDays: json['duration_days'] is int
+          ? json['duration_days'] as int
+          : int.tryParse('${json['duration_days']}'),
     );
   }
 }
@@ -43,30 +45,39 @@ class SubscriptionServiceApi {
   static final SubscriptionServiceApi instance = SubscriptionServiceApi._();
   final ApiClient _api = ApiClient.instance;
 
-  Future<List<SubscriptionPlan>> fetchPlans({String type = 'rider', bool activeOnly = true}) async {
-    final qp = <String, String>{ 'type': type };
+  Future<List<SubscriptionPlan>> fetchPlans(
+      {String type = 'rider', bool activeOnly = true}) async {
+    final qp = <String, String>{'type': type};
     if (activeOnly) qp['active'] = 'true';
-    final res = await _api.get<List<dynamic>>('/api/subscription-plans-new', queryParameters: qp);
+    final res = await _api.get<List<dynamic>>('/api/subscription-plans-new',
+        queryParameters: qp);
     if (res.isSuccess && res.data != null) {
       final list = res.data!;
-      return list.map((e) => SubscriptionPlan.fromJson(e as Map<String, dynamic>)).toList();
+      return list
+          .map((e) => SubscriptionPlan.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
     return [];
   }
 
   Future<Map<String, dynamic>?> getMySubscription() async {
     final res = await _api.get<Map<String, dynamic>>('/api/subscriptions/me');
-    if (res.isSuccess && res.data != null) return res.data!['data'] as Map<String, dynamic>?;
+    if (res.isSuccess && res.data != null)
+      return res.data!['data'] as Map<String, dynamic>?;
     return null;
   }
 
   Future<bool> startSubscription(String planId) async {
-    final res = await _api.post<Map<String, dynamic>>('/api/subscriptions/start', data: { 'plan_id': planId });
+    final res = await _api.post<Map<String, dynamic>>(
+        '/api/subscriptions/start',
+        data: {'plan_id': planId});
     return res.isSuccess == true;
   }
 
   Future<bool> cancelSubscription({bool immediate = false}) async {
-    final res = await _api.post<Map<String, dynamic>>('/api/subscriptions/cancel', data: { 'immediate': immediate });
+    final res = await _api.post<Map<String, dynamic>>(
+        '/api/subscriptions/cancel',
+        data: {'immediate': immediate});
     return res.isSuccess == true;
   }
 }
