@@ -1,15 +1,9 @@
 import 'api_client.dart';
-import 'dart:collection';
 
 /// Service to handle image URLs, especially S3 signed URLs for AWS images
 class ImageUrlService {
   ImageUrlService._();
   static final instance = ImageUrlService._();
-
-  // Simple in-memory cache for processed URLs (signed/normalized)
-  final LinkedHashMap<String, String> _cache = LinkedHashMap();
-  static const int _maxCacheEntries = 512;
-  final Map<String, Future<String>> _inflight = {};
 
   /// Get a signed URL for S3 images using AWS API
   Future<String?> getSignedUrl(String s3Url) async {
@@ -35,30 +29,8 @@ class ImageUrlService {
         url.contains('.s3.us-east-1.amazonaws.com');
   }
 
-  /// Process image URL - convert S3 URLs to signed URLs, handle localhost/dev URLs
+  /// Process image URL - convert S3 URLs to signed URLs, handle localhost URLs
   Future<String> processImageUrl(String imageUrl) async {
-    // Return from cache fast
-    final cached = _cache[imageUrl];
-    if (cached != null) return cached;
-
-    // Coalesce concurrent requests for the same URL
-    final existing = _inflight[imageUrl];
-    if (existing != null) {
-      return existing; // Await the same future
-    }
-
-    final future = _processImageUrlInternal(imageUrl);
-    _inflight[imageUrl] = future;
-    try {
-      final processed = await future;
-      _putCache(imageUrl, processed);
-      return processed;
-    } finally {
-      _inflight.remove(imageUrl);
-    }
-  }
-
-  Future<String> _processImageUrlInternal(String imageUrl) async {
     final base = ApiClient.baseUrlPublic;
 
     if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
@@ -66,30 +38,30 @@ class ImageUrlService {
       if (isS3Url(imageUrl)) {
         final signedUrl = await getSignedUrl(imageUrl);
         return signedUrl ?? imageUrl; // Use signed URL or fallback to original
-      } else {
-        // Normalize developer/private hosts (localhost, 127.0.0.1, 10.0.2.2, 192.168.x.x, 172.16-31.x.x)
-        // to the public API host for assets under /uploads so they load on devices.
+      } else if (imageUrl.contains('localhost') ||
+          imageUrl.contains('127.0.0.1')) {
+        // If the admin saved an absolute URL pointing to localhost/127.0.0.1,
+        // rewrite it to use the app's API host so Android emulator/devices can load it.
         try {
           final u = Uri.parse(imageUrl);
-          if (_isDevOrPrivateHost(u.host) && u.path.startsWith('/uploads')) {
+          if (u.host == 'localhost' || u.host == '127.0.0.1') {
             final b = Uri.parse(base);
             final rebuilt = Uri(
               scheme: b.scheme,
               host: b.host,
-              port: b.hasPort ? b.port : null,
+              port: b.port,
               path: u.path.startsWith('/') ? u.path : '/${u.path}',
-              query: u.hasQuery ? u.query : null,
-              fragment: u.fragment.isNotEmpty ? u.fragment : null,
+              query: u.query.isEmpty ? null : u.query,
+              fragment: u.fragment.isEmpty ? null : u.fragment,
             );
-            // Debug log in debug/profile builds only
-            // ignore: avoid_print
-            if (const bool.fromEnvironment('dart.vm.product') == false) {
-              print(
-                  '[ImageUrlService] Rewriting dev host ${u.host} -> ${b.host} for ${u.path}');
-            }
             return rebuilt.toString();
+          } else {
+            return imageUrl;
           }
-        } catch (_) {}
+        } catch (_) {
+          return imageUrl;
+        }
+      } else {
         return imageUrl;
       }
     } else {
@@ -98,39 +70,9 @@ class ImageUrlService {
     }
   }
 
-  bool _isDevOrPrivateHost(String host) {
-    if (host.isEmpty) return false;
-    if (host == 'localhost' || host == '127.0.0.1' || host == '10.0.2.2') {
-      return true;
-    }
-    if (host == '::1') return true; // IPv6 localhost
-    // 10.0.0.0/8
-    if (host.startsWith('10.')) return true;
-    // 192.168.0.0/16
-    if (host.startsWith('192.168.')) return true;
-    // 172.16.0.0/12
-    final parts = host.split('.');
-    if (parts.length == 4) {
-      final p0 = int.tryParse(parts[0]);
-      final p1 = int.tryParse(parts[1]);
-      if (p0 == 172 && p1 != null && p1 >= 16 && p1 <= 31) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   /// Process multiple image URLs in parallel
   Future<List<String>> processImageUrls(List<String> imageUrls) async {
     final futures = imageUrls.map((url) => processImageUrl(url));
     return await Future.wait(futures);
-  }
-
-  void _putCache(String key, String value) {
-    _cache[key] = value;
-    if (_cache.length > _maxCacheEntries) {
-      // Evict oldest entry
-      _cache.remove(_cache.keys.first);
-    }
   }
 }

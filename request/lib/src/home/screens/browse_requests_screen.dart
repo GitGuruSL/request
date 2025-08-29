@@ -10,8 +10,6 @@ import '../../models/request_model.dart' as models;
 import '../../screens/unified_request_response/unified_request_view_screen.dart';
 import '../../screens/requests/ride/view_ride_request_screen.dart';
 import '../../theme/glass_theme.dart';
-import '../../widgets/smart_network_image.dart';
-import '../../services/rest_user_service.dart';
 
 class BrowseRequestsScreen extends StatefulWidget {
   const BrowseRequestsScreen({super.key});
@@ -28,10 +26,6 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
   int _page = 1;
   String? _error;
   bool _needsCountrySelection = false;
-
-  // Cache requester avatar URLs to avoid repeated network calls per card
-  final Map<String, String?> _avatarUrlCache = {};
-  final Set<String> _avatarLoading = {};
 
   // Allowed from user registrations (driver/delivery, etc.)
   List<String> _allowedRequestTypes = ['item', 'service', 'rent'];
@@ -1260,8 +1254,6 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
   Widget _buildRequestCard(models.RequestModel request) {
     final requestType = _displayTypeFor(request);
     final style = _typeStyle(requestType);
-    final String? firstImage =
-        (request.images.isNotEmpty) ? request.images.first : null;
 
     return Container(
       decoration: BoxDecoration(
@@ -1277,56 +1269,25 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top row: requester avatar on the left, type badge aligned right
-              Row(
-                children: [
-                  _buildRequesterAvatar(request),
-                  const Spacer(),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: style.bg.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      requestType,
-                      style: TextStyle(
-                        color: style.bg,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // First request image (if any)
-              if (firstImage != null && firstImage.isNotEmpty) ...[
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: AspectRatio(
-                    aspectRatio: 16 / 9,
-                    child: SmartNetworkImage(
-                      imageUrl: firstImage,
-                      fit: BoxFit.cover,
-                      placeholder: Container(
-                        color: Colors.grey.shade100,
-                      ),
-                      errorBuilder: (c, e, st) => Container(
-                        color: Colors.grey.shade200,
-                        child: const Center(
-                          child: Icon(Icons.broken_image,
-                              size: 24, color: Colors.grey),
-                        ),
-                      ),
-                    ),
+              // Type badge section
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: style.bg.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  requestType,
+                  style: TextStyle(
+                    color: style.bg,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
                   ),
                 ),
-                const SizedBox(height: 12),
-              ],
+              ),
+              const SizedBox(height: 12),
 
               // Title with better typography
               Text(
@@ -1439,89 +1400,6 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
         ),
       ),
     );
-  }
-
-  // Avatar widget with simple in-memory cache and background fetch
-  Widget _buildRequesterAvatar(models.RequestModel r) {
-    final uid = r.requesterId;
-    final displayName = _requesterDisplayName(r);
-    final fallbackInitial =
-        (displayName.isNotEmpty) ? displayName.trim()[0].toUpperCase() : 'U';
-
-    String? url = _avatarUrlCache[uid];
-    if (url == null && !_avatarLoading.contains(uid)) {
-      _avatarLoading.add(uid);
-      // Schedule after first frame to avoid build jank
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        try {
-          final profile = await RestUserService.instance.getPublicProfile(uid);
-          if (!mounted) return;
-          setState(() {
-            _avatarUrlCache[uid] = profile?.photoUrl;
-          });
-        } catch (_) {
-          if (!mounted) return;
-          setState(() {
-            _avatarUrlCache[uid] = null;
-          });
-        } finally {
-          _avatarLoading.remove(uid);
-        }
-      });
-    }
-
-    final double size = 28;
-    if (url != null && url.isNotEmpty) {
-      return CircleAvatar(
-        radius: size / 2,
-        backgroundColor: Colors.transparent,
-        child: ClipOval(
-          child: SmartNetworkImage(
-            imageUrl: url,
-            width: size,
-            height: size,
-            fit: BoxFit.cover,
-            errorBuilder: (c, e, st) => _initialsAvatar(fallbackInitial, size),
-            placeholder: _avatarShimmer(size),
-          ),
-        ),
-      );
-    }
-    return _initialsAvatar(fallbackInitial, size);
-  }
-
-  Widget _avatarShimmer(double size) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        shape: BoxShape.circle,
-      ),
-    );
-  }
-
-  Widget _initialsAvatar(String ch, double size) {
-    return CircleAvatar(
-      radius: size / 2,
-      backgroundColor: GlassTheme.colors.textTertiary.withOpacity(0.2),
-      child: Text(
-        ch,
-        style: const TextStyle(fontWeight: FontWeight.w700),
-      ),
-    );
-  }
-
-  String _requesterDisplayName(models.RequestModel r) {
-    final meta = r.typeSpecificData;
-    final candidates = <String?>[
-      meta['requester_display_name']?.toString(),
-      meta['requester_name']?.toString(),
-    ];
-    for (final s in candidates) {
-      if (s != null && s.trim().isNotEmpty) return s;
-    }
-    return 'User';
   }
 
   // Helper method to map categories to request types
