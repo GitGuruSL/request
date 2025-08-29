@@ -68,6 +68,11 @@ class BusinessNotificationService {
           bv.business_type = 'delivery_service' OR
           bv.business_type = 'both'
         )
+        AND EXISTS (
+          SELECT 1 FROM user_subscriptions us
+          JOIN subscription_plans_new sp ON sp.id = us.plan_id AND sp.type='business'
+          WHERE us.user_id = bv.user_id AND us.status IN ('active','trialing','past_due')
+        )
       ORDER BY bv.business_name
     `;
 
@@ -99,6 +104,11 @@ class BusinessNotificationService {
           bv.business_type = 'product_selling' OR
           bv.business_type = 'both'
         )
+        AND EXISTS (
+          SELECT 1 FROM user_subscriptions us
+          JOIN subscription_plans_new sp ON sp.id = us.plan_id AND sp.type='business'
+          WHERE us.user_id = bv.user_id AND us.status IN ('active','trialing','past_due')
+        )
       ORDER BY bv.business_name
     `;
 
@@ -127,6 +137,11 @@ class BusinessNotificationService {
         AND (
           LOWER(COALESCE(bt.name, '')) = ANY($2)
           OR LOWER(COALESCE(bv.business_category, '')) = ANY($2)
+        )
+        AND EXISTS (
+          SELECT 1 FROM user_subscriptions us
+          JOIN subscription_plans_new sp ON sp.id = us.plan_id AND sp.type='business'
+          WHERE us.user_id = bv.user_id AND us.status IN ('active','trialing','past_due')
         )
       ORDER BY bv.business_name
     `;
@@ -162,6 +177,11 @@ class BusinessNotificationService {
         AND bv.status = 'approved'
         AND bv.country = $1
         AND (cbt.country_code IS NULL OR cbt.country_code = $1)
+        AND EXISTS (
+          SELECT 1 FROM user_subscriptions us
+          JOIN subscription_plans_new sp ON sp.id = us.plan_id AND sp.type='business'
+          WHERE us.user_id = bv.user_id AND us.status IN ('active','trialing','past_due')
+        )
       ORDER BY 
         CASE 
           WHEN bv.categories @> $2::jsonb THEN 1

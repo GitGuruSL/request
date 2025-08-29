@@ -16,6 +16,17 @@ async function getEntitlements(userId, role, now = new Date()) {
     const yearMonth = ym(now);
     // Audience based on role only now
     const audience = role === 'business' ? 'business' : 'normal';
+
+    // Active subscription?
+    const subRes = await client.query(`
+      SELECT us.*, sp.type AS plan_user_type, sp.plan_type
+      FROM user_subscriptions us
+      JOIN subscription_plans_new sp ON sp.id = us.plan_id
+      WHERE us.user_id = $1 AND us.status IN ('active','trialing','past_due')
+      ORDER BY COALESCE(us.next_renewal_at, us.ends_at) DESC NULLS LAST, us.created_at DESC
+      LIMIT 1
+    `, [userId]);
+    const subscription = subRes.rows[0] || null;
     const usageRes = await client.query(
       'SELECT response_count FROM usage_monthly WHERE user_id = $1 AND year_month = $2',
       [userId, yearMonth]
@@ -24,12 +35,21 @@ async function getEntitlements(userId, role, now = new Date()) {
     // Static free limits (can be tuned per audience)
     const freeLimit = audience === 'business' ? -1 : 3; // -1 means unlimited
     const canUnlimited = freeLimit < 0;
+
+    // If subscribed, enable contact + notifications and high limits based on country pricing or plan limitations
+    let canViewContact = canUnlimited || responseCount < freeLimit;
+    let canMessage = canViewContact;
+    if (subscription) {
+      canViewContact = true;
+      canMessage = true;
+    }
     return {
-      isSubscribed: false,
+      isSubscribed: !!subscription,
       audience,
       responseCountThisMonth: responseCount,
-      canViewContact: canUnlimited || responseCount < freeLimit,
-      canMessage: canUnlimited || responseCount < freeLimit,
+      canViewContact,
+      canMessage,
+      subscription
     };
   } finally {
     client.release();

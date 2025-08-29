@@ -81,7 +81,9 @@ const countryRoutes = require('./routes/countries');
 const uploadRoutes = require('./routes/upload'); // NEW
 const uploadS3Routes = require('./routes/uploadS3'); // NEW - S3 upload/signed URLs
 const testImageRoutes = require('./routes/test-images'); // TEST
-// Removed: subscription plans and country pricing routes
+// Subscriptions
+const subscriptionPlansRoutes = require('./routes/subscription-plans-new');
+const subscriptionsRoutes = require('./routes/subscriptions');
 const contentPagesRoutes = require('./routes/content-pages');
 const bannersRoutes = require('./routes/banners'); // NEW - banners CRUD
 console.log('🔧 About to require driver-verifications route');
@@ -117,6 +119,7 @@ const countryVariableTypesRoutes = require('./routes/country-variable-types');
 const priceListingsRoutes = require('./routes/price-listings');
 const paymentMethodsRoutes = require('./routes/payment-methods');
 const s3Routes = require('./routes/uploadS3');
+const countryPaymentGatewaysRoutes = require('./routes/country-payment-gateways');
 
 console.log('🔧 About to register driver-verifications route');
 
@@ -183,6 +186,7 @@ safeUse('/api/country-variable-types', countryVariableTypesRoutes, 'countryVaria
 // Price comparison routes  
 safeUse('/api/price-listings', priceListingsRoutes, 'priceListingsRoutes');
 safeUse('/api/payment-methods', paymentMethodsRoutes, 'paymentMethodsRoutes');
+safeUse('/api/country-payment-gateways', countryPaymentGatewaysRoutes, 'countryPaymentGatewaysRoutes');
 safeUse('/api/s3', s3Routes, 's3Routes');
 safeUse('/api/banners', bannersRoutes, 'bannersRoutes'); // NEW - banners CRUD
 
@@ -190,7 +194,9 @@ safeUse('/api/upload', uploadRoutes, 'uploadRoutes'); // NEW - image upload endp
 safeUse('/api/uploads', uploadRoutes, 'uploadRoutes(alias)'); // Alias to support admin-react '/uploads/payment-methods'
 safeUse('/api/s3', uploadS3Routes, 'uploadS3Routes'); // NEW - S3 upload + signed URL endpoints
 safeUse('/api/test-images', testImageRoutes, 'testImageRoutes'); // TEST - image serving test
-// Removed: subscription plans and country pricing mounts
+// Subscriptions
+safeUse('/api/subscription-plans', subscriptionPlansRoutes, 'subscriptionPlansRoutes');
+safeUse('/api/subscriptions', subscriptionsRoutes, 'subscriptionsRoutes');
 safeUse('/api/content-pages', contentPagesRoutes, 'contentPagesRoutes'); // content pages management
 safeUse('/api/driver-verifications', driverVerificationRoutes, 'driverVerificationRoutes'); // NEW - driver verification management
 safeUse('/api/business-verifications', businessVerificationRoutes, 'businessVerificationRoutes'); // NEW - business verification management

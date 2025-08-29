@@ -1,4 +1,0 @@
-[
-  {"id":"city1","name":"Colombo","country_code":"LK","province":"Western","district":"Colombo","latitude":6.9271,"longitude":79.8612,"is_active":true},
-  {"id":"city2","name":"Kandy","country_code":"LK","province":"Central","district":"Kandy","latitude":7.2906,"longitude":80.6337,"is_active":true}
-]

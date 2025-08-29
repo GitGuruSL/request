@@ -5,9 +5,52 @@ const auth = require('../services/auth');
 const responsesRouter = require('./responses');
 const notify = require('../services/notification-helper');
 const BusinessNotificationService = require('../services/business-notification-service'); // NEW
+const entitlements = require('../entitlements'); // NEW - for gating contact visibility
+
+// Optional auth wrapper (copied pattern used in responses)
+function optionalAuth(handler){
+  return async (req,res,next)=>{
+    try {
+      const hasAuthHeader = !!req.headers.authorization;
+      if (hasAuthHeader) {
+        let authErrored = false;
+        await auth.authMiddleware()(req, {
+          status:(code)=>({ json:(obj)=>{ authErrored = true; res.status(code).json(obj); } })
+        }, ()=>{});
+        if (authErrored) {
+          if (process.env.NODE_ENV !== 'development') return; // response already sent
+          console.warn('[requests][optionalAuth] auth header present but failed verification; continuing (dev only).');
+        }
+      } else if (process.env.NODE_ENV === 'development') {
+        console.warn('[requests][optionalAuth] no Authorization header; continuing unauthenticated (dev only).');
+      }
+      return handler(req,res,next);
+    } catch(e){
+      next(e);
+    }
+  };
+}
+
+// Helper to mask contact details based on entitlements and ownership
+function applyContactGating(row, viewer) {
+  const viewerId = viewer?.id || viewer?.userId || null;
+  const isOwner = viewerId && row.user_id === viewerId;
+  const ent = viewer?.entitlements || null;
+  const canViewContact = isOwner || (ent ? !!ent.canViewContact : false);
+  const canMessage = isOwner || (ent ? !!ent.canMessage : false);
+  // Shallow copy to avoid mutating original
+  const masked = { ...row };
+  if (!canViewContact) {
+    // Hide requester phone; keep email as-is per requirement (phone + message icon)
+    if ('user_phone' in masked) masked.user_phone = null;
+  }
+  masked.contact_visible = !!canViewContact;
+  masked.can_message = !!canMessage;
+  return masked;
+}
 
 // Get requests with optional filtering
-router.get('/', async (req, res) => {
+router.get('/', optionalAuth(async (req, res) => {
   try {
     const {
       category_id,
@@ -68,11 +111,11 @@ router.get('/', async (req, res) => {
     }
 
     const offset = (page - 1) * limit;
-    const validSortColumns = ['created_at', 'updated_at', 'title', 'budget'];
+  const validSortColumns = ['created_at', 'updated_at', 'title', 'budget'];
     const finalSortBy = validSortColumns.includes(sort_by) ? sort_by : 'created_at';
     const finalSortOrder = sort_order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
-    const query = `
+  const query = `
       SELECT 
         r.*,
         u.display_name as user_name,
@@ -96,13 +139,23 @@ router.get('/', async (req, res) => {
         WHERE resp.request_id = r.id
       ) rc ON TRUE
       WHERE ${conditions.join(' AND ')}
-      ORDER BY r.${finalSortBy} ${finalSortOrder}
+      ORDER BY 
+        CASE WHEN r.is_urgent = true AND (r.urgent_until IS NULL OR r.urgent_until > NOW()) THEN 0 ELSE 1 END,
+        r.${finalSortBy} ${finalSortOrder}
       LIMIT $${paramCounter++} OFFSET $${paramCounter++}
     `;
 
     values.push(limit, offset);
 
     const requests = await database.query(query, values);
+
+    // Compute viewer entitlements once (if logged in)
+    let ent = null;
+    if (req.user && req.user.id) {
+      try { ent = await entitlements.getEntitlements(req.user.id, req.user.role); } catch (e) { console.warn('[requests] entitlements failed', e?.message || e); }
+    }
+    const viewer = { id: req.user?.id || req.user?.userId || null, entitlements: ent };
+    const gatedRows = requests.rows.map(r => applyContactGating(r, viewer));
 
     // Get total count for pagination
     const countQuery = `
@@ -117,7 +170,7 @@ router.get('/', async (req, res) => {
     res.json({
       success: true,
       data: {
-        requests: requests.rows,
+  requests: gatedRows,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
@@ -135,10 +188,10 @@ router.get('/', async (req, res) => {
       error: error.message
     });
   }
-});
+}));
 
 // Search requests by title or description (must come before :id route)
-router.get('/search', async (req, res) => {
+router.get('/search', optionalAuth(async (req, res) => {
   try {
     const {
       q,
@@ -187,7 +240,7 @@ router.get('/search', async (req, res) => {
     const finalSortBy = validSortColumns.includes(sort_by) ? sort_by : 'created_at';
     const finalSortOrder = sort_order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
-    const query = `
+  const query = `
       SELECT 
         r.*,
         u.display_name as user_name,
@@ -211,7 +264,9 @@ router.get('/search', async (req, res) => {
         WHERE resp.request_id = r.id
       ) rc ON TRUE
       WHERE ${conditions.join(' AND ')}
-      ORDER BY r.${finalSortBy} ${finalSortOrder}
+      ORDER BY 
+        CASE WHEN r.is_urgent = true AND (r.urgent_until IS NULL OR r.urgent_until > NOW()) THEN 0 ELSE 1 END,
+        r.${finalSortBy} ${finalSortOrder}
       LIMIT $${paramCounter++} OFFSET $${paramCounter++}
     `;
 
@@ -222,10 +277,18 @@ router.get('/search', async (req, res) => {
     const countResult = await database.queryOne(countQuery, values.slice(0, -2));
     const total = parseInt(countResult.total);
 
+    // Compute viewer entitlements once (if logged in)
+    let ent = null;
+    if (req.user && req.user.id) {
+      try { ent = await entitlements.getEntitlements(req.user.id, req.user.role); } catch (e) { console.warn('[requests][search] entitlements failed', e?.message || e); }
+    }
+    const viewer = { id: req.user?.id || req.user?.userId || null, entitlements: ent };
+    const gatedRows = requests.rows.map(r => applyContactGating(r, viewer));
+
     res.json({
       success: true,
       data: {
-        requests: requests.rows,
+  requests: gatedRows,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
@@ -238,10 +301,10 @@ router.get('/search', async (req, res) => {
     console.error('Error searching requests:', error);
     res.status(500).json({ success: false, message: 'Error searching requests', error: error.message });
   }
-});
+}));
 
 // Get single request by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', optionalAuth(async (req, res) => {
   try {
     const requestId = req.params.id;
 
@@ -288,10 +351,18 @@ router.get('/:id', async (req, res) => {
       metadata = {};
     }
 
+    // Compute viewer entitlements and apply masking
+    let ent = null;
+    if (req.user && req.user.id) {
+      try { ent = await entitlements.getEntitlements(req.user.id, req.user.role); } catch (e) { console.warn('[requests][detail] entitlements failed', e?.message || e); }
+    }
+    const viewer = { id: req.user?.id || req.user?.userId || null, entitlements: ent };
+    const masked = applyContactGating(request, viewer);
+
     res.json({
       success: true,
       data: {
-        ...request,
+        ...masked,
         metadata,
         variables: [] // For compatibility with frontend expecting variables array
       }
@@ -304,7 +375,7 @@ router.get('/:id', async (req, res) => {
       error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
-});
+}));
 
 // Create new request (requires authentication)
 router.post('/', auth.authMiddleware(), async (req, res) => {
@@ -469,6 +540,79 @@ router.post('/', auth.authMiddleware(), async (req, res) => {
       message: 'Error creating request',
       error: error.message // Always show error message for debugging
     });
+  }
+});
+
+// Start urgent boost checkout (creates pending transaction)
+// Client/mobile will use returned tx id to process payment via selected country gateway
+router.post('/:id/urgent-boost/start', auth.authMiddleware(), async (req, res) => {
+  try {
+    const requestId = req.params.id;
+    const userId = req.user.id;
+    const requestRow = await database.queryOne('SELECT id, user_id, country_code FROM requests WHERE id=$1', [requestId]);
+    if (!requestRow) return res.status(404).json({ success:false, message:'Request not found' });
+    if (requestRow.user_id !== userId && req.user.role !== 'admin') return res.status(403).json({ success:false, message:'Not permitted' });
+
+    // Default 900 LKR per requirement; could be made country-configurable later
+    const country = requestRow.country_code || 'LK';
+    const amount = 900;
+    const currency = 'LKR';
+
+    const tx = await database.queryOne(`
+      INSERT INTO subscription_transactions (user_id, country_code, plan_id, subscription_id, purpose, amount, currency, status, metadata)
+      VALUES ($1,$2,NULL,NULL,'urgent_boost',$3,$4,'pending', jsonb_build_object('request_id',$5))
+      RETURNING *
+    `, [userId, country, amount, currency, requestId]);
+
+    res.status(201).json({ success:true, data:{ transaction: tx } });
+  } catch (error) {
+    console.error('Error starting urgent boost:', error);
+    res.status(500).json({ success:false, message:'Error starting urgent boost', error: error.message });
+  }
+});
+
+// Confirm urgent boost payment (webhook or client callback once provider says paid)
+router.post('/:id/urgent-boost/confirm', auth.authMiddleware(), async (req, res) => {
+  try {
+    const requestId = req.params.id;
+    const userId = req.user.id;
+    const { transaction_id } = req.body || {};
+    if (!transaction_id) return res.status(400).json({ success:false, message:'transaction_id required' });
+
+    const requestRow = await database.queryOne('SELECT id, user_id, country_code FROM requests WHERE id=$1', [requestId]);
+    if (!requestRow) return res.status(404).json({ success:false, message:'Request not found' });
+    if (requestRow.user_id !== userId && req.user.role !== 'admin') return res.status(403).json({ success:false, message:'Not permitted' });
+
+    const tx = await database.queryOne('SELECT * FROM subscription_transactions WHERE id=$1 AND purpose=$2 AND user_id=$3', [transaction_id, 'urgent_boost', requestRow.user_id]);
+    if (!tx) return res.status(404).json({ success:false, message:'Transaction not found' });
+    if (tx.status !== 'paid') {
+      // for now allow client to mark paid manually; in production this should be set by webhook
+      await database.query('UPDATE subscription_transactions SET status=$1, updated_at=NOW() WHERE id=$2', ['paid', transaction_id]);
+    }
+
+    // Set urgent for 30 days from now per requirement
+    const until = new Date(Date.now() + 30*24*60*60*1000);
+    const updated = await database.queryOne('UPDATE requests SET is_urgent=true, urgent_until=$1, urgent_paid_tx_id=$2, updated_at=NOW() WHERE id=$3 RETURNING *', [until, transaction_id, requestId]);
+    res.json({ success:true, message:'Urgent boost activated', data: updated });
+  } catch (error) {
+    console.error('Error confirming urgent boost:', error);
+    res.status(500).json({ success:false, message:'Error confirming urgent boost', error: error.message });
+  }
+});
+
+// Admin or owner can clear urgent
+router.post('/:id/urgent-boost/clear', auth.authMiddleware(), async (req, res) => {
+  try {
+    const requestId = req.params.id;
+    const userId = req.user.id;
+    const row = await database.queryOne('SELECT id, user_id FROM requests WHERE id=$1', [requestId]);
+    if (!row) return res.status(404).json({ success:false, message:'Request not found' });
+    if (row.user_id !== userId && req.user.role !== 'admin') return res.status(403).json({ success:false, message:'Not permitted' });
+    const updated = await database.queryOne('UPDATE requests SET is_urgent=false, urgent_until=NULL, updated_at=NOW() WHERE id=$1 RETURNING *', [requestId]);
+    res.json({ success:true, message:'Urgent boost cleared', data: updated });
+  } catch (error) {
+    console.error('Error clearing urgent boost:', error);
+    res.status(500).json({ success:false, message:'Error clearing urgent boost', error: error.message });
   }
 });
 

@@ -6,6 +6,7 @@ const path = require('path');
 const { getSignedUrl } = require('../services/s3Upload');
 
 const router = express.Router();
+const db = require('../services/database');
 
 // Multer configuration for image uploads
 const storage = multer.diskStorage({
@@ -867,6 +868,21 @@ router.put('/:id', authService.authMiddleware(), upload.array('images', 5), asyn
 router.patch('/:id/toggle-status', authService.authMiddleware(), async (req, res) => {
   try {
     const userId = req.user.id;
+
+    // Require business subscription (monthly or PPC) for product listings
+    try {
+      const sub = await db.queryOne(`
+        SELECT us.*, sp.plan_type, sp.type AS plan_user_type
+        FROM user_subscriptions us
+        JOIN subscription_plans_new sp ON sp.id = us.plan_id
+        WHERE us.user_id=$1 AND us.status IN ('active','trialing','past_due') AND sp.type='business'
+        ORDER BY COALESCE(us.next_renewal_at, us.ends_at) DESC NULLS LAST, us.created_at DESC
+        LIMIT 1
+      `, [userId]);
+      if (!sub) return res.status(402).json({ success:false, error:'subscription_required', message:'Active business subscription required to add prices' });
+    } catch (e) {
+      console.warn('[price-listings] subscription check failed', e?.message || e);
+    }
     const { id } = req.params;
 
     // Check if listing exists and belongs to the user
