@@ -1,9 +1,15 @@
 import 'api_client.dart';
+import 'dart:collection';
 
 /// Service to handle image URLs, especially S3 signed URLs for AWS images
 class ImageUrlService {
   ImageUrlService._();
   static final instance = ImageUrlService._();
+
+  // Simple in-memory cache for processed URLs (signed/normalized)
+  final LinkedHashMap<String, String> _cache = LinkedHashMap();
+  static const int _maxCacheEntries = 512;
+  final Map<String, Future<String>> _inflight = {};
 
   /// Get a signed URL for S3 images using AWS API
   Future<String?> getSignedUrl(String s3Url) async {
@@ -31,6 +37,28 @@ class ImageUrlService {
 
   /// Process image URL - convert S3 URLs to signed URLs, handle localhost/dev URLs
   Future<String> processImageUrl(String imageUrl) async {
+    // Return from cache fast
+    final cached = _cache[imageUrl];
+    if (cached != null) return cached;
+
+    // Coalesce concurrent requests for the same URL
+    final existing = _inflight[imageUrl];
+    if (existing != null) {
+      return existing; // Await the same future
+    }
+
+    final future = _processImageUrlInternal(imageUrl);
+    _inflight[imageUrl] = future;
+    try {
+      final processed = await future;
+      _putCache(imageUrl, processed);
+      return processed;
+    } finally {
+      _inflight.remove(imageUrl);
+    }
+  }
+
+  Future<String> _processImageUrlInternal(String imageUrl) async {
     final base = ApiClient.baseUrlPublic;
 
     if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
@@ -96,5 +124,13 @@ class ImageUrlService {
   Future<List<String>> processImageUrls(List<String> imageUrls) async {
     final futures = imageUrls.map((url) => processImageUrl(url));
     return await Future.wait(futures);
+  }
+
+  void _putCache(String key, String value) {
+    _cache[key] = value;
+    if (_cache.length > _maxCacheEntries) {
+      // Evict oldest entry
+      _cache.remove(_cache.keys.first);
+    }
   }
 }

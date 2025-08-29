@@ -4,6 +4,8 @@ import '../../services/rest_request_service.dart';
 import '../../services/country_service.dart';
 import '../../services/module_service.dart';
 import '../../screens/unified_request_response/unified_request_view_screen.dart';
+import '../../widgets/smart_network_image.dart';
+import '../../services/rest_user_service.dart';
 
 class BrowseRequestsScreen extends StatefulWidget {
   const BrowseRequestsScreen({super.key});
@@ -21,6 +23,8 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
   String? _currencySymbol;
   CountryModules? _countryModules;
   List<RequestType> _enabledRequestTypes = [];
+  final Map<String, String?> _avatarUrlCache = {};
+  final Set<String> _avatarLoading = {};
 
   @override
   void initState() {
@@ -452,7 +456,7 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header with type and status
+              // Header with type, status and requester avatar
               Row(
                 children: [
                   Container(
@@ -472,6 +476,8 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
                     ),
                   ),
                   const Spacer(),
+                  _buildRequesterAvatar(request),
+                  const SizedBox(width: 8),
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -492,6 +498,30 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
               ),
 
               const SizedBox(height: 12),
+
+              // First request image (if any)
+              if (request.imageUrls != null &&
+                  request.imageUrls!.isNotEmpty) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: SmartNetworkImage(
+                      imageUrl: request.imageUrls!.first,
+                      fit: BoxFit.cover,
+                      placeholder: Container(color: Colors.grey.shade100),
+                      errorBuilder: (c, e, st) => Container(
+                        color: Colors.grey.shade200,
+                        child: const Center(
+                          child: Icon(Icons.broken_image,
+                              size: 24, color: Colors.grey),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
 
               // Title
               Text(
@@ -589,6 +619,69 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
       ),
     );
   }
+
+  // Avatar helpers
+  Widget _buildRequesterAvatar(RequestModel r) {
+    final uid = r.userId;
+    final String display = r.userName ?? 'User';
+    final fallbackInitial =
+        display.trim().isNotEmpty ? display.trim()[0].toUpperCase() : 'U';
+
+    String? url = _avatarUrlCache[uid];
+    if (url == null && !_avatarLoading.contains(uid)) {
+      _avatarLoading.add(uid);
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        try {
+          final profile = await RestUserService.instance.getPublicProfile(uid);
+          if (!mounted) return;
+          setState(() {
+            _avatarUrlCache[uid] = profile?.photoUrl;
+          });
+        } catch (_) {
+          if (!mounted) return;
+          setState(() {
+            _avatarUrlCache[uid] = null;
+          });
+        } finally {
+          _avatarLoading.remove(uid);
+        }
+      });
+    }
+
+    const double size = 24;
+    if (url != null && url.isNotEmpty) {
+      return CircleAvatar(
+        radius: size / 2,
+        backgroundColor: Colors.transparent,
+        child: ClipOval(
+          child: SmartNetworkImage(
+            imageUrl: url,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            placeholder: _avatarShimmer(size),
+            errorBuilder: (c, e, st) => _initialsAvatar(fallbackInitial, size),
+          ),
+        ),
+      );
+    }
+    return _initialsAvatar(fallbackInitial, size);
+  }
+
+  Widget _avatarShimmer(double size) => Container(
+        width: size,
+        height: size,
+        decoration: const BoxDecoration(
+          color: Color(0xFFEAEAEA),
+          shape: BoxShape.circle,
+        ),
+      );
+
+  Widget _initialsAvatar(String ch, double size) => CircleAvatar(
+        radius: size / 2,
+        backgroundColor: const Color(0xFFE0E0E0),
+        child: Text(ch, style: const TextStyle(fontWeight: FontWeight.w700)),
+      );
 
   // Prefer module from metadata for badge, but if it conflicts with inferred
   // type from text/fields, show the inferred type label. Ensures 'van hire'
