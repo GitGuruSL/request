@@ -2,14 +2,14 @@ Backend Deployment (No SCP)
 
 Overview
 - Build and publish Docker images automatically on push to main.
-- Server pulls from GHCR and restarts container via SSH action.
+- Server redeploys strictly via a single script (/opt/request-backend/redeploy.sh). No other workflow should start containers directly.
 
 Environments
-- Production: branch main → image tag ghcr.io/<owner>/request-backend:<git-sha> → deploy to port 3001 via backend-deploy.yml
-- Staging: branch develop → image tag ghcr.io/<owner>/request-backend:<git-sha>-stg → deploy to port 3101 via backend-deploy-staging.yml
+- Production: branch main → image tag ghcr.io/<owner>/request-backend:<git-sha>. Redeploy is manual-only via Backend Redeploy workflow.
+- Staging: branch develop → image tag ghcr.io/<owner>/request-backend:<git-sha>-stg. Redeploy is manual-only via Backend Redeploy workflow.
 
 CI/CD
-- GitHub Actions workflow at `.github/workflows/backend-deploy.yml` builds Docker image from `backend/` and pushes to GHCR.
+- GitHub Actions workflow at `.github/workflows/backend-deploy.yml` builds Docker image from `backend/` and pushes to GHCR. Deploy steps in this file are disabled; use `backend-redeploy.yml` to execute server redeploys.
 - Image tags:
   - `ghcr.io/<owner-lower>/request-backend:latest`
   - `ghcr.io/<owner-lower>/request-backend:<git-sha>` (deploys use the immutable sha tag)
@@ -42,7 +42,11 @@ Server setup (one-time)
 
 How deployments work
 - On push to main: workflow builds image and pushes `latest` and `<git-sha>` to GHCR (owner normalized to lowercase).
-- Deploy pulls the `<git-sha>` tag on the server, runs the container bound to `127.0.0.1:3001`, then probes `/health` up to 30 times. On success, the sha is recorded to `/opt/request-backend/last_successful.sha` for rollback.
+- Server-side container start is done exclusively by `/opt/request-backend/redeploy.sh` which:
+  - Removes any existing containers by canonical name, legacy name, label, and by image repo match.
+  - Starts exactly one container named `request-backend-container` on port 3001 (127.0.0.1 bind by default).
+  - Health-checks `/health` before completing.
+  - Writes the last successful sha to `/opt/request-backend/last_successful.sha`.
 
 How staging deployments work
 - On push to develop: workflow builds and pushes `staging` and `<git-sha>-stg` to GHCR.
@@ -69,7 +73,7 @@ Notes
 
 Standardize container name (avoid duplicates)
 - Always use a single canonical name: `request-backend-container`.
-- Replace containers via a stop/remove/run sequence, or use the helper script below.
+- Never start containers directly from CI or ad-hoc scripts. Always call the helper script below.
 
 Helper script (server)
 ```bash
@@ -147,6 +151,11 @@ docker logs --tail=200 "$NAME" || true
 exit 1
 EOF
 sudo chmod +x /opt/request-backend/redeploy.sh
+
+Policy to prevent duplicate containers
+- CI workflows that previously ran `docker run` have been disabled from doing so.
+- Only the server’s `/opt/request-backend/redeploy.sh` may start/replace the backend container.
+- The script removes any containers matching the app’s label or image repository before starting the new one.
 ```
 
 Troubleshooting: no space left on device (Docker pull/extract)

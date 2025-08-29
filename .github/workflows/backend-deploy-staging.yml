@@ -75,28 +75,9 @@ jobs:
             IMAGE_OWNER="$(echo "$REPO_OWNER" | tr '[:upper:]' '[:lower:]')"
             IMAGE_BASE="ghcr.io/${IMAGE_OWNER}/request-backend"
             IMAGE="$IMAGE_BASE:${{ github.sha }}-stg"
-            echo "[Deploy] Login if needed"
-            if [ -n "$GHCR_TOKEN" ] && [ -n "$GHCR_USER" ]; then
-              echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            echo "[Deploy] Using server's redeploy.sh"
+            if [ ! -f /opt/request-backend/redeploy.sh ]; then
+              echo "redeploy.sh not found at /opt/request-backend/redeploy.sh" >&2
+              exit 1
             fi
-            docker pull "$IMAGE"
-            sudo mkdir -p /opt/request-backend
-            sudo chown $USER:$USER /opt/request-backend
-            if [ "$(docker ps -aq -f name=request-backend-stg)" ]; then
-              docker rm -f request-backend-stg || true
-            fi
-            docker run -d \
-              --name request-backend-stg \
-              --restart unless-stopped \
-              --env-file /opt/request-backend/production.env \
-              -p 127.0.0.1:3101:3001 \
-              "$IMAGE"
-            for i in $(seq 1 30); do
-              if curl -fsS http://127.0.0.1:3101/health >/dev/null 2>&1; then
-                echo "[Deploy] Staging healthy"
-                break
-              fi
-              echo "[Deploy] Waiting... ($i/30)"
-              sleep 2
-            done
-            curl -fsS http://127.0.0.1:3101/health >/dev/null
+            bash /opt/request-backend/redeploy.sh "$IMAGE"

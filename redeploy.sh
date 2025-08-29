@@ -43,9 +43,14 @@ echo "➡️  Host bind:      $HOST_BIND:$PORT -> 3001"
 echo "➡️  Env file:       $ENV_FILE"
 
 echo "📥 Pulling image..."
+# Optional GHCR login if credentials are present (useful for private images)
+if [[ -n "${GHCR_TOKEN:-}" && -n "${GHCR_USER:-}" ]]; then
+  echo "🔐 Logging into GHCR as $GHCR_USER"
+  echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin || true
+fi
 docker pull "$IMAGE"
 
-echo "🧹 Removing any existing containers for this app (by name or label)..."
+echo "🧹 Removing any existing containers for this app (by name, label, or image repo)..."
 # Remove by canonical name
 docker rm -f "$NAME" >/dev/null 2>&1 || true
 # Remove by legacy/accidental name
@@ -54,8 +59,25 @@ docker rm -f "$ALT_NAME" >/dev/null 2>&1 || true
 if docker ps -aq -f "label=${LABEL_KEY}=${LABEL_VAL}" | grep -q .; then
   docker rm -f $(docker ps -aq -f "label=${LABEL_KEY}=${LABEL_VAL}") >/dev/null 2>&1 || true
 fi
+# Remove any containers created from the same image repo (any tag) but with a different name
+if docker ps -a --format '{{.ID}} {{.Image}} {{.Names}}' | grep -E "${REPO}[:@]" >/dev/null 2>&1; then
+  while read -r ID IMG NM; do
+    if [[ "$NM" != "$NAME" ]]; then
+      docker rm -f "$ID" >/dev/null 2>&1 || true
+    fi
+  done < <(docker ps -a --format '{{.ID}} {{.Image}} {{.Names}}' | grep -E "${REPO}[:@]")
+fi
 
-echo "🚀 Starting container..."
+echo "🔒 Ensuring no other container is bound to host port $PORT"
+# Remove any container currently publishing host port $PORT if not the canonical name
+while read -r CID CNM PRTS; do
+  if echo "$PRTS" | grep -E "(0\.0\.0\.0|127\.0\.0\.1):${PORT}->" >/dev/null 2>&1; then
+    if [[ "$CNM" != "$NAME" ]]; then
+      echo "Killing container $CNM ($CID) occupying host port $PORT"
+      docker rm -f "$CID" >/dev/null 2>&1 || true
+    fi
+  fi
+done < <(docker ps --format '{{.ID}} {{.Names}} {{.Ports}}')
 docker run -d --name "$NAME" \
   --restart unless-stopped \
   --env-file "$ENV_FILE" \
