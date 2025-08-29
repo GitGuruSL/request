@@ -10,12 +10,15 @@ class MembershipScreen extends StatefulWidget {
   final String?
       requiredSubscriptionType; // 'driver', 'business', 'product_seller'
   final bool isProductSellerRequired; // Force product seller subscription
+  final String?
+      selectedRole; // general | driver | delivery | professional | business
 
   const MembershipScreen({
     super.key,
     this.promptOnboarding = false,
     this.requiredSubscriptionType,
     this.isProductSellerRequired = false,
+    this.selectedRole,
   });
 
   @override
@@ -38,6 +41,8 @@ class _MembershipScreenState extends State<MembershipScreen> {
   @override
   void initState() {
     super.initState();
+    // Seed from route (step 2 if provided)
+    _selectedRole = widget.selectedRole ?? _selectedRole;
     _initializePlanType();
     _load();
   }
@@ -336,6 +341,7 @@ class _MembershipScreenState extends State<MembershipScreen> {
   @override
   Widget build(BuildContext context) {
     final currencyFmt = CountryService.instance.getCurrencySymbol();
+    final isRoleSelectionStep = _selectedRole == null;
     return GlassTheme.backgroundContainer(
       child: Scaffold(
         backgroundColor: AppTheme.backgroundColor,
@@ -360,43 +366,43 @@ class _MembershipScreenState extends State<MembershipScreen> {
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    if (_current != null) _buildCurrentCard(),
-
-                    _buildRoleOnboarding(),
-
-                    // Show tabs or context-specific header
-                    _buildPlanTypeSelector(),
-
-                    Container(
-                      decoration: GlassTheme.glassContainer,
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(_getContextSpecificTitle(),
-                              style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: GlassTheme.colors.textPrimary)),
-                          const SizedBox(height: 8),
-                          Text(_getContextSpecificDescription(),
-                              style: TextStyle(
-                                  color: GlassTheme.colors.textSecondary)),
-                          const SizedBox(height: 12),
-                          TextField(
-                            controller: _promoController,
-                            decoration: const InputDecoration(
-                              labelText: 'Promo code (optional)',
-                              border: OutlineInputBorder(),
+                    if (isRoleSelectionStep) ...[
+                      _buildRoleOnboarding(),
+                    ] else ...[
+                      if (_current != null) _buildCurrentCard(),
+                      // Show tabs or context-specific header
+                      _buildPlanTypeSelector(),
+                      Container(
+                        decoration: GlassTheme.glassContainer,
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(_getContextSpecificTitle(),
+                                style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: GlassTheme.colors.textPrimary)),
+                            const SizedBox(height: 8),
+                            Text(_getContextSpecificDescription(),
+                                style: TextStyle(
+                                    color: GlassTheme.colors.textSecondary)),
+                            const SizedBox(height: 12),
+                            TextField(
+                              controller: _promoController,
+                              decoration: const InputDecoration(
+                                labelText: 'Promo code (optional)',
+                                border: OutlineInputBorder(),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    ...(_currentPlans)
-                        .map((p) => _buildPlanCard(p, currencyFmt))
-                        .toList(),
+                      const SizedBox(height: 12),
+                      ...(_currentPlans)
+                          .map((p) => _buildPlanCard(p, currencyFmt))
+                          .toList(),
+                    ]
                   ],
                 ),
               ),
@@ -552,80 +558,226 @@ class _MembershipScreenState extends State<MembershipScreen> {
   }
 
   Widget _buildRoleOnboarding() {
-    // Simple role chooser shown during onboarding
-    return Container(
-      decoration: GlassTheme.glassContainer,
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Choose how you will use Request',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: GlassTheme.colors.textPrimary)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          decoration: GlassTheme.glassContainer,
+          padding: const EdgeInsets.all(20),
+          margin: const EdgeInsets.only(bottom: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _roleChip('General Responder', 'general', Icons.handshake),
-              _roleChip('Driver', 'driver', Icons.drive_eta),
-              _roleChip('Delivery Service', 'delivery', Icons.local_shipping),
-              _roleChip('Professional', 'professional', Icons.badge),
+              Text('Choose Your Role',
+                  style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: GlassTheme.colors.textPrimary)),
+              const SizedBox(height: 8),
+              Text('Select how you plan to use Request to get started',
+                  style: TextStyle(
+                      fontSize: 16, color: GlassTheme.colors.textSecondary)),
             ],
           ),
-          if (_selectedRole == 'professional') ...[
-            const SizedBox(height: 12),
-            Text('Select your professional area',
-                style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: GlassTheme.colors.textPrimary)),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
+        ),
+        _buildRoleCard(
+          'Respond to General Requests',
+          'General Responder',
+          'Answer various requests in your area. 3 free responses per month, upgrade for unlimited responses and contact visibility.',
+          Icons.handshake,
+          'general',
+          Colors.green,
+        ),
+        _buildRoleCard(
+          'I am a Driver',
+          'Specialized Responder (Driver)',
+          'Respond to ride requests and earn money. Includes verification process for driver\'s license. Access to ride requests and all common requests.',
+          Icons.drive_eta,
+          'driver',
+          Colors.blue,
+        ),
+        _buildRoleCard(
+          'I run a Delivery Service',
+          'Specialized Responder (Delivery)',
+          'Provide delivery services for various requests. May require business verification. Access to delivery requests and all common requests.',
+          Icons.local_shipping,
+          'delivery',
+          Colors.orange,
+        ),
+        _buildRoleCard(
+          'I am a Professional in a specific field',
+          'Professional Responder',
+          'Offer professional services in specialized areas like tours, events, construction, education, or hiring.',
+          Icons.badge,
+          'professional',
+          Colors.purple,
+        ),
+        if (_selectedRole == 'professional') ...[
+          const SizedBox(height: 16),
+          Container(
+            decoration: GlassTheme.glassContainer,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _professionalChip('Tour', 'tour', Icons.map_outlined),
-                _professionalChip('Event', 'event', Icons.event),
-                _professionalChip(
-                    'Construction', 'construction', Icons.engineering),
-                _professionalChip('Education', 'education', Icons.school),
-                _professionalChip('Hiring', 'hiring', Icons.work_outline),
+                Text('Select your professional area',
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: GlassTheme.colors.textPrimary)),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _professionalChip('Tour', 'tour', Icons.map_outlined),
+                    _professionalChip('Event', 'event', Icons.event),
+                    _professionalChip(
+                        'Construction', 'construction', Icons.engineering),
+                    _professionalChip('Education', 'education', Icons.school),
+                    _professionalChip('Hiring', 'hiring', Icons.work_outline),
+                  ],
+                ),
               ],
             ),
-          ],
-          const SizedBox(height: 6),
-          Text(
-            _selectedRole == 'driver'
-                ? '3 free ride responses per month. Upgrade for unlimited and contact visibility.'
-                : '3 free responses per month. Upgrade for unlimited and contact visibility.',
-            style:
-                TextStyle(color: GlassTheme.colors.textSecondary, fontSize: 12),
           ),
         ],
+        if (_selectedRole != null) ...[
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _goToPlans,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: GlassTheme.colors.primaryBlue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                'Continue to Plans',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildRoleCard(String title, String subtitle, String description,
+      IconData icon, String value, Color color) {
+    final selected = _selectedRole == value;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color:
+              selected ? GlassTheme.colors.primaryBlue : Colors.grey.shade300,
+          width: selected ? 2 : 1,
+        ),
+        color: selected
+            ? GlassTheme.colors.primaryBlue.withOpacity(0.1)
+            : GlassTheme.colors.glassBackground.first,
+      ),
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _selectedRole = value;
+            // Reset professional area if role changes away from professional
+            if (value != 'professional') {
+              _selectedProfessionalArea = null;
+            }
+          });
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: GlassTheme.colors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: selected
+                            ? GlassTheme.colors.primaryBlue
+                            : GlassTheme.colors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: GlassTheme.colors.textSecondary,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (selected)
+                Icon(
+                  Icons.check_circle,
+                  color: GlassTheme.colors.primaryBlue,
+                  size: 24,
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _roleChip(String title, String value, IconData icon) {
-    final selected = _selectedRole == value;
-    return ChoiceChip(
-      label: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [Icon(icon, size: 16), const SizedBox(width: 6), Text(title)],
-      ),
-      selected: selected,
-      onSelected: (_) {
-        setState(() {
-          _selectedRole = value;
-          // Reset professional area if role changes away
-          if (value != 'professional') {
-            _selectedProfessionalArea = null;
-          }
-        });
+  void _goToPlans() {
+    final value = _selectedRole;
+    if (value == null) return;
+    final requiredType = (value == 'driver')
+        ? 'driver'
+        : (value == 'delivery' ||
+                value == 'professional' ||
+                value == 'business')
+            ? 'business'
+            : null;
+    Navigator.pushReplacementNamed(
+      context,
+      '/membership',
+      arguments: {
+        'selectedRole': value,
+        if (_selectedProfessionalArea != null)
+          'professionalArea': _selectedProfessionalArea,
+        if (requiredType != null) 'requiredSubscriptionType': requiredType,
+        'promptOnboarding': true,
       },
     );
   }
