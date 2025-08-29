@@ -27,13 +27,17 @@ class NotificationCenter {
 
   static const _prefsSeenKey = 'seen_notification_ids';
   static const _maxSeen = 200; // cap stored IDs
-  static const Duration _interval = Duration(seconds: 45);
+  // Polling interval: faster in debug to help validation
+  static Duration get _interval =>
+      kReleaseMode ? const Duration(seconds: 45) : const Duration(seconds: 15);
 
   Future<void> start() async {
     if (_running) return;
     _running = true;
 
     await _loadSeen();
+    debugPrint('[NotificationCenter] start(): polling every '
+        '${_interval.inSeconds}s (primed=$_primed)');
     // Kick once immediately, then schedule.
     unawaited(_poll());
     _timer = Timer.periodic(_interval, (_) => _poll());
@@ -68,6 +72,10 @@ class NotificationCenter {
     // Skip if no auth token
     final token = await ApiClient.instance.getToken();
     if (token == null || token.isEmpty) {
+      if (kDebugMode) {
+        debugPrint(
+            '[NotificationCenter] _poll(): no auth token; clearing badges');
+      }
       if (unreadMessages.value != 0) unreadMessages.value = 0;
       return;
     }
@@ -75,6 +83,10 @@ class NotificationCenter {
     try {
       // 1) Update unread counts for badges
       final counts = await RestNotificationService.instance.unreadCounts();
+      if (kDebugMode) {
+        debugPrint(
+            '[NotificationCenter] unread counts -> messages=${counts.messages}');
+      }
       if (unreadMessages.value != counts.messages) {
         unreadMessages.value = counts.messages;
       }
@@ -82,6 +94,9 @@ class NotificationCenter {
       // 2) Detect new notifications and toast them locally
       final list =
           await RestNotificationService.instance.fetchMyNotifications();
+      if (kDebugMode) {
+        debugPrint('[NotificationCenter] fetched ${list.length} notifications');
+      }
       if (list.isEmpty) return;
 
       // Sort by createdAt ascending to show in order
@@ -89,6 +104,10 @@ class NotificationCenter {
 
       // On first prime, just record existing without showing
       if (!_primed) {
+        if (kDebugMode) {
+          debugPrint(
+              '[NotificationCenter] priming with ${list.length} existing items (no toasts)');
+        }
         for (final n in list) {
           _seenIds.add(n.id);
         }
@@ -99,6 +118,10 @@ class NotificationCenter {
 
       // Find truly new items (not previously seen)
       final newOnes = list.where((n) => !_seenIds.contains(n.id)).toList();
+      if (kDebugMode) {
+        debugPrint(
+            '[NotificationCenter] detected ${newOnes.length} new notifications');
+      }
       if (newOnes.isEmpty) return;
 
       // Limit bursts
@@ -116,6 +139,10 @@ class NotificationCenter {
   Future<void> _showLocal(NotificationModel n) async {
     final title = (n.title.isNotEmpty) ? n.title : _titleForType(n.type);
     final body = (n.message.isNotEmpty) ? n.message : 'Open to view details';
+    if (kDebugMode) {
+      debugPrint(
+          '[NotificationCenter] showing local notification: title="$title"');
+    }
     await NotificationService.instance.showLocalNotification(
       title: title,
       body: body,

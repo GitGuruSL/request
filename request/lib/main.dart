@@ -55,6 +55,10 @@ void main() async {
       },
     );
 
+    // Proactively ask for notification permission on Android 13+
+    // so local notifications will show without extra steps.
+    await NotificationService.instance.ensurePermission();
+
     // Start foreground polling (badges + local toasts)
     await NotificationCenter.instance.start();
 
