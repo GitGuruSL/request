@@ -219,6 +219,11 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(
               builder: (context) => const SubscriptionScreen(),
             );
+          case '/membership':
+            // Alias to subscriptions screen for menu deep link
+            return MaterialPageRoute(
+              builder: (context) => const SubscriptionScreen(),
+            );
           case '/rider/browse-drivers':
             return MaterialPageRoute(
               builder: (context) => const RiderBrowseDriversScreen(),

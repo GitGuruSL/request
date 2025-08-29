@@ -8,7 +8,7 @@ router.get('/me', auth.authMiddleware(), async (req, res) => {
   try {
     const userId = req.user.id || req.user.userId;
     const sub = await db.queryOne(
-      `SELECT s.*, p.* AS plan
+      `SELECT s.*, row_to_json(p) AS plan
        FROM subscriptions s
        JOIN subscription_plans_new p ON p.id = s.plan_id
        WHERE s.user_id = $1 AND s.status IN ('active','trialing')
