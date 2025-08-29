@@ -6,7 +6,16 @@ import '../../theme/app_theme.dart';
 
 class MembershipScreen extends StatefulWidget {
   final bool promptOnboarding;
-  const MembershipScreen({super.key, this.promptOnboarding = false});
+  final String?
+      requiredSubscriptionType; // 'driver', 'business', 'product_seller'
+  final bool isProductSellerRequired; // Force product seller subscription
+
+  const MembershipScreen({
+    super.key,
+    this.promptOnboarding = false,
+    this.requiredSubscriptionType,
+    this.isProductSellerRequired = false,
+  });
 
   @override
   State<MembershipScreen> createState() => _MembershipScreenState();
@@ -16,15 +25,27 @@ class _MembershipScreenState extends State<MembershipScreen> {
   final _api = SubscriptionServiceApi.instance;
   final _promoController = TextEditingController();
   bool _loading = true;
-  List<SubscriptionPlan> _plans = [];
+  List<SubscriptionPlan> _userResponsePlans = [];
+  List<SubscriptionPlan> _productSellerPlans = [];
   Map<String, dynamic>? _current;
-  String _type = 'rider';
+  String _planType = 'user_response'; // 'user_response' | 'product_seller'
   bool _checkingOut = false;
 
   @override
   void initState() {
     super.initState();
+    _initializePlanType();
     _load();
+  }
+
+  void _initializePlanType() {
+    // Set initial plan type based on requirements
+    if (widget.isProductSellerRequired ||
+        widget.requiredSubscriptionType == 'product_seller') {
+      _planType = 'product_seller';
+    } else {
+      _planType = 'user_response';
+    }
   }
 
   @override
@@ -36,17 +57,50 @@ class _MembershipScreenState extends State<MembershipScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final plans = await _api.fetchPlans(type: _type, activeOnly: true);
+      final userPlans = await _api.fetchUserResponsePlans(activeOnly: true);
+      final productPlans = await _api.fetchProductSellerPlans(activeOnly: true);
       final cur = await _api.getMySubscription();
+
+      // Filter plans based on user type requirements
+      List<SubscriptionPlan> filteredUserPlans =
+          _filterUserResponsePlans(userPlans);
+
       if (mounted) {
         setState(() {
-          _plans = plans;
+          _userResponsePlans = filteredUserPlans;
+          _productSellerPlans = productPlans;
           _current = cur;
         });
       }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  List<SubscriptionPlan> _filterUserResponsePlans(
+      List<SubscriptionPlan> plans) {
+    if (widget.requiredSubscriptionType == 'driver') {
+      // For drivers: show free plan + ride-specific plans
+      return plans
+          .where((plan) => plan.planType == 'free' || plan.planType == 'ride')
+          .toList();
+    } else if (widget.requiredSubscriptionType == 'business') {
+      // For regular business: show free plan + all response plans
+      return plans
+          .where((plan) => plan.planType == 'free' || plan.planType == 'all')
+          .toList();
+    } else if (widget.isProductSellerRequired) {
+      // For product sellers: only show free plan (3 responses) unless they get product subscription
+      return plans.where((plan) => plan.planType == 'free').toList();
+    }
+    // Default: show all plans
+    return plans;
+  }
+
+  List<SubscriptionPlan> get _currentPlans {
+    return _planType == 'user_response'
+        ? _userResponsePlans
+        : _productSellerPlans;
   }
 
   Future<void> _choosePlan(SubscriptionPlan plan) async {
@@ -217,20 +271,35 @@ class _MembershipScreenState extends State<MembershipScreen> {
                   padding: const EdgeInsets.all(16),
                   children: [
                     if (_current != null) _buildCurrentCard(),
+
+                    // Show tabs or context-specific header
+                    _buildPlanTypeSelector(),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
                     Container(
                       decoration: GlassTheme.glassContainer,
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Choose your plan',
+                          Text(
+                              _planType == 'user_response'
+                                  ? 'Choose your response plan'
+                                  : 'Choose your marketplace plan',
                               style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                   color: GlassTheme.colors.textPrimary)),
                           const SizedBox(height: 8),
                           Text(
-                              'Free plan gives limited responses. Paid plans unlock unlimited responses, contact visibility, and instant notifications.',
+                              _planType == 'user_response'
+                                  ? 'Free plan gives limited responses. Paid plans unlock unlimited responses, contact visibility, and instant notifications.'
+                                  : 'Choose how you want to pay for your product listings in our marketplace.',
                               style: TextStyle(
                                   color: GlassTheme.colors.textSecondary)),
                           const SizedBox(height: 12),
@@ -245,7 +314,7 @@ class _MembershipScreenState extends State<MembershipScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    ..._plans
+                    ...(_currentPlans)
                         .map((p) => _buildPlanCard(p, currencyFmt))
                         .toList(),
                   ],
@@ -280,10 +349,6 @@ class _MembershipScreenState extends State<MembershipScreen> {
   }
 
   Widget _buildPlanCard(SubscriptionPlan plan, String currencySymbol) {
-    final isFree = (plan.price == null || plan.price == 0);
-    final priceStr = isFree
-        ? 'Free'
-        : '${CountryService.instance.formatPrice(plan.price ?? 0)} / ${plan.durationDays ?? 30}d';
     return Container(
       decoration: GlassTheme.glassContainer,
       padding: const EdgeInsets.all(16),
@@ -301,7 +366,7 @@ class _MembershipScreenState extends State<MembershipScreen> {
                       color: GlassTheme.colors.textPrimary,
                     )),
               ),
-              Text(priceStr,
+              Text(plan.displayPrice,
                   style: TextStyle(color: GlassTheme.colors.textSecondary)),
             ],
           ),
@@ -310,8 +375,40 @@ class _MembershipScreenState extends State<MembershipScreen> {
             Text(plan.description!,
                 style: TextStyle(color: GlassTheme.colors.textSecondary)),
           const SizedBox(height: 8),
-          if (plan.planType == 'monthly' && plan.type == 'rider')
-            _benefitsList(isFree: isFree),
+
+          // Show plan-specific details
+          if (plan.type == 'user_response') ...[
+            if (plan.responseLimit != null)
+              Text('${plan.responseLimit} responses per month',
+                  style: TextStyle(
+                      color: GlassTheme.colors.textSecondary, fontSize: 12))
+            else
+              Text('Unlimited responses',
+                  style: TextStyle(
+                      color: GlassTheme.colors.textSecondary, fontSize: 12)),
+            if (plan.features != null && plan.features!.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Wrap(
+                spacing: 4,
+                children: plan.features!
+                    .map((feature) => Chip(
+                          label: Text(feature,
+                              style: const TextStyle(fontSize: 10)),
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                        ))
+                    .toList(),
+              ),
+            ],
+          ] else if (plan.type == 'product_seller') ...[
+            Text(
+                plan.planType == 'per_click'
+                    ? 'Pay only when customers click on your products'
+                    : 'Fixed monthly fee for unlimited product listings',
+                style: TextStyle(
+                    color: GlassTheme.colors.textSecondary, fontSize: 12)),
+          ],
+
           const SizedBox(height: 12),
           Align(
             alignment: Alignment.centerRight,
@@ -321,49 +418,11 @@ class _MembershipScreenState extends State<MembershipScreen> {
                 backgroundColor: GlassTheme.colors.primaryBlue,
                 foregroundColor: Colors.white,
               ),
-              child: Text(isFree ? 'Continue Free' : 'Subscribe'),
+              child: Text(plan.isFree ? 'Continue Free' : 'Subscribe'),
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _benefitsList({required bool isFree}) {
-    final items = isFree
-        ? [
-            '3 responses per month',
-            'Contact details hidden',
-            'No instant notifications',
-          ]
-        : [
-            'Unlimited responses',
-            'Contact details visible',
-            'Instant request notifications',
-          ];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: items
-          .map((t) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Row(
-                  children: [
-                    Icon(isFree ? Icons.info_outline : Icons.check_circle,
-                        size: 18,
-                        color: isFree
-                            ? GlassTheme.colors.textSecondary
-                            : Colors.green),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(t,
-                          style: TextStyle(
-                            color: GlassTheme.colors.textSecondary,
-                          )),
-                    ),
-                  ],
-                ),
-              ))
-          .toList(),
     );
   }
 }

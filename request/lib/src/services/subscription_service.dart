@@ -4,12 +4,14 @@ class SubscriptionPlan {
   final String id;
   final String code;
   final String name;
-  final String type; // 'rider' | 'business'
-  final String planType; // 'monthly' | 'pay_per_click'
+  final String type; // 'user_response' | 'product_seller'
+  final String
+      planType; // For user response: response_type, For product: billing_type
   final String? description;
   final num? price;
   final String? currency;
-  final int? durationDays;
+  final int? responseLimit; // For user response plans
+  final List<String>? features; // For user response plans
 
   SubscriptionPlan({
     required this.id,
@@ -20,23 +22,47 @@ class SubscriptionPlan {
     this.description,
     this.price,
     this.currency,
-    this.durationDays,
+    this.responseLimit,
+    this.features,
   });
 
-  factory SubscriptionPlan.fromJson(Map<String, dynamic> json) {
+  factory SubscriptionPlan.fromJson(Map<String, dynamic> json, String type) {
     return SubscriptionPlan(
       id: json['id'].toString(),
       code: (json['code'] ?? '').toString(),
       name: (json['name'] ?? '').toString(),
-      type: (json['type'] ?? 'rider').toString(),
-      planType: (json['plan_type'] ?? 'monthly').toString(),
+      type: type,
+      planType: type == 'user_response'
+          ? (json['response_type'] ?? 'other').toString()
+          : (json['billing_type'] ?? 'monthly').toString(),
       description: json['description']?.toString(),
-      price: json['price'] as num?,
+      price: json['monthly_price'] as num? ??
+          json['price_per_click'] as num? ??
+          json['monthly_fee'] as num?,
       currency: json['currency']?.toString(),
-      durationDays: json['duration_days'] is int
-          ? json['duration_days'] as int
-          : int.tryParse('${json['duration_days']}'),
+      responseLimit: json['response_limit'] as int?,
+      features: json['features'] != null
+          ? List<String>.from(json['features'] as List)
+          : null,
     );
+  }
+
+  // Helper getters
+  bool get isFree => planType == 'free' || (price ?? 0) == 0;
+  bool get isUnlimited => responseLimit == null;
+  String get displayPrice {
+    if (isFree) return 'Free';
+    if (price == null) return 'Contact for pricing';
+
+    if (type == 'product_seller') {
+      if (planType == 'per_click') {
+        return '${(price! * 10000).toStringAsFixed(4)} per click';
+      } else {
+        return '${price!.toStringAsFixed(2)} /month';
+      }
+    } else {
+      return '${price!.toStringAsFixed(2)} /month';
+    }
   }
 }
 
@@ -46,20 +72,37 @@ class SubscriptionServiceApi {
   final ApiClient _api = ApiClient.instance;
 
   Future<List<SubscriptionPlan>> fetchPlans({
-    String type = 'rider',
+    String type = 'user_response', // 'user_response' or 'product_seller'
     bool activeOnly = true,
   }) async {
-    final qp = <String, String>{'type': type};
+    // Use new subscription management endpoints
+    final endpoint = type == 'user_response'
+        ? '/api/subscription-management/user-response-plans'
+        : '/api/subscription-management/product-seller-plans';
+
+    final qp = <String, String>{};
     if (activeOnly) qp['active'] = 'true';
-    final res = await _api.get<Map<String, dynamic>>('/api/subscription-plans',
-        queryParameters: qp);
+
+    final res =
+        await _api.get<Map<String, dynamic>>(endpoint, queryParameters: qp);
     if (res.isSuccess && res.data != null) {
       final list = (res.data!['data'] as List?) ?? [];
       return list
-          .map((e) => SubscriptionPlan.fromJson(e as Map<String, dynamic>))
+          .map(
+              (e) => SubscriptionPlan.fromJson(e as Map<String, dynamic>, type))
           .toList();
     }
     return [];
+  }
+
+  Future<List<SubscriptionPlan>> fetchUserResponsePlans(
+      {bool activeOnly = true}) async {
+    return fetchPlans(type: 'user_response', activeOnly: activeOnly);
+  }
+
+  Future<List<SubscriptionPlan>> fetchProductSellerPlans(
+      {bool activeOnly = true}) async {
+    return fetchPlans(type: 'product_seller', activeOnly: activeOnly);
   }
 
   Future<Map<String, dynamic>?> getMySubscription() async {
