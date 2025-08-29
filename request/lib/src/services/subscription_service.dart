@@ -67,10 +67,12 @@ class SubscriptionServiceApi {
     return null;
   }
 
-  Future<bool> startSubscription(String planId) async {
-    final res = await _api.post<Map<String, dynamic>>(
-        '/api/subscriptions/start',
-        data: {'plan_id': planId});
+  Future<bool> startSubscription(String planId, {String? promoCode}) async {
+    final data = <String, dynamic>{'plan_id': planId};
+    if (promoCode != null && promoCode.isNotEmpty)
+      data['promo_code'] = promoCode;
+    final res = await _api
+        .post<Map<String, dynamic>>('/api/subscriptions/start', data: data);
     return res.isSuccess == true;
   }
 

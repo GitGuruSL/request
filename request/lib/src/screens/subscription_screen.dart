@@ -14,6 +14,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   List<SubscriptionPlan> _plans = [];
   Map<String, dynamic>? _current;
   String _type = 'rider';
+  final _promoController = TextEditingController();
 
   @override
   void initState() {
@@ -34,7 +35,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
   Future<void> _startPlan(SubscriptionPlan plan) async {
     setState(() => _loading = true);
-    final ok = await _api.startSubscription(plan.id);
+    final promo = _promoController.text.trim();
+    final ok = await _api.startSubscription(plan.id,
+        promoCode: promo.isEmpty ? null : promo);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(
@@ -67,6 +70,32 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  // Promo code input
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Promo code',
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: _promoController,
+                            decoration: const InputDecoration(
+                              hintText: 'Enter promo code (optional)',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                              'Apply a promo to get a free trial period if eligible.',
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.black54)),
+                        ],
+                      ),
+                    ),
+                  ),
                   if (_current != null) _buildCurrentCard(),
                   ..._plans.map(_buildPlanCard),
                 ],
