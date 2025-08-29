@@ -578,7 +578,13 @@ const Subscriptions = () => {
       handleCloseDialog();
     } catch (error) {
       console.error('Error saving subscription plan:', error);
-      setError('Failed to save subscription plan');
+      const status = error?.response?.status;
+      const code = error?.response?.data?.code;
+      if (status === 409) {
+        setError(`A plan with code "${code || (formData.name||'').toLowerCase().replace(/[^a-z0-9]+/g,'_')}" already exists. Change the Name to generate a new code, or edit the existing plan and add LK pricing.`);
+      } else {
+        setError('Failed to save subscription plan');
+      }
     }
   };
 

@@ -67,8 +67,8 @@ router.post('/subscription-plans', auth.authMiddleware(), auth.roleMiddleware(['
   const derived = (b.name||'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
   if(!b.planId && !b.code && !derived) return res.status(400).json({ error:'planId/code or valid name required'});
   const code = (b.planId||b.code||derived).toLowerCase();
-    const exists = await db.findMany('subscription_plans_new',{ code });
-    if(exists.length) return res.status(409).json({ error:'Plan code exists'});
+  const exists = await db.findMany('subscription_plans_new',{ code });
+  if(exists.length) return res.status(409).json({ error:'Plan code exists', code });
     const data = {
       code,
       name: b.name,
