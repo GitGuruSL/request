@@ -15,6 +15,7 @@ import 'about_us_simple_screen.dart';
 import 'pricing/business_product_dashboard.dart';
 import 'settings_screen.dart';
 import '../widgets/smart_network_image.dart';
+import '../services/subscription_service.dart';
 
 class ModernMenuScreen extends StatefulWidget {
   const ModernMenuScreen({super.key});
@@ -35,6 +36,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
   // Product seller flag no longer used for menu routing; dashboard self-gates
   int _unreadTotal = 0;
   int _unreadMessages = 0;
+  String? _membershipLabel; // e.g., Free or plan name
   // Removed admin/business gating; keep Ride Alerts gated by driver status only.
 
   // Lightweight in-memory cache to avoid refetching every time tab opens
@@ -96,6 +98,21 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
       }).catchError((_) {
         if (_lastIsDriver != null && mounted)
           setState(() => _isDriver = _lastIsDriver!);
+      }));
+
+      // Membership label (current subscription)
+      futures.add(SubscriptionServiceApi.instance
+          .getMySubscription()
+          .timeout(const Duration(seconds: 3))
+          .then((sub) {
+        final label = sub == null
+            ? 'Free'
+            : (sub['name']?.toString() ??
+                sub['plan']?['name']?.toString() ??
+                'Member');
+        if (mounted) setState(() => _membershipLabel = label);
+      }).catchError((_) {
+        if (mounted && _membershipLabel == null) _membershipLabel = 'Member';
       }));
 
       // Unread counts with a tiny TTL to reduce chattiness
@@ -315,7 +332,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
               ),
               const SizedBox(width: 6),
               Text(
-                'Member',
+                _membershipLabel ?? 'Member',
                 style: TextStyle(
                   fontSize: 14,
                   color: GlassTheme.colors.textSecondary,

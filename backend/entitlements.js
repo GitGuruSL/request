@@ -42,8 +42,31 @@ async function getEntitlements(userId, role, now = new Date()) {
       canViewContact = true;
       canMessage = true;
     } else if (audience === 'normal') {
-      canViewContact = responseCount < 3;
-      canMessage = responseCount < 3;
+      // Determine free monthly limit from default rider plan limitations
+      let limit = 3; // fallback
+      try {
+        const freePlan = await client.query(
+          `SELECT limitations FROM subscription_plans_new
+           WHERE type = 'rider' AND is_default_plan = true
+           ORDER BY created_at DESC NULLS LAST
+           LIMIT 1`
+        );
+        const limitations = freePlan.rows[0]?.limitations || null;
+        if (limitations && typeof limitations === 'object') {
+          const m = limitations.maxResponsesPerMonth;
+          if (typeof m === 'number') limit = m;
+        }
+      } catch (e) {
+        // ignore, use fallback
+      }
+      if (limit < 0) {
+        // Unlimited
+        canViewContact = true;
+        canMessage = true;
+      } else {
+        canViewContact = responseCount < limit;
+        canMessage = responseCount < limit;
+      }
     } else if (audience === 'business') {
       // For business without active monthly sub, allow view (PPC logic elsewhere)
       canViewContact = true;
@@ -71,7 +94,7 @@ function requireResponseEntitlement() {
   const ent = await getEntitlements(userId, role);
   // attach to request for downstream handlers
   req.entitlements = ent;
-      if (ent.audience === 'normal' && !ent.isSubscribed && ent.responseCountThisMonth >= 3) {
+  if (ent.audience === 'normal' && !ent.isSubscribed && ent.canMessage !== true) {
         return res.status(402).json({ error: 'limit_reached', message: 'Monthly response limit reached' });
       }
       return next();
