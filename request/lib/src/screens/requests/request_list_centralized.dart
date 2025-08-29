@@ -15,7 +15,7 @@ class RequestListCentralized extends StatefulWidget {
 class _RequestListCentralizedState extends State<RequestListCentralized> {
   final CentralizedRequestService _requestService = CentralizedRequestService();
   final CountryService _countryService = CountryService.instance;
-  
+
   List<RequestModel> _requests = [];
   bool _loading = true;
   String? _error;
@@ -56,15 +56,24 @@ class _RequestListCentralizedState extends State<RequestListCentralized> {
     });
 
     // Get country-filtered requests stream
-    _requestService.getCountryRequestsStream(
+    _requestService
+        .getCountryRequestsStream(
       category: _selectedCategory == 'All' ? null : _selectedCategory,
       type: _selectedType,
       limit: 50,
-    ).listen(
+    )
+        .listen(
       (requests) {
         if (mounted) {
           setState(() {
-            _requests = requests;
+            _requests = List<RequestModel>.from(requests)
+              ..sort((a, b) {
+                // Urgent priority first, then newest
+                final aUrgent = a.priority == Priority.urgent;
+                final bUrgent = b.priority == Priority.urgent;
+                if (aUrgent != bUrgent) return aUrgent ? -1 : 1;
+                return b.createdAt.compareTo(a.createdAt);
+              });
             _loading = false;
           });
         }
@@ -95,11 +104,11 @@ class _RequestListCentralizedState extends State<RequestListCentralized> {
           ),
           const SizedBox(width: 8),
           Text(
-            'Showing requests from ${_countryService.countryName ?? 'your country'}',
+            'Showing requests from ${_countryService.countryName.isNotEmpty ? _countryService.countryName : 'your country'}',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).primaryColor,
-            ),
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).primaryColor,
+                ),
           ),
         ],
       ),
@@ -115,8 +124,8 @@ class _RequestListCentralizedState extends State<RequestListCentralized> {
           Text(
             'Filters',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           const SizedBox(height: 8),
           Row(
@@ -199,8 +208,8 @@ class _RequestListCentralizedState extends State<RequestListCentralized> {
                   child: Text(
                     request.title,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                 ),
                 Chip(
@@ -228,8 +237,8 @@ class _RequestListCentralizedState extends State<RequestListCentralized> {
                 Text(
                   request.location?.address ?? 'Location not specified',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[600],
-                  ),
+                        color: Colors.grey[600],
+                      ),
                 ),
                 const Spacer(),
                 if (request.budget != null)
@@ -252,16 +261,16 @@ class _RequestListCentralizedState extends State<RequestListCentralized> {
                 Text(
                   request.countryName ?? 'Unknown',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).primaryColor,
-                    fontWeight: FontWeight.w500,
-                  ),
+                        color: Theme.of(context).primaryColor,
+                        fontWeight: FontWeight.w500,
+                      ),
                 ),
                 const Spacer(),
                 Text(
                   _formatDate(request.createdAt),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[600],
-                  ),
+                        color: Colors.grey[600],
+                      ),
                 ),
               ],
             ),
@@ -304,10 +313,10 @@ class _RequestListCentralizedState extends State<RequestListCentralized> {
         children: [
           // Country header
           _buildCountryHeader(),
-          
+
           // Filters
           _buildFilters(),
-          
+
           // Content
           Expanded(
             child: _buildContent(),
@@ -396,10 +405,10 @@ class _RequestListCentralizedState extends State<RequestListCentralized> {
             ),
             const SizedBox(height: 8),
             Text(
-              'No requests found in ${_countryService.countryName ?? 'your country'}',
+              'No requests found in ${_countryService.countryName.isNotEmpty ? _countryService.countryName : 'your country'}',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
+                    color: Colors.grey[600],
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),

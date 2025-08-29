@@ -775,6 +775,15 @@ class _BrowseRequestsScreenState extends State<BrowseRequestsScreen> {
       }).toList();
     }
 
+    // Always sort with urgent first, then most recent
+    filtered.sort((a, b) {
+      // Urgent to top
+      if (a.isUrgent != b.isUrgent) {
+        return a.isUrgent ? -1 : 1;
+      }
+      // Newest first
+      return b.createdAt.compareTo(a.createdAt);
+    });
     return filtered;
   }
 
