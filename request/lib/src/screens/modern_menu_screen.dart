@@ -433,10 +433,12 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
                     } else {
                       if (item.route == '/membership') {
                         // Provide a simple, role-aware default
-                        await Navigator.pushNamed(
-                            context, '/membership', arguments: {
-                          if (_isDriver) 'requiredSubscriptionType': 'driver'
-                        });
+                        await Navigator.pushNamed(context, '/membership',
+                            arguments: {
+                              if (_isDriver)
+                                'requiredSubscriptionType': 'driver',
+                              'promptOnboarding': true,
+                            });
                       } else {
                         await Navigator.pushNamed(context, item.route!);
                       }

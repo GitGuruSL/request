@@ -83,6 +83,17 @@ class _MembershipScreenState extends State<MembershipScreen> {
 
   List<SubscriptionPlan> _filterUserResponsePlans(
       List<SubscriptionPlan> plans) {
+    // Base filter: hide any obviously-misconfigured free plans claiming unlimited
+    final cleaned = plans.where((plan) {
+      final name = plan.name.toLowerCase();
+      final planType = plan.planType.toLowerCase();
+      final looksUnlimited =
+          name.contains('unlimited') || planType.contains('unlimited');
+      final isFreeUnlimited =
+          plan.isFree && (plan.responseLimit == null) && looksUnlimited;
+      return !isFreeUnlimited;
+    }).toList();
+
     final requiredType = widget.requiredSubscriptionType ??
         ((_selectedRole == 'driver')
             ? 'driver'
@@ -92,14 +103,14 @@ class _MembershipScreenState extends State<MembershipScreen> {
 
     if (requiredType == 'driver') {
       // For drivers: show free plan + ride-specific plans
-      return plans
+      return cleaned
           .where((plan) =>
               plan.planType == 'free' ||
               plan.planType.toLowerCase().contains('ride'))
           .toList();
     } else if (requiredType == 'business') {
       // For regular business: show free plan + all response plans
-      return plans.where((plan) {
+      return cleaned.where((plan) {
         final t = plan.planType.toLowerCase();
         return plan.planType == 'free' ||
             t.contains('all') ||
@@ -108,10 +119,10 @@ class _MembershipScreenState extends State<MembershipScreen> {
       }).toList();
     } else if (widget.isProductSellerRequired) {
       // For product sellers: only show free plan (3 responses) unless they get product subscription
-      return plans.where((plan) => plan.planType == 'free').toList();
+      return cleaned.where((plan) => plan.planType == 'free').toList();
     }
     // Default: show all plans
-    return plans;
+    return cleaned;
   }
 
   String _getContextSpecificTitle() {
@@ -177,9 +188,11 @@ class _MembershipScreenState extends State<MembershipScreen> {
           (created['active'] == true)) {
         _toast('Subscription activated');
         await _load();
-        if (widget.promptOnboarding && mounted) {
-          await _maybeNavigateRoleRegistration();
-          Navigator.pushNamedAndRemoveUntil(context, '/home', (r) => false);
+        if (mounted) {
+          final navigated = await _maybeNavigateRoleRegistration();
+          if (!navigated) {
+            Navigator.pushNamedAndRemoveUntil(context, '/home', (r) => false);
+          }
         }
         return;
       }
@@ -301,20 +314,23 @@ class _MembershipScreenState extends State<MembershipScreen> {
     } catch (_) {}
   }
 
-  Future<void> _maybeNavigateRoleRegistration() async {
+  Future<bool> _maybeNavigateRoleRegistration() async {
     // After selecting a plan during onboarding, take user to role-specific registration if applicable
     if (_selectedRole == 'driver') {
-      Navigator.pushNamed(context, '/driver-registration');
+      await Navigator.pushNamed(context, '/driver-registration');
+      return true;
     } else if (_selectedRole == 'delivery' ||
         _selectedRole == 'professional' ||
         _selectedRole == 'business') {
       // Use business registration for delivery/professional/business
-      Navigator.pushNamed(context, '/business-registration', arguments: {
+      await Navigator.pushNamed(context, '/business-registration', arguments: {
         'selectedRole': _selectedRole,
         if (_selectedProfessionalArea != null)
           'professionalArea': _selectedProfessionalArea,
       });
+      return true;
     }
+    return false;
   }
 
   @override
@@ -346,7 +362,7 @@ class _MembershipScreenState extends State<MembershipScreen> {
                   children: [
                     if (_current != null) _buildCurrentCard(),
 
-                    if (widget.promptOnboarding) _buildRoleOnboarding(),
+                    _buildRoleOnboarding(),
 
                     // Show tabs or context-specific header
                     _buildPlanTypeSelector(),
@@ -744,10 +760,14 @@ class _MembershipScreenState extends State<MembershipScreen> {
               Text('${plan.responseLimit} responses per month',
                   style: TextStyle(
                       color: GlassTheme.colors.textSecondary, fontSize: 12))
-            else
-              Text('Unlimited responses',
-                  style: TextStyle(
-                      color: GlassTheme.colors.textSecondary, fontSize: 12)),
+            else ...[
+              // Safety: free response plans should be limited to 3 by business rules
+              Text(
+                plan.isFree ? '3 responses per month' : 'Unlimited responses',
+                style: TextStyle(
+                    color: GlassTheme.colors.textSecondary, fontSize: 12),
+              ),
+            ],
             if (plan.features != null && plan.features!.isNotEmpty) ...[
               const SizedBox(height: 4),
               Wrap(
