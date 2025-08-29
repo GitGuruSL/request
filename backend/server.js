@@ -390,8 +390,11 @@ app.use('/api/upload', uploadRoutes); // Image upload endpoint
 
 app.use('/api/s3', uploadS3Routes); // S3 upload endpoints
 app.use('/api/promo-codes', promoCodesRoutes); // NEW - Promo codes admin endpoints
+// Mount NEW subscription management routes (replaces subscription-plans-new)
+const subscriptionManagementRoutes = require('./routes/subscription-management');
+app.use('/api/subscription-management', subscriptionManagementRoutes);
 // Mount subscription plan admin routes (plans + per-country pricing)
-app.use('/api/subscription-plans-new', subscriptionPlansNewRoutes);
+// app.use('/api/subscription-plans-new', subscriptionPlansNewRoutes); // DEPRECATED
 // Removed: /api/subscriptions (user subscription management not exposed here)
 // Current user entitlements (for gating in app)
 app.get('/api/me/entitlements', authService.authMiddleware(), async (req, res) => {
