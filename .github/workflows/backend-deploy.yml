@@ -69,7 +69,7 @@ jobs:
       group: backend-deploy-production
       cancel-in-progress: true
     steps:
-  - name: Deploy over SSH
+      - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.0.3
         env:
           GHCR_USER: ${{ secrets.GHCR_USER }}
