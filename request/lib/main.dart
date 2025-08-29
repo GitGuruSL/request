@@ -31,6 +31,7 @@ import 'src/screens/chat/chat_conversations_screen.dart';
 import 'src/screens/notification_screen.dart';
 import 'src/screens/ride/rider_browse_drivers_screen.dart';
 import 'src/services/notification_service.dart';
+import 'src/services/notification_center.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,6 +54,9 @@ void main() async {
         }
       },
     );
+
+    // Start foreground polling (badges + local toasts)
+    await NotificationCenter.instance.start();
 
     debugPrint('✅ REST API services initialized successfully');
   } catch (e) {

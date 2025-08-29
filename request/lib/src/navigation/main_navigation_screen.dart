@@ -7,6 +7,7 @@ import '../home/screens/browse_requests_screen.dart';
 import '../screens/modern_menu_screen.dart';
 import '../screens/pricing/price_comparison_screen.dart';
 import '../screens/chat/chat_conversations_screen.dart';
+import '../services/notification_center.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final int initialIndex;
@@ -57,6 +58,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     super.initState();
     _currentIndex = widget.initialIndex;
     _loadUnreadCounts();
+    // Subscribe to live updates from NotificationCenter
+    NotificationCenter.instance.unreadMessages.addListener(_updateBadge);
+  }
+
+  void _updateBadge() {
+    if (!mounted) return;
+    setState(() {
+      _unreadMessages = NotificationCenter.instance.unreadMessages.value;
+    });
   }
 
   Future<void> _persistIndex(int index) async {
@@ -109,6 +119,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    NotificationCenter.instance.unreadMessages.removeListener(_updateBadge);
+    super.dispose();
   }
 
   Future<void> _loadUnreadCounts() async {
