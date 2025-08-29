@@ -131,6 +131,13 @@ class DatabaseService {
   }
 
   /**
+     * Get a raw client from the pool. Caller MUST release().
+     */
+  async getClient() {
+    return await this.pool.connect();
+  }
+
+  /**
      * Get a single row by ID
      */
   async findById(table, id, columns = '*') {

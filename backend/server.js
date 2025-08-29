@@ -83,6 +83,7 @@ const contactRoutes = require('./routes/contact');
 const bannersRoutes = require('./routes/banners'); // NEW - Banners CRUD
 const reviewsRoutes = require('./routes/reviews'); // NEW - User reviews API
 const promoCodesRoutes = require('./routes/promo-codes'); // NEW - Promo codes admin
+const subscriptionsRoutes = require('./routes/subscriptions'); // NEW - Subscriptions (me/start/cancel)
 
 
 
@@ -371,6 +372,7 @@ app.use('/api/upload', uploadRoutes); // Image upload endpoint
 
 app.use('/api/s3', uploadS3Routes); // S3 upload endpoints
 app.use('/api/promo-codes', promoCodesRoutes); // NEW - Promo codes admin endpoints
+app.use('/api/subscriptions', subscriptionsRoutes); // NEW - Subscriptions (me/start/cancel)
 
 app.use('/api/chat', chatRoutes); // Chat endpoints
 
