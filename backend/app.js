@@ -92,9 +92,7 @@ const countryRoutes = require('./routes/countries');
 const uploadRoutes = require('./routes/upload'); // NEW
 const uploadS3Routes = require('./routes/uploadS3'); // NEW - S3 upload/signed URLs
 const testImageRoutes = require('./routes/test-images'); // TEST
-const subscriptionPlansLegacy = require('./routes/subscription-plans-legacy');
-const subscriptionPlansNew = require('./routes/subscription-plans-new');
-const subscriptionCountryPricing = require('./routes/subscription-country-pricing');
+// Removed: subscription plans and country pricing routes
 const contentPagesRoutes = require('./routes/content-pages');
 const bannersRoutes = require('./routes/banners'); // NEW - banners CRUD
 console.log('🔧 About to require driver-verifications route');
@@ -110,7 +108,7 @@ const smsConfigRoutes = require('./routes/sms-config'); // NEW - SMS config API 
 const reviewsRoutes = require('./routes/reviews'); // NEW - user reviews API
 const authService = require('./services/auth');
 const entitlementSvc = require('./entitlements');
-const subscriptionsRoutes = require('./routes/subscriptions');
+// Removed: subscriptions routes
 
 // Import centralized data routes
 const masterProductsRoutes = require('./routes/master-products');
@@ -203,9 +201,7 @@ safeUse('/api/upload', uploadRoutes, 'uploadRoutes'); // NEW - image upload endp
 safeUse('/api/uploads', uploadRoutes, 'uploadRoutes(alias)'); // Alias to support admin-react '/uploads/payment-methods'
 safeUse('/api/s3', uploadS3Routes, 'uploadS3Routes'); // NEW - S3 upload + signed URL endpoints
 safeUse('/api/test-images', testImageRoutes, 'testImageRoutes'); // TEST - image serving test
-safeUse('/api', subscriptionPlansLegacy, 'subscriptionPlansLegacy'); // legacy paths /subscription-plans, /user-subscriptions
-safeUse('/api', subscriptionPlansNew, 'subscriptionPlansNew'); // new CRUD under /subscription-plans-new
-safeUse('/api/subscription-country', subscriptionCountryPricing, 'subscriptionCountryPricing'); // country overrides CRUD
+// Removed: subscription plans and country pricing mounts
 safeUse('/api/content-pages', contentPagesRoutes, 'contentPagesRoutes'); // content pages management
 safeUse('/api/driver-verifications', driverVerificationRoutes, 'driverVerificationRoutes'); // NEW - driver verification management
 safeUse('/api/business-verifications', businessVerificationRoutes, 'businessVerificationRoutes'); // NEW - business verification management
@@ -216,7 +212,7 @@ safeUse('/api/modules', modulesRoutes, 'modulesRoutes'); // NEW - module managem
 safeUse('/api/admin', adminSmsRoutes, 'adminSmsRoutes'); // NEW - SMS configuration management
 safeUse('/api/sms', smsConfigRoutes, 'smsConfigRoutes'); // NEW - SMS config API for frontend
 safeUse('/api/reviews', reviewsRoutes, 'reviewsRoutes'); // NEW - user reviews
-safeUse('/api/subscriptions', subscriptionsRoutes, 'subscriptionsRoutes');
+// Removed: subscriptions routes mount
 // Current user entitlements (for gating in app)
 app.get('/api/me/entitlements', authService.authMiddleware(), async (req, res) => {
   try {

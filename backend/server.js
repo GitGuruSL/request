@@ -83,8 +83,7 @@ const contactRoutes = require('./routes/contact');
 const bannersRoutes = require('./routes/banners'); // NEW - Banners CRUD
 const reviewsRoutes = require('./routes/reviews'); // NEW - User reviews API
 const promoCodesRoutes = require('./routes/promo-codes'); // NEW - Promo codes admin
-const subscriptionsRoutes = require('./routes/subscriptions'); // NEW - Subscriptions (me/start/cancel)
-const subscriptionCountryPricingRoutes = require('./routes/subscription-country-pricing'); // NEW - Country pricing overrides
+// Removed: subscriptions and subscription-country-pricing routes
 const entitlementSvc = require('./entitlements'); // Entitlements service
 const authService = require('./services/auth'); // Auth middleware for protected routes
 
@@ -392,7 +391,7 @@ app.use('/api/upload', uploadRoutes); // Image upload endpoint
 
 app.use('/api/s3', uploadS3Routes); // S3 upload endpoints
 app.use('/api/promo-codes', promoCodesRoutes); // NEW - Promo codes admin endpoints
-app.use('/api/subscriptions', subscriptionsRoutes); // NEW - Subscriptions (me/start/cancel)
+// Removed: /api/subscriptions
 // Current user entitlements (for gating in app)
 app.get('/api/me/entitlements', authService.authMiddleware(), async (req, res) => {
   try {
@@ -424,10 +423,7 @@ app.use('/api/product-sync', productSyncRoutes);
 
 app.use('/api/entity-activations', entityActivationRoutes);
 
-app.use('/api/subscription-plans-new', subscriptionPlansNewRoutes);
-app.use('/api/subscription-country', subscriptionCountryPricingRoutes); // Country-specific overrides CRUD and merged listing
-
-app.use('/api', subscriptionPlansLegacyRoutes);
+// Removed: subscription plans (new/legacy) and subscription-country routes
 
 app.use('/api', dashboardRoutes);
 
