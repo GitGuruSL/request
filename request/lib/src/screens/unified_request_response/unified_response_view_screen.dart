@@ -9,6 +9,8 @@ import '../../services/messaging_service.dart';
 import '../messaging/conversation_screen.dart';
 import 'unified_response_edit_screen.dart';
 import '../../utils/module_field_localizer.dart';
+import '../../widgets/smart_network_image.dart';
+import '../../services/rest_user_service.dart';
 
 class UnifiedResponseViewScreen extends StatefulWidget {
   final RequestModel request;
@@ -37,6 +39,7 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
   bool _anyAcceptedForRequest = false;
   bool _isLoading = true;
   bool _isProcessing = false;
+  String? _responderPhotoUrl;
 
   @override
   void initState() {
@@ -59,6 +62,15 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
         _responderEmailFallback = info['responder_email']?.toString();
         _responderPhoneFallback = info['responder_phone']?.toString();
       }
+      // Defer avatar fetch until after frame
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        try {
+          final profile = await RestUserService.instance
+              .getPublicProfile(widget.response.responderId);
+          if (!mounted) return;
+          setState(() => _responderPhotoUrl = profile?.photoUrl);
+        } catch (_) {}
+      });
 
       // Fetch responses to determine if any has been accepted
       try {
@@ -706,24 +718,7 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
                         const SizedBox(height: 12),
                         Row(
                           children: [
-                            CircleAvatar(
-                              radius: 30,
-                              backgroundColor: Colors.blue[100],
-                              child: Text(
-                                (_responder != null &&
-                                        _responder!.name.isNotEmpty)
-                                    ? _responder!.name[0]
-                                    : (_responderNameFallback != null &&
-                                            _responderNameFallback!.isNotEmpty
-                                        ? _responderNameFallback![0]
-                                        : 'U'),
-                                style: TextStyle(
-                                  color: Colors.blue[700],
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 20,
-                                ),
-                              ),
-                            ),
+                            _buildResponderAvatar(),
                             const SizedBox(width: 16),
                             Expanded(
                               child: Column(
@@ -1012,4 +1007,49 @@ class _UnifiedResponseViewScreenState extends State<UnifiedResponseViewScreen> {
           : null,
     );
   }
+
+  Widget _buildResponderAvatar() {
+    final display = _responder?.name ?? _responderNameFallback ?? 'User';
+    final initial =
+        display.trim().isNotEmpty ? display.trim()[0].toUpperCase() : 'U';
+    const double size = 60;
+    final url = _responderPhotoUrl;
+    if (url != null && url.isNotEmpty) {
+      return CircleAvatar(
+        radius: size / 2,
+        backgroundColor: Colors.transparent,
+        child: ClipOval(
+          child: SmartNetworkImage(
+            imageUrl: url,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            placeholder: Container(
+              width: size,
+              height: size,
+              decoration: const BoxDecoration(
+                color: Color(0xFFEAEAEA),
+                shape: BoxShape.circle,
+              ),
+            ),
+            errorBuilder: (c, e, st) => _initialsAvatar(initial, size),
+          ),
+        ),
+      );
+    }
+    return _initialsAvatar(initial, size);
+  }
+
+  Widget _initialsAvatar(String ch, double size) => CircleAvatar(
+        radius: size / 2,
+        backgroundColor: Colors.blue[100],
+        child: Text(
+          ch,
+          style: TextStyle(
+            color: Colors.blue[700],
+            fontWeight: FontWeight.bold,
+            fontSize: size * 0.33,
+          ),
+        ),
+      );
 }

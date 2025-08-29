@@ -15,6 +15,7 @@ import '../chat/conversation_screen.dart';
 import '../../services/chat_service.dart';
 import '../../services/rest_request_service.dart' show ReviewsService;
 import '../account/public_profile_screen.dart';
+import '../../services/rest_user_service.dart';
 
 /// UnifiedRequestViewScreen (Minimal REST Migration)
 /// Legacy Firebase-based logic removed. Displays core request info only.
@@ -39,12 +40,50 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
   bool _deletingRequest = false;
   bool _submittingReview = false;
   bool _alreadyReviewed = false;
+  String? _requesterPhotoUrl;
 
   @override
   void initState() {
     super.initState();
     _load();
   }
+
+  Widget _buildRequesterAvatar(rest.RequestModel r) {
+    final name = (r.userName ?? 'User').trim();
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+    const double size = 24;
+    final url = _requesterPhotoUrl;
+    if (url != null && url.isNotEmpty) {
+      return CircleAvatar(
+        radius: size / 2,
+        backgroundColor: Colors.transparent,
+        child: ClipOval(
+          child: SmartNetworkImage(
+            imageUrl: url,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            placeholder: Container(
+              width: size,
+              height: size,
+              decoration: const BoxDecoration(
+                color: Color(0xFFEAEAEA),
+                shape: BoxShape.circle,
+              ),
+            ),
+            errorBuilder: (c, e, st) => _initialsAvatar(initial, size),
+          ),
+        ),
+      );
+    }
+    return _initialsAvatar(initial, size);
+  }
+
+  Widget _initialsAvatar(String ch, double size) => CircleAvatar(
+        radius: size / 2,
+        backgroundColor: Colors.grey.shade300,
+        child: Text(ch, style: const TextStyle(fontWeight: FontWeight.w700)),
+      );
 
   Future<void> _load() async {
     setState(() => _loading = true);
@@ -75,6 +114,19 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
           _responses = responses;
           _loading = false;
         });
+        // Lazy fetch requester avatar after first frame
+        if (r != null && (r.userId).isNotEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            try {
+              final profile =
+                  await RestUserService.instance.getPublicProfile(r.userId);
+              if (!mounted) return;
+              setState(() {
+                _requesterPhotoUrl = profile?.photoUrl;
+              });
+            } catch (_) {}
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -1014,7 +1066,7 @@ class _UnifiedRequestViewScreenState extends State<UnifiedRequestViewScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(children: [
-                          Icon(Icons.person, size: 18, color: Colors.grey[600]),
+                          _buildRequesterAvatar(r),
                           const SizedBox(width: 8),
                           Expanded(
                             child: GestureDetector(
