@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/subscription_service.dart';
 import '../../services/country_service.dart';
+import '../../services/entitlements_service.dart';
 import '../../theme/glass_theme.dart';
 import '../../theme/app_theme.dart';
 
@@ -274,12 +275,6 @@ class _MembershipScreenState extends State<MembershipScreen> {
 
                     // Show tabs or context-specific header
                     _buildPlanTypeSelector(),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
 
                     Container(
                       decoration: GlassTheme.glassContainer,
@@ -320,6 +315,132 @@ class _MembershipScreenState extends State<MembershipScreen> {
                   ],
                 ),
               ),
+      ),
+    );
+  }
+
+  Widget _buildPlanTypeSelector() {
+    // If user must choose product seller subscription, only show product seller options
+    if (widget.isProductSellerRequired) {
+      return Container(
+        decoration: GlassTheme.glassContainer,
+        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.store, color: GlassTheme.colors.primaryBlue),
+                const SizedBox(width: 8),
+                Text(
+                  'Product Seller Subscription Required',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: GlassTheme.colors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'To list products in our marketplace, you need to subscribe to a product seller plan.',
+              style: TextStyle(color: GlassTheme.colors.textSecondary),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    // For regular users, show plan type tabs
+    return Container(
+      decoration: GlassTheme.glassContainer,
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Choose Plan Type',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: GlassTheme.colors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildPlanTypeButton(
+                  'Response Plans',
+                  'For responding to requests',
+                  Icons.chat_bubble_outline,
+                  'user_response',
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildPlanTypeButton(
+                  'Product Seller',
+                  'For listing products',
+                  Icons.store,
+                  'product_seller',
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlanTypeButton(String title, String subtitle, IconData icon, String type) {
+    final isSelected = _planType == type;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _planType = type;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: isSelected ? GlassTheme.colors.primaryBlue : Colors.grey.shade300,
+            width: isSelected ? 2 : 1,
+          ),
+          borderRadius: BorderRadius.circular(8),
+          color: isSelected ? GlassTheme.colors.primaryBlue.withOpacity(0.1) : Colors.transparent,
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? GlassTheme.colors.primaryBlue : Colors.grey,
+              size: 24,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: isSelected ? GlassTheme.colors.primaryBlue : GlassTheme.colors.textPrimary,
+                fontSize: 12,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            Text(
+              subtitle,
+              style: TextStyle(
+                color: GlassTheme.colors.textSecondary,
+                fontSize: 10,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
