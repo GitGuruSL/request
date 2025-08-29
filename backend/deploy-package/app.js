@@ -66,8 +66,7 @@ const countryRoutes = require('./routes/countries');
 const uploadRoutes = require('./routes/upload'); // NEW
 const uploadS3Routes = require('./routes/uploadS3'); // NEW - S3 upload/signed URLs
 const testImageRoutes = require('./routes/test-images'); // TEST
-const subscriptionPlansLegacy = require('./routes/subscription-plans-legacy');
-const subscriptionPlansNew = require('./routes/subscription-plans-new');
+// Removed: subscription plans routes
 const contentPagesRoutes = require('./routes/content-pages');
 const bannersRoutes = require('./routes/banners'); // NEW - banners CRUD
 console.log('🔧 About to require driver-verifications route');
@@ -166,8 +165,7 @@ safeUse('/api/upload', uploadRoutes, 'uploadRoutes'); // NEW - image upload endp
 safeUse('/api/uploads', uploadRoutes, 'uploadRoutes(alias)'); // Alias to support admin-react '/uploads/payment-methods'
 safeUse('/api/s3', uploadS3Routes, 'uploadS3Routes'); // NEW - S3 upload + signed URL endpoints
 safeUse('/api/test-images', testImageRoutes, 'testImageRoutes'); // TEST - image serving test
-safeUse('/api', subscriptionPlansLegacy, 'subscriptionPlansLegacy'); // legacy paths /subscription-plans, /user-subscriptions
-safeUse('/api', subscriptionPlansNew, 'subscriptionPlansNew'); // new CRUD under /subscription-plans-new
+// Removed: subscription plan mounts
 safeUse('/api/content-pages', contentPagesRoutes, 'contentPagesRoutes'); // content pages management
 safeUse('/api/driver-verifications', driverVerificationRoutes, 'driverVerificationRoutes'); // NEW - driver verification management
 safeUse('/api/business-verifications', businessVerificationRoutes, 'businessVerificationRoutes'); // NEW - business verification management

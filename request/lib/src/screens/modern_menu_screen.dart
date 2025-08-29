@@ -15,7 +15,7 @@ import 'about_us_simple_screen.dart';
 import 'pricing/business_product_dashboard.dart';
 import 'settings_screen.dart';
 import '../widgets/smart_network_image.dart';
-import '../services/subscription_service.dart';
+// Removed subscription service
 
 class ModernMenuScreen extends StatefulWidget {
   const ModernMenuScreen({super.key});
@@ -36,7 +36,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
   // Product seller flag no longer used for menu routing; dashboard self-gates
   int _unreadTotal = 0;
   int _unreadMessages = 0;
-  String? _membershipLabel; // e.g., Free or plan name
+  String? _membershipLabel; // e.g., static member label
   // Removed admin/business gating; keep Ride Alerts gated by driver status only.
 
   // Lightweight in-memory cache to avoid refetching every time tab opens
@@ -100,20 +100,8 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
           setState(() => _isDriver = _lastIsDriver!);
       }));
 
-      // Membership label (current subscription)
-      futures.add(SubscriptionServiceApi.instance
-          .getMySubscription()
-          .timeout(const Duration(seconds: 3))
-          .then((sub) {
-        final label = sub == null
-            ? 'Free'
-            : (sub['name']?.toString() ??
-                sub['plan']?['name']?.toString() ??
-                'Member');
-        if (mounted) setState(() => _membershipLabel = label);
-      }).catchError((_) {
-        if (mounted && _membershipLabel == null) _membershipLabel = 'Member';
-      }));
+      // Membership label (static)
+      if (mounted && _membershipLabel == null) _membershipLabel = 'Member';
 
       // Unread counts with a tiny TTL to reduce chattiness
       final now = DateTime.now();
@@ -525,13 +513,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
       decoration: GlassTheme.glassContainer,
       child: Column(
         children: [
-          _buildActionTile(
-            icon: Icons.workspace_premium_outlined,
-            title: 'Membership',
-            subtitle: 'Manage your membership',
-            color: const Color(0xFF8B5CF6), // Purple
-            onTap: () => Navigator.pushNamed(context, '/membership'),
-          ),
+          // Membership tile removed
           _buildActionTile(
             icon: Icons.settings_outlined,
             title: 'Settings',

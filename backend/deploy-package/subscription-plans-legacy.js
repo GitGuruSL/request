@@ -1,5 +1,48 @@
 const express = require('express');
 const router = express.Router();
+
+function adapt(plan){
+  if(!plan) return null;
+  return {
+    id: plan.id,
+    planId: plan.code,
+    code: plan.code,
+    name: plan.name,
+    type: plan.type,
+    planType: plan.plan_type,
+    description: plan.description,
+    isActive: plan.is_active,
+    isDefaultPlan: plan.is_default_plan,
+    requiresCountryPricing: plan.requires_country_pricing,
+    countries: plan.countries || [],
+    pricingByCountry: plan.pricing_by_country || {},
+    features: plan.features || [],
+    limitations: plan.limitations || {},
+    defaultPrice: Number(plan.price) || 0,
+    currency: plan.currency,
+    durationDays: plan.duration_days,
+    createdAt: plan.created_at,
+    updatedAt: plan.updated_at
+  };
+}
+
+router.get('/subscription-plans', async (req,res)=>{
+  try {
+    const { country, type } = req.query;
+    const conditions = {};
+    if(type) conditions.type = type;
+    const plans = await db.findMany('subscription_plans_new', conditions, { orderBy:'created_at', orderDirection:'DESC' });
+    let adapted = plans.map(adapt);
+    if(country){
+      adapted = adapted.filter(p => p.countries.includes(country) || p.isDefaultPlan);
+    }
+    res.json(adapted);
+  } catch(e){ res.status(500).json({ error:e.message }); }
+});
+
+module.exports = router;
+const express = require('express');
+const router = express.Router();
 const db = require('../services/database');
 const auth = require('../services/auth');
 

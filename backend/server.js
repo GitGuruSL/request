@@ -62,9 +62,7 @@ const productSyncRoutes = require('./routes/product-sync');
 
 const entityActivationRoutes = require('./routes/entity-activations');
 
-const subscriptionPlansNewRoutes = require('./routes/subscription-plans-new');
-
-const subscriptionPlansLegacyRoutes = require('./routes/subscription-plans-legacy');
+// Removed: subscription plan routes
 
 const dashboardRoutes = require('./routes/dashboard');
 

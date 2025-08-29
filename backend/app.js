@@ -66,18 +66,7 @@ app.get('/health', async (req, res) => {
   }
 });
 
-// Minimal entitlement probe (optional route)
-if (entitlements) {
-  app.get('/me/subscription', async (req, res) => {
-    try {
-      const user = req.user || {}; // assume auth middleware elsewhere
-      const data = await entitlements.getEntitlements(user.id, user.role);
-      res.json(data);
-    } catch (e) {
-      res.status(500).json({ error: 'failed' });
-    }
-  });
-}
+// Removed: legacy minimal /me/subscription probe
 
 // Import routes
 const authRoutes = require('./routes/auth');

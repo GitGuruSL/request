@@ -1947,7 +1947,7 @@ class _UnifiedResponseCreateScreenState
       if (mounted) {
         final msg = e.toString();
         final human = msg.contains('limit')
-            ? 'Monthly response limit reached. Subscribe to continue.'
+            ? 'Monthly response limit reached for this month.'
             : msg.replaceAll('Exception: ', '');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1956,10 +1956,9 @@ class _UnifiedResponseCreateScreenState
             backgroundColor: Colors.red,
             action: human.contains('Monthly response limit')
                 ? SnackBarAction(
-                    label: 'Subscribe',
+                    label: 'OK',
                     textColor: Colors.white,
-                    onPressed: () =>
-                        Navigator.pushNamed(context, '/subscriptions'),
+                    onPressed: () {},
                   )
                 : null,
           ),

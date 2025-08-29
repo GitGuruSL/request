@@ -32,7 +32,7 @@ import 'src/screens/notification_screen.dart';
 import 'src/screens/ride/rider_browse_drivers_screen.dart';
 import 'src/services/notification_service.dart';
 import 'src/services/notification_center.dart';
-import 'src/screens/subscription_screen.dart';
+// Removed: subscription screen
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -215,15 +215,7 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(
               builder: (context) => const NotificationScreen(),
             );
-          case '/subscriptions':
-            return MaterialPageRoute(
-              builder: (context) => const SubscriptionScreen(),
-            );
-          case '/membership':
-            // Alias to subscriptions screen for menu deep link
-            return MaterialPageRoute(
-              builder: (context) => const SubscriptionScreen(),
-            );
+          // Removed: /subscriptions and /membership routes
           case '/rider/browse-drivers':
             return MaterialPageRoute(
               builder: (context) => const RiderBrowseDriversScreen(),

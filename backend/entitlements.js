@@ -14,82 +14,22 @@ async function getEntitlements(userId, role, now = new Date()) {
   const client = await pool.connect();
   try {
     const yearMonth = ym(now);
-
-    const subRes = await client.query(
-  `SELECT s.status, s.current_period_end, p.audience, p.model
-       FROM subscriptions s
-       JOIN subscription_plans p ON p.id = s.plan_id
-       WHERE s.user_id = $1 AND s.status IN ('active','trialing')
-       ORDER BY s.current_period_end DESC NULLS LAST
-       LIMIT 1`,
-      [userId]
-    );
-
-    const sub = subRes.rows[0] || null;
-    const isSubscribed = !!sub;
-    const audience = sub?.audience || (role === 'business' ? 'business' : 'normal');
-
+    // Audience based on role only now
+    const audience = role === 'business' ? 'business' : 'normal';
     const usageRes = await client.query(
       'SELECT response_count FROM usage_monthly WHERE user_id = $1 AND year_month = $2',
       [userId, yearMonth]
     );
     const responseCount = usageRes.rows[0]?.response_count || 0;
-
-    let canViewContact = false;
-    let canMessage = false;
-
-    if (isSubscribed) {
-      canViewContact = true;
-      canMessage = true;
-    } else if (audience === 'normal') {
-      // Determine free monthly limit from default rider plan limitations
-      let limit = 3; // fallback
-      try {
-  // Fetch user's country for country-specific overrides
-  const ures = await client.query('SELECT country_code FROM users WHERE id=$1', [userId]);
-  const userCountry = (ures.rows[0]?.country_code || '').toUpperCase();
-        const freePlan = await client.query(
-          `SELECT id, limitations FROM subscription_plans_new
-             WHERE type = 'rider' AND is_default_plan = true
-             ORDER BY created_at DESC NULLS LAST
-             LIMIT 1`
-        );
-        let limitations = freePlan.rows[0]?.limitations || null;
-  // Merge country override if available
-  if (userCountry && freePlan.rowCount) {
-          const ov = await client.query('SELECT limitations FROM subscription_plan_country_pricing WHERE plan_id=$1 AND country_code=$2', [freePlan.rows[0].id, String(userCountry).toUpperCase()]);
-          if (ov.rowCount) {
-            const l2 = ov.rows[0].limitations || {};
-            limitations = { ...(limitations||{}), ...(l2||{}) };
-          }
-        }
-        if (limitations && typeof limitations === 'object') {
-          const m = limitations.maxResponsesPerMonth;
-          if (typeof m === 'number') limit = m;
-        }
-      } catch (e) {
-        // ignore, use fallback
-      }
-      if (limit < 0) {
-        // Unlimited
-        canViewContact = true;
-        canMessage = true;
-      } else {
-        canViewContact = responseCount < limit;
-        canMessage = responseCount < limit;
-      }
-    } else if (audience === 'business') {
-      // For business without active monthly sub, allow view (PPC logic elsewhere)
-      canViewContact = true;
-      canMessage = true;
-    }
-
+    // Static free limits (can be tuned per audience)
+    const freeLimit = audience === 'business' ? -1 : 3; // -1 means unlimited
+    const canUnlimited = freeLimit < 0;
     return {
-      isSubscribed,
+      isSubscribed: false,
       audience,
       responseCountThisMonth: responseCount,
-      canViewContact,
-      canMessage,
+      canViewContact: canUnlimited || responseCount < freeLimit,
+      canMessage: canUnlimited || responseCount < freeLimit,
     };
   } finally {
     client.release();
