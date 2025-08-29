@@ -82,6 +82,7 @@ const uploadRoutes = require('./routes/upload'); // NEW
 const uploadS3Routes = require('./routes/uploadS3'); // NEW - S3 upload/signed URLs
 const testImageRoutes = require('./routes/test-images'); // TEST
 // Subscriptions
+const subscriptionManagementRoutes = require('./routes/subscription-management'); // NEW - Unified subscription management
 const subscriptionPlansRoutes = require('./routes/subscription-plans-new');
 const subscriptionsRoutes = require('./routes/subscriptions');
 const contentPagesRoutes = require('./routes/content-pages');
@@ -197,6 +198,7 @@ safeUse('/api/uploads', uploadRoutes, 'uploadRoutes(alias)'); // Alias to suppor
 safeUse('/api/s3', uploadS3Routes, 'uploadS3Routes'); // NEW - S3 upload + signed URL endpoints
 safeUse('/api/test-images', testImageRoutes, 'testImageRoutes'); // TEST - image serving test
 // Subscriptions
+safeUse('/api/subscription-management', subscriptionManagementRoutes, 'subscriptionManagementRoutes'); // NEW - Unified subscription management
 safeUse('/api/subscription-plans', subscriptionPlansRoutes, 'subscriptionPlansRoutes');
 safeUse('/api/subscriptions', subscriptionsRoutes, 'subscriptionsRoutes');
 safeUse('/api/content-pages', contentPagesRoutes, 'contentPagesRoutes'); // content pages management
