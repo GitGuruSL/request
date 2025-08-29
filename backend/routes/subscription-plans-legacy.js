@@ -42,11 +42,31 @@ router.get('/subscription-plans', async (req,res)=>{
   } catch(e){ res.status(500).json({ error:e.message }); }
 });
 
+// Seed default plans (legacy path used by admin-react Subscriptions.jsx)
+router.post('/subscription-plans/defaults', auth.authMiddleware(), auth.roleMiddleware(['super_admin']), async (req,res)=>{
+  const defaults = [
+    { code:'rider_free', name:'Rider Free Plan', type:'rider', plan_type:'monthly', description:'Limited free plan for riders with basic features', price:0, currency:'USD', duration_days:30, features:['Browse service requests','Up to 2 responses per month','Basic profile creation','View contact information after selection'], limitations:{ maxResponsesPerMonth:2, riderRequestNotifications:false, unlimitedResponses:false }, is_active:true, is_default_plan:true, requires_country_pricing:false },
+    { code:'rider_premium', name:'Rider Premium Plan', type:'rider', plan_type:'monthly', description:'Unlimited plan for active riders', price:10, currency:'USD', duration_days:30, features:['Browse all service requests','Unlimited responses per month','Priority listing in search results','Instant rider request notifications','Advanced profile features','Analytics and insights'], limitations:{ maxResponsesPerMonth:-1, riderRequestNotifications:true, unlimitedResponses:true }, is_active:true, is_default_plan:true, requires_country_pricing:true },
+    { code:'business_pay_per_click', name:'Business Pay Per Click', type:'business', plan_type:'pay_per_click', description:'Pay only when someone responds to your requests', price:2, currency:'USD', duration_days:30, features:['Post unlimited service requests','Pay only for responses received','Business profile verification','Priority customer support','Request analytics and reporting'], limitations:{ payPerResponse:true, unlimitedRequests:true }, is_active:true, is_default_plan:true, requires_country_pricing:true }
+  ];
+  const created=[]; const skipped=[];
+  try {
+    for(const def of defaults){
+      const existing = await db.findMany('subscription_plans_new',{ code:def.code });
+      if(existing.length){ skipped.push(def.code); continue; }
+      const row = await db.insert('subscription_plans_new', def); created.push(row.code);
+    }
+    res.json({ success:true, created, skipped });
+  } catch(e){ res.status(500).json({ error:e.message, created, skipped }); }
+});
+
 router.post('/subscription-plans', auth.authMiddleware(), auth.roleMiddleware(['super_admin']), async (req,res)=>{
   try {
     const b = req.body || {};
-    if(!b.planId && !b.code) return res.status(400).json({ error:'planId/code required'});
-    const code = (b.planId||b.code).toLowerCase();
+  // Derive code from name if not provided
+  const derived = (b.name||'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
+  if(!b.planId && !b.code && !derived) return res.status(400).json({ error:'planId/code or valid name required'});
+  const code = (b.planId||b.code||derived).toLowerCase();
     const exists = await db.findMany('subscription_plans_new',{ code });
     if(exists.length) return res.status(409).json({ error:'Plan code exists'});
     const data = {
@@ -106,6 +126,35 @@ router.put('/subscription-plans/:id/pricing/:country', auth.authMiddleware(), as
     if(!plan) return res.status(404).json({ error:'Not found'});
     const pricing = plan.pricing_by_country || {}; pricing[req.params.country] = { ...(pricing[req.params.country]||{}), ...req.body };
     const row = await db.update('subscription_plans_new', req.params.id, { pricing_by_country: pricing, countries: Array.from(new Set([...(plan.countries||[]), req.params.country])) });
+    res.json(adapt(row));
+  } catch(e){ res.status(500).json({ error:e.message }); }
+});
+
+// Approve pricing for a country (sets approvalStatus, isActive)
+router.post('/subscription-plans/:id/pricing/:country/approve', auth.authMiddleware(), auth.roleMiddleware(['super_admin']), async (req,res)=>{
+  try {
+    const plan = await db.findById('subscription_plans_new', req.params.id);
+    if(!plan) return res.status(404).json({ error:'Not found'});
+    const country = req.params.country;
+    const pricing = plan.pricing_by_country || {};
+    const prev = pricing[country] || {};
+    pricing[country] = { ...prev, approvalStatus:'approved', approvedBy:req.user?.email, approvedAt:new Date(), isActive:true };
+    const row = await db.update('subscription_plans_new', req.params.id, { pricing_by_country: pricing, countries: Array.from(new Set([...(plan.countries||[]), country])) });
+    res.json(adapt(row));
+  } catch(e){ res.status(500).json({ error:e.message }); }
+});
+
+// Reject pricing for a country
+router.post('/subscription-plans/:id/pricing/:country/reject', auth.authMiddleware(), auth.roleMiddleware(['super_admin']), async (req,res)=>{
+  try {
+    const plan = await db.findById('subscription_plans_new', req.params.id);
+    if(!plan) return res.status(404).json({ error:'Not found'});
+    const country = req.params.country;
+    const reason = (req.body && req.body.reason) || '';
+    const pricing = plan.pricing_by_country || {};
+    const prev = pricing[country] || {};
+    pricing[country] = { ...prev, approvalStatus:'rejected', rejectedBy:req.user?.email, rejectedAt:new Date(), rejectionReason: reason, isActive:false };
+    const row = await db.update('subscription_plans_new', req.params.id, { pricing_by_country: pricing, countries: Array.from(new Set([...(plan.countries||[]), country])) });
     res.json(adapt(row));
   } catch(e){ res.status(500).json({ error:e.message }); }
 });

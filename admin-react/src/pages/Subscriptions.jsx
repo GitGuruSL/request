@@ -146,7 +146,7 @@ const DEFAULT_SUBSCRIPTION_PLANS = {
 
 const Subscriptions = () => {
   const { user, adminData, userRole, userCountry } = useAuth();
-  const { isSuperAdmin, countries } = useCountryFilter();
+  const { isSuperAdmin } = useCountryFilter();
   const [subscriptionPlans, setSubscriptionPlans] = useState([]);
   const [userSubscriptions, setUserSubscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -156,6 +156,11 @@ const Subscriptions = () => {
   const [tabValue, setTabValue] = useState(0);
   const [error, setError] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  // Super admin country view
+  const [viewCountry, setViewCountry] = useState('');
+  const [availableCountries, setAvailableCountries] = useState([]);
+  // Expose as `countries` for existing JSX usages
+  const countries = availableCountries;
 
   // Pricing dialog states
   const [pricingDialogOpen, setPricingDialogOpen] = useState(false);
@@ -184,16 +189,31 @@ const Subscriptions = () => {
 
   useEffect(() => {
     if (hasSubscriptionPermission) {
+      // Load enabled countries for super admin country view
+      if (isSuperAdmin) {
+        api.get('/countries')
+          .then(({ data }) => {
+            // Support shapes: array | { data: array } | { items: array }
+            const raw = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (data?.items || []));
+            const enabled = raw.filter(c => c.is_active === true || c.isActive === true || c.isEnabled === true);
+            setAvailableCountries(enabled.map(c => ({ code: c.code || c.countryCode || c.id, name: c.name || c.title || c.code })));
+          })
+          .catch(() => {});
+      }
       fetchSubscriptionPlans();
       fetchUserSubscriptions();
     }
-  }, [hasSubscriptionPermission, userCountry]);
+  }, [hasSubscriptionPermission, userCountry, isSuperAdmin, viewCountry]);
 
   const fetchSubscriptionPlans = async () => {
     try {
       setLoading(true);
       const params = {};
-      if (!isSuperAdmin && userCountry) params.country = userCountry;
+      if (isSuperAdmin) {
+        if (viewCountry) params.country = viewCountry;
+      } else if (userCountry) {
+        params.country = userCountry;
+      }
       const { data } = await api.get('/subscription-plans', { params });
       let plans = Array.isArray(data) ? data : data?.items || [];
       // Client-side filtering for country admins
@@ -220,7 +240,11 @@ const Subscriptions = () => {
   const fetchUserSubscriptions = async () => {
     try {
       const params = {};
-      if (!isSuperAdmin && userCountry) params.country = userCountry;
+      if (isSuperAdmin) {
+        if (viewCountry) params.country = viewCountry;
+      } else if (userCountry) {
+        params.country = userCountry;
+      }
       const { data } = await api.get('/user-subscriptions', { params });
       setUserSubscriptions(Array.isArray(data) ? data : data?.items || []);
     } catch (error) {
@@ -527,13 +551,21 @@ const Subscriptions = () => {
       // Ensure country filtering for non-super admins
       const countriesToSave = isSuperAdmin ? formData.countries : [userCountry];
       
+      // Generate a stable code when creating a new plan (backend expects code/planId)
+      const codeFromName = (name) => {
+        const base = String(name||'').toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+        return base || `${formData.type || 'plan'}_${formData.planType || 'monthly'}_${Date.now()}`;
+      };
+
       const planData = {
         ...formData,
         countries: countriesToSave,
         createdAt: new Date(),
         updatedAt: new Date(),
         createdBy: user.email,
-        createdByCountry: userCountry
+        createdByCountry: userCountry,
+        // Only include code on create; backend PUT ignores if not changing
+        ...(selectedPlan ? {} : { code: codeFromName(formData.name) })
       };
 
       if (selectedPlan) {
@@ -641,7 +673,31 @@ const Subscriptions = () => {
     <Box p={3}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4">Subscription Management</Typography>
-        <Box display="flex" gap={2}>
+        <Box display="flex" gap={2} alignItems="center">
+          {isSuperAdmin && (
+            <FormControl size="small" sx={{ minWidth: 220 }}>
+              <InputLabel id="view-country-label">View Country (optional)</InputLabel>
+              <Select
+                labelId="view-country-label"
+                label="View Country (optional)"
+                value={viewCountry}
+                onChange={(e) => setViewCountry(e.target.value)}
+              >
+                <MenuItem value=""><em>Global (All Countries)</em></MenuItem>
+                {availableCountries.map((c) => (
+                  <MenuItem key={c.code} value={c.code}>{c.name} ({c.code})</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+          {!isSuperAdmin && userCountry && (
+            <FormControl size="small" sx={{ minWidth: 220 }} disabled>
+              <InputLabel id="my-country-label">My Country</InputLabel>
+              <Select labelId="my-country-label" label="My Country" value={userCountry}>
+                <MenuItem value={userCountry}>{userCountry}</MenuItem>
+              </Select>
+            </FormControl>
+          )}
           {isSuperAdmin && (
             <>
               <Button
