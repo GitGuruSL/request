@@ -58,11 +58,35 @@ class _BusinessRegistrationScreenState
 
   bool _isSubmitting = false;
 
+  // Onboarding context (from Membership)
+  String? _selectedRoleFromOnboarding; // delivery | professional | business
+  String?
+      _selectedProfessionalArea; // tour | event | construction | education | hiring
+
+  bool _didReadArgs =
+      false; // ensure we only read once in didChangeDependencies
+
   @override
   void initState() {
     super.initState();
     _loadCurrentUserData();
     _loadFormData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didReadArgs) return;
+    _didReadArgs = true;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map) {
+      final role = args['selectedRole']?.toString();
+      final area = args['professionalArea']?.toString();
+      setState(() {
+        _selectedRoleFromOnboarding = role;
+        _selectedProfessionalArea = area;
+      });
+    }
   }
 
   Future<void> _loadCurrentUserData() async {
@@ -205,6 +229,44 @@ class _BusinessRegistrationScreenState
           Text(
             'Complete your business registration to start offering services on our platform.',
             style: GlassTheme.bodyMedium,
+          ),
+          if (_selectedRoleFromOnboarding != null) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _contextBadge('Role: ${_selectedRoleFromOnboarding!}'),
+                if (_selectedProfessionalArea != null)
+                  _contextBadge('Area: ${_selectedProfessionalArea!}'),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _contextBadge(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: GlassTheme.colors.textSecondary.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.label_rounded,
+              size: 14, color: GlassTheme.colors.textSecondary),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: TextStyle(
+              color: GlassTheme.colors.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -1130,6 +1192,13 @@ class _BusinessRegistrationScreenState
         'isVerified': false,
         'submittedAt': DateTime.now(),
         'updatedAt': DateTime.now(),
+        // Onboarding context (from Membership flow)
+        'onboarding': {
+          if (_selectedRoleFromOnboarding != null)
+            'selectedRole': _selectedRoleFromOnboarding,
+          if (_selectedProfessionalArea != null)
+            'professionalArea': _selectedProfessionalArea,
+        },
         // Document URLs
         'businessLicenseUrl': businessLicenseUrl,
         'taxCertificateUrl': taxCertificateUrl,

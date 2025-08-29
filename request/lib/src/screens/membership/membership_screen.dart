@@ -32,6 +32,8 @@ class _MembershipScreenState extends State<MembershipScreen> {
   String _planType = 'user_response'; // 'user_response' | 'product_seller'
   bool _checkingOut = false;
   String? _selectedRole; // general | driver | delivery | professional
+  String?
+      _selectedProfessionalArea; // tour | event | construction | education | hiring
 
   @override
   void initState() {
@@ -307,7 +309,11 @@ class _MembershipScreenState extends State<MembershipScreen> {
         _selectedRole == 'professional' ||
         _selectedRole == 'business') {
       // Use business registration for delivery/professional/business
-      Navigator.pushNamed(context, '/business-registration');
+      Navigator.pushNamed(context, '/business-registration', arguments: {
+        'selectedRole': _selectedRole,
+        if (_selectedProfessionalArea != null)
+          'professionalArea': _selectedProfessionalArea,
+      });
     }
   }
 
@@ -554,6 +560,27 @@ class _MembershipScreenState extends State<MembershipScreen> {
               _roleChip('Professional', 'professional', Icons.badge),
             ],
           ),
+          if (_selectedRole == 'professional') ...[
+            const SizedBox(height: 12),
+            Text('Select your professional area',
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: GlassTheme.colors.textPrimary)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _professionalChip('Tour', 'tour', Icons.map_outlined),
+                _professionalChip('Event', 'event', Icons.event),
+                _professionalChip(
+                    'Construction', 'construction', Icons.engineering),
+                _professionalChip('Education', 'education', Icons.school),
+                _professionalChip('Hiring', 'hiring', Icons.work_outline),
+              ],
+            ),
+          ],
           const SizedBox(height: 6),
           Text(
             _selectedRole == 'driver'
@@ -578,6 +605,26 @@ class _MembershipScreenState extends State<MembershipScreen> {
       onSelected: (_) {
         setState(() {
           _selectedRole = value;
+          // Reset professional area if role changes away
+          if (value != 'professional') {
+            _selectedProfessionalArea = null;
+          }
+        });
+      },
+    );
+  }
+
+  Widget _professionalChip(String title, String value, IconData icon) {
+    final selected = _selectedProfessionalArea == value;
+    return ChoiceChip(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [Icon(icon, size: 16), const SizedBox(width: 6), Text(title)],
+      ),
+      selected: selected,
+      onSelected: (_) {
+        setState(() {
+          _selectedProfessionalArea = value;
         });
       },
     );
