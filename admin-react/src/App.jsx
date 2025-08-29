@@ -32,7 +32,7 @@ import VariablesModule from './pages/VariablesModule';
 import SubcategoriesModule from './pages/SubcategoriesModule';
 import PagesModule from './pages/PagesModule';
 import CentralizedPagesModule from './pages/CentralizedPagesModule';
-import SubscriptionsModule from './pages/Subscriptions';
+// Removed: Subscriptions module
 import PromoCodes from './pages/PromoCodes';
 import CountryProductManagement from './pages/CountryProductManagement';
 import CountryCategoryManagement from './pages/CountryCategoryManagement';
@@ -42,7 +42,7 @@ import CountryVariableTypeManagement from './pages/CountryVariableTypeManagement
 import SMSConfigurationModule from './pages/SMSConfigurationModule';
 import SuperAdminSMSManagement from './pages/SuperAdminSMSManagement';
 import DebugAuth from './components/DebugAuth';
-import SubscriptionPlansNew from './pages/SubscriptionPlansNew.jsx';
+// Removed: SubscriptionPlansNew
 import BusinessPriceManagement from './pages/BusinessPriceManagement';
 import PriceComparisonPage from './pages/PriceComparisonPage';
 import BannersModule from './pages/BannersModule.jsx';
@@ -105,7 +105,7 @@ function App() {
               <Route path="requests" element={<RequestsModule />} />
               <Route path="responses" element={<ResponsesModule />} />
               <Route path="price-listings" element={<PriceListingsModule />} />
-              <Route path="subscriptions" element={<SubscriptionsModule />} />
+              {/** Subscriptions route removed */}
               <Route path="promo-codes" element={<PromoCodes />} />
               <Route path="pages" element={<PagesModule />} />
               <Route path="centralized-pages" element={<CentralizedPagesModule />} />
@@ -122,7 +122,7 @@ function App() {
               <Route path="sms-management" element={<SuperAdminSMSManagement />} />
               
               {/* Add more protected routes here */}
-              <Route path="subscriptions-new" element={<SubscriptionPlansNew />} />
+              {/** Subscriptions (new) route removed */}
               
               {/* Price Management Routes */}
               <Route path="business-price-management" element={<BusinessPriceManagement />} />

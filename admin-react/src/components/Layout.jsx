@@ -48,7 +48,7 @@ import {
   Settings,
   PriceCheck,
   Article,
-  Subscriptions,
+  // Subscriptions icon removed
   LocalOffer,
   Message,
   StoreMallDirectory,
@@ -179,7 +179,7 @@ const Layout = () => {
     { text: 'Variable Types', icon: <Tune />, path: '/country-variable-types', access: 'country_admin', permission: 'countryVariableTypeManagement' },
     { text: 'Divider' },
     { text: 'Users', icon: <Person />, path: '/users', access: 'all', permission: 'userManagement' },
-    { text: 'Subscriptions', icon: <Subscriptions />, path: '/subscriptions', access: 'all', permission: 'subscriptionManagement' },
+  // { text: 'Subscriptions', icon: <Subscriptions />, path: '/subscriptions', access: 'all', permission: 'subscriptionManagement' },
     { text: 'Promo Codes', icon: <LocalOffer />, path: '/promo-codes', access: 'all', permission: 'promoCodeManagement' },
     { text: 'Page Management', icon: <Article />, path: '/pages', access: 'all', permission: 'countryPageManagement' },
     { text: 'Global Pages', icon: <Public />, path: '/centralized-pages', access: 'super_admin' },
