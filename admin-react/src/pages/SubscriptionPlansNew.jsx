@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Card, CardContent, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Grid, Chip, Checkbox, FormControlLabel, Switch, MenuItem, IconButton, Table, TableHead, TableRow, TableCell, TableBody, Toolbar, Tooltip } from '@mui/material';
+import { Box, Card, CardContent, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Grid, Chip, FormControlLabel, Switch, MenuItem, IconButton, Table, TableHead, TableRow, TableCell, TableBody, Toolbar, Tooltip, Stack } from '@mui/material';
 import { Add, Edit, Delete, Refresh } from '@mui/icons-material';
 import api from '../services/apiClient';
 import useCountryFilter from '../hooks/useCountryFilter';
@@ -18,16 +18,30 @@ export default function SubscriptionPlansNew(){
   const [dialogOpen,setDialogOpen]=useState(false);
   const [editing,setEditing]=useState(null);
   const [form,setForm]=useState({ code:'', name:'', type:'rider', plan_type:'monthly', description:'', price:0, currency:'USD', duration_days:30, features:'', limitations:'', countries:[], is_active:true, is_default_plan:false, requires_country_pricing:false });
+  // Country-aware view and override dialog
+  const [viewCountry, setViewCountry] = useState('');
+  const [overrideOpen, setOverrideOpen] = useState(false);
+  const [overridePlan, setOverridePlan] = useState(null);
+  const [overrideForm, setOverrideForm] = useState({ country:'', price:'', currency:'', maxResponsesPerMonth:'', is_active:true });
 
   function resetForm(){ setForm({ code:'', name:'', type:'rider', plan_type:'monthly', description:'', price:0, currency:'USD', duration_days:30, features:'', limitations:'', countries:[], is_active:true, is_default_plan:false, requires_country_pricing:false }); setEditing(null); }
 
   async function load(){
     if(!hasPermission) return; setLoading(true); setError('');
-    try { const { data } = await api.get('/subscription-plans-new'); setRows(Array.isArray(data)? data: data.items||[]); }
+    try {
+      const params = {};
+      if (viewCountry) params.country = viewCountry;
+      const { data } = await api.get('/subscription-plans-new', { params });
+      setRows(Array.isArray(data)? data: data.items||[]);
+    }
     catch(e){ setError(e.message||'Failed'); }
     finally{ setLoading(false); }
   }
-  useEffect(()=>{ load(); },[hasPermission]);
+  useEffect(()=>{ load(); },[hasPermission, viewCountry]);
+  // Default country view for country admins
+  useEffect(()=>{
+    if (!isSuperAdmin && adminData?.country && !viewCountry) setViewCountry(adminData.country);
+  },[isSuperAdmin, adminData, viewCountry]);
 
   function openCreate(){ resetForm(); setDialogOpen(true); }
   function openEdit(row){ setEditing(row); setForm({ ...row, features: JSON.stringify(row.features||[] ,null,2), limitations: JSON.stringify(row.limitations||{},null,2)}); setDialogOpen(true); }
@@ -46,9 +60,57 @@ export default function SubscriptionPlansNew(){
   function safeJSON(txt, fallback){ try { return JSON.parse(txt||fallback); } catch(_){ return JSON.parse(fallback); } }
   async function remove(row){ if(!window.confirm('Delete plan?')) return; try { await api.delete(`/subscription-plans-new/${row.id}`); load(); } catch(e){ alert('Delete failed: '+e.message); } }
 
+  // Country override helpers
+  function openOverride(row){
+    const country = isSuperAdmin ? (viewCountry || '') : (adminData?.country || '');
+    setOverridePlan(row);
+    setOverrideForm({
+      country,
+      price: row.price ?? '',
+      currency: row.currency || 'USD',
+      maxResponsesPerMonth: (row.limitations?.maxResponsesPerMonth ?? ''),
+      is_active: row.is_active ?? true,
+    });
+    setOverrideOpen(true);
+  }
+  async function saveOverride(){
+    if(!overridePlan || !overrideForm.country){ setError('Country is required'); return; }
+    try{
+      const body = {
+        price: overrideForm.price === '' ? null : Number(overrideForm.price),
+        currency: overrideForm.currency || null,
+        limitations: {
+          ...(overridePlan.limitations||{}),
+          ...(overrideForm.maxResponsesPerMonth !== '' ? { maxResponsesPerMonth: Number(overrideForm.maxResponsesPerMonth) } : {})
+        },
+        is_active: !!overrideForm.is_active
+      };
+      await api.put(`/subscription-country/${overridePlan.id}/${overrideForm.country}`, body);
+      setOverrideOpen(false);
+      setOverridePlan(null);
+      await load();
+    }catch(e){ setError(e.message||'Failed to save override'); }
+  }
+  async function deleteOverride(){
+    if(!overridePlan || !overrideForm.country) return;
+    if(!window.confirm('Remove country override?')) return;
+    try{
+      await api.delete(`/subscription-country/${overridePlan.id}/${overrideForm.country}`);
+      setOverrideOpen(false);
+      setOverridePlan(null);
+      await load();
+    }catch(e){ setError(e.message||'Failed to delete override'); }
+  }
+
   return <Box p={2}>
     <Toolbar disableGutters sx={{justifyContent:'space-between'}}>
-      <Typography variant='h5'>Subscription Plans (New)</Typography>
+      <Stack direction="row" spacing={2} alignItems="center">
+        <Typography variant='h5'>Subscription Plans (New)</Typography>
+        <TextField size='small' label={isSuperAdmin? 'View Country (optional)':'My Country'} placeholder={isSuperAdmin? 'e.g. LK':''}
+          value={viewCountry} onChange={e=> setViewCountry(e.target.value.toUpperCase())} sx={{width:180}}
+          disabled={!isSuperAdmin} helperText={isSuperAdmin? 'Apply country overrides in list':''}
+        />
+      </Stack>
       <Box>
         <Tooltip title='Reload'><IconButton onClick={load} disabled={loading}><Refresh/></IconButton></Tooltip>
         {hasPermission && <Button startIcon={<Add/>} variant='contained' onClick={openCreate}>New Plan</Button>}
@@ -64,7 +126,7 @@ export default function SubscriptionPlansNew(){
               <TableCell>Code</TableCell>
               <TableCell>Type</TableCell>
               <TableCell>Plan</TableCell>
-              <TableCell>Price</TableCell>
+              <TableCell>{viewCountry? `Price (${viewCountry})` : 'Price'}</TableCell>
               <TableCell>Currency</TableCell>
               <TableCell>Active</TableCell>
               <TableCell>Default</TableCell>
@@ -87,6 +149,7 @@ export default function SubscriptionPlansNew(){
                 {hasPermission && <>
                   <IconButton size='small' onClick={()=>openEdit(r)}><Edit fontSize='inherit'/></IconButton>
                   <IconButton size='small' onClick={()=>remove(r)}><Delete fontSize='inherit'/></IconButton>
+                  <Button size='small' onClick={()=>openOverride(r)} sx={{ml:1}} variant='outlined'>Country Price</Button>
                 </>}
               </TableCell>
             </TableRow>)}
@@ -118,6 +181,33 @@ export default function SubscriptionPlansNew(){
       <DialogActions>
         <Button onClick={()=>setDialogOpen(false)}>Cancel</Button>
         <Button variant='contained' onClick={save}>{editing? 'Update':'Create'}</Button>
+      </DialogActions>
+    </Dialog>
+
+    {/* Country Override Dialog */}
+    <Dialog open={overrideOpen} fullWidth maxWidth='sm' onClose={()=>setOverrideOpen(false)}>
+      <DialogTitle>Set Country Pricing</DialogTitle>
+      <DialogContent dividers>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={4}>
+            <TextField fullWidth label='Country Code' value={overrideForm.country}
+              onChange={e=> setOverrideForm(f=>({...f,country:e.target.value.toUpperCase()}))}
+              disabled={!isSuperAdmin} helperText={isSuperAdmin? 'e.g. LK':'Your country'}
+            />
+          </Grid>
+          <Grid item xs={6} sm={4}><TextField fullWidth type='number' label='Price' value={overrideForm.price}
+            onChange={e=> setOverrideForm(f=>({...f,price:e.target.value}))} /></Grid>
+          <Grid item xs={6} sm={4}><TextField fullWidth label='Currency' value={overrideForm.currency}
+            onChange={e=> setOverrideForm(f=>({...f,currency:e.target.value}))} /></Grid>
+          <Grid item xs={12} sm={6}><TextField fullWidth type='number' label='Max Responses / Month' value={overrideForm.maxResponsesPerMonth}
+            onChange={e=> setOverrideForm(f=>({...f,maxResponsesPerMonth:e.target.value}))} helperText='-1 for unlimited'/></Grid>
+          <Grid item xs={12} sm={6}><FormControlLabel control={<Switch checked={!!overrideForm.is_active} onChange={e=> setOverrideForm(f=>({...f,is_active:e.target.checked}))} />} label='Active for this country' /></Grid>
+        </Grid>
+      </DialogContent>
+      <DialogActions>
+        {overrideForm.country && <Button color='error' onClick={deleteOverride}>Remove Override</Button>}
+        <Button onClick={()=>setOverrideOpen(false)}>Cancel</Button>
+        <Button variant='contained' onClick={saveOverride}>Save</Button>
       </DialogActions>
     </Dialog>
   </Box>;
