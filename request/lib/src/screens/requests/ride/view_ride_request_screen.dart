@@ -66,8 +66,8 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   @override
   void initState() {
     super.initState();
-  _loadGateState();
-  _loadRequestData();
+    _loadGateState();
+    _loadRequestData();
 
     // Delayed map initialization to reduce initial rendering load
     Timer(const Duration(seconds: 2), () {
@@ -223,11 +223,11 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
   bool _canUserRespond() {
     if (_request == null) return false;
     if (_isOwner) return false;
-  // Membership + entitlements gating
-  if (!_membershipCompleted) return false;
-  if (!(_entitlements?.canRespond ?? false)) return false;
-  // Only approved drivers (driver_verifications.status == approved)
-  return _isApprovedDriver;
+    // Membership + entitlements gating
+    if (!_membershipCompleted) return false;
+    if (!(_entitlements?.canRespond ?? false)) return false;
+    // Only approved drivers (driver_verifications.status == approved)
+    return _isApprovedDriver;
   }
 
   bool _hasUserResponded() {
@@ -1162,7 +1162,8 @@ class _ViewRideRequestScreenState extends State<ViewRideRequestScreen> {
                 children: [
                   IconButton(
                     onPressed: () async {
-                      if (!_membershipCompleted || !(_entitlements?.canSeeContactDetails ?? false)) {
+                      if (!_membershipCompleted ||
+                          !(_entitlements?.canSeeContactDetails ?? false)) {
                         await QuickUpgradeSheet.show(context, 'driver');
                         await _loadGateState();
                         return;

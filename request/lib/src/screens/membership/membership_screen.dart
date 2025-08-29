@@ -81,21 +81,21 @@ class _MembershipScreenState extends State<MembershipScreen> {
 
   List<SubscriptionPlan> _filterUserResponsePlans(
       List<SubscriptionPlan> plans) {
-  final requiredType = widget.requiredSubscriptionType ??
-    ((_selectedRole == 'driver')
-      ? 'driver'
-      : (_selectedRole == 'delivery' || _selectedRole == 'professional')
-        ? 'business'
-        : null);
+    final requiredType = widget.requiredSubscriptionType ??
+        ((_selectedRole == 'driver')
+            ? 'driver'
+            : (_selectedRole == 'delivery' || _selectedRole == 'professional')
+                ? 'business'
+                : null);
 
-  if (requiredType == 'driver') {
+    if (requiredType == 'driver') {
       // For drivers: show free plan + ride-specific plans
       return plans
           .where((plan) =>
               plan.planType == 'free' ||
               plan.planType.toLowerCase().contains('ride'))
           .toList();
-  } else if (requiredType == 'business') {
+    } else if (requiredType == 'business') {
       // For regular business: show free plan + all response plans
       return plans.where((plan) {
         final t = plan.planType.toLowerCase();
@@ -104,7 +104,7 @@ class _MembershipScreenState extends State<MembershipScreen> {
             t.contains('other') ||
             t.contains('general');
       }).toList();
-  } else if (widget.isProductSellerRequired) {
+    } else if (widget.isProductSellerRequired) {
       // For product sellers: only show free plan (3 responses) unless they get product subscription
       return plans.where((plan) => plan.planType == 'free').toList();
     }
@@ -303,7 +303,9 @@ class _MembershipScreenState extends State<MembershipScreen> {
     // After selecting a plan during onboarding, take user to role-specific registration if applicable
     if (_selectedRole == 'driver') {
       Navigator.pushNamed(context, '/driver-registration');
-    } else if (_selectedRole == 'delivery' || _selectedRole == 'professional' || _selectedRole == 'business') {
+    } else if (_selectedRole == 'delivery' ||
+        _selectedRole == 'professional' ||
+        _selectedRole == 'business') {
       // Use business registration for delivery/professional/business
       Navigator.pushNamed(context, '/business-registration');
     }
@@ -415,9 +417,9 @@ class _MembershipScreenState extends State<MembershipScreen> {
     }
 
     // Context-specific headers for different user types
-  final requiredType = widget.requiredSubscriptionType ??
-    ((_selectedRole == 'driver') ? 'driver' : null);
-  if (requiredType == 'driver') {
+    final requiredType = widget.requiredSubscriptionType ??
+        ((_selectedRole == 'driver') ? 'driver' : null);
+    if (requiredType == 'driver') {
       return Container(
         decoration: GlassTheme.glassContainer,
         padding: const EdgeInsets.all(16),
@@ -449,10 +451,10 @@ class _MembershipScreenState extends State<MembershipScreen> {
       );
     }
 
-  if ((widget.requiredSubscriptionType == 'business') ||
-    (_selectedRole == 'delivery') ||
-    (_selectedRole == 'professional') ||
-    (_selectedRole == 'business')) {
+    if ((widget.requiredSubscriptionType == 'business') ||
+        (_selectedRole == 'delivery') ||
+        (_selectedRole == 'professional') ||
+        (_selectedRole == 'business')) {
       return Container(
         decoration: GlassTheme.glassContainer,
         padding: const EdgeInsets.all(16),
@@ -557,7 +559,8 @@ class _MembershipScreenState extends State<MembershipScreen> {
             _selectedRole == 'driver'
                 ? '3 free ride responses per month. Upgrade for unlimited and contact visibility.'
                 : '3 free responses per month. Upgrade for unlimited and contact visibility.',
-            style: TextStyle(color: GlassTheme.colors.textSecondary, fontSize: 12),
+            style:
+                TextStyle(color: GlassTheme.colors.textSecondary, fontSize: 12),
           ),
         ],
       ),

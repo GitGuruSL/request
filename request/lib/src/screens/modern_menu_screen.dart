@@ -335,7 +335,7 @@ class _ModernMenuScreenState extends State<ModernMenuScreen> {
   }
 
   Widget _buildMenuGrid() {
-  final accountItems = [
+    final accountItems = [
       _MenuItem(
         title: 'Products',
         icon: Icons.inventory_2_outlined,
