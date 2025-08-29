@@ -367,6 +367,7 @@ app.get('/api/health', async (req, res) => {
 
 
 // API routes
+const subscriptionPlansNewRoutes = require('./routes/subscription-plans-new');
 
 app.use('/api/auth', authRoutes);
 
@@ -389,7 +390,9 @@ app.use('/api/upload', uploadRoutes); // Image upload endpoint
 
 app.use('/api/s3', uploadS3Routes); // S3 upload endpoints
 app.use('/api/promo-codes', promoCodesRoutes); // NEW - Promo codes admin endpoints
-// Removed: /api/subscriptions
+// Mount subscription plan admin routes (plans + per-country pricing)
+app.use('/api/subscription-plans-new', subscriptionPlansNewRoutes);
+// Removed: /api/subscriptions (user subscription management not exposed here)
 // Current user entitlements (for gating in app)
 app.get('/api/me/entitlements', authService.authMiddleware(), async (req, res) => {
   try {
@@ -421,7 +424,7 @@ app.use('/api/product-sync', productSyncRoutes);
 
 app.use('/api/entity-activations', entityActivationRoutes);
 
-// Removed: subscription plans (new/legacy) and subscription-country routes
+// Removed: legacy subscription routes; using subscription-plans-new instead
 
 app.use('/api', dashboardRoutes);
 

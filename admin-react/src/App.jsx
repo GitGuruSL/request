@@ -46,6 +46,7 @@ import DebugAuth from './components/DebugAuth';
 import BusinessPriceManagement from './pages/BusinessPriceManagement';
 import PriceComparisonPage from './pages/PriceComparisonPage';
 import BannersModule from './pages/BannersModule.jsx';
+import SubscriptionPlansAdmin from './pages/SubscriptionPlansAdmin.jsx';
 
 const theme = createTheme({
   palette: {
@@ -105,7 +106,7 @@ function App() {
               <Route path="requests" element={<RequestsModule />} />
               <Route path="responses" element={<ResponsesModule />} />
               <Route path="price-listings" element={<PriceListingsModule />} />
-              {/** Subscriptions route removed */}
+              <Route path="subscriptions" element={<SubscriptionPlansAdmin />} />
               <Route path="promo-codes" element={<PromoCodes />} />
               <Route path="pages" element={<PagesModule />} />
               <Route path="centralized-pages" element={<CentralizedPagesModule />} />
@@ -122,7 +123,7 @@ function App() {
               <Route path="sms-management" element={<SuperAdminSMSManagement />} />
               
               {/* Add more protected routes here */}
-              {/** Subscriptions (new) route removed */}
+              {/* Subscriptions admin */}
               
               {/* Price Management Routes */}
               <Route path="business-price-management" element={<BusinessPriceManagement />} />
