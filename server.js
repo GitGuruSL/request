@@ -1,3 +1,3 @@
 // Entry point to run the backend with `node server.js` from the repo root
-// This simply requires the Express app which starts the HTTP server.
-require('./backend/app');
+// Delegate to the single backend entry file to avoid confusion.
+require('./backend/server');

@@ -1,4 +1,5 @@
-// Update your main app.js to include the new Flutter auth routes
+// DEPRECATED: Use backend/server.js as the single entry point.
+// This file remains for legacy references but should not be used to start the server.
 
 const express = require('express');
 const cors = require('cors');
