@@ -1,11 +1,7 @@
 name: Backend Deploy (Staging)
 
 on:
-  push:
-    branches: [ develop ]
-    paths:
-      - 'backend/**'
-      - '.github/workflows/backend-deploy-staging.yml'
+  # Disabled automatic triggers; use backend-redeploy.yml for staging too
   workflow_dispatch:
 
 permissions:

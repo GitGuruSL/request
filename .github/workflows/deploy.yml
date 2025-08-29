@@ -1,10 +1,8 @@
-name: Deploy to AWS
+name: Deploy to AWS (Legacy)
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  # Legacy workflow retained for manual runs/documentation only
+  workflow_dispatch:
 
 jobs:
   deploy-backend:
