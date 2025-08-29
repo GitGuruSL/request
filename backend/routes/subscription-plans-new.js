@@ -76,19 +76,83 @@ router.get('/:id/country-pricing', auth.authMiddleware(), auth.roleMiddleware(['
 router.post('/:id/country-pricing', auth.authMiddleware(), auth.roleMiddleware(['super_admin','country_admin']), async (req,res)=>{
   try {
     const { id } = req.params;
-    const { country_code, price, currency, response_limit, notifications_enabled=true, show_contact_details=true, metadata } = req.body || {};
+    let { country_code, price, currency, response_limit, notifications_enabled=true, show_contact_details=true, metadata, is_active } = req.body || {};
     if (!country_code) return res.status(400).json({ success:false, error:'country_code is required' });
+    // Default currency from countries table if not provided
+    if (!currency) {
+      try {
+        const row = await db.queryOne('SELECT default_currency FROM countries WHERE code=$1', [country_code.toUpperCase()]);
+        if (row && row.default_currency) currency = row.default_currency;
+      } catch (_) {}
+    }
+    // Super admin can set is_active via payload; country admin submissions are always pending (inactive)
+    const role = req.user?.role;
+    const activeFlag = role === 'super_admin' ? (is_active === true) : false;
     const row = await db.queryOne(`
-      INSERT INTO subscription_country_pricing (plan_id, country_code, price, currency, response_limit, notifications_enabled, show_contact_details, metadata)
-      VALUES ($1::uuid,$2,$3,$4,$5,$6,$7,$8::jsonb)
+      INSERT INTO subscription_country_pricing (plan_id, country_code, price, currency, response_limit, notifications_enabled, show_contact_details, metadata, is_active)
+      VALUES ($1::uuid,$2,$3,$4,$5,$6,$7,$8::jsonb,$9)
       ON CONFLICT (plan_id, country_code)
       DO UPDATE SET price=EXCLUDED.price, currency=EXCLUDED.currency, response_limit=EXCLUDED.response_limit,
                     notifications_enabled=EXCLUDED.notifications_enabled, show_contact_details=EXCLUDED.show_contact_details,
-                    metadata=EXCLUDED.metadata, updated_at = NOW()
+                    metadata=EXCLUDED.metadata, is_active = CASE WHEN $10 = true THEN EXCLUDED.is_active ELSE subscription_country_pricing.is_active END,
+                    updated_at = NOW()
       RETURNING *
-    `, [id, country_code, price||0, currency||'USD', response_limit ?? null, !!notifications_enabled, !!show_contact_details, JSON.stringify(metadata||{})]);
+    `, [id, country_code, price||0, currency||'USD', response_limit ?? null, !!notifications_enabled, !!show_contact_details, JSON.stringify(metadata||{}), activeFlag, role==='super_admin']);
     res.status(201).json({ success:true, data:row });
   } catch (e) { console.error(e); res.status(500).json({ success:false, error:'Failed to upsert country pricing' }); }
 });
 
+// Approve or update country pricing (super admin only)
+router.put('/:id/country-pricing/:country', auth.authMiddleware(), auth.roleMiddleware(['super_admin']), async (req, res) => {
+  try {
+    const { id, country } = req.params;
+    const fields = {};
+    const allowed = ['price','currency','response_limit','notifications_enabled','show_contact_details','is_active','metadata'];
+    for (const k of allowed) if (k in req.body) fields[k] = req.body[k];
+    if (fields.metadata) fields.metadata = JSON.stringify(fields.metadata);
+    const sets = [];
+    const vals = [];
+    for (const [k,v] of Object.entries(fields)) { vals.push(v); sets.push(`${k} = $${vals.length}`); }
+    if (!sets.length) return res.status(400).json({ success:false, error:'No fields to update' });
+    vals.push(id, country.toUpperCase());
+    const row = await db.queryOne(`
+      UPDATE subscription_country_pricing
+      SET ${sets.join(', ')}, updated_at = NOW()
+      WHERE plan_id = $${vals.length-1}::uuid AND country_code = $${vals.length}
+      RETURNING *
+    `, vals);
+    if (!row) return res.status(404).json({ success:false, error:'Not found' });
+    res.json({ success:true, data:row });
+  } catch (e) {
+    console.error('Approve/update country pricing failed', e);
+    res.status(500).json({ success:false, error:'Failed to update country pricing' });
+  }
+});
+
 module.exports = router;
+// List pending country pricing for approval (super admin can see all, country admin sees own country)
+router.get('/pending-country-pricing', auth.authMiddleware(), auth.roleMiddleware(['super_admin','country_admin']), async (req, res) => {
+  try {
+    const role = req.user?.role;
+    const { country } = req.query;
+    const where = ['scp.is_active = false'];
+    const params = [];
+    if (role === 'country_admin') {
+      const cc = req.user?.country_code || country;
+      if (cc) { params.push(cc); where.push(`scp.country_code = $${params.length}`); }
+    } else if (country) {
+      params.push(country); where.push(`scp.country_code = $${params.length}`);
+    }
+    const rows = await db.query(`
+      SELECT scp.*, sp.name AS plan_name, sp.code AS plan_code, sp.plan_type
+      FROM subscription_country_pricing scp
+      JOIN subscription_plans_new sp ON sp.id = scp.plan_id
+      WHERE ${where.join(' AND ')}
+      ORDER BY scp.updated_at DESC
+    `, params);
+    res.json({ success:true, data: rows.rows });
+  } catch (e) {
+    console.error('List pending country pricing failed', e);
+    res.status(500).json({ success:false, error:'Failed to list pending pricing' });
+  }
+});
