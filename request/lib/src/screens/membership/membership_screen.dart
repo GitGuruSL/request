@@ -131,8 +131,11 @@ class _MembershipScreenState extends State<MembershipScreen> {
   }
 
   String _getContextSpecificTitle() {
-    if (widget.isProductSellerRequired) {
+    if (widget.isProductSellerRequired || _selectedRole == 'product_seller') {
       return 'Choose your marketplace plan';
+    }
+    if (_selectedRole == 'general') {
+      return 'Choose your general response plan';
     }
     if (widget.requiredSubscriptionType == 'driver') {
       return 'Choose your driver plan';
@@ -146,8 +149,11 @@ class _MembershipScreenState extends State<MembershipScreen> {
   }
 
   String _getContextSpecificDescription() {
-    if (widget.isProductSellerRequired) {
+    if (widget.isProductSellerRequired || _selectedRole == 'product_seller') {
       return 'Choose how you want to pay for your product listings in our marketplace.';
+    }
+    if (_selectedRole == 'general') {
+      return 'Free plan gives 3 responses per month. Upgrade for unlimited responses, contact visibility, and instant notifications.';
     }
     if (widget.requiredSubscriptionType == 'driver') {
       return 'Free plan gives 3 ride responses with contact details. Paid plans unlock unlimited responses, contact visibility, and instant notifications.';
@@ -334,6 +340,10 @@ class _MembershipScreenState extends State<MembershipScreen> {
           'professionalArea': _selectedProfessionalArea,
       });
       return true;
+    } else if (_selectedRole == 'product_seller') {
+      // After product seller subscription, navigate to product dashboard
+      await Navigator.pushNamed(context, '/business-pricing');
+      return true;
     }
     return false;
   }
@@ -411,8 +421,8 @@ class _MembershipScreenState extends State<MembershipScreen> {
   }
 
   Widget _buildPlanTypeSelector() {
-    // If user must choose product seller subscription, only show product seller options
-    if (widget.isProductSellerRequired) {
+    // If user must choose product seller subscription, or selected role is product seller
+    if (widget.isProductSellerRequired || _selectedRole == 'product_seller') {
       return Container(
         decoration: GlassTheme.glassContainer,
         padding: const EdgeInsets.all(16),
@@ -425,7 +435,7 @@ class _MembershipScreenState extends State<MembershipScreen> {
                 Icon(Icons.store, color: GlassTheme.colors.primaryBlue),
                 const SizedBox(width: 8),
                 Text(
-                  'Product Seller Subscription Required',
+                  'Product Seller Plans',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -437,6 +447,40 @@ class _MembershipScreenState extends State<MembershipScreen> {
             const SizedBox(height: 8),
             Text(
               'To list products in our marketplace, you need to subscribe to a product seller plan.',
+              style: TextStyle(color: GlassTheme.colors.textSecondary),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // For General Responder, simplify: no tabs, just a header
+    if (_selectedRole == 'general') {
+      return Container(
+        decoration: GlassTheme.glassContainer,
+        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.forum_outlined,
+                    color: GlassTheme.colors.primaryBlue),
+                const SizedBox(width: 8),
+                Text(
+                  'General Response Plans',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: GlassTheme.colors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Respond to common requests. Free plan gives 3 responses per month. Upgrade for unlimited responses and contact visibility.',
               style: TextStyle(color: GlassTheme.colors.textSecondary),
             ),
           ],
@@ -580,37 +624,34 @@ class _MembershipScreenState extends State<MembershipScreen> {
             ],
           ),
         ),
+        // 1) General Responder
         _buildRoleCard(
-          'Respond to General Requests',
           'General Responder',
-          'Answer various requests in your area. 3 free responses per month, upgrade for unlimited responses and contact visibility.',
+          'Respond to common requests',
+          'Start with 3 free responses per month. Upgrade anytime for unlimited responses and contact visibility.',
           Icons.handshake,
           'general',
           Colors.green,
         ),
+        // 2) Specialized Responder: Driver or Delivery (choose one)
+        _buildSpecializedCard(),
+        // 3) Professional Responder
         _buildRoleCard(
-          'I am a Driver',
-          'Specialized Responder (Driver)',
-          'Respond to ride requests and earn money. Includes verification process for driver\'s license. Access to ride requests and all common requests.',
-          Icons.drive_eta,
-          'driver',
-          Colors.blue,
-        ),
-        _buildRoleCard(
-          'I run a Delivery Service',
-          'Specialized Responder (Delivery)',
-          'Provide delivery services for various requests. May require business verification. Access to delivery requests and all common requests.',
-          Icons.local_shipping,
-          'delivery',
-          Colors.orange,
-        ),
-        _buildRoleCard(
-          'I am a Professional in a specific field',
           'Professional Responder',
-          'Offer professional services in specialized areas like tours, events, construction, education, or hiring.',
+          'Tours, Events, Construction, Education, Hiring',
+          'Offer services in your field. Choose an area, subscribe, and start getting relevant requests.',
           Icons.badge,
           'professional',
           Colors.purple,
+        ),
+        // 4) Product Seller
+        _buildRoleCard(
+          'Product Seller',
+          'List products and prices',
+          'Subscribe to list products in Price Comparison. Different pricing model: pay-per-click or monthly.',
+          Icons.store,
+          'product_seller',
+          Colors.teal,
         ),
         if (_selectedRole == 'professional') ...[
           const SizedBox(height: 16),
@@ -762,24 +803,125 @@ class _MembershipScreenState extends State<MembershipScreen> {
   void _goToPlans() {
     final value = _selectedRole;
     if (value == null) return;
-    final requiredType = (value == 'driver')
-        ? 'driver'
-        : (value == 'delivery' ||
-                value == 'professional' ||
-                value == 'business')
-            ? 'business'
-            : null;
-    Navigator.pushReplacementNamed(
-      context,
-      '/membership',
-      arguments: {
-        'selectedRole': value,
-        if (_selectedProfessionalArea != null)
-          'professionalArea': _selectedProfessionalArea,
-        if (requiredType != null) 'requiredSubscriptionType': requiredType,
-        'promptOnboarding': true,
-      },
+    // Adjust plan context locally; no route change
+    setState(() {
+      if (value == 'product_seller') {
+        _planType = 'product_seller';
+      } else {
+        _planType = 'user_response';
+      }
+    });
+  }
+
+  Widget _buildSpecializedCard() {
+    final isSelected = _selectedRole == 'driver' || _selectedRole == 'delivery';
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color:
+              isSelected ? GlassTheme.colors.primaryBlue : Colors.grey.shade300,
+          width: isSelected ? 2 : 1,
+        ),
+        color: isSelected
+            ? GlassTheme.colors.primaryBlue.withOpacity(0.1)
+            : GlassTheme.colors.glassBackground.first,
+      ),
+      child: InkWell(
+        onTap: _selectSpecializedRole,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.local_taxi,
+                  color: Colors.blue,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Specialized Responder (Driver/Delivery)',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: GlassTheme.colors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Respond to Ride or Delivery requests in addition to common requests. Registration and verification may apply.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: GlassTheme.colors.textSecondary,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isSelected)
+                Icon(
+                  Icons.check_circle,
+                  color: GlassTheme.colors.primaryBlue,
+                  size: 24,
+                ),
+            ],
+          ),
+        ),
+      ),
     );
+  }
+
+  Future<void> _selectSpecializedRole() async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: GlassTheme.colors.glassBackground.first,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.drive_eta),
+              title: Text('Driver',
+                  style: TextStyle(color: GlassTheme.colors.textPrimary)),
+              subtitle: Text('Respond to ride requests',
+                  style: TextStyle(color: GlassTheme.colors.textSecondary)),
+              onTap: () => Navigator.pop(ctx, 'driver'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.local_shipping),
+              title: Text('Delivery',
+                  style: TextStyle(color: GlassTheme.colors.textPrimary)),
+              subtitle: Text('Respond to delivery requests',
+                  style: TextStyle(color: GlassTheme.colors.textSecondary)),
+              onTap: () => Navigator.pop(ctx, 'delivery'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (choice != null && mounted) {
+      setState(() {
+        _selectedRole = choice;
+      });
+    }
   }
 
   Widget _professionalChip(String title, String value, IconData icon) {
