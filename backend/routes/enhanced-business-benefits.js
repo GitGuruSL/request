@@ -8,7 +8,7 @@ async function resolveCountryId(client, countryIdOrCode) {
   const asNumber = parseInt(countryIdOrCode, 10);
   if (!Number.isNaN(asNumber)) return asNumber;
   const { rows } = await client.query(
-    `SELECT id FROM countries WHERE LOWER(code) = LOWER($1) OR LOWER(country_code) = LOWER($1) LIMIT 1`,
+    `SELECT id FROM countries WHERE LOWER(code) = LOWER($1) LIMIT 1`,
     [String(countryIdOrCode)]
   );
   return rows[0]?.id || null;
@@ -37,17 +37,31 @@ router.get('/:countryId', async (req, res) => {
       const benefits = {};
       
       for (const businessType of businessTypesResult.rows) {
+        // Get plans for this business type (fallback to default if no custom plans)
         const plansResult = await client.query(
-          'SELECT * FROM get_business_type_benefit_plans($1, $2)',
+          `SELECT * FROM enhanced_business_benefits 
+           WHERE country_id = $1 AND business_type_id = $2 
+           ORDER BY plan_code`,
           [resolvedId, businessType.id]
         );
+
+        // If no custom plans, return default structure
+        const plans = plansResult.rows.length > 0 ? plansResult.rows.map(plan => ({
+          planId: plan.id,
+          planCode: plan.plan_code,
+          planName: plan.plan_name,
+          pricingModel: plan.pricing_model,
+          features: plan.features || {},
+          pricing: plan.pricing || {},
+          isActive: plan.is_active
+        })) : [];
 
         benefits[businessType.name] = {
           businessTypeId: businessType.id,
           businessTypeName: businessType.name,
-          plans: plansResult.rows.map(plan => ({
-            planId: plan.plan_id,
-            planCode: plan.plan_code,
+          plans: plans
+        };
+      }
             planName: plan.plan_name,
             planDescription: plan.plan_description,
             planType: plan.plan_type,
