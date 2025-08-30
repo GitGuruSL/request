@@ -64,6 +64,9 @@ class SubscriptionPlan {
       return '${price!.toStringAsFixed(2)} /month';
     }
   }
+
+  // For legacy UI that expects a duration; always 30 for disabled plans.
+  int get durationDays => 30;
 }
 
 class SubscriptionServiceApi {
@@ -107,6 +110,15 @@ class SubscriptionServiceApi {
     String? provider,
   }) async {
     return {'success': false, 'error': 'disabled'};
+  }
+
+  // Stubs to satisfy UI references
+  Future<bool> startSubscription(String planId, {String? promoCode}) async {
+    return false;
+  }
+
+  Future<bool> cancelSubscription({bool immediate = false}) async {
+    return false;
   }
 
   Future<List<Map<String, dynamic>>> getCountryGateways(

@@ -64,7 +64,7 @@ if [ -f deploy/production.env ]; then
 fi
 # Sanity echo (non-sensitive): which host/user/db
 echo "[migrate] Using DB host: ${DB_HOST:-${PGHOST:-(echo unset)}} user: ${DB_USERNAME:-${PGUSER:-(echo unset)}} database: ${DB_DATABASE:-${PGDATABASE:-(echo unset)}}"
-node ./scripts/run-sql-migration.js ./migration/20250827_subscriptions.sql
+node ./scripts/run-sql-migration.js ./database/migrations/20250830_remove_subscriptions_and_benefits.sql
 '@
 # Normalize to LF and send via base64
 $scriptLF = $script -replace "`r?`n","`n"

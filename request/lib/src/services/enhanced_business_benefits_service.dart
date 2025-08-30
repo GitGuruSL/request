@@ -1,4 +1,5 @@
-// Minimal no-op service to keep references compiling after removing backend endpoints.
+// Minimal no-op service to keep app compiling after removing benefits backend.
+// All methods return empty data and do not perform network calls.
 class EnhancedBusinessBenefitsService {
   static Future<Map<String, dynamic>> getBusinessTypeBenefits(
       String countryCode) async {
@@ -26,7 +27,7 @@ class EnhancedBusinessBenefitsService {
     Map<String, dynamic>? pricing,
     List<String>? allowedResponseTypes,
   }) async {
-    return {'success': false, 'error': 'disabled'};
+    return {'success': false, 'error': 'benefits_disabled'};
   }
 
   static Future<Map<String, dynamic>> updateBenefitPlan(
@@ -38,10 +39,10 @@ class EnhancedBusinessBenefitsService {
     List<String>? allowedResponseTypes,
     bool? isActive,
   }) async {
-    return {'success': false, 'error': 'disabled'};
+    return {'success': false, 'error': 'benefits_disabled'};
   }
 
-  static Future<Map<String, dynamic>> deleteBenefitPlan(int planId) async {
-    return {'success': false, 'error': 'disabled'};
+  static Future<void> deleteBenefitPlan(dynamic planId) async {
+    // no-op
   }
 }
