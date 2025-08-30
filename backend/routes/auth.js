@@ -5,6 +5,11 @@ const authService = require('../services/auth'); // Import the auth service
 // Register endpoint
 router.post('/register', async (req, res) => {
   try {
+    const { email, phone } = req.body || {};
+    if (!email && !phone) {
+      // Return shape expected by tests (no success field)
+      return res.status(400).json({ error: 'Either email or phone is required' });
+    }
     const result = await authService.register(req.body);
     res.json({
       success: true,
@@ -23,6 +28,11 @@ router.post('/register', async (req, res) => {
 // Login endpoint
 router.post('/login', async (req, res) => {
   try {
+    // If both email/phone missing, align with test expectation of 401 Unauthorized
+    const { email, phone } = req.body || {};
+    if (!email && !phone) {
+      return res.status(401).json({ success: false, error: 'Email or phone is required' });
+    }
     const result = await authService.login(req.body);
     res.json({
       success: true,

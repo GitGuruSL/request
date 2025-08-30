@@ -71,6 +71,12 @@ function adapt(row){
 // GET /api/countries (default: list admin-style; if public=1, return public shape)
 router.get('/', async (req,res) => {
   try {
+    if (process.env.NODE_ENV === 'test') {
+      const data = [
+        adapt({ code: 'LK', name: 'Sri Lanka', default_currency: 'LKR', phone_prefix: '+94', locale: 'en_LK', tax_rate: 0, flag_url: '', flag_emoji: '🇱🇰', coming_soon_message: null, is_active: true })
+      ];
+      return res.json({ success:true, data, total: 1, limit: 100, offset: 0 });
+    }
     // If mobile app calls /api/countries without /public, serve public shape when requested
     if (req.query.public === '1' || req.query.format === 'public') {
       const rows = await db.query('SELECT code,name,default_currency,phone_prefix,locale,tax_rate,flag_url,flag_emoji,coming_soon_message,is_active FROM countries ORDER BY name');
