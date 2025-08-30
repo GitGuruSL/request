@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/enhanced_user_service.dart';
 import '../services/country_service.dart';
-import '../services/business_type_benefits_service.dart';
+import '../services/enhanced_business_benefits_service.dart';
+import '../models/enhanced_business_benefits.dart';
 import '../theme/app_theme.dart';
 import '../theme/glass_theme.dart';
 import 'package:image_picker/image_picker.dart';
@@ -37,100 +38,40 @@ class _BusinessRegistrationScreenState
   List<dynamic> _businessTypes = [];
   String? _selectedBusinessTypeGlobalId;
 
-  // API-fetched benefits data
-  Map<String, dynamic> _apiBenefitsData = {};
+  // Enhanced business benefits data
+  List<EnhancedBenefitPlan> _enhancedBenefitPlans = [];
   bool _loadingBenefits = false;
 
-  // Method to get response and messaging benefits for selected business type
-  Map<String, dynamic> _getBusinessTypeBenefits(String businessTypeName) {
-    // Check if we have API data for this business type
-    if (_apiBenefitsData.containsKey(businessTypeName)) {
-      final apiData = _apiBenefitsData[businessTypeName];
-      return {
-        'title': '$businessTypeName Business Plan',
-        'icon': _getBusinessTypeIcon(businessTypeName),
-        'color': _getBusinessTypeColor(businessTypeName),
-        'config': {
-          'free_plan': apiData['freePlan'],
-          'paid_plan': apiData['paidPlan'],
-        },
-      };
-    }
-
-    // Fallback to default configuration if API data is not available
-    final businessTypeConfig = {
-      'free_plan': {
-        'responses_per_month': 3,
-        'contact_revealed': false,
-        'can_message_requester': false,
-        'respond_button_enabled': true, // Only for first 3 responses
-        'instant_notifications': false,
-      },
-      'paid_plan': {
-        'responses_per_month': -1, // unlimited
-        'contact_revealed': true,
-        'can_message_requester': true,
-        'respond_button_enabled': true,
-        'instant_notifications': true,
-      }
-    };
-
-    return {
-      'title': '$businessTypeName Business Plan',
-      'icon': _getBusinessTypeIcon(businessTypeName),
-      'color': _getBusinessTypeColor(businessTypeName),
-      'config': businessTypeConfig,
-    };
-  }
-
-  // Helper method to get icon for business type
-  IconData _getBusinessTypeIcon(String businessTypeName) {
-    final icons = {
-      'Restaurant': Icons.restaurant,
-      'Retail Store': Icons.store,
-      'Service Provider': Icons.handyman,
-      'Healthcare': Icons.local_hospital,
-      'Education': Icons.school,
-      'Technology': Icons.computer,
-    };
-    return icons[businessTypeName] ?? Icons.business;
-  }
-
-  // Helper method to get color for business type
-  Color _getBusinessTypeColor(String businessTypeName) {
-    final colors = {
-      'Restaurant': Colors.orange,
-      'Retail Store': Colors.blue,
-      'Service Provider': Colors.green,
-      'Healthcare': Colors.red,
-      'Education': Colors.purple,
-      'Technology': Colors.teal,
-    };
-    return colors[businessTypeName] ?? Colors.indigo;
-  }
-
-  // Method to load business type benefits from API
+  // Method to load business type benefits from Enhanced API
   Future<void> _loadBusinessTypeBenefits() async {
+    if (_selectedBusinessTypeGlobalId == null) return;
+
     setState(() {
       _loadingBenefits = true;
     });
 
     try {
-      // Get user's country ID (you'll need to implement this based on your user service)
-      final countryId = await _getUserCountryId();
+      // Get business type ID from global ID (assuming it's the same or we need mapping)
+      int businessTypeId = int.tryParse(_selectedBusinessTypeGlobalId!) ?? 1;
 
-      if (countryId != null) {
-        final benefits =
-            await BusinessTypeBenefitsService.getBusinessTypeBenefits(
-                countryId);
-        if (benefits != null) {
-          setState(() {
-            _apiBenefitsData = benefits;
-          });
-        }
+      final response =
+          await EnhancedBusinessBenefitsService.getBusinessTypePlans(
+        'LK', // Default to Sri Lanka
+        businessTypeId,
+      );
+
+      if (response['success'] == true && response['data'] != null) {
+        final businessTypeBenefits =
+            BusinessTypeBenefits.fromJson(response['data']);
+        setState(() {
+          _enhancedBenefitPlans = businessTypeBenefits.plans;
+        });
       }
     } catch (e) {
-      print('Error loading business type benefits: $e');
+      print('Error loading enhanced business benefits: $e');
+      setState(() {
+        _enhancedBenefitPlans = [];
+      });
     } finally {
       setState(() {
         _loadingBenefits = false;
@@ -138,23 +79,10 @@ class _BusinessRegistrationScreenState
     }
   }
 
-  // Helper method to get user's country ID
-  Future<int?> _getUserCountryId() async {
-    try {
-      // This should be implemented based on your user service
-      // For now, returning a default country ID (1)
-      // You might get this from user profile, selected country, or app settings
-      return 1; // Default country ID
-    } catch (e) {
-      print('Error getting user country ID: $e');
-      return null;
-    }
-  }
-
   String? _selectedBusinessTypeName;
   List<dynamic> _itemSubcategoriesByCategory = [];
 
-  // Build benefits card for selected business type
+  // Build enhanced benefits card for selected business type
   Widget _buildBusinessTypeBenefitsCard() {
     if (_selectedBusinessTypeName == null) return const SizedBox.shrink();
 
@@ -176,7 +104,7 @@ class _BusinessRegistrationScreenState
               CircularProgressIndicator(),
               SizedBox(height: 16),
               Text(
-                'Loading business benefits...',
+                'Loading enhanced business benefits...',
                 style: TextStyle(
                   fontSize: 14,
                   color: AppTheme.textSecondary,
@@ -188,212 +116,295 @@ class _BusinessRegistrationScreenState
       );
     }
 
-    final benefits = _getBusinessTypeBenefits(_selectedBusinessTypeName!);
-    final color = benefits['color'] as Color;
-    final icon = benefits['icon'] as IconData;
-    final title = benefits['title'] as String;
-    final config = benefits['config'] as Map<String, dynamic>;
-    final freeConfig = config['free_plan'] as Map<String, dynamic>;
-    final paidConfig = config['paid_plan'] as Map<String, dynamic>;
+    if (_enhancedBenefitPlans.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 20),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.orange.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Colors.orange.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              Icons.info_outline,
+              color: Colors.orange,
+              size: 32,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'No benefit plans available',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.orange,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Enhanced business benefit plans will be displayed here when available for $_selectedBusinessTypeName businesses.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            color.withOpacity(0.1),
-            color.withOpacity(0.05),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: color.withOpacity(0.3),
-          width: 1,
-        ),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  icon,
-                  color: color,
-                  size: 24,
-                ),
+          // Header
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.blue.withOpacity(0.1),
+                  Colors.blue.withOpacity(0.05),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: color,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+              border: Border.all(
+                color: Colors.blue.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.business_center,
+                    color: Colors.blue,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '$_selectedBusinessTypeName Business Benefits',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Response & Communication Benefits:',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: color.withOpacity(0.8),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Available enhanced benefit plans:',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.blue.withOpacity(0.8),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Free Plan Section
-          _buildPlanSection(
-            'FREE PLAN',
-            Colors.green,
-            [
-              _buildFeatureItem(
-                Icons.reply,
-                '${_getConfigValue(freeConfig, 'responsesPerMonth', 'responses_per_month', 3)} responses per month',
-                _getConfigValue(freeConfig, 'responsesPerMonth',
-                        'responses_per_month', 3) >
-                    0,
-              ),
-              _buildFeatureItem(
-                Icons.visibility_off,
-                'Contact details hidden',
-                !_getConfigValue(
-                    freeConfig, 'contactRevealed', 'contact_revealed', false),
-              ),
-              _buildFeatureItem(
-                Icons.message_outlined,
-                'Direct messaging',
-                _getConfigValue(freeConfig, 'canMessageRequester',
-                    'can_message_requester', false),
-              ),
-              _buildFeatureItem(
-                Icons.notifications_off,
-                'Instant notifications',
-                _getConfigValue(freeConfig, 'instantNotifications',
-                    'instant_notifications', false),
-              ),
-              _buildFeatureItem(
-                Icons.block,
-                'Features disabled after 3 responses',
-                true,
-                isWarning: true,
-              ),
-            ],
+              ],
+            ),
           ),
 
-          const SizedBox(height: 16),
+          // Plans
+          ...(_enhancedBenefitPlans.asMap().entries.map((entry) {
+            final index = entry.key;
+            final plan = entry.value;
+            final isLast = index == _enhancedBenefitPlans.length - 1;
 
-          // Paid Plan Section
-          _buildPlanSection(
-            'PAID PLAN',
-            Colors.blue,
-            [
-              _buildFeatureItem(
-                Icons.all_inclusive,
-                'Unlimited responses',
-                _getConfigValue(paidConfig, 'responsesPerMonth',
-                        'responses_per_month', -1) ==
-                    -1,
-              ),
-              _buildFeatureItem(
-                Icons.visibility,
-                'Contact details revealed',
-                _getConfigValue(
-                    paidConfig, 'contactRevealed', 'contact_revealed', true),
-              ),
-              _buildFeatureItem(
-                Icons.message,
-                'Direct messaging enabled',
-                _getConfigValue(paidConfig, 'canMessageRequester',
-                    'can_message_requester', true),
-              ),
-              _buildFeatureItem(
-                Icons.notifications_active,
-                'Instant notifications',
-                _getConfigValue(paidConfig, 'instantNotifications',
-                    'instant_notifications', true),
-              ),
-              _buildFeatureItem(
-                Icons.priority_high,
-                'Priority in search results',
-                _getConfigValue(
-                    paidConfig, 'priorityInSearch', 'priority_in_search', true),
-              ),
-            ],
-          ),
+            return _buildEnhancedPlanCard(plan, isLast);
+          }).toList()),
         ],
       ),
     );
   }
 
-  // Helper method to get config values with fallback for different field name formats
-  dynamic _getConfigValue(Map<String, dynamic> config, String camelCaseKey,
-      String snakeCaseKey, dynamic defaultValue) {
-    return config[camelCaseKey] ?? config[snakeCaseKey] ?? defaultValue;
-  }
+  Widget _buildEnhancedPlanCard(EnhancedBenefitPlan plan, bool isLast) {
+    Color planColor = _getPlanColor(plan.pricingModel);
 
-  Widget _buildPlanSection(
-      String title, Color planColor, List<Widget> features) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: planColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: planColor.withOpacity(0.3),
-          width: 1,
+        borderRadius: isLast
+            ? const BorderRadius.only(
+                bottomLeft: Radius.circular(16),
+                bottomRight: Radius.circular(16),
+              )
+            : BorderRadius.zero,
+        border: Border(
+          left: BorderSide(color: planColor.withOpacity(0.3), width: 1),
+          right: BorderSide(color: planColor.withOpacity(0.3), width: 1),
+          bottom: BorderSide(
+              color: planColor.withOpacity(0.3), width: isLast ? 1 : 0.5),
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: planColor,
-            ),
+          // Plan header
+          Row(
+            children: [
+              Text(
+                plan.planName.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: planColor,
+                ),
+              ),
+              const Spacer(),
+              _buildPricingChip(plan, planColor),
+            ],
           ),
           const SizedBox(height: 12),
-          ...features,
+
+          // Features
+          ...plan.features.entries
+              .map((feature) => _buildEnhancedFeatureItem(
+                    _getFeatureIcon(feature.key),
+                    _getFeatureText(feature.key, feature.value),
+                    feature.value == true,
+                    planColor,
+                  ))
+              .toList(),
         ],
       ),
     );
   }
 
-  Widget _buildFeatureItem(IconData icon, String text, bool enabled,
-      {bool isWarning = false}) {
-    final color = isWarning
-        ? Colors.orange
-        : enabled
-            ? Colors.green
-            : Colors.red;
+  Widget _buildPricingChip(EnhancedBenefitPlan plan, Color color) {
+    String pricingText = _getPricingText(plan);
 
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        pricingText,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  String _getPricingText(EnhancedBenefitPlan plan) {
+    final currency = plan.currency;
+
+    switch (plan.pricingModel) {
+      case 'monthly_subscription':
+        return plan.monthlyFee != null
+            ? '$currency ${plan.monthlyFee}/month'
+            : 'Contact for pricing';
+      case 'pay_per_click':
+        return plan.costPerClick != null
+            ? '$currency ${plan.costPerClick}/click'
+            : 'Pay per click';
+      case 'bundle':
+        return plan.bundlePrice != null
+            ? '$currency ${plan.bundlePrice}'
+            : 'Bundle pricing';
+      case 'response_based':
+        return plan.costPerResponse != null
+            ? '$currency ${plan.costPerResponse}/response'
+            : 'Per response';
+      default:
+        return 'Contact for pricing';
+    }
+  }
+
+  Color _getPlanColor(String pricingModel) {
+    switch (pricingModel) {
+      case 'monthly_subscription':
+        return Colors.blue;
+      case 'pay_per_click':
+        return Colors.green;
+      case 'bundle':
+        return Colors.purple;
+      case 'response_based':
+        return Colors.orange;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  IconData _getFeatureIcon(String featureKey) {
+    switch (featureKey) {
+      case 'click_tracking':
+        return Icons.analytics;
+      case 'analytics_dashboard':
+        return Icons.dashboard;
+      case 'product_showcase':
+        return Icons.store;
+      case 'customer_messaging':
+        return Icons.message;
+      case 'unlimited_products':
+        return Icons.all_inclusive;
+      case 'priority_listing':
+        return Icons.priority_high;
+      case 'advanced_analytics':
+        return Icons.insights;
+      case 'customer_support':
+        return Icons.support_agent;
+      case 'promotion_tools':
+        return Icons.campaign;
+      case 'featured_listing':
+        return Icons.star;
+      default:
+        return Icons.check_circle;
+    }
+  }
+
+  String _getFeatureText(String featureKey, dynamic value) {
+    String baseText = featureKey
+        .replaceAll('_', ' ')
+        .split(' ')
+        .map((word) => word.substring(0, 1).toUpperCase() + word.substring(1))
+        .join(' ');
+
+    if (value is bool) {
+      return baseText;
+    } else if (value is String || value is num) {
+      return '$baseText: $value';
+    } else {
+      return baseText;
+    }
+  }
+
+  Widget _buildEnhancedFeatureItem(
+      IconData icon, String text, bool enabled, Color color) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
           Icon(
             enabled ? Icons.check_circle : Icons.cancel,
-            color: color,
+            color: enabled ? Colors.green : Colors.red,
             size: 16,
           ),
           const SizedBox(width: 8),
@@ -409,7 +420,7 @@ class _BusinessRegistrationScreenState
               style: TextStyle(
                 fontSize: 13,
                 color: AppTheme.textPrimary,
-                fontWeight: isWarning ? FontWeight.w600 : FontWeight.normal,
+                fontWeight: enabled ? FontWeight.w500 : FontWeight.normal,
               ),
             ),
           ),
@@ -1230,14 +1241,18 @@ class _BusinessRegistrationScreenState
                   _subcategoryNameById.clear();
                   for (final cat in _currentSubcategoriesByCategory) {
                     final subs = (cat['subcategories'] as List?) ?? [];
-                    for (final s in subs) {
-                      final id = s['id']?.toString();
-                      final name = s['name']?.toString() ?? '';
-                      if (id != null) _subcategoryNameById[id] = name;
+                    for (final sub in subs) {
+                      _subcategoryNameById[sub['id'].toString()] =
+                          sub['name'].toString();
                     }
                   }
-                  if (!_showSubcategoryPicker) _selectedSubcategoryIds.clear();
+                  _selectedSubcategoryIds.clear();
                 });
+
+                // Load enhanced business benefits for the selected type
+                if (value != null) {
+                  _loadBusinessTypeBenefits();
+                }
               },
             ),
         ],
