@@ -44,6 +44,7 @@ export default function BusinessTypeBenefits() {
   const [saving, setSaving] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [benefits, setBenefits] = useState([]); // [{ id, name, free: {...}, paid: {...} }]
+  const [readOnly, setReadOnly] = useState(false); // When backend lacks admin endpoints
 
   const loadCountries = async () => {
     if (!isSuperAdmin) return;
@@ -111,17 +112,58 @@ export default function BusinessTypeBenefits() {
     return Object.values(byType).sort((a, b) => a.name.localeCompare(b.name));
   };
 
+  // Adapt non-admin map response { name: { freePlan, paidPlan } } to table rows
+  const adaptMapToRows = (mapObj) => {
+    const rows = [];
+    for (const [name, plans] of Object.entries(mapObj || {})) {
+      rows.push({
+        id: name, // No numeric ID available here; treat name as key in read-only mode
+        name,
+        free: {
+          responsesPerMonth: plans?.freePlan?.responsesPerMonth ?? 3,
+          contactRevealed: !!plans?.freePlan?.contactRevealed,
+          canMessageRequester: !!plans?.freePlan?.canMessageRequester,
+          respondButtonEnabled: plans?.freePlan?.respondButtonEnabled !== false,
+          instantNotifications: !!plans?.freePlan?.instantNotifications,
+          priorityInSearch: !!plans?.freePlan?.priorityInSearch,
+        },
+        paid: {
+          responsesPerMonth: plans?.paidPlan?.responsesPerMonth ?? -1,
+          contactRevealed: !!plans?.paidPlan?.contactRevealed,
+          canMessageRequester: !!plans?.paidPlan?.canMessageRequester,
+          respondButtonEnabled: plans?.paidPlan?.respondButtonEnabled !== false,
+          instantNotifications: !!plans?.paidPlan?.instantNotifications,
+          priorityInSearch: !!plans?.paidPlan?.priorityInSearch,
+        },
+      });
+    }
+    return rows.sort((a, b) => a.name.localeCompare(b.name));
+  };
+
   const loadBenefits = async () => {
     if (!selectedCountry) return;
     try {
       setLoading(true);
       const countryIdParam = await resolveCountryIdParam(selectedCountry);
-      const { data } = await api.get(`/business-type-benefits/admin/${countryIdParam}`);
-      if (data?.success) {
-        const rows = data.benefits || data.data || [];
-        setBenefits(groupAdminRows(rows));
-      } else {
-        setSnackbar({ open: true, message: data?.message || 'Failed to fetch benefits', severity: 'error' });
+      setReadOnly(false);
+      try {
+        const { data } = await api.get(`/business-type-benefits/admin/${countryIdParam}`);
+        if (data?.success) {
+          const rows = data.benefits || data.data || [];
+          setBenefits(groupAdminRows(rows));
+        } else {
+          throw new Error(data?.message || 'Failed to fetch admin benefits');
+        }
+      } catch (err) {
+        // Fallback to non-admin endpoint (read-only)
+        const { data: fb } = await api.get(`/business-type-benefits/${countryIdParam}`);
+        if (fb?.success && fb?.businessTypeBenefits) {
+          setBenefits(adaptMapToRows(fb.businessTypeBenefits));
+          setReadOnly(true);
+          setSnackbar({ open: true, message: 'Admin endpoint not found; showing read-only data', severity: 'warning' });
+        } else {
+          throw err;
+        }
       }
     } catch (e) {
       console.error('Failed to fetch benefits', e);
@@ -146,6 +188,10 @@ export default function BusinessTypeBenefits() {
 
   const savePlan = async (btId, plan) => {
     try {
+      if (readOnly) {
+        setSnackbar({ open: true, message: 'Backend lacks admin endpoints. Please deploy the latest backend to enable editing.', severity: 'warning' });
+        return;
+      }
       setSaving(true);
       const bt = benefits.find((b) => b.id === btId);
       const payload = bt[plan];
@@ -187,7 +233,7 @@ export default function BusinessTypeBenefits() {
       </Box>
 
       <Paper sx={{ p: 2 }}>
-        {loading ? (
+  {loading ? (
           <Box display="flex" justifyContent="center" py={6}><CircularProgress /></Box>
         ) : (
           <Table size="small">
@@ -255,8 +301,8 @@ export default function BusinessTypeBenefits() {
 
                   <TableCell align="right">
                     <Box display="flex" gap={1}>
-                      <Button variant="outlined" size="small" startIcon={<SaveIcon />} disabled={saving} onClick={() => savePlan(b.id, 'free')}>Save Free</Button>
-                      <Button variant="contained" size="small" startIcon={<SaveIcon />} disabled={saving} onClick={() => savePlan(b.id, 'paid')}>Save Paid</Button>
+                      <Button variant="outlined" size="small" startIcon={<SaveIcon />} disabled={saving || readOnly || typeof b.id !== 'number'} onClick={() => savePlan(b.id, 'free')}>Save Free</Button>
+                      <Button variant="contained" size="small" startIcon={<SaveIcon />} disabled={saving || readOnly || typeof b.id !== 'number'} onClick={() => savePlan(b.id, 'paid')}>Save Paid</Button>
                     </Box>
                   </TableCell>
                 </TableRow>
@@ -267,9 +313,15 @@ export default function BusinessTypeBenefits() {
       </Paper>
 
       <Box mt={2}>
-        <Alert severity="info">
-          Use -1 for "Unlimited responses". Other fields are boolean toggles.
-        </Alert>
+        {!readOnly ? (
+          <Alert severity="info">
+            Use -1 for "Unlimited responses". Other fields are boolean toggles.
+          </Alert>
+        ) : (
+          <Alert severity="warning">
+            Read-only mode: The EC2 backend doesn’t expose admin endpoints for Business Type Benefits yet. Deploy the latest backend to enable editing.
+          </Alert>
+        )}
       </Box>
 
       <Snackbar
