@@ -187,14 +187,13 @@ router.get('/admin/:countryId', async (req, res) => {
         SELECT 
           btb.*,
           bt.name as business_type_name,
-          c.name as country_name,
-          creator.username as created_by_username,
-          updater.username as updated_by_username
+          c.name as country_name
         FROM business_type_benefits btb
         JOIN business_types bt ON btb.business_type_id = bt.id
         JOIN countries c ON btb.country_id = c.id
-        LEFT JOIN users creator ON btb.created_by = creator.id
-        LEFT JOIN users updater ON btb.updated_by = updater.id
+        /* Handle mixed integer/uuid user id types by casting to text for join */
+        LEFT JOIN users creator ON CAST(btb.created_by AS TEXT) = CAST(creator.id AS TEXT)
+        LEFT JOIN users updater ON CAST(btb.updated_by AS TEXT) = CAST(updater.id AS TEXT)
         WHERE btb.country_id = $1
         ORDER BY bt.name, btb.plan_type
       `, [resolvedId]);

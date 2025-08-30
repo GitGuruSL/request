@@ -1,0 +1,63 @@
+name: Backend Build and Push (Production)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-build-push-prod.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    name: Build and Push Docker Image (Production)
+    runs-on: ubuntu-latest
+    concurrency:
+      group: backend-build-prod-${{ github.ref }}
+      cancel-in-progress: false
+    env:
+      GHCR_USER: ${{ secrets.GHCR_USER }}
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare lowercase owner
+        id: vars
+        run: echo "owner_lower=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR (with GHCR_USER/TOKEN if provided)
+        if: ${{ env.GHCR_USER != '' && env.GHCR_TOKEN != '' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ env.GHCR_USER }}
+          password: ${{ env.GHCR_TOKEN }}
+
+      - name: Log in to GHCR (fallback to GITHUB_TOKEN)
+        if: ${{ env.GHCR_USER == '' || env.GHCR_TOKEN == '' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          provenance: false
+          sbom: false
+          tags: |
+            ghcr.io/${{ steps.vars.outputs.owner_lower }}/request-backend:latest
+            ghcr.io/${{ steps.vars.outputs.owner_lower }}/request-backend:${{ github.sha }}
+          cache-from: type=registry,ref=ghcr.io/${{ steps.vars.outputs.owner_lower }}/request-backend:buildcache
+          cache-to: type=registry,ref=ghcr.io/${{ steps.vars.outputs.owner_lower }}/request-backend:buildcache,mode=max
