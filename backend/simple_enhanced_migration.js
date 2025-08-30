@@ -33,15 +33,15 @@ async function createEnhancedBenefitsTable() {
       (country_id, business_type_id, plan_code, plan_name, pricing_model, features, pricing, allowed_response_types)
       SELECT 
         1,
-        id,
+        bt.id,
         'free',
         'Free Plan',
         'response_based',
         '{"responses_per_month": 3, "contact_revealed": false, "can_message_requester": false}',
         '{"monthly_fee": 0}',
         '["quick_quote", "standard"]'
-      FROM business_types
-      WHERE name IN ('Product Seller', 'Delivery', 'Tours', 'Events')
+      FROM business_types bt
+      WHERE bt.name IN ('Product Seller', 'Delivery', 'Tours', 'Events')
       ON CONFLICT (country_id, business_type_id, plan_code) DO NOTHING;
     `);
     
@@ -50,15 +50,15 @@ async function createEnhancedBenefitsTable() {
       (country_id, business_type_id, plan_code, plan_name, pricing_model, features, pricing, allowed_response_types)
       SELECT 
         1,
-        id,
+        bt.id,
         'pay_per_click',
         'Pay Per Click',
         'pay_per_click',
         '{"cost_per_click": 50, "click_tracking": true}',
         '{"cost_per_click": 50}',
         '["product_listing"]'
-      FROM business_types
-      WHERE name = 'Product Seller'
+      FROM business_types bt
+      WHERE bt.name = 'Product Seller'
       ON CONFLICT (country_id, business_type_id, plan_code) DO NOTHING;
     `);
     
@@ -67,15 +67,15 @@ async function createEnhancedBenefitsTable() {
       (country_id, business_type_id, plan_code, plan_name, pricing_model, features, pricing, allowed_response_types)
       SELECT 
         1,
-        id,
+        bt.id,
         'monthly_pricing',
         'Monthly Product Pricing',
         'monthly_subscription',
         '{"product_listing_limit": 100, "featured_products": 5}',
         '{"monthly_fee": 2500}',
         '["product_listing", "featured"]'
-      FROM business_types
-      WHERE name = 'Product Seller'
+      FROM business_types bt
+      WHERE bt.name = 'Product Seller'
       ON CONFLICT (country_id, business_type_id, plan_code) DO NOTHING;
     `);
     
@@ -84,15 +84,15 @@ async function createEnhancedBenefitsTable() {
       (country_id, business_type_id, plan_code, plan_name, pricing_model, features, pricing, allowed_response_types)
       SELECT 
         1,
-        id,
+        bt.id,
         'bundle',
         'Bundle: Pricing + Unlimited Responses',
         'bundle',
         '{"product_listing_limit": -1, "responses_per_month": -1, "contact_revealed": true, "priority_support": true}',
         '{"monthly_fee": 5000}',
         '["product_listing", "featured", "quick_quote", "standard", "premium"]'
-      FROM business_types
-      WHERE name = 'Product Seller'
+      FROM business_types bt
+      WHERE bt.name = 'Product Seller'
       ON CONFLICT (country_id, business_type_id, plan_code) DO NOTHING;
     `);
     
