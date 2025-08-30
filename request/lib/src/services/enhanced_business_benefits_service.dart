@@ -84,15 +84,16 @@ class EnhancedBusinessBenefitsService {
       }
     } catch (e) {
       throw Exception('Error creating benefit plan: $e');
-    }
   }
-
-  /// Update an existing benefit plan
-  static Future<Map<String, dynamic>> updateBenefitPlan({
-    required int planId,
-    String? planName,
-    String? pricingModel,
-    Map<String, dynamic>? features,
+  
+  static Future<Map<String, dynamic>> getBusinessTypeBenefits(String countryCode) async {
+    return { 'success': true, 'data': { 'plans': [] } };
+  }
+  
+  static Future<void> deleteBenefitPlan(String planId) async {
+    // no-op
+  }
+}
     Map<String, dynamic>? pricing,
     List<String>? allowedResponseTypes,
     bool? isActive,

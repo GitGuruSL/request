@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/enhanced_user_service.dart';
 import '../services/country_service.dart';
-import '../services/enhanced_business_benefits_service.dart';
-import '../models/enhanced_business_benefits.dart';
+// Removed: enhanced business benefits integration
 import '../theme/app_theme.dart';
 import '../theme/glass_theme.dart';
 import 'package:image_picker/image_picker.dart';
@@ -38,8 +37,8 @@ class _BusinessRegistrationScreenState
   List<dynamic> _businessTypes = [];
   String? _selectedBusinessTypeGlobalId;
 
-  // Enhanced business benefits data
-  List<EnhancedBenefitPlan> _enhancedBenefitPlans = [];
+  // Enhanced business benefits disabled
+  final List _enhancedBenefitPlans = [];
   bool _isLoadingBenefits = false;
 
   // Method to load business type benefits from Enhanced API
@@ -51,27 +50,8 @@ class _BusinessRegistrationScreenState
     });
 
     try {
-      // Get business type ID from global ID (assuming it's the same or we need mapping)
-      int businessTypeId = int.tryParse(_selectedBusinessTypeGlobalId!) ?? 1;
-
-      final response =
-          await EnhancedBusinessBenefitsService.getBusinessTypePlans(
-        'LK', // Default to Sri Lanka
-        businessTypeId,
-      );
-
-      if (response['success'] == true && response['data'] != null) {
-        final businessTypeBenefits =
-            BusinessTypeBenefits.fromJson(response['data']);
-        setState(() {
-          _enhancedBenefitPlans = businessTypeBenefits.plans;
-        });
-      }
-    } catch (e) {
-      print('Error loading enhanced business benefits: $e');
-      setState(() {
-        _enhancedBenefitPlans = [];
-      });
+      // Disabled: no-op
+      _enhancedBenefitPlans.clear();
     } finally {
       setState(() {
         _isLoadingBenefits = false;
@@ -239,7 +219,7 @@ class _BusinessRegistrationScreenState
     );
   }
 
-  Widget _buildEnhancedPlanCard(EnhancedBenefitPlan plan, bool isLast) {
+  Widget _buildEnhancedPlanCard(dynamic plan, bool isLast) {
     Color planColor = _getPlanColor(plan.pricingModel);
 
     return Container(
@@ -293,7 +273,7 @@ class _BusinessRegistrationScreenState
     );
   }
 
-  Widget _buildPricingChip(EnhancedBenefitPlan plan, Color color) {
+  Widget _buildPricingChip(dynamic plan, Color color) {
     String pricingText = _getPricingText(plan);
 
     return Container(
@@ -313,7 +293,7 @@ class _BusinessRegistrationScreenState
     );
   }
 
-  String _getPricingText(EnhancedBenefitPlan plan) {
+  String _getPricingText(dynamic plan) {
     final currency = plan.currency;
 
     switch (plan.pricingModel) {

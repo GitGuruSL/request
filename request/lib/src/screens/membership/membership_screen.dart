@@ -119,7 +119,8 @@ class _MembershipScreenState extends State<MembershipScreen> {
                     onPressed: () {
                       // Removed: enhanced-business-benefits route
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Benefits are not available.')),
+                        const SnackBar(
+                            content: Text('Benefits are not available.')),
                       );
                     },
                     style: OutlinedButton.styleFrom(
