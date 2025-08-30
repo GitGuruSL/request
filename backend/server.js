@@ -114,6 +114,7 @@ const businessVerificationRoutes = require('./routes/business-verifications-simp
 const businessCategoriesRoutes = require('./routes/business-categories'); // NEW - Business categories management
 
 const businessTypesRoutes = require('./routes/business-types'); // NEW - Admin business types management
+const subscriptionsRoutes = require('./routes/subscriptions'); // NEW - Subscription management
 
 const businessRegistrationFormRoutes = require('./routes/business-registration-form'); // NEW - Business registration form data
 
@@ -479,6 +480,7 @@ app.use('/api/business-verifications', businessVerificationRoutes); // NEW - Bus
 app.use('/api/business-categories', businessCategoriesRoutes); // NEW - Business categories management
 
 app.use('/api/business-types', businessTypesRoutes); // NEW - Admin business types management
+app.use('/api/subscriptions', subscriptionsRoutes); // NEW - Subscription management
 
 app.use('/api/business-registration', businessRegistrationFormRoutes); // NEW - Business registration form data
 

@@ -179,8 +179,8 @@ const Layout = () => {
     { text: 'Brands', icon: <BrandingWatermark />, path: '/country-brands', access: 'country_admin', permission: 'countryBrandManagement' },
     { text: 'Variable Types', icon: <Tune />, path: '/country-variable-types', access: 'country_admin', permission: 'countryVariableTypeManagement' },
     { text: 'Divider' },
-    { text: 'Users', icon: <Person />, path: '/users', access: 'all', permission: 'userManagement' },
-  // Removed: Subscriptions
+  { text: 'Users', icon: <Person />, path: '/users', access: 'all', permission: 'userManagement' },
+  { text: 'Subscription Management', icon: <PriceCheck />, path: '/subscription-management', access: 'all' },
     { text: 'Promo Codes', icon: <LocalOffer />, path: '/promo-codes', access: 'all', permission: 'promoCodeManagement' },
     { text: 'Page Management', icon: <Article />, path: '/pages', access: 'all', permission: 'countryPageManagement' },
     { text: 'Global Pages', icon: <Public />, path: '/centralized-pages', access: 'super_admin' },

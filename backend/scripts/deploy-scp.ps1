@@ -36,14 +36,15 @@ Write-Host "[SCP] Uploading $tgz to ${remote}:/tmp/request-backend.tgz"
 & scp @scpKeyArg "$tgz" "${remote}:/tmp/request-backend.tgz"
 if ($LASTEXITCODE -ne 0) { Write-Error "scp failed ($LASTEXITCODE)"; exit $LASTEXITCODE }
 
-$remoteScript = @"
+$remoteScript = @'
 set -e
-echo "[Remote] Ensure app path: $Path"
-sudo mkdir -p "$Path"
+
+echo "[Remote] Ensure app path: ${APP_PATH}"
+sudo mkdir -p "${APP_PATH}"
 echo "[Remote] Extracting archive"
-if [ "$Mirror" = "True" ] || [ "$Mirror" = "true" ]; then
+if [ "${MIRROR}" = "True" ] || [ "${MIRROR}" = "true" ]; then
   echo "[Remote] Mirror mode: cleaning stale files (preserving env, uploads, node_modules, deploy)"
-  for f in "$Path"/*; do
+  for f in "${APP_PATH}"/*; do
     bn="$(basename "$f")"
     case " $bn " in
       ' .env '|' .env.rds '|' production.env '|' uploads '|' node_modules '|' deploy ')
@@ -53,10 +54,10 @@ if [ "$Mirror" = "True" ] || [ "$Mirror" = "true" ]; then
     esac
   done
 fi
-sudo tar -xzf /tmp/request-backend.tgz -C "$Path" --strip-components=1
-cd "$Path"
+sudo tar -xzf /tmp/request-backend.tgz -C "${APP_PATH}" --strip-components=1
+cd "${APP_PATH}"
 echo "[Remote] Fixing permissions"
-sudo chown -R `$USER:`$USER "$Path"
+sudo chown -R "$USER":"$USER" "${APP_PATH}"
 echo "[Remote] Installing Node if missing"
 if ! command -v node >/dev/null 2>&1; then
   if command -v apt-get >/dev/null 2>&1; then
@@ -66,24 +67,31 @@ if ! command -v node >/dev/null 2>&1; then
   fi
 fi
 echo "[Remote] Installing production deps"
-npm ci --only=production || npm install --omit=dev
-echo "[Remote] Restarting with PM2 ($Pm2)"
+# Clean potentially root-owned node_modules to avoid EACCES issues
+if [ -d node_modules ]; then
+  echo "[Remote] Removing existing node_modules to avoid permission issues"
+  sudo rm -rf node_modules
+fi
+# Prefer modern omit=dev flag
+npm ci --omit=dev || npm install --omit=dev
+echo "[Remote] Restarting with PM2 (${PM2_NAME})"
 if command -v pm2 >/dev/null 2>&1; then
-  pm2 describe "$Pm2" >/dev/null 2>&1 && pm2 reload "$Pm2" || pm2 start server.js --name "$Pm2"
+  pm2 describe "${PM2_NAME}" >/dev/null 2>&1 && pm2 reload "${PM2_NAME}" || pm2 start server.js --name "${PM2_NAME}"
   pm2 save || true
 else
-  npx pm2 describe "$Pm2" >/dev/null 2>&1 && npx pm2 reload "$Pm2" || npx pm2 start server.js --name "$Pm2"
+  npx pm2 describe "${PM2_NAME}" >/dev/null 2>&1 && npx pm2 reload "${PM2_NAME}" || npx pm2 start server.js --name "${PM2_NAME}"
   npx pm2 save || true
 fi
 echo "[Remote] Done. Health (if bound): curl -fsS http://127.0.0.1:3001/health || true"
-"@
+'@
 
 Write-Host "[SCP] Running remote update via SSH"
 # Normalize to LF and send as base64 to avoid CRLF parsing issues on remote
 $remoteScriptLF = $remoteScript -replace "`r?`n","`n"
 $bytes = [System.Text.Encoding]::UTF8.GetBytes($remoteScriptLF)
 $b64 = [Convert]::ToBase64String($bytes)
-$exec = "echo $b64 | base64 -d > /tmp/request-deploy.sh && chmod +x /tmp/request-deploy.sh && bash /tmp/request-deploy.sh"
+$envAssign = "APP_PATH='${Path}' PM2_NAME='${Pm2}' MIRROR='${($Mirror.IsPresent)}'"
+$exec = "echo $b64 | base64 -d > /tmp/request-deploy.sh && chmod +x /tmp/request-deploy.sh && $envAssign bash /tmp/request-deploy.sh"
 & ssh @sshKeyArg "$remote" "$exec"
 if ($LASTEXITCODE -ne 0) { Write-Error "ssh failed ($LASTEXITCODE)"; exit $LASTEXITCODE }
 
