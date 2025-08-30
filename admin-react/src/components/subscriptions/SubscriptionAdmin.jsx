@@ -73,8 +73,8 @@ export default function SubscriptionAdmin() {
 
   async function loadBusinessTypes(cc) {
     try {
-      const { data } = await apiClient.get('/api/business-types/admin', { params: { country_code: cc } });
-      setBusinessTypes((data?.data) || []);
+      const { data } = await apiClient.get('/api/subscriptions/business-types', { params: { country_code: cc } });
+      setBusinessTypes(data || []);
     } catch (e) {
       console.error('Load business types failed', e);
     }

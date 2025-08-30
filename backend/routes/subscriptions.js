@@ -167,4 +167,37 @@ router.post('/mappings', auth.authMiddleware(), async (req, res) => {
   }
 });
 
+// Lightweight business types list for subscription mapping (country_admin/super_admin)
+router.get('/business-types', auth.authMiddleware(), async (req, res) => {
+  try {
+    if (!isCountryAdmin(req.user) && !isSuperAdmin(req.user)) return res.status(403).json({ error: 'Forbidden' });
+    const requested = (req.query.country_code || '').toUpperCase();
+    const country = isSuperAdmin(req.user) ? (requested || null) : (req.user.country_code || null);
+
+    // Detect if country_business_types exists
+    const exists = await database.query(`
+      SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='country_business_types'
+    `);
+    if (exists.rows.length > 0) {
+      const params = [];
+      let sql = `SELECT id, name FROM country_business_types WHERE is_active = TRUE`;
+      if (country) { sql += ` AND country_code = $1`; params.push(country); }
+      sql += ` ORDER BY display_order, name`;
+      const { rows } = await database.query(sql, params);
+      return res.json(rows);
+    }
+
+    // Fallback to legacy business_types
+    const params = [];
+    let sql = `SELECT id, name FROM business_types WHERE is_active = TRUE`;
+    if (country) { sql += ` AND country_code = $1`; params.push(country); }
+    sql += ` ORDER BY display_order, name`;
+    const { rows } = await database.query(sql, params);
+    return res.json(rows);
+  } catch (err) {
+    console.error('GET /business-types error', err);
+    res.status(500).json({ error: 'Internal error' });
+  }
+});
+
 module.exports = router;
