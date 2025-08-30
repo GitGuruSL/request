@@ -14,38 +14,21 @@ async function getEntitlements(userId, role, now = new Date()) {
   const client = await pool.connect();
   try {
     const yearMonth = ym(now);
-    // Audience based on role only now
     const audience = role === 'business' ? 'business' : 'normal';
 
-    // Active subscription?
-    const subRes = await client.query(`
-      SELECT us.*, sp.type AS plan_user_type, sp.plan_type
-      FROM user_subscriptions us
-      JOIN subscription_plans_new sp ON sp.id = us.plan_id
-      WHERE us.user_id = $1 AND us.status IN ('active','trialing','past_due')
-      ORDER BY COALESCE(us.next_renewal_at, us.ends_at) DESC NULLS LAST, us.created_at DESC
-      LIMIT 1
-    `, [userId]);
-    const subscription = subRes.rows[0] || null;
+    // Subscriptions removed: always assume no active subscription
+    const subscription = null;
     const usageRes = await client.query(
       'SELECT response_count FROM usage_monthly WHERE user_id = $1 AND year_month = $2',
       [userId, yearMonth]
     );
-  const responseCount = usageRes.rows[0]?.response_count || 0;
-  // Static free limits: everyone gets 3 responses until they subscribe
-  // (Product seller flow is independent of responses)
-  const freeLimit = 3;
-  const canUnlimited = !!subscription; // unlimited only when subscribed
-
-  // If subscribed, enable contact + notifications and high limits
-  let canViewContact = canUnlimited || responseCount < freeLimit;
+    const responseCount = usageRes.rows[0]?.response_count || 0;
+    const freeLimit = 3;
+    let canViewContact = responseCount < freeLimit;
     let canMessage = canViewContact;
-    if (subscription) {
-      canViewContact = true;
-      canMessage = true;
-    }
+
     return {
-      isSubscribed: !!subscription,
+      isSubscribed: false,
       audience,
       responseCountThisMonth: responseCount,
       canViewContact,

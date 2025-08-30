@@ -75,42 +75,23 @@ class SubscriptionServiceApi {
     String type = 'user_response', // 'user_response' or 'product_seller'
     bool activeOnly = true,
   }) async {
-    // Use new subscription management endpoints
-    final endpoint = type == 'user_response'
-        ? '/api/subscription-management/user-response-plans'
-        : '/api/subscription-management/product-seller-plans';
-
-    final qp = <String, String>{};
-    if (activeOnly) qp['active'] = 'true';
-
-    final res =
-        await _api.get<Map<String, dynamic>>(endpoint, queryParameters: qp);
-    if (res.isSuccess && res.data != null) {
-      final list = (res.data!['data'] as List?) ?? [];
-      return list
-          .map(
-              (e) => SubscriptionPlan.fromJson(e as Map<String, dynamic>, type))
-          .toList();
-    }
+    // Subscriptions removed
     return [];
   }
 
   Future<List<SubscriptionPlan>> fetchUserResponsePlans(
       {bool activeOnly = true}) async {
-    return fetchPlans(type: 'user_response', activeOnly: activeOnly);
+    return [];
   }
 
   Future<List<SubscriptionPlan>> fetchProductSellerPlans(
       {bool activeOnly = true}) async {
-    return fetchPlans(type: 'product_seller', activeOnly: activeOnly);
+    return [];
   }
 
   Future<Map<String, dynamic>?> getMySubscription() async {
-    final res = await _api.get<Map<String, dynamic>>('/api/subscriptions/me');
-    if (res.isSuccess && res.data != null) {
-      return res.data!['data'] as Map<String, dynamic>?;
-    }
-    return null;
+    // Subscriptions removed
+    return {'hasSubscription': false};
   }
 
   Future<Map<String, dynamic>?> createSubscription({
@@ -118,36 +99,14 @@ class SubscriptionServiceApi {
     required String countryCode,
     String? promoCode,
   }) async {
-    final data = <String, dynamic>{
-      'plan_id': planId,
-      'country_code': countryCode,
-      if (promoCode != null && promoCode.isNotEmpty) 'promo_code': promoCode,
-    };
-    final res = await _api.post<Map<String, dynamic>>(
-      '/api/subscriptions',
-      data: data,
-    );
-    if (res.isSuccess && res.data != null) {
-      return res.data!['data'] as Map<String, dynamic>?;
-    }
-    return null;
+    return {'success': false, 'error': 'disabled'};
   }
 
   Future<Map<String, dynamic>?> checkoutSubscription({
     required String subscriptionId,
     String? provider,
   }) async {
-    final res = await _api.post<Map<String, dynamic>>(
-      '/api/payments/checkout-subscription',
-      data: {
-        'subscription_id': subscriptionId,
-        if (provider != null) 'provider': provider,
-      },
-    );
-    if (res.isSuccess && res.data != null) {
-      return res.data!['data'] as Map<String, dynamic>?;
-    }
-    return null;
+    return {'success': false, 'error': 'disabled'};
   }
 
   Future<List<Map<String, dynamic>>> getCountryGateways(
