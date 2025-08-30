@@ -98,3 +98,9 @@ jobs:
               echo "[Smoke] Verifying health endpoint..."
               curl -fsS http://localhost:3001/health >/dev/null
               echo "[OK] /health responded successfully"
+            echo "[Migrate] Ensuring subscription mappings tables exist..."
+            if docker ps --format '{{.Names}}' | grep -q '^request-backend-container$'; then
+              docker exec request-backend-container node scripts/run-sql-migration.js migration/20250831_subscription_mappings.sql || true
+            else
+              echo "[Warn] request-backend-container not found; skipping DB migration"
+            fi
