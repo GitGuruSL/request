@@ -98,6 +98,7 @@ const modulesRoutes = require('./routes/modules'); // NEW - module management
 const adminSmsRoutes = require('./routes/admin-sms'); // NEW - SMS configuration management
 const smsConfigRoutes = require('./routes/sms-config'); // NEW - SMS config API for frontend
 const reviewsRoutes = require('./routes/reviews'); // NEW - user reviews API
+const businessTypeBenefitsRoutes = require('./routes/business-type-benefits'); // NEW - business type benefits
 const authService = require('./services/auth');
 const entitlementSvc = require('./entitlements');
 // Removed: subscriptions routes
@@ -211,6 +212,7 @@ safeUse('/api/modules', modulesRoutes, 'modulesRoutes'); // NEW - module managem
 safeUse('/api/admin', adminSmsRoutes, 'adminSmsRoutes'); // NEW - SMS configuration management
 safeUse('/api/sms', smsConfigRoutes, 'smsConfigRoutes'); // NEW - SMS config API for frontend
 safeUse('/api/reviews', reviewsRoutes, 'reviewsRoutes'); // NEW - user reviews
+safeUse('/api/business-type-benefits', businessTypeBenefitsRoutes, 'businessTypeBenefitsRoutes'); // NEW - business type benefits endpoints
 // Removed: subscriptions routes mount
 // Current user entitlements (for gating in app)
 app.get('/api/me/entitlements', authService.authMiddleware(), async (req, res) => {
