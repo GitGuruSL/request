@@ -161,8 +161,7 @@ const Layout = () => {
     { text: 'Businesses', icon: <Business />, path: '/businesses', access: 'all', permission: 'businessManagement' },
     { text: 'Global Business Types', icon: <BusinessCenter />, path: '/business-types', access: 'super_admin', permission: 'businessManagement' },
   { text: 'Business Types', icon: <BusinessCenter />, path: '/country-business-types', access: 'country_admin', permission: 'countryBusinessTypeManagement' },
-  { text: 'Business Type Benefits', icon: <PriceCheck />, path: '/business-type-benefits', access: 'all', permission: 'countryBusinessTypeManagement' },
-  { text: 'Enhanced Business Benefits', icon: <StoreMallDirectory />, path: '/enhanced-business-benefits', access: 'all', permission: 'countryBusinessTypeManagement' },
+  // Removed: Business Type Benefits and Enhanced Business Benefits
     { text: 'Drivers', icon: <Gavel />, path: '/driver-verification', access: 'all', permission: 'driverVerification' },
     { text: 'Divider' },
     { text: 'Vehicle Types', icon: <Settings />, path: '/vehicles', access: 'super_admin', permission: 'vehicleManagement' },
@@ -181,7 +180,7 @@ const Layout = () => {
     { text: 'Variable Types', icon: <Tune />, path: '/country-variable-types', access: 'country_admin', permission: 'countryVariableTypeManagement' },
     { text: 'Divider' },
     { text: 'Users', icon: <Person />, path: '/users', access: 'all', permission: 'userManagement' },
-  { text: 'Subscriptions', icon: <PriceCheck />, path: '/subscriptions', access: 'all', permission: 'subscriptionManagement' },
+  // Removed: Subscriptions
     { text: 'Promo Codes', icon: <LocalOffer />, path: '/promo-codes', access: 'all', permission: 'promoCodeManagement' },
     { text: 'Page Management', icon: <Article />, path: '/pages', access: 'all', permission: 'countryPageManagement' },
     { text: 'Global Pages', icon: <Public />, path: '/centralized-pages', access: 'super_admin' },

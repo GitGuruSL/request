@@ -46,9 +46,7 @@ import DebugAuth from './components/DebugAuth';
 import BusinessPriceManagement from './pages/BusinessPriceManagement';
 import PriceComparisonPage from './pages/PriceComparisonPage';
 import BannersModule from './pages/BannersModule.jsx';
-import SubscriptionManagement from './pages/SubscriptionManagement.jsx';
-import BusinessTypeBenefits from './pages/BusinessTypeBenefits.jsx';
-import EnhancedBusinessBenefitsManagement from './components/enhanced-business-benefits/EnhancedBusinessBenefitsManagement.jsx';
+// Removed: SubscriptionManagement, BusinessTypeBenefits, EnhancedBusinessBenefitsManagement
 
 const theme = createTheme({
   palette: {
@@ -108,7 +106,7 @@ function App() {
               <Route path="requests" element={<RequestsModule />} />
               <Route path="responses" element={<ResponsesModule />} />
               <Route path="price-listings" element={<PriceListingsModule />} />
-              <Route path="subscriptions" element={<SubscriptionManagement />} />
+              {/* Removed: Subscriptions admin */}
               <Route path="promo-codes" element={<PromoCodes />} />
               <Route path="pages" element={<PagesModule />} />
               <Route path="centralized-pages" element={<CentralizedPagesModule />} />
@@ -130,8 +128,7 @@ function App() {
               {/* Price Management Routes */}
               <Route path="business-price-management" element={<BusinessPriceManagement />} />
               <Route path="price-comparison" element={<PriceComparisonPage />} />
-              <Route path="business-type-benefits" element={<BusinessTypeBenefits />} />
-              <Route path="enhanced-business-benefits" element={<EnhancedBusinessBenefitsManagement />} />
+              {/* Removed: business-type-benefits and enhanced-business-benefits routes */}
             </Route>
           </Routes>
         </Router>

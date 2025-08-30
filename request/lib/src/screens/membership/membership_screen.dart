@@ -117,8 +117,10 @@ class _MembershipScreenState extends State<MembershipScreen> {
                   width: double.infinity,
                   child: OutlinedButton(
                     onPressed: () {
-                      Navigator.pushNamed(
-                          context, '/enhanced-business-benefits');
+                      // Removed: enhanced-business-benefits route
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Benefits are not available.')),
+                      );
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFF5A6B7A),

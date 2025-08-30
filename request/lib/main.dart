@@ -33,7 +33,7 @@ import 'src/services/notification_service.dart';
 import 'src/services/notification_center.dart';
 // Removed: subscription screen
 import 'src/screens/membership/membership_screen.dart';
-import 'src/screens/membership/enhanced_business_benefits_screen.dart';
+// Removed: Enhanced Business Benefits screen
 import 'src/screens/role_management_screen.dart';
 import 'src/screens/role_registration_screen.dart';
 
@@ -225,10 +225,7 @@ class MyApp extends StatelessWidget {
                 promptOnboarding: args?['promptOnboarding'] == true,
               ),
             );
-          case '/enhanced-business-benefits':
-            return MaterialPageRoute(
-              builder: (context) => const EnhancedBusinessBenefitsScreen(),
-            );
+          // Removed: /enhanced-business-benefits route
           case '/role-registration':
             final args = settings.arguments as Map<String, dynamic>?;
             return MaterialPageRoute(
