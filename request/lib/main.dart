@@ -33,6 +33,7 @@ import 'src/services/notification_service.dart';
 import 'src/services/notification_center.dart';
 // Removed: subscription screen
 import 'src/screens/membership/membership_screen.dart';
+import 'src/screens/role_management_screen.dart';
 import 'src/screens/role_registration_screen.dart';
 
 void main() async {
@@ -183,11 +184,8 @@ class MyApp extends StatelessWidget {
               builder: (context) => const DriverVerificationScreen(),
             );
           case '/role-management':
-            // Legacy route: redirect to membership onboarding flow
             return MaterialPageRoute(
-              builder: (context) => const MembershipScreen(
-                promptOnboarding: true,
-              ),
+              builder: (context) => const RoleManagementScreen(),
             );
           case '/main-dashboard':
           case '/home':
@@ -224,10 +222,6 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(
               builder: (context) => MembershipScreen(
                 promptOnboarding: args?['promptOnboarding'] == true,
-                requiredSubscriptionType:
-                    args?['requiredSubscriptionType'] as String?,
-                isProductSellerRequired:
-                    args?['isProductSellerRequired'] == true,
               ),
             );
           case '/role-registration':
