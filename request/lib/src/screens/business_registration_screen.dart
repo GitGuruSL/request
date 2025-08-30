@@ -40,14 +40,14 @@ class _BusinessRegistrationScreenState
 
   // Enhanced business benefits data
   List<EnhancedBenefitPlan> _enhancedBenefitPlans = [];
-  bool _loadingBenefits = false;
+  bool _isLoadingBenefits = false;
 
   // Method to load business type benefits from Enhanced API
   Future<void> _loadBusinessTypeBenefits() async {
     if (_selectedBusinessTypeGlobalId == null) return;
 
     setState(() {
-      _loadingBenefits = true;
+      _isLoadingBenefits = true;
     });
 
     try {
@@ -74,7 +74,7 @@ class _BusinessRegistrationScreenState
       });
     } finally {
       setState(() {
-        _loadingBenefits = false;
+        _isLoadingBenefits = false;
       });
     }
   }
@@ -86,7 +86,7 @@ class _BusinessRegistrationScreenState
   Widget _buildBusinessTypeBenefitsCard() {
     if (_selectedBusinessTypeName == null) return const SizedBox.shrink();
 
-    if (_loadingBenefits) {
+    if (_isLoadingBenefits) {
       return Container(
         margin: const EdgeInsets.only(bottom: 20),
         padding: const EdgeInsets.all(40),

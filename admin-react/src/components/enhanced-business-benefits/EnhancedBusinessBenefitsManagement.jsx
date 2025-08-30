@@ -87,9 +87,20 @@ const EnhancedBusinessBenefitsManagement = () => {
   const loadBusinessTypes = async () => {
     try {
       const response = await api.get('/business-types');
-      setBusinessTypes(response.data || []);
+      console.log('Business types response:', response.data);
+      
+      // Ensure we always set an array
+      if (Array.isArray(response.data)) {
+        setBusinessTypes(response.data);
+      } else if (response.data && Array.isArray(response.data.data)) {
+        setBusinessTypes(response.data.data);
+      } else {
+        console.warn('Business types response is not an array:', response.data);
+        setBusinessTypes([]);
+      }
     } catch (err) {
       console.error('Failed to load business types:', err);
+      setBusinessTypes([]); // Ensure we always have an array
     }
   };
 
@@ -401,7 +412,7 @@ const EnhancedBusinessBenefitsManagement = () => {
                   value={planForm.businessTypeId}
                   onChange={(e) => setPlanForm({ ...planForm, businessTypeId: e.target.value })}
                 >
-                  {businessTypes.map(type => (
+                  {(businessTypes || []).map(type => (
                     <MenuItem key={type.id} value={type.id}>
                       {type.name}
                     </MenuItem>
