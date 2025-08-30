@@ -31,13 +31,14 @@ async function getEntitlements(userId, role, now = new Date()) {
       'SELECT response_count FROM usage_monthly WHERE user_id = $1 AND year_month = $2',
       [userId, yearMonth]
     );
-    const responseCount = usageRes.rows[0]?.response_count || 0;
-    // Static free limits (can be tuned per audience)
-    const freeLimit = audience === 'business' ? -1 : 3; // -1 means unlimited
-    const canUnlimited = freeLimit < 0;
+  const responseCount = usageRes.rows[0]?.response_count || 0;
+  // Static free limits: everyone gets 3 responses until they subscribe
+  // (Product seller flow is independent of responses)
+  const freeLimit = 3;
+  const canUnlimited = !!subscription; // unlimited only when subscribed
 
-    // If subscribed, enable contact + notifications and high limits based on country pricing or plan limitations
-    let canViewContact = canUnlimited || responseCount < freeLimit;
+  // If subscribed, enable contact + notifications and high limits
+  let canViewContact = canUnlimited || responseCount < freeLimit;
     let canMessage = canViewContact;
     if (subscription) {
       canViewContact = true;

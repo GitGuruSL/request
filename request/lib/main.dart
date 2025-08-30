@@ -33,6 +33,7 @@ import 'src/services/notification_service.dart';
 import 'src/services/notification_center.dart';
 // Removed: subscription screen
 import 'src/screens/membership/membership_screen.dart';
+import 'src/screens/role_registration_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -227,6 +228,14 @@ class MyApp extends StatelessWidget {
                     args?['requiredSubscriptionType'] as String?,
                 isProductSellerRequired:
                     args?['isProductSellerRequired'] == true,
+              ),
+            );
+          case '/role-registration':
+            final args = settings.arguments as Map<String, dynamic>?;
+            return MaterialPageRoute(
+              builder: (context) => RoleRegistrationScreen(
+                selectedRole: args?['selectedRole'] ?? 'business',
+                professionalArea: args?['professionalArea'],
               ),
             );
           case '/onboarding/membership':

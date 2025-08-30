@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/subscription_service.dart';
 import '../../services/country_service.dart';
 import '../../theme/glass_theme.dart';
+import '../../services/role_benefits_service.dart';
+import '../../services/user_registration_service.dart';
 import '../../theme/app_theme.dart';
 
 class MembershipScreen extends StatefulWidget {
@@ -37,6 +39,10 @@ class _MembershipScreenState extends State<MembershipScreen> {
   String? _selectedRole; // general | driver | delivery | professional
   String?
       _selectedProfessionalArea; // tour | event | construction | education | hiring
+  bool _showFirstTimeIntro = false; // show intro card when first arriving
+  List<String> _roleBenefits = const [];
+  SubscriptionPlan?
+      _deferredPaidPlan; // plan to activate after registration approval
 
   @override
   void initState() {
@@ -66,6 +72,11 @@ class _MembershipScreenState extends State<MembershipScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
+      // Determine if we should show the first-time intro prompt
+      final prefs = await SharedPreferences.getInstance();
+      final hasSeenIntro = prefs.getBool('membership_intro_seen') == true;
+      _showFirstTimeIntro = !hasSeenIntro && (widget.promptOnboarding);
+
       final userPlans = await _api.fetchUserResponsePlans(activeOnly: true);
       final productPlans = await _api.fetchProductSellerPlans(activeOnly: true);
       final cur = await _api.getMySubscription();
@@ -328,13 +339,14 @@ class _MembershipScreenState extends State<MembershipScreen> {
   Future<bool> _maybeNavigateRoleRegistration() async {
     // After selecting a plan during onboarding, take user to role-specific registration if applicable
     if (_selectedRole == 'driver') {
-      await Navigator.pushNamed(context, '/driver-registration');
+      await Navigator.pushNamed(context, '/role-registration', arguments: {
+        'selectedRole': 'driver',
+      });
       return true;
     } else if (_selectedRole == 'delivery' ||
         _selectedRole == 'professional' ||
         _selectedRole == 'business') {
-      // Use business registration for delivery/professional/business
-      await Navigator.pushNamed(context, '/business-registration', arguments: {
+      await Navigator.pushNamed(context, '/role-registration', arguments: {
         'selectedRole': _selectedRole,
         if (_selectedProfessionalArea != null)
           'professionalArea': _selectedProfessionalArea,
@@ -376,12 +388,18 @@ class _MembershipScreenState extends State<MembershipScreen> {
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    if (isRoleSelectionStep) ...[
+                    if (_showFirstTimeIntro) ...[
+                      _buildFirstTimeIntro(),
+                    ] else if (isRoleSelectionStep) ...[
                       _buildRoleOnboarding(),
                     ] else ...[
                       if (_current != null) _buildCurrentCard(),
                       // Show tabs or context-specific header
                       _buildPlanTypeSelector(),
+                      if (_selectedRole != null) ...[
+                        const SizedBox(height: 12),
+                        _buildRoleBenefitsPanel(),
+                      ],
                       Container(
                         decoration: GlassTheme.glassContainer,
                         padding: const EdgeInsets.all(16),
@@ -417,6 +435,61 @@ class _MembershipScreenState extends State<MembershipScreen> {
                 ),
               ),
       ),
+    );
+  }
+
+  Widget _buildFirstTimeIntro() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          decoration: GlassTheme.glassContainer,
+          padding: const EdgeInsets.all(20),
+          margin: const EdgeInsets.only(bottom: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Choose your role to continue',
+                  style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: GlassTheme.colors.textPrimary)),
+              const SizedBox(height: 8),
+              Text(
+                'Membership unlocks responding, contact details, and messaging. Start with 3 free responses during registration.',
+                style: TextStyle(color: GlassTheme.colors.textSecondary),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setBool('membership_intro_seen', true);
+                        if (!mounted) return;
+                        setState(() {
+                          _showFirstTimeIntro = false;
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: GlassTheme.colors.primaryBlue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Continue'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        _buildRoleOnboarding(),
+      ],
     );
   }
 
@@ -683,6 +756,10 @@ class _MembershipScreenState extends State<MembershipScreen> {
             ),
           ),
         ],
+        if (_selectedRole != null && _roleBenefits.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _buildRoleBenefitsPanel(),
+        ],
         if (_selectedRole != null) ...[
           const SizedBox(height: 20),
           SizedBox(
@@ -733,6 +810,7 @@ class _MembershipScreenState extends State<MembershipScreen> {
               _selectedProfessionalArea = null;
             }
           });
+          _loadRoleBenefits();
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
@@ -811,6 +889,15 @@ class _MembershipScreenState extends State<MembershipScreen> {
         _planType = 'user_response';
       }
     });
+    // Fetch role-specific benefits for the selected role
+    _loadRoleBenefits();
+  }
+
+  Future<void> _loadRoleBenefits() async {
+    final role = _selectedRole ?? 'general';
+    final benefits = await RoleBenefitsService.instance.fetchRoleBenefits(role);
+    if (!mounted) return;
+    setState(() => _roleBenefits = benefits);
   }
 
   Widget _buildSpecializedCard() {
@@ -921,6 +1008,7 @@ class _MembershipScreenState extends State<MembershipScreen> {
       setState(() {
         _selectedRole = choice;
       });
+      _loadRoleBenefits();
     }
   }
 
@@ -1089,7 +1177,18 @@ class _MembershipScreenState extends State<MembershipScreen> {
           Align(
             alignment: Alignment.centerRight,
             child: ElevatedButton(
-              onPressed: _checkingOut ? null : () => _choosePlan(plan),
+              onPressed: _checkingOut
+                  ? null
+                  : () async {
+                      // If plan is paid and user has not completed/approved registration yet, let them register first
+                      if (!plan.isFree &&
+                          await _needsRegistrationBeforePayment()) {
+                        setState(() => _deferredPaidPlan = plan);
+                        await _goToRegistrationFlow();
+                        return;
+                      }
+                      await _choosePlan(plan);
+                    },
               style: ElevatedButton.styleFrom(
                 backgroundColor: GlassTheme.colors.primaryBlue,
                 foregroundColor: Colors.white,
@@ -1097,6 +1196,88 @@ class _MembershipScreenState extends State<MembershipScreen> {
               child: Text(plan.isFree ? 'Continue Free' : 'Subscribe'),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Future<bool> _needsRegistrationBeforePayment() async {
+    // For roles that require registration (driver/business-like), ensure approved before payment
+    final role = _selectedRole;
+    if (role == 'driver' ||
+        role == 'delivery' ||
+        role == 'professional' ||
+        role == 'business') {
+      final regs =
+          await UserRegistrationService.instance.getUserRegistrations();
+      if (role == 'driver') {
+        return !(regs?.isApprovedDriver == true);
+      } else {
+        return !(regs?.isApprovedBusiness == true);
+      }
+    }
+    return false;
+  }
+
+  Future<void> _goToRegistrationFlow() async {
+    if (_selectedRole == null) return;
+    await Navigator.pushNamed(context, '/role-registration', arguments: {
+      'selectedRole': _selectedRole,
+      if (_selectedProfessionalArea != null)
+        'professionalArea': _selectedProfessionalArea,
+    });
+    // After returning from registration: check approval and resume subscription if needed
+    final regs = await UserRegistrationService.instance.getUserRegistrations();
+    final approved = _selectedRole == 'driver'
+        ? (regs?.isApprovedDriver == true)
+        : (regs?.isApprovedBusiness == true);
+    if (approved && _deferredPaidPlan != null) {
+      final plan = _deferredPaidPlan!;
+      setState(() => _deferredPaidPlan = null);
+      await _choosePlan(plan);
+    } else if (!approved) {
+      // Still pending or not started: user gets 3 free responses; show nudge
+      _toast(
+          'You can use 3 free responses until your registration is approved.');
+    }
+  }
+
+  Widget _buildRoleBenefitsPanel() {
+    if (_roleBenefits.isEmpty) return const SizedBox.shrink();
+    return Container(
+      decoration: GlassTheme.glassContainer,
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.verified, color: Colors.green),
+              const SizedBox(width: 8),
+              Text('What you get',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: GlassTheme.colors.textPrimary,
+                  )),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ..._roleBenefits.map((b) => Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(top: 2.0),
+                    child: Icon(Icons.check, size: 16, color: Colors.green),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(b,
+                        style: TextStyle(color: GlassTheme.colors.textPrimary)),
+                  ),
+                ],
+              )),
         ],
       ),
     );
