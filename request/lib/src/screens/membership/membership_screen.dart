@@ -83,7 +83,7 @@ class _MembershipScreenState extends State<MembershipScreen> {
                 ),
                 const SizedBox(height: 40),
 
-                // Button
+                // Start Registration Button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -102,6 +102,37 @@ class _MembershipScreenState extends State<MembershipScreen> {
                     ),
                     child: const Text(
                       'Start Registration',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Enhanced Business Benefits Button
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pushNamed(
+                          context, '/enhanced-business-benefits');
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF5A6B7A),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      side: const BorderSide(
+                        color: Color(0xFF5A6B7A),
+                        width: 2,
+                      ),
+                    ),
+                    child: const Text(
+                      'View Business Benefits',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,

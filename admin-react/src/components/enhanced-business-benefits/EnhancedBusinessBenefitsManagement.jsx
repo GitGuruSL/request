@@ -36,7 +36,7 @@ import {
   Inventory as InventoryIcon,
   Reply as ReplyIcon,
 } from '@mui/icons-material';
-import { apiRequest } from '../../../services/api';
+import api from '../../services/apiClient';
 
 const PRICING_MODELS = [
   { value: 'pay_per_click', label: 'Pay Per Click', icon: PaymentIcon },
@@ -74,8 +74,8 @@ const EnhancedBusinessBenefitsManagement = () => {
   const loadBenefits = async () => {
     try {
       setLoading(true);
-      const response = await apiRequest('/enhanced-business-benefits/LK');
-      setBenefits(response.businessTypeBenefits || {});
+      const response = await api.get('/enhanced-business-benefits/LK');
+      setBenefits(response.data.businessTypeBenefits || {});
       setError(null);
     } catch (err) {
       setError('Failed to load business benefits: ' + err.message);
@@ -86,8 +86,8 @@ const EnhancedBusinessBenefitsManagement = () => {
 
   const loadBusinessTypes = async () => {
     try {
-      const response = await apiRequest('/business-types');
-      setBusinessTypes(response || []);
+      const response = await api.get('/business-types');
+      setBusinessTypes(response.data || []);
     } catch (err) {
       console.error('Failed to load business types:', err);
     }
@@ -95,7 +95,7 @@ const EnhancedBusinessBenefitsManagement = () => {
 
   const handleCreatePlan = async () => {
     try {
-      await apiRequest('/enhanced-business-benefits', 'POST', {
+      await api.post('/enhanced-business-benefits', {
         countryId: 'LK',
         businessTypeId: parseInt(planForm.businessTypeId),
         planCode: planForm.planCode,
@@ -116,7 +116,7 @@ const EnhancedBusinessBenefitsManagement = () => {
 
   const handleEditPlan = async () => {
     try {
-      await apiRequest(`/enhanced-business-benefits/${selectedPlan.planId}`, 'PUT', {
+      await api.put(`/enhanced-business-benefits/${selectedPlan.planId}`, {
         planName: planForm.planName,
         pricingModel: planForm.pricingModel,
         features: planForm.features,
@@ -140,7 +140,7 @@ const EnhancedBusinessBenefitsManagement = () => {
     }
 
     try {
-      await apiRequest(`/enhanced-business-benefits/${planId}`, 'DELETE');
+      await api.delete(`/enhanced-business-benefits/${planId}`);
       loadBenefits();
     } catch (err) {
       setError('Failed to delete plan: ' + err.message);

@@ -162,6 +162,7 @@ const Layout = () => {
     { text: 'Global Business Types', icon: <BusinessCenter />, path: '/business-types', access: 'super_admin', permission: 'businessManagement' },
   { text: 'Business Types', icon: <BusinessCenter />, path: '/country-business-types', access: 'country_admin', permission: 'countryBusinessTypeManagement' },
   { text: 'Business Type Benefits', icon: <PriceCheck />, path: '/business-type-benefits', access: 'all', permission: 'countryBusinessTypeManagement' },
+  { text: 'Enhanced Business Benefits', icon: <StoreMallDirectory />, path: '/enhanced-business-benefits', access: 'all', permission: 'countryBusinessTypeManagement' },
     { text: 'Drivers', icon: <Gavel />, path: '/driver-verification', access: 'all', permission: 'driverVerification' },
     { text: 'Divider' },
     { text: 'Vehicle Types', icon: <Settings />, path: '/vehicles', access: 'super_admin', permission: 'vehicleManagement' },
