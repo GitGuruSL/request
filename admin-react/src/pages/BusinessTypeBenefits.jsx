@@ -55,6 +55,23 @@ export default function BusinessTypeBenefits() {
     }
   };
 
+  // Resolve a country identifier (numeric ID or code like "LK") to a numeric ID the backend expects
+  const resolveCountryIdParam = async (value) => {
+    if (!value && value !== 0) return null;
+    // If already numeric-like, use as-is
+    if (typeof value === 'number' || /^\d+$/.test(String(value))) {
+      return parseInt(value, 10);
+    }
+    try {
+      const res = await api.get(`/countries/${value}`);
+      const id = res?.data?.data?.id || res?.data?.id;
+      return id || null;
+    } catch (e) {
+      console.warn('Could not resolve country code to ID, using original value', value, e?.response?.status);
+      return value; // fallback to original; backend may support code as well
+    }
+  };
+
   const groupAdminRows = (rows) => {
     const byType = {};
     for (const r of rows) {
@@ -98,7 +115,7 @@ export default function BusinessTypeBenefits() {
     if (!selectedCountry) return;
     try {
       setLoading(true);
-      const countryIdParam = selectedCountry; // backend expects numeric ID; if we have code, rely on backend mapping if supported
+      const countryIdParam = await resolveCountryIdParam(selectedCountry);
       const { data } = await api.get(`/business-type-benefits/admin/${countryIdParam}`);
       if (data?.success) {
         const rows = data.benefits || data.data || [];
@@ -133,7 +150,7 @@ export default function BusinessTypeBenefits() {
       const bt = benefits.find((b) => b.id === btId);
       const payload = bt[plan];
       const planType = plan === 'free' ? 'free' : 'paid';
-      const countryIdParam = selectedCountry;
+      const countryIdParam = await resolveCountryIdParam(selectedCountry);
       const { data } = await api.put(
         `/business-type-benefits/${countryIdParam}/${btId}/${planType}`,
         payload
