@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/enhanced_user_service.dart';
 import '../services/country_service.dart';
-import '../services/business_type_benefits_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/glass_theme.dart';
 import 'package:image_picker/image_picker.dart';
@@ -35,389 +34,8 @@ class _BusinessRegistrationScreenState
 
   // Dynamic Business Type and Item Subcategories (from backend)
   List<dynamic> _businessTypes = [];
-  String? _selectedBusinessTypeGlobalId;
-
-  // API-fetched benefits data
-  Map<String, dynamic> _apiBenefitsData = {};
-  bool _loadingBenefits = false;
-
-  // Method to get response and messaging benefits for selected business type
-  Map<String, dynamic> _getBusinessTypeBenefits(String businessTypeName) {
-    // Check if we have API data for this business type
-    if (_apiBenefitsData.containsKey(businessTypeName)) {
-      final apiData = _apiBenefitsData[businessTypeName];
-      return {
-        'title': '$businessTypeName Business Plan',
-        'icon': _getBusinessTypeIcon(businessTypeName),
-        'color': _getBusinessTypeColor(businessTypeName),
-        'config': {
-          'free_plan': apiData['freePlan'],
-          'paid_plan': apiData['paidPlan'],
-        },
-      };
-    }
-
-    // Fallback to default configuration if API data is not available
-    final businessTypeConfig = {
-      'free_plan': {
-        'responses_per_month': 3,
-        'contact_revealed': false,
-        'can_message_requester': false,
-        'respond_button_enabled': true, // Only for first 3 responses
-        'instant_notifications': false,
-      },
-      'paid_plan': {
-        'responses_per_month': -1, // unlimited
-        'contact_revealed': true,
-        'can_message_requester': true,
-        'respond_button_enabled': true,
-        'instant_notifications': true,
-      }
-    };
-
-    return {
-      'title': '$businessTypeName Business Plan',
-      'icon': _getBusinessTypeIcon(businessTypeName),
-      'color': _getBusinessTypeColor(businessTypeName),
-      'config': businessTypeConfig,
-    };
-  }
-
-  // Helper method to get icon for business type
-  IconData _getBusinessTypeIcon(String businessTypeName) {
-    final icons = {
-      'Restaurant': Icons.restaurant,
-      'Retail Store': Icons.store,
-      'Service Provider': Icons.handyman,
-      'Healthcare': Icons.local_hospital,
-      'Education': Icons.school,
-      'Technology': Icons.computer,
-    };
-    return icons[businessTypeName] ?? Icons.business;
-  }
-
-  // Helper method to get color for business type
-  Color _getBusinessTypeColor(String businessTypeName) {
-    final colors = {
-      'Restaurant': Colors.orange,
-      'Retail Store': Colors.blue,
-      'Service Provider': Colors.green,
-      'Healthcare': Colors.red,
-      'Education': Colors.purple,
-      'Technology': Colors.teal,
-    };
-    return colors[businessTypeName] ?? Colors.indigo;
-  }
-
-  // Method to load business type benefits from API
-  Future<void> _loadBusinessTypeBenefits() async {
-    setState(() {
-      _loadingBenefits = true;
-    });
-
-    try {
-      // Get user's country ID (you'll need to implement this based on your user service)
-      final countryId = await _getUserCountryId();
-
-      if (countryId != null) {
-        final benefits =
-            await BusinessTypeBenefitsService.getBusinessTypeBenefits(
-                countryId);
-        if (benefits != null) {
-          setState(() {
-            _apiBenefitsData = benefits;
-          });
-        }
-      }
-    } catch (e) {
-      print('Error loading business type benefits: $e');
-    } finally {
-      setState(() {
-        _loadingBenefits = false;
-      });
-    }
-  }
-
-  // Helper method to get user's country ID
-  Future<int?> _getUserCountryId() async {
-    try {
-      // This should be implemented based on your user service
-      // For now, returning a default country ID (1)
-      // You might get this from user profile, selected country, or app settings
-      return 1; // Default country ID
-    } catch (e) {
-      print('Error getting user country ID: $e');
-      return null;
-    }
-  }
-
-  String? _selectedBusinessTypeName;
+  String? _selectedBusinessTypeGlobalId; // use global_business_type_id for POST
   List<dynamic> _itemSubcategoriesByCategory = [];
-
-  // Build benefits card for selected business type
-  Widget _buildBusinessTypeBenefitsCard() {
-    if (_selectedBusinessTypeName == null) return const SizedBox.shrink();
-
-    if (_loadingBenefits) {
-      return Container(
-        margin: const EdgeInsets.only(bottom: 20),
-        padding: const EdgeInsets.all(40),
-        decoration: BoxDecoration(
-          color: Colors.grey.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: Colors.grey.withOpacity(0.3),
-            width: 1,
-          ),
-        ),
-        child: const Center(
-          child: Column(
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text(
-                'Loading business benefits...',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppTheme.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    final benefits = _getBusinessTypeBenefits(_selectedBusinessTypeName!);
-    final color = benefits['color'] as Color;
-    final icon = benefits['icon'] as IconData;
-    final title = benefits['title'] as String;
-    final config = benefits['config'] as Map<String, dynamic>;
-    final freeConfig = config['free_plan'] as Map<String, dynamic>;
-    final paidConfig = config['paid_plan'] as Map<String, dynamic>;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            color.withOpacity(0.1),
-            color.withOpacity(0.05),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: color.withOpacity(0.3),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  icon,
-                  color: color,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: color,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Response & Communication Benefits:',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: color.withOpacity(0.8),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Free Plan Section
-          _buildPlanSection(
-            'FREE PLAN',
-            Colors.green,
-            [
-              _buildFeatureItem(
-                Icons.reply,
-                '${_getConfigValue(freeConfig, 'responsesPerMonth', 'responses_per_month', 3)} responses per month',
-                _getConfigValue(freeConfig, 'responsesPerMonth',
-                        'responses_per_month', 3) >
-                    0,
-              ),
-              _buildFeatureItem(
-                Icons.visibility_off,
-                'Contact details hidden',
-                !_getConfigValue(
-                    freeConfig, 'contactRevealed', 'contact_revealed', false),
-              ),
-              _buildFeatureItem(
-                Icons.message_outlined,
-                'Direct messaging',
-                _getConfigValue(freeConfig, 'canMessageRequester',
-                    'can_message_requester', false),
-              ),
-              _buildFeatureItem(
-                Icons.notifications_off,
-                'Instant notifications',
-                _getConfigValue(freeConfig, 'instantNotifications',
-                    'instant_notifications', false),
-              ),
-              _buildFeatureItem(
-                Icons.block,
-                'Features disabled after 3 responses',
-                true,
-                isWarning: true,
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // Paid Plan Section
-          _buildPlanSection(
-            'PAID PLAN',
-            Colors.blue,
-            [
-              _buildFeatureItem(
-                Icons.all_inclusive,
-                'Unlimited responses',
-                _getConfigValue(paidConfig, 'responsesPerMonth',
-                        'responses_per_month', -1) ==
-                    -1,
-              ),
-              _buildFeatureItem(
-                Icons.visibility,
-                'Contact details revealed',
-                _getConfigValue(
-                    paidConfig, 'contactRevealed', 'contact_revealed', true),
-              ),
-              _buildFeatureItem(
-                Icons.message,
-                'Direct messaging enabled',
-                _getConfigValue(paidConfig, 'canMessageRequester',
-                    'can_message_requester', true),
-              ),
-              _buildFeatureItem(
-                Icons.notifications_active,
-                'Instant notifications',
-                _getConfigValue(paidConfig, 'instantNotifications',
-                    'instant_notifications', true),
-              ),
-              _buildFeatureItem(
-                Icons.priority_high,
-                'Priority in search results',
-                _getConfigValue(
-                    paidConfig, 'priorityInSearch', 'priority_in_search', true),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Helper method to get config values with fallback for different field name formats
-  dynamic _getConfigValue(Map<String, dynamic> config, String camelCaseKey,
-      String snakeCaseKey, dynamic defaultValue) {
-    return config[camelCaseKey] ?? config[snakeCaseKey] ?? defaultValue;
-  }
-
-  Widget _buildPlanSection(
-      String title, Color planColor, List<Widget> features) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: planColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: planColor.withOpacity(0.3),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: planColor,
-            ),
-          ),
-          const SizedBox(height: 12),
-          ...features,
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFeatureItem(IconData icon, String text, bool enabled,
-      {bool isWarning = false}) {
-    final color = isWarning
-        ? Colors.orange
-        : enabled
-            ? Colors.green
-            : Colors.red;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Icon(
-            enabled ? Icons.check_circle : Icons.cancel,
-            color: color,
-            size: 16,
-          ),
-          const SizedBox(width: 8),
-          Icon(
-            icon,
-            color: color.withOpacity(0.7),
-            size: 16,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                fontSize: 13,
-                color: AppTheme.textPrimary,
-                fontWeight: isWarning ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Map<String, dynamic> _subcategoriesByBusinessType = {};
   List<dynamic> _currentSubcategoriesByCategory = [];
   final Set<String> _selectedSubcategoryIds = <String>{};
@@ -453,7 +71,6 @@ class _BusinessRegistrationScreenState
     super.initState();
     _loadCurrentUserData();
     _loadFormData();
-    _loadBusinessTypeBenefits();
   }
 
   @override
@@ -678,8 +295,6 @@ class _BusinessRegistrationScreenState
             ],
           ),
           const SizedBox(height: 16),
-          _buildBusinessTypeDropdown(),
-          _buildBusinessTypeBenefitsCard(),
           _buildTextField(
             controller: _businessNameController,
             label: 'Business Name *',
@@ -728,6 +343,7 @@ class _BusinessRegistrationScreenState
                 ? 'Business description is required'
                 : null,
           ),
+          _buildBusinessTypeDropdown(),
           const SizedBox(height: 8),
           if (_showSubcategoryPicker) _buildItemSubcategoriesField(),
           _buildTextField(
@@ -1204,22 +820,6 @@ class _BusinessRegistrationScreenState
               onChanged: (value) {
                 setState(() {
                   _selectedBusinessTypeGlobalId = value;
-
-                  // Get the business type name for benefits display
-                  if (value != null) {
-                    final selectedType = _businessTypes.firstWhere(
-                      (bt) =>
-                          (bt['global_business_type_id'] ?? bt['id'])
-                              .toString() ==
-                          value,
-                      orElse: () => null,
-                    );
-                    _selectedBusinessTypeName =
-                        selectedType?['name']?.toString();
-                  } else {
-                    _selectedBusinessTypeName = null;
-                  }
-
                   // Compute groups for this business type
                   final groups = (_subcategoriesByBusinessType[value]?['groups']
                           as List?) ??

@@ -47,6 +47,7 @@ import BusinessPriceManagement from './pages/BusinessPriceManagement';
 import PriceComparisonPage from './pages/PriceComparisonPage';
 import BannersModule from './pages/BannersModule.jsx';
 import SubscriptionManagement from './pages/SubscriptionManagement.jsx';
+import BusinessTypeBenefits from './pages/BusinessTypeBenefits.jsx';
 
 const theme = createTheme({
   palette: {
@@ -128,6 +129,7 @@ function App() {
               {/* Price Management Routes */}
               <Route path="business-price-management" element={<BusinessPriceManagement />} />
               <Route path="price-comparison" element={<PriceComparisonPage />} />
+              <Route path="business-type-benefits" element={<BusinessTypeBenefits />} />
             </Route>
           </Routes>
         </Router>
